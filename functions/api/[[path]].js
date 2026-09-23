@@ -53,9 +53,13 @@ function ghUrl(env, key, withRef) {
   const branch = env.BRANCH || DEFAULT_BRANCH;
   return `https://api.github.com/repos/${repo}/contents/${key}.json${withRef ? '?ref=' + branch : ''}`;
 }
+/* 环境变量里粘贴的 Token 可能带上空格 / 换行，统一清理后再用 */
+function cleanToken(env){
+  return String(env.GITHUB_TOKEN || '').replace(/\s+/g, '');
+}
 function ghHeaders(env, extra) {
   return Object.assign({
-    Authorization: 'Bearer ' + (env.GITHUB_TOKEN || ''),
+    Authorization: 'Bearer ' + cleanToken(env),
     Accept: 'application/vnd.github+json',
     'User-Agent': 'tianshu-pages-fn',
   }, extra || {});
@@ -94,6 +98,14 @@ export async function onRequest(context) {
   /* GET /api/health */
   if (parts[0] === 'health') {
     const r = await readFile(env, 'users');
+    const raw = String(env.GITHUB_TOKEN || '');
+    const tok = cleanToken(env);
+    let hint = '';
+    if (!tok) hint = '未配置 GITHUB_TOKEN';
+    else if (!/^github_pat_/.test(tok) && !/^ghp_/.test(tok)) hint = '格式不对：应以 github_pat_ 或 ghp_ 开头';
+    else if (tok.length < 40) hint = '长度异常：只有 ' + tok.length + ' 字符，可能复制不全';
+    else if (tok !== raw) hint = '已自动清理空格/换行后仍 401，建议重新生成 Token';
+    else if (r.status === 401) hint = 'Token 无效或已过期/被吊销，请重新生成';
     return json({
       ok: r.ok,
       repo: env.REPO || DEFAULT_REPO,
@@ -101,6 +113,9 @@ export async function onRequest(context) {
       github: r.status,
       tokenSet: !!env.GITHUB_TOKEN,
       appKeySet: !!env.APP_KEY,
+      tokenPrefix: tok.slice(0, 12),      // 只暴露前 12 位，用于核对类型与开头
+      tokenLength: tok.length,
+      hint: hint || 'ok',
     });
   }
 
