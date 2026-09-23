@@ -1806,9 +1806,15 @@ function saveRooms(r){ lsSet('ts_rooms', r); if(CLOUD.enabled) cloudPut('rooms',
 function getSessions(){ const s = lsGet('ts_sessions', []); return Array.isArray(s) ? s : []; }
 function saveSessions(s){ lsSet('ts_sessions', s); if(CLOUD.enabled) cloudPut('sessions', s).catch(()=>{}); }
 function getCarMsgs(){ const m = lsGet('ts_carmsgs', []); return Array.isArray(m) ? m : []; }
-function saveCarMsgs(m){ lsSet('ts_carmsgs', m); if(CLOUD.enabled) cloudPut('carmsgs', m).catch(()=>{}); }
+function saveCarMsgs(m){
+  lsSet('ts_carmsgs', m);
+  if(CLOUD.enabled) saveBiz('carmsgs', m);
+}
 function getPays(){ const p = lsGet('ts_pays', []); return Array.isArray(p) ? p : []; }
-function savePays(p){ lsSet('ts_pays', p); if(CLOUD.enabled) cloudPut('pays', p).catch(()=>{}); }
+function savePays(p){
+  lsSet('ts_pays', p);
+  if(CLOUD.enabled) saveBiz('pays', p);
+}
 /* 收藏（想玩）与标签库 */
 function getFavs(){ const f = lsGet('ts_favs', {}); return (f && typeof f === 'object') ? f : {}; }
 function saveFavs(f){ lsSet('ts_favs', f); if(CLOUD.enabled) cloudPut('favs', f).catch(()=>{}); }
@@ -1896,6 +1902,28 @@ async function cloudGet(key, quiet){
     if(!quiet) cloudBad(e.status, e.message);
     return null;
   }
+}
+/* 追加合并：把本地新增/变更的记录上报给服务端，由服务端与最新全量合并
+   —— 客户没有管理密钥也能安全写入，不会覆盖其他设备的记录 */
+async function cloudAppend(key, items){
+  if(!CLOUD.enabled || !useWorker() || !items || !items.length) return false;
+  try{
+    const res = await fetch(`${CLOUD.api}/append/${key}`, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ items: items.slice(0, 500) })
+    });
+    if(res.ok){ cloudOk(); return true; }
+    const info = await res.json().catch(()=>({}));
+    console.warn('追加同步失败：', key, res.status, info.error);
+    return false;
+  }catch(e){ console.warn('追加同步异常：', key, e); return false; }
+}
+/* 业务数据统一保存策略：管理员=全量覆盖，普通用户=追加合并 */
+function saveBiz(key, data, single){
+  if(!CLOUD.enabled) return;
+  if(CLOUD.token) cloudPut(key, data).catch(()=>{});
+  else cloudAppend(key, single || data).catch(()=>{});
 }
 /* 同一文件的写入串行化：避免并发 PUT 造成 409 SHA 冲突 */
 const _cloudQueue = {};
@@ -2052,13 +2080,13 @@ async function saveAccounts(accounts){
 async function saveMessages(msgs){
   lsSetMessages(msgs);
   if(!CLOUD.enabled) return;
-  const ok = await cloudPut('messages', msgs);
+  const ok = CLOUD.token ? await cloudPut('messages', msgs) : await cloudAppend('messages', msgs);
   toast(ok ? '☁️ 留言已同步' : '⚠️ 云端同步失败，已保存本地');
 }
 async function saveReviews(reviews){
   lsSetReviews(reviews);
   if(!CLOUD.enabled) return;
-  const ok = await cloudPut('reviews', reviews);
+  const ok = CLOUD.token ? await cloudPut('reviews', reviews) : await cloudAppend('reviews', reviews);
   toast(ok ? '☁️ 评价已同步' : '⚠️ 云端同步失败，已保存本地');
 }
 async function saveSettings(s){
@@ -2832,7 +2860,11 @@ async function saveBookings(){
   lsSet('ts_bookings', state.bookings);        // 本地备份
   renderBookings(); refreshMe();
   if(state.isAdmin) renderAdmin();
-  if(CLOUD.enabled) await cloudPut('bookings', state.bookings);
+  /* 管理员全量覆盖；其他设备追加合并（只上报自己这份，服务端与最新数据合并） */
+  if(CLOUD.enabled){
+    if(CLOUD.token) await cloudPut('bookings', state.bookings);
+    else await cloudAppend('bookings', state.bookings);
+  }
 }
 function doCancel(id){
   const b = state.bookings.find(x=>x.id===id); if(!b) return;
@@ -4587,7 +4619,10 @@ const POST_TYPES = [
   ['team','🙋 找队友'],   ['qa','❓ 新手问答'], ['checkin','📸 到店打卡']
 ];
 function getPosts(){ const p = lsGet('ts_posts', []); return Array.isArray(p) ? p : []; }
-function savePosts(p){ lsSet('ts_posts', p); if(CLOUD.enabled) cloudPut('posts', p).catch(()=>{}); }
+function savePosts(p){
+  lsSet('ts_posts', p);
+  if(CLOUD.enabled) saveBiz('posts', p);
+}
 function getBadWords(){ const w = lsGet('ts_badwords', null); return Array.isArray(w) ? w : BAD_WORDS.slice(); }
 function saveBadWords(list){
   lsSet('ts_badwords', list);
@@ -4998,8 +5033,9 @@ function logAct(text){
     role:myRole(), text, at:Date.now() });
   const trimmed = l.slice(0, 300);
   lsSet('ts_logs', trimmed);
-  /* 同步到云端（需管理密钥；无密钥时静默跳过） */
-  if(CLOUD.enabled && CLOUD.token) cloudPut('logs', trimmed).catch(()=>{});
+  /* 一律走「追加合并」：所有设备（含管理员）只上报自己的这条，
+     服务端与最新全量合并，任何人打开日志都能看到全部设备上的操作 */
+  if(CLOUD.enabled) cloudAppend('logs', [trimmed[0]]).catch(()=>{});
 }
 /* 云端配置面板渲染 */
 /* 粘贴时常见的隐形字符（空格/换行/零宽字符）会导致 401，统一清掉 */
