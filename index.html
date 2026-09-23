@@ -891,7 +891,7 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
       <button class="bell" id="btn-bell" data-action="open-notice" aria-label="消息中心" title="消息中心">🔔<span class="dot" id="bell-dot">0</span></button>
       <button class="theme-btn" data-action="toggle-theme" aria-label="切换主题" title="切换深浅色">🌙</button>
       <button class="btn btn-ghost btn-sm" id="btn-back-staff" data-action="back-staff" hidden>🛡️ 返回管理端</button>
-      <div class="avatar" style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#f97316);display:flex;align-items:center;justify-content:center;cursor:pointer" data-action="switch-tab" data-tab="me" role="button" tabindex="0" aria-label="个人中心">🎭</div>
+      <div class="avatar" id="nav-avatar" style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#f97316);display:flex;align-items:center;justify-content:center;cursor:pointer" data-action="switch-tab" data-tab="me" role="button" tabindex="0" aria-label="个人中心">🎭</div>
     </div>
   </div></header>
 
@@ -993,7 +993,7 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
       <div class="me-wrap">
         <div>
           <div class="profile">
-            <div class="avatar" aria-hidden="true">🎭</div>
+            <div class="avatar" id="me-avatar" aria-hidden="true">🎭</div>
             <h3 id="me-name">剧迷</h3>
             <p id="me-phone"></p>
             <div class="p-stats">
@@ -2333,9 +2333,9 @@ function enterApp(){
   go('page-app'); renderAll(); switchTab('home');
   const back = $('#btn-back-staff'); if(back) back.hidden = true;
   const u = state.user;
-  $('#me-name').textContent  = (u && u.username) || '剧迷';
+  /* 展示统一用昵称（没有昵称时回落到账号名） */
+  refreshMyDisplay();
   $('#me-phone').textContent = maskPhone(u && u.phone);
-  $('#hi-user').textContent  = u ? '已登录 ' + (u.username || maskPhone(u.phone)) : '';
 }
 
 /* ================= 用户协议 / 隐私政策 ================= */
@@ -3072,7 +3072,7 @@ function submitReview(){
   const ses = getSessions().find(s => s.id === b.sessionId);
   const r = { id:Date.now(), sid:b.sid, bid:b.id, rating:state.rvStar,
     text, anonymous: anon,
-    username: anon ? '' : (state.user.username || maskPhone(state.user.phone)),
+    username: anon ? '' : (displayName() || maskPhone(state.user.phone)),
     dims: state.rvDims || {}, imgs: state.rvImgs || [],
     dmPhone: (ses && ses.dm) || b.dmPhone || '', followUps: [], likes: [],
     reply: '', hidden: bad, createdAt: Date.now() };
@@ -3910,7 +3910,7 @@ function submitMsg(){
   if(!text) return toast('说点什么再提交吧～');
   if(text.length > 300) return toast('留言请控制在 300 字以内');
   const msgs = getMessages();
-  msgs.unshift({ id:Date.now(), phone:state.user.phone, username:state.user.username || '玩家',
+  msgs.unshift({ id:Date.now(), phone:state.user.phone, username:displayName() || '玩家',
     cat:state.msgCat, text, status:'pending', reply:'', repliedBy:'', createdAt:Date.now() });
   saveMessages(msgs);
   $('#msg-text').value = '';
@@ -4031,6 +4031,29 @@ function profileOf(phone){
   return (u && u.profile) || {};
 }
 function myProfile(){ return state.user ? profileOf(state.user.phone) : {}; }
+/* 展示名：优先昵称，其次账号名（登录名不变，仅影响显示） */
+function nickOf(phone){
+  const u = lsAccounts().find(x => x.phone === phone);
+  if(!u) return '';
+  return (u.profile && u.profile.nick) || u.username || '';
+}
+function displayName(){
+  if(!state.user) return '剧迷';
+  return nickOf(state.user.phone) || state.user.username || '剧迷';
+}
+function avatarOf(phone){
+  const u = lsAccounts().find(x => x.phone === phone);
+  return (u && u.profile && u.profile.avatar) || '🎭';
+}
+/* 昵称/头像改动后，把所有展示位置一起刷新 */
+function refreshMyDisplay(){
+  const name = displayName();
+  const av = avatarOf(state.user && state.user.phone);
+  const hi = $('#hi-user');    if(hi) hi.textContent = state.user ? '已登录 ' + name : '';
+  const me = $('#me-name');    if(me) me.textContent = name;
+  const mav = $('#me-avatar'); if(mav) mav.textContent = av;
+  const navAv = $('#nav-avatar'); if(navAv) navAv.textContent = av;
+}
 function saveProfile(patch){
   if(!state.user) return;
   const accounts = lsAccounts();
@@ -4038,9 +4061,15 @@ function saveProfile(patch){
   if(!u) return;
   u.profile = Object.assign({ avatar:'🎭', nick:'', gender:'', age:null }, u.profile || {}, patch);
   u.last = Date.now();
-  saveAccountsQuiet(accounts);
-  $('#me-name').textContent = u.profile.nick || u.username;
-  toast('✅ 资料已保存');
+  saveAccountsQuiet(accounts);        // 云端同步（含按手机号追加合并）
+  logAct(`更新个人资料（昵称/头像）`);
+  refreshMyDisplay();
+  renderProfileEditor();
+  /* 相关列表同步刷新，昵称立刻生效 */
+  if(state.curTab === 'car')  renderCarTab();
+  if(state.curTab === 'msg')  renderMsgTab();
+  if(state.curTab === 'book'){ renderMyOrders(); }
+  toast('✅ 资料已保存并同步到云端');
 }
 function renderProfileEditor(){
   const p = myProfile();
@@ -4050,7 +4079,7 @@ function renderProfileEditor(){
   const avatars = ['🎭','🍠','🐱','🐶','🦊','🐼','🦁','👻','🤖','🌙'];
   box.innerHTML = `
     <div class="adm-panel">
-      <h3>编辑资料</h3>
+      <h3>编辑资料 <span class="car-sub" style="margin:0">（昵称 = 展示名，登录仍用账号名 ${escapeHtml(u.username)}）</span></h3>
       <div class="msg-cats">${avatars.map(a=>
         `<button class="chip-sm ${(p.avatar||'🎭')===a?'on':''}" data-action="pick-avatar" data-a="${a}">${a}</button>`).join('')}</div>
       <div class="form-grid" style="margin-top:12px">
@@ -4076,15 +4105,16 @@ function carList(){
   const out = [];
   state.bookings.filter(b => b.carNew && b.status === 'booked' && b.ts >= today).forEach(ob=>{
     const acc = lsAccounts().find(u => u.phone === ob.phone);
-    const owner = (acc && acc.username) || '玩家';
-    const mates = state.bookings.filter(b => !b.carNew && b.carOwner === owner
+    const ownerKey = (acc && acc.username) || '玩家';        // 分组用账号名（历史数据一致）
+    const owner    = nickOf(ob.phone) || ownerKey;            // 展示用昵称
+    const mates = state.bookings.filter(b => !b.carNew && b.carOwner === ownerKey
       && b.sid === ob.sid && b.ts === ob.ts && b.time === ob.time && b.status !== 'cancelled');
     const s = SCRIPTS.find(x => x.id === ob.sid);
     if(!s) return;
     const pr = playerRange(s);
     const joined = ob.players + mates.reduce((n,b)=>n + b.players, 0);
     const need = Math.max(0, pr.min - joined);
-    out.push({ id:'own-'+ob.id, owner, ownerPhone:ob.phone, sid:ob.sid, ts:ob.ts, time:ob.time,
+    out.push({ id:'own-'+ob.id, owner, ownerKey, ownerPhone:ob.phone, sid:ob.sid, ts:ob.ts, time:ob.time,
       cap:pr.max, min:pr.min, joined, need, script:s, members:[ob].concat(mates),
       reserved: ob.reserved || 0 });
   });
@@ -4215,10 +4245,9 @@ function renderCar(){
     <div class="adm-panel">
       <h3>成员</h3>
       ${c.members.map(b=>{
-        const acc = lsAccounts().find(u => u.phone === b.phone);
         const pf = profileOf(b.phone);
         return `<div class="rv-item"><div class="top">
-          <b>${escapeHtml((acc && acc.username) || '玩家')}${b.carNew ? '（车主）' : ''}</b>
+          <b>${escapeHtml(nickOf(b.phone) || '玩家')}${b.carNew ? '（车主）' : ''}</b>
           <span class="stars">${b.players} 人</span>
           ${pf.gender ? `<span class="badge">${pf.gender}</span>` : ''}
           ${pf.age ? `<span class="badge">${pf.age} 岁</span>` : ''}
@@ -4246,11 +4275,11 @@ function carJoin(id){
   if(left <= 0) return toast('车位已满');
   state.bookings.unshift({ id:Date.now(), sid:c.sid, title:c.script.title, emoji:c.script.emoji,
     g:c.script.g, day:dateLabel(c.ts), ts:c.ts, time:c.time, players:1, price:c.script.price,
-    status:'booked', mode:'拼车', carNew:false, carOwner:c.owner,
+    status:'booked', mode:'拼车', carNew:false, carOwner:c.ownerKey,
     phone: state.user.phone });
   saveBookings();
   /* 30：成局 / 有人加入，通知车主与成员 */
-  pushNotice(c.ownerPhone, '有人加入你的车队', `${state.user.username || '一位玩家'}加入了《${c.script.title}》${dateLabel(c.ts)} ${c.time} 的车队。`);
+  pushNotice(c.ownerPhone, '有人加入你的车队', `${displayName()} 加入了《${c.script.title}》${dateLabel(c.ts)} ${c.time} 的车队。`);
   const after = carList().find(x => x.id === id);
   if(after && !after.need){
     after.members.forEach(b=>{
@@ -4265,10 +4294,10 @@ function carQuit(id){
   if(!c) return;
   const p = state.user.phone;
   askConfirm('确定退出这个车队？', ()=>{
-    state.bookings = state.bookings.filter(b => !(b.phone === p && !b.carNew && b.carOwner === c.owner
+    state.bookings = state.bookings.filter(b => !(b.phone === p && !b.carNew && b.carOwner === c.ownerKey
       && b.sid === c.sid && b.ts === c.ts && b.time === c.time && b.status === 'booked'));
     saveBookings();
-    pushNotice(c.ownerPhone, '有人退出车队', `${state.user.username || '一位玩家'}退出了《${c.script.title}》${dateLabel(c.ts)} ${c.time} 的车队。`);
+    pushNotice(c.ownerPhone, '有人退出车队', `${displayName()} 退出了《${c.script.title}》${dateLabel(c.ts)} ${c.time} 的车队。`);
     closeModal('modal-car'); renderCarTab();
     toast('已退出车队');
   });
@@ -4286,7 +4315,7 @@ function carSendMsg(id){
   const t = $('#car-msg').value.trim();
   if(!t) return toast('说点什么吧～');
   const m = getCarMsgs();
-  m.push({ id:Date.now(), carId:id, by:state.user.username || '玩家', phone:state.user.phone, text:t, at:Date.now() });
+  m.push({ id:Date.now(), carId:id, by:displayName() || '玩家', phone:state.user.phone, text:t, at:Date.now() });
   saveCarMsgs(m);
   $('#car-msg').value = '';
   renderCar();
@@ -4670,7 +4699,7 @@ function commPost(){
   const bad = badHit(title + text);
   const posts = getPosts();
   posts.unshift({ id:Date.now(), type:state.postType || 'diary', title, text,
-    imgs: state.cmImgs || [], phone:state.user.phone, username:state.user.username || '玩家',
+    imgs: state.cmImgs || [], phone:state.user.phone, username:displayName() || '玩家',
     at:Date.now(), likes:[], reports:[], hidden:bad,
     spoiler: state.postType === 'diary' || state.postType === 'guide' });
   savePosts(posts);
@@ -5256,6 +5285,17 @@ function netRetry(){
 const MIGRATIONS = [
   { v:3, run(){ ensureSuperAdmin(); } },
   { v:4, run(){ upgradeRoles(); } },
+  /* v6：一次性数据修正 —— 把 FIreFly2 改成 FireFly2（含云端） */
+  { v:6, run(){
+      const accounts = lsAccounts();
+      let changed = false;
+      accounts.forEach(u=>{
+        if(u.username === 'FIreFly2'){ u.username = 'FireFly2'; changed = true; }
+      });
+      if(changed) saveAccountsQuiet(accounts);
+      const cur = lsGet('ts_user', null);
+      if(cur && cur.username === 'FIreFly2'){ cur.username = 'FireFly2'; lsSet('ts_user', cur); state.user = cur; }
+    } },
   /* v5：超管账号改名 FIreFly → FireFly（含云端），并保持超管身份 */
   { v:5, run(){
       const accounts = lsAccounts();
