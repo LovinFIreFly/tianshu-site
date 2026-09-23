@@ -1764,8 +1764,10 @@ const CLOUD = {
     favs:     'favs.json',
     taglib:   'taglib.json',
     dmleave:  'dmleave.json',
+    logs:     'logs.json',
     posts:    'posts.json',
-    badwords: 'badwords.json'
+    badwords: 'badwords.json',
+    scripts:  'scripts.json'   // 管理端新增/编辑的剧本（之前只在本地，客户看不到）
   }
 };
 /* ---------- 云端配置：Token 只存本机，网页源码不包含任何密钥 ---------- */
@@ -2071,14 +2073,42 @@ async function cloudSync(force){
   if(Date.now() - (lsGet('ts_reset_at', 0) || 0) < 10000) return;
   /* 退避期内自动同步跳过（手动重试 force=true 例外） */
   if(cloudBusy() && !force) return;
-  const [users, bookings, reviews, settings, messages, notices, rooms, sessions, carmsgs, pays] = await Promise.all([
+  const [users, bookings, reviews, settings, messages, notices, rooms, sessions, carmsgs, pays, logs,
+         favs, taglib, dmleave, posts, badwords, scripts] = await Promise.all([
     cloudGet('users'), cloudGet('bookings'), cloudGet('reviews'), cloudGet('settings'), cloudGet('messages'), cloudGet('notices'),
-  cloudGet('rooms'), cloudGet('sessions'), cloudGet('carmsgs'), cloudGet('pays')
+    cloudGet('rooms'), cloudGet('sessions'), cloudGet('carmsgs'), cloudGet('pays'), cloudGet('logs'),
+    cloudGet('favs'), cloudGet('taglib'), cloudGet('dmleave'), cloudGet('posts'), cloudGet('badwords'), cloudGet('scripts')
   ]);
   if(Array.isArray(rooms))    lsSet('ts_rooms', rooms);
   if(Array.isArray(sessions)) lsSet('ts_sessions', sessions);
   if(Array.isArray(carmsgs))  lsSet('ts_carmsgs', carmsgs);
   if(Array.isArray(pays))     lsSet('ts_pays', pays);
+  /* 剧本库：云端为准（管理端编辑后的版本） */
+  if(Array.isArray(scripts) && scripts.length){ SCRIPTS = scripts; lsSet('ts_scripts', scripts); refreshFrontScripts(); }
+  /* 标签库 / 敏感词：云端有值就用云端 */
+  if(Array.isArray(taglib) && taglib.length) lsSet('ts_taglib', taglib);
+  if(Array.isArray(badwords) && badwords.length) lsSet('ts_badwords', badwords);
+  /* 收藏：按用户合并（取并集，避免相互覆盖） */
+  if(favs && typeof favs === 'object'){
+    const cur = getFavs();
+    Object.keys(favs).forEach(phone=>{
+      const a = new Set([...(cur[phone] || []), ...((favs[phone] || []))]);
+      cur[phone] = [...a];
+    });
+    lsSet('ts_favs', cur);
+  }
+  /* DM 请假：按 id 合并 */
+  if(Array.isArray(dmleave)){
+    const m = new Map(getLeave().map(x => [x.id, x]));
+    dmleave.forEach(x => { if(!m.has(x.id)) m.set(x.id, x); });
+    lsSet('ts_dmleave', [...m.values()]);
+  }
+  /* 社区帖子：按 id 合并 */
+  if(Array.isArray(posts)){
+    const m = new Map(getPosts().map(x => [x.id, x]));
+    posts.forEach(x => { if(!m.has(x.id)) m.set(x.id, x); });
+    lsSet('ts_posts', [...m.values()].sort((a,b)=>b.at-a.at));
+  }
   if(Array.isArray(notices)){
     const map = new Map(getNotices().map(n=>[n.id, n]));
     notices.forEach(n=>{ if(!map.has(n.id)) map.set(n.id, n); });
@@ -2108,6 +2138,11 @@ async function cloudSync(force){
     const map = new Map(getMessages().map(m=>[m.id, m]));
     messages.forEach(m=>{ if(!map.has(m.id)) map.set(m.id, m); });
     lsSetMessages([...map.values()]);
+  }
+  if(Array.isArray(logs)){
+    const map = new Map(lsGet('ts_logs', []).map(x => [x.id, x]));
+    logs.forEach(x => { if(!map.has(x.id)) map.set(x.id, x); });
+    lsSet('ts_logs', [...map.values()].sort((a,b)=>b.at-a.at).slice(0, 300));
   }
   if(settings && typeof settings === 'object') lsSet('ts_settings', Object.assign({reviewsEnabled:true}, settings));
   refreshCurrent();
@@ -2143,6 +2178,7 @@ function loginAs(u){
   state.isAdmin = role === 'admin' || role === 'super';
   state.isDm    = role === 'dm';
   closeTopModal();
+  logAct(`登录成功（${u.username} · ${ROLE_NAME[role] || role}）`);
   if(state.isAdmin){
     state.admTab = 'dash';
     go('page-admin'); renderAdmin();
@@ -3274,6 +3310,7 @@ function admBkRows(list){
 function admDone(id){    // 第一步：核销到场
   const b = state.bookings.find(x=>x.id===id); if(!b) return;
   b.status = 'arrived'; saveBookings();
+  logAct(`核销到场（《${b.title}》${maskPhone(b.phone)}）`);
   toast('✅ 已核销到场，游玩结束后点「确认完成」');
 }
 function admFinish(id){  // 第二步：确认完成 → 邀请客户评价
@@ -3330,7 +3367,11 @@ function renderAdmScripts(){
     return head + '<tbody>' + body + '</tbody>';
   })();
 }
-function persistScripts(){ lsSet('ts_scripts', SCRIPTS); }
+/* 剧本改动同步到云端（管理端专属：需管理密钥），客户打开即可看到最新剧本库 */
+function persistScripts(){
+  lsSet('ts_scripts', SCRIPTS);
+  if(CLOUD.enabled) cloudPut('scripts', SCRIPTS).catch(()=>{});
+}
 function refreshFrontScripts(){
   renderChips(); renderHomeGrids(); renderList(); renderBanner();
 }
@@ -3458,6 +3499,7 @@ function scReset(){
   askConfirm('确定恢复全部演示剧本？你在管理端做的修改将丢失。', ()=>{
     localStorage.removeItem('ts_scripts');
     SCRIPTS = safeRun(()=>JSON.parse(document.getElementById('data-scripts').textContent), SCRIPTS);
+    persistScripts();          // 恢复后的剧本同样同步到云端
     refreshFrontScripts();
     renderAdmScripts();
     toast('已恢复演示数据');
@@ -4548,6 +4590,10 @@ const POST_TYPES = [
 function getPosts(){ const p = lsGet('ts_posts', []); return Array.isArray(p) ? p : []; }
 function savePosts(p){ lsSet('ts_posts', p); if(CLOUD.enabled) cloudPut('posts', p).catch(()=>{}); }
 function getBadWords(){ const w = lsGet('ts_badwords', null); return Array.isArray(w) ? w : BAD_WORDS.slice(); }
+function saveBadWords(list){
+  lsSet('ts_badwords', list);
+  if(CLOUD.enabled) cloudPut('badwords', list).catch(()=>{});
+}
 function badHit(t){
   const s = String(t || '').toLowerCase();
   return getBadWords().some(w => s.includes(String(w).toLowerCase()));
@@ -4670,12 +4716,12 @@ function badAdd(){
   if(!w) return toast('请输入敏感词');
   const list = getBadWords();
   if(list.includes(w)) return toast('已存在');
-  list.push(w); lsSet('ts_badwords', list);
+  list.push(w); saveBadWords(list);
   $('#bad-new').value = '';
   renderAdmCommunity(); toast('✅ 已添加敏感词');
 }
 function badDel(w){
-  lsSet('ts_badwords', getBadWords().filter(x => x !== w));
+  saveBadWords(getBadWords().filter(x => x !== w));
   renderAdmCommunity(); toast('已删除');
 }
 
@@ -4951,7 +4997,10 @@ function logAct(text){
   const l = lsGet('ts_logs', []);
   l.unshift({ id:Date.now(), by:(state.user && state.user.username) || '系统',
     role:myRole(), text, at:Date.now() });
-  lsSet('ts_logs', l.slice(0, 300));
+  const trimmed = l.slice(0, 300);
+  lsSet('ts_logs', trimmed);
+  /* 同步到云端（需管理密钥；无密钥时静默跳过） */
+  if(CLOUD.enabled && CLOUD.token) cloudPut('logs', trimmed).catch(()=>{});
 }
 /* 云端配置面板渲染 */
 /* 粘贴时常见的隐形字符（空格/换行/零宽字符）会导致 401，统一清掉 */
@@ -5038,7 +5087,7 @@ function renderAdmLogs(){
     `<div class="log-row"><span class="d">·</span><b>${escapeHtml(x.by)}</b>
       <span>${escapeHtml(x.text)}</span>
       <span class="tm">${new Date(x.at).toLocaleString()}</span></div>`).join('')
-    : emptyBox('📜','暂无操作记录');
+    : emptyBox('📜','暂无操作记录（关键操作会自动记录；换设备时日志会从云端同步过来）');
 }
 
 /* ---------- 消息中心 ---------- */
@@ -5123,7 +5172,8 @@ function renderAdmNotice(){
 }
 
 /* ---------- 数据备份 / 恢复 ---------- */
-const BACKUP_KEYS = ['ts_accounts','ts_bookings','ts_reviews','ts_messages','ts_notices','ts_logs','ts_scripts','ts_settings'];
+const BACKUP_KEYS = ['ts_accounts','ts_bookings','ts_reviews','ts_messages','ts_notices','ts_logs','ts_scripts','ts_settings',
+  'ts_rooms','ts_sessions','ts_carmsgs','ts_pays','ts_favs','ts_taglib','ts_dmleave','ts_posts','ts_badwords'];
 function backupExport(){
   const data = { app:'甜薯剧本杀', at:new Date().toISOString(), ver:lsGet('ts_ver', 0), data:{} };
   BACKUP_KEYS.forEach(k => data.data[k] = lsGet(k, null));
@@ -5370,7 +5420,11 @@ const ACTIONS = {
   'notice-del': el=>noticeDel(el.dataset.id),
   'backup-export': backupExport,
   'backup-import': ()=>$('#backup-file').click(),
-  'log-clear':   ()=>askConfirm('清空全部操作日志？', ()=>{ lsSet('ts_logs', []); renderAdmLogs(); toast('日志已清空'); }),
+  'log-clear':   ()=>askConfirm('清空全部操作日志？', ()=>{
+    lsSet('ts_logs', []);
+    if(CLOUD.enabled && CLOUD.token) cloudPut('logs', []).catch(()=>{});   // 云端一并清空
+    renderAdmLogs(); toast('日志已清空');
+  }),
   'net-retry':   netRetry,
   'toggle-theme': toggleTheme,
   'dm-logout':   ()=>askConfirm('确定退出 DM 端？', dmLogout),
