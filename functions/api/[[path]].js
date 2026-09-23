@@ -34,6 +34,10 @@ const ALLOWED = ['users', 'bookings', 'reviews', 'settings', 'messages', 'notice
 /* 访客无需密钥即可写入的业务数据 */
 const PUBLIC_WRITE = ['bookings', 'messages', 'reviews', 'posts', 'favs', 'carmsgs', 'pays', 'users'];
 
+/* 支持「服务端追加合并」的数据：访客只上报自己的记录，
+   由服务端读出最新全量 → 按 id 合并 → 写回，避免覆盖其他设备的记录 */
+const ALLOWED_APPEND = ['logs', 'bookings', 'messages', 'reviews', 'posts', 'carmsgs', 'pays'];
+
 const MAX_BODY = 8 * 1024 * 1024;   // 8MB：剧本库含封面/角色图（base64）时体积较大
 
 const CORS = {
@@ -117,6 +121,44 @@ export async function onRequest(context) {
       tokenLength: tok.length,
       hint: hint || 'ok',
     });
+  }
+
+  /* POST /api/append/:key —— 追加合并（访客可用，用于上报自己的记录） */
+  if (request.method === 'POST' && parts[0] === 'append' && parts[1]) {
+    const akey = parts[1].replace(/\.json$/, '');
+    if (!ALLOWED_APPEND.includes(akey)) return json({ error: 'append not allowed: ' + akey }, 400);
+
+    const bodyText = await request.text();
+    if (bodyText.length > 1024 * 1024) return json({ error: '单次上报过大' }, 413);
+    let payload;
+    try { payload = JSON.parse(bodyText); } catch (e) { return json({ error: '不是合法 JSON' }, 400); }
+    const items = Array.isArray(payload && payload.items) ? payload.items : [];
+    if (!items.length) return json({ ok: true, merged: 0 });
+    if (items.length > 500) return json({ error: '单次最多 500 条' }, 413);
+
+    const cur = await readFile(env, akey);
+    const map = new Map((Array.isArray(cur.data) ? cur.data : []).map(x => [String(x && x.id), x]));
+    items.forEach(it => { if (it && it.id != null) map.set(String(it.id), it); });
+    let merged = [...map.values()].sort((a, b) => (b.id || 0) - (a.id || 0));
+    if (akey === 'logs') merged = merged.slice(0, 300);
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const sha = attempt === 0 ? cur.sha : (await readFile(env, akey)).sha;
+      const res = await fetch(ghUrl(env, akey, false), {
+        method: 'PUT',
+        headers: ghHeaders(env, { 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          message: '甜薯追加同步 ' + akey,
+          branch: env.BRANCH || DEFAULT_BRANCH,
+          sha: sha || undefined,
+          content: textToB64(JSON.stringify(merged, null, 2)),
+        }),
+      });
+      if (res.ok) return json({ ok: true, merged: merged.length, added: items.length });
+      if (!res.ok && attempt < 2) { await new Promise(r => setTimeout(r, 200 * (attempt + 1))); continue; }
+      return json({ error: 'github ' + res.status }, 502);
+    }
+    return json({ error: '写入冲突，请重试' }, 502);
   }
 
   if (parts[0] !== 'data' || !parts[1]) return json({ error: 'not found' }, 404);
