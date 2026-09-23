@@ -1186,12 +1186,18 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
           <p class="car-sub">Token 只保存在<b>本机浏览器</b>，不会随网页源码公开，可放心把网页放到公开仓库。<br>
             数据仓库请务必设为 <b>Private</b>（里面是客户手机号等敏感数据）。</p>
           <div class="form-grid" style="margin-top:12px">
+            <div class="f-item full"><label>Worker 代理地址（推荐 · 部署 tianshu-worker.js 后填入，所有访客都能正常读写）</label>
+              <div class="box"><input id="cf-api" placeholder="https://tianshu-api.你的子域.workers.dev"
+                autocomplete="off" spellcheck="false"></div></div>
+            <div class="f-item full"><label>管理密钥（Worker 的 APP_KEY，仅你/店长填写，用于修改设置类数据；客户无需填写）</label>
+              <div class="box"><input id="cf-token" type="password" placeholder="留空 = 仅客户权限（可从旧配置复用）"
+                autocomplete="off" spellcheck="false" data-lpignore="true" name="gh-token-field"></div></div>
+          </div>
+          <p class="car-sub">未使用 Worker 时的直连模式（仅本机能用）：</p>
+          <div class="form-grid">
             <div class="f-item"><label>GitHub 用户名</label><div class="box"><input id="cf-owner" placeholder="LovinFireFly"></div></div>
             <div class="f-item"><label>数据仓库名</label><div class="box"><input id="cf-repo" placeholder="tianshu-data"></div></div>
             <div class="f-item"><label>分支</label><div class="box"><input id="cf-branch" placeholder="main"></div></div>
-            <div class="f-item"><label>Token（Fine-grained，仅授权该仓库 Contents 读写）</label>
-              <div class="box"><input id="cf-token" type="password" placeholder="github_pat_… 或 ghp_…"
-                autocomplete="off" spellcheck="false" data-lpignore="true" name="gh-token-field"></div></div>
           </div>
           <div class="f-check" style="margin-top:12px">
             <button type="button" id="cf-enabled" data-action="cf-toggle">☁️ 启用云端同步</button>
@@ -1701,12 +1707,17 @@ function findCar(list, id){ return list.find(c => c.id === id); }
 
 /* ================= 云端同步（GitHub 仓库作数据库，本地永远留备份） =================
    开通步骤：见本文件底部注释说明；填好 CLOUD 配置并把 enabled 改为 true 即生效 */
+/* 云端 API 地址（公开信息，写进网页安全）
+   '/api' = 走同域名的 Pages Functions（推荐，客户访问最稳，不会被墙）
+   也可填完整 Worker 地址，例：https://tianshu-api.xxx.workers.dev */
+const CLOUD_API_BAKED = (typeof location !== 'undefined' && /^https?:/.test(location.protocol)) ? '/api' : '';
 const CLOUD = {
   enabled: false,          // 由本机配置决定（见 loadCloudCfg）
-  owner:  'LovinFireFly',  // GitHub 用户名
+  api:    '',              // Worker 代理地址（推荐，访客也能正常读写）
+  owner:  'LovinFireFly',  // 直连模式用的 GitHub 用户名
   repo:   'tianshu-data',  // 仓库名（务必设为 Private，里面是客户数据）
   branch: 'main',
-  token:  '',              // ⚠️ Token 不再写死在代码里，只保存在本机浏览器（可安全公开网页源码）
+  token:  '',              // Worker 模式下=管理密钥；直连模式下=GitHub Token，都只存本机
   files: {                 // 云端数据文件（用户 / 预约 / 评价 / 设置 / 留言）
     users:    'users.json',
     bookings: 'bookings.json',
@@ -1728,19 +1739,22 @@ const CLOUD = {
 /* ---------- 云端配置：Token 只存本机，网页源码不包含任何密钥 ---------- */
 function loadCloudCfg(){
   const c = lsGet('ts_cloud_cfg', null) || {};
+  CLOUD.api     = (c.api || CLOUD_API_BAKED || '').replace(/\/+$/, '');
   CLOUD.owner   = c.owner  || 'LovinFireFly';
   CLOUD.repo    = c.repo   || 'tianshu-data';
   CLOUD.branch  = c.branch || 'main';
   CLOUD.token   = c.token  || '';
-  CLOUD.enabled = !!c.token && c.enabled !== false;
+  /* Worker 模式：地址就是公开配置，所有访客都能读写；直连模式：必须本机有 Token */
+  CLOUD.enabled = !!CLOUD.api || (!!c.token && c.enabled !== false);
 }
+const useWorker = () => !!CLOUD.api;
 function saveCloudCfg(patch){
   const next = Object.assign({}, lsGet('ts_cloud_cfg', {}) || {}, patch);
   lsSet('ts_cloud_cfg', next);
   loadCloudCfg();
   if(typeof _cloudSha === 'object' && _cloudSha) Object.keys(_cloudSha).forEach(k => delete _cloudSha[k]);
 }
-const cloudReady = () => !!(CLOUD.token && CLOUD.enabled);
+const cloudReady = () => !!(CLOUD.enabled && (CLOUD.api || CLOUD.token));
 loadCloudCfg();
 
 function lsAccounts(){ const a = lsGet('ts_accounts', []); return Array.isArray(a) ? a : []; }
@@ -1821,6 +1835,21 @@ const cloudBusy = () => Date.now() < _cloudHealth.backoffUntil;
 async function cloudGet(key, quiet){
   if(!CLOUD.enabled) return null;
   if(cloudBusy() && !quiet) return null;          // 退避期内不再打扰云端
+  /* Worker 代理模式：读取对所有访客开放 */
+  if(useWorker()){
+    try{
+      const res = await fetch(`${CLOUD.api}/data/${key}`);
+      if(res.status === 404){ cloudOk(); return null; }
+      if(!res.ok) throw Object.assign(new Error('HTTP '+res.status), { status:res.status });
+      const d = await res.json();
+      cloudOk();
+      return d;
+    }catch(e){
+      console.warn('Worker 拉取失败：', key, e);
+      if(!quiet) cloudBad(e.status, e.message);
+      return null;
+    }
+  }
   try{
     const res = await fetch(_cloudPath(key)+'?ref='+CLOUD.branch, { headers:_cloudHeaders() });
     if(res.status === 404){ cloudOk(); return null; }   // 文件还没建，属正常
@@ -1854,6 +1883,36 @@ async function _cloudPutOnce(key, data){
 }
 async function cloudPut(key, data){
   if(!CLOUD.enabled) return false;
+  /* Worker 代理模式：写入走代理，Token 不经过浏览器 */
+  if(useWorker()){
+    const runW = async ()=>{
+      for(let attempt = 0; attempt < 3; attempt++){
+        try{
+          const headers = { 'Content-Type':'application/json' };
+          if(CLOUD.token) headers['x-app-key'] = CLOUD.token;   // 管理密钥（设置类数据需要）
+          const res = await fetch(`${CLOUD.api}/data/${key}`, {
+            method:'PUT', headers, body: JSON.stringify(data)
+          });
+          if(res.ok){ cloudOk(); return true; }
+          const info = await res.json().catch(()=>({}));
+          if(res.status === 403){                    // 缺管理密钥：不重试，给出明确提示
+            console.warn('Worker 拒绝写入（需要管理密钥）：', key, info.error);
+            return false;
+          }
+          if(attempt === 2) throw Object.assign(new Error(info.error || ('HTTP '+res.status)), { status:res.status });
+          await new Promise(done => setTimeout(done, 400 * (attempt + 1)));
+        }catch(e){
+          if(attempt === 2){ console.warn('Worker 推送失败：', key, e); cloudBad(e.status, e.message); return false; }
+          await new Promise(done => setTimeout(done, 400 * (attempt + 1)));
+        }
+      }
+      return false;
+    };
+    const prevW = _cloudQueue[key] || Promise.resolve();
+    const curW = prevW.then(runW, runW);
+    _cloudQueue[key] = curW.catch(()=>{});
+    return await curW;
+  }
   /* 排队：同一 key 的上一次写入完成后才开始本次 */
   const run = async ()=>{
     for(let attempt = 0; attempt < 3; attempt++){
@@ -1887,8 +1946,46 @@ async function cloudPut(key, data){
   return await cur;
 }
 /* 云端连接自检：返回各数据文件的可达情况，便于排查 */
+/* 统一的连接测试（Worker 模式 / 直连模式都走这里） */
+async function testCloudConn(){
+  $('#cf-result').innerHTML = '<p class="car-sub">🔍 正在测试连接…</p>';
+  const lines = await cloudDiagnose();
+  const okLine = useWorker()
+    ? lines.some(l => l.includes('Worker 代理'))
+    : lines.some(l => l.includes('仓库访问：HTTP 200'));
+  $('#cf-result').innerHTML = `<div class="log-row"><span>${lines.map(l=>escapeHtml(l)).join('<br>')}</span></div>`
+    + `<p class="car-sub" style="color:${okLine ? 'var(--ok)' : 'var(--full)'}">${okLine
+        ? '✅ 连接成功，已开启自动同步（客户也能正常读写）'
+        : '❌ 连接失败，请按上面的提示检查'}</p>`;
+  if(okLine){ cloudSync(true); toast('✅ 云端连接成功'); }
+  else toast('❌ 云端连接失败，详见检测结果');
+}
 async function cloudDiagnose(){
   const lines = [];
+  /* Worker 代理模式 */
+  if(useWorker()){
+    lines.push(`模式：Worker 代理 · ${CLOUD.api}`);
+    try{
+      const r = await fetch(`${CLOUD.api}/health`);
+      const d = await r.json().catch(()=>({}));
+      if(r.ok && d.ok){
+        lines.push(`Worker 代理：HTTP ${r.status} ✔（后台数据仓库 ${d.repo}@${d.branch}）`);
+        lines.push(`GitHub 连通：HTTP ${d.github} ✔ · Token ${d.tokenSet ? '已配置' : '⚠️ 未配置'} · 管理密钥 ${d.appKeySet ? '已配置' : '⚠️ 未配置'}`);
+      }else{
+        lines.push(`Worker 代理：HTTP ${r.status} ✘ ${JSON.stringify(d).slice(0,120)}`);
+      }
+    }catch(e){
+      lines.push('无法连接 Worker：' + e.message + '（检查地址是否复制完整、Worker 是否已部署）');
+    }
+    lines.push(CLOUD.token ? '管理密钥：已填写，可修改设置类数据' : '管理密钥：未填写（仅客户权限，无法修改设置类数据）');
+    for(const key of Object.keys(CLOUD.files)){
+      try{
+        const r = await fetch(`${CLOUD.api}/data/${key}`);
+        lines.push(`${CLOUD.files[key]}：HTTP ${r.status}${r.status === 404 ? '（尚未创建）' : r.ok ? ' ✔' : ' ✘'}`);
+      }catch(e){ lines.push(`${CLOUD.files[key]}：失败 ${e.message}`); }
+    }
+    return lines;
+  }
   lines.push(`配置：${CLOUD.owner}/${CLOUD.repo}@${CLOUD.branch}　状态：${cloudReady() ? '已启用' : '未启用'}`);
   if(!CLOUD.token) return lines.concat('未填写 Token：请在上方「云端同步配置」填入并保存后重试。');
   try{
@@ -4836,6 +4933,7 @@ function tokenLooksBad(t){
 }
 function renderCloudCfg(){
   const box = $('#cf-owner'); if(!box) return;
+  $('#cf-api').value    = CLOUD.api;
   $('#cf-owner').value  = CLOUD.owner;
   $('#cf-repo').value   = CLOUD.repo;
   $('#cf-branch').value = CLOUD.branch;
@@ -4844,18 +4942,25 @@ function renderCloudCfg(){
   btn.classList.toggle('on', cloudReady());
   btn.textContent = cloudReady() ? '☁️ 云端同步：已启用' : '☁️ 云端同步：未启用';
   const st = $('#cf-state');
+  if(useWorker()){
+    st.textContent = `Worker 模式 · ${CLOUD.api}` + (CLOUD.token ? '（含管理密钥）' : '（访客权限，只能改业务数据）');
+    st.style.color = 'var(--ok)';
+    return;
+  }
   const bad = tokenLooksBad(CLOUD.token);
-  st.textContent = !CLOUD.token ? '尚未配置（数据仅保存在本机）'
-    : bad ? `⚠️ ${bad}`
-    : `已配置 · ${CLOUD.token.slice(0, 11)}…${CLOUD.token.slice(-4)}（共 ${CLOUD.token.length} 字符）`;
-  st.style.color = !CLOUD.token ? 'var(--accent)' : bad ? 'var(--full)' : 'var(--ok)';
+  st.textContent = !CLOUD.token ? '尚未配置（数据仅保存在本机 · 建议部署 Worker）'
+    : bad ? `⚠️ ${bad}（直连模式）`
+    : `直连模式 · ${CLOUD.token.slice(0, 11)}…${CLOUD.token.slice(-4)}（共 ${CLOUD.token.length} 字符，仅本机可用）`;
+  st.style.color = !CLOUD.token ? 'var(--accent)' : bad ? 'var(--full)' : 'var(--mid, var(--accent))';
 }
 function cfSave(){
   const raw   = $('#cf-token').value;
   const token = sanitizeToken(raw);          // 自动去掉粘贴带进来的空格 / 换行
   const cleaned = raw !== token;
   const enabledEl = $('#cf-enabled');
+  const api = ($('#cf-api').value.trim() || '').replace(/\/+$/, '');
   saveCloudCfg({
+    api,
     owner:   $('#cf-owner').value.trim() || 'LovinFireFly',
     repo:    $('#cf-repo').value.trim()  || 'tianshu-data',
     branch:  $('#cf-branch').value.trim()|| 'main',
@@ -4863,7 +4968,12 @@ function cfSave(){
     enabled: enabledEl.classList.contains('on')
   });
   renderCloudCfg();
-  if(!token){ $('#cf-result').innerHTML = '<p class="car-sub">未填写 Token，云端同步保持关闭，数据只存本机。</p>'; return; }
+  if(api){                                     // Worker 模式：地址是公开的，无需 Token 即可测
+    if(cleaned) toast('已自动清理粘贴内容中的空格 / 换行');
+    testCloudConn();
+    return;
+  }
+  if(!token){ $('#cf-result').innerHTML = '<p class="car-sub">未填写 Worker 地址或 Token，云端同步保持关闭，数据只存本机。</p>'; return; }
   const bad = tokenLooksBad(token);
   if(bad){
     $('#cf-result').innerHTML = `<div class="adm-panel" style="margin:0;border-color:rgba(248,113,113,.5)">
@@ -5023,9 +5133,10 @@ function netRetry(){
 }
 
 /* ---------- 数据迁移框架 ---------- */
+/* 注意：只保留「本地数据升级」类迁移。
+   ⚠️ 绝不要在新的迁移里做「重置并推送云端」——新访客首次打开也会跑迁移，
+   那会把本地空数据推到云端、覆盖真实数据。重置只能由管理员手动触发。 */
 const MIGRATIONS = [
-  { v:1, run(){ if(!lsGet('ts_reset_v1', false)) resetAllData(); } },
-  { v:2, run(){ if(!lsGet('ts_purge_v2', false)){ resetAllData(); lsSet('ts_purge_v2', true); } } },
   { v:3, run(){ ensureSuperAdmin(); } },
   { v:4, run(){ upgradeRoles(); } },
 ];
@@ -5315,7 +5426,10 @@ function resetAllData(){
   localStorage.removeItem('ts_user');
   lsSet('ts_reset_v1', true);
   lsSet('ts_reset_at', now);
-  if(CLOUD.enabled){
+  /* 只有管理员（持有管理密钥，或直连模式本机有 Token）才允许把清空结果推到云端，
+     避免普通访客的浏览器把云端数据覆盖成空 */
+  const isStaffDevice = !useWorker() ? !!CLOUD.token : !!CLOUD.token;
+  if(CLOUD.enabled && isStaffDevice){
     cloudPut('users', accounts).catch(()=>{});
     cloudPut('bookings', []).catch(()=>{});
     cloudPut('reviews', []).catch(()=>{});
