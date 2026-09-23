@@ -822,7 +822,7 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
     <div class="field"><span class="ico" aria-hidden="true">🔒</span><input id="in-pwd" type="password" placeholder="密码" aria-label="密码"></div>
     <p style="text-align:right;margin:2px 2px 18px;font-size:13px"><a class="lnk" data-action="go-forgot">忘记密码？</a></p>
     <button class="btn btn-accent" style="width:100%;height:50px" data-action="do-login">登 录</button>
-    <p id="login-hint">👑 管理员 FIreFly / 123123　🗡️ DM dm测试 / 123123<br>🐞 调试账号 调试debug / 123123（密码统一 123123）</p>
+    <p id="login-hint">👑 管理员 FireFly / 123123　🗡️ DM dm测试 / 123123<br>🐞 调试账号 调试debug / 123123（密码统一 123123）</p>
     <p style="text-align:center;margin:20px 0 0;font-size:13px;color:var(--text2)">没有账号？<a class="lnk" data-action="go-register">前往注册 →</a></p>
   </div>
 </div>
@@ -5221,6 +5221,23 @@ function netRetry(){
 const MIGRATIONS = [
   { v:3, run(){ ensureSuperAdmin(); } },
   { v:4, run(){ upgradeRoles(); } },
+  /* v5：超管账号改名 FIreFly → FireFly（含云端），并保持超管身份 */
+  { v:5, run(){
+      const accounts = lsAccounts();
+      let changed = false;
+      accounts.forEach(u=>{
+        if(u.username === LEGACY_SUPER || u.username === SUPER_ADMIN){
+          if(u.username !== SUPER_ADMIN){ u.username = SUPER_ADMIN; }
+          if(u.super !== true){ u.super = true; }
+          if(u.role !== 'super'){ u.role = 'super'; }
+          changed = true;
+        }
+      });
+      if(changed) saveAccountsQuiet(accounts);
+      /* 本机登录态里如果还是旧名字，一并更新 */
+      const cur = lsGet('ts_user', null);
+      if(cur && cur.username === LEGACY_SUPER){ cur.username = SUPER_ADMIN; lsSet('ts_user', cur); state.user = cur; }
+    } },
 ];
 function runMigrations(){
   const from = lsGet('ts_ver', 0);
@@ -5492,9 +5509,10 @@ function compressImage(file, maxW, cb){
 }
 /* ================= 内置账号 / 数据重置 / 调试快捷键 ================= */
 /* 上线前删掉 DEBUG 快捷键部分即可 */
-const SUPER_ADMIN = 'FIreFly';        // 最高级账号，权限不可被修改
+const SUPER_ADMIN = 'FireFly';        // 最高级账号，权限不可被修改
+const LEGACY_SUPER = 'FIreFly';       // 旧名字，迁移时自动改名
 const SEED_ACCOUNTS = [
-  { username:'FIreFly',   phone:'13552158081', pwd:'123123', role:'admin', super:true },
+  { username:'FireFly',   phone:'13552158081', pwd:'123123', role:'admin', super:true },
   { username:'dm测试',     phone:'12345678901', pwd:'123123', role:'dm'   },
   { username:'调试debug',  phone:'13800000000', pwd:'123123', role:'user' },
 ];
@@ -5526,9 +5544,8 @@ function ensureSuperAdmin(){
   const accounts = lsAccounts();
   let changed = false;
   accounts.forEach(u=>{
-    const isSuper = u.username === SUPER_ADMIN;
-    if(isSuper && u.super !== true){ u.super = true; u.role = 'admin'; changed = true; }
-    else if(!isSuper && u.super === true){ u.super = false; changed = true; }
+    /* 只做「授予」：内置超管账号一定带 super 标记；不再主动回收，避免误降级 */
+    if(u.username === SUPER_ADMIN && u.super !== true){ u.super = true; u.role = 'super'; changed = true; }
   });
   if(changed) saveAccountsQuiet(accounts);
 }
@@ -5555,10 +5572,10 @@ window.addEventListener('unhandledrejection', e=>{
 /* 键盘可达：Enter / Space 触发 role=button 元素 */
 document.addEventListener('keydown', e=>{
   if(e.key === 'Escape'){ closeTopModal(); return; }
-  /* 调试快捷键：右 Alt=调试账号，右 Shift=管理员 FIreFly，PageDown=DM 账号 */
+  /* 调试快捷键：右 Alt=调试账号，右 Shift=管理员 FireFly，PageDown=DM 账号 */
   if(!e.repeat){
     if(e.code === 'AltRight' || (e.key === 'Alt' && e.location === 2)){ e.preventDefault(); quickLogin('调试debug'); return; }
-    if(e.code === 'ShiftRight' || (e.key === 'Shift' && e.location === 2)){ e.preventDefault(); quickLogin('FIreFly'); return; }
+    if(e.code === 'ShiftRight' || (e.key === 'Shift' && e.location === 2)){ e.preventDefault(); quickLogin('FireFly'); return; }
     if(e.key === 'PageDown' || e.code === 'PageDown'){ e.preventDefault(); quickLogin('dm测试'); return; }
   }
   /* 登录页按回车直接登录 */
