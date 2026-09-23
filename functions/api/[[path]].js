@@ -29,12 +29,12 @@ const DEFAULT_REPO = 'LovinFireFly/tianshu-data';
 const DEFAULT_BRANCH = 'main';
 
 const ALLOWED = ['users', 'bookings', 'reviews', 'settings', 'messages', 'notices',
-  'rooms', 'sessions', 'carmsgs', 'pays', 'favs', 'taglib', 'dmleave', 'posts', 'badwords'];
+  'rooms', 'sessions', 'carmsgs', 'pays', 'favs', 'taglib', 'dmleave', 'posts', 'badwords', 'logs', 'scripts'];
 
 /* 访客无需密钥即可写入的业务数据 */
 const PUBLIC_WRITE = ['bookings', 'messages', 'reviews', 'posts', 'favs', 'carmsgs', 'pays', 'users'];
 
-const MAX_BODY = 2 * 1024 * 1024;
+const MAX_BODY = 8 * 1024 * 1024;   // 8MB：剧本库含封面/角色图（base64）时体积较大
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
