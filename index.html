@@ -1220,7 +1220,7 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
             <div class="f-item full"><label>Worker 代理地址（推荐 · 部署 tianshu-worker.js 后填入，所有访客都能正常读写）</label>
               <div class="box"><input id="cf-api" placeholder="https://tianshu-api.你的子域.workers.dev"
                 autocomplete="off" spellcheck="false"></div></div>
-            <div class="f-item full"><label>管理密钥（Worker 的 APP_KEY，仅你/店长填写，用于修改设置类数据；客户无需填写）</label>
+            <div class="f-item full"><label>管理密钥（Worker 的 APP_KEY，仅你/管理员填写，用于修改设置类数据；客户无需填写）</label>
               <div class="box"><input id="cf-token" type="password" placeholder="留空 = 仅客户权限（可从旧配置复用）"
                 autocomplete="off" spellcheck="false" data-lpignore="true" name="gh-token-field"></div></div>
           </div>
@@ -3539,11 +3539,11 @@ function scReset(){
 
 /* ---------- 用户管理（含权限调整） ---------- */
 const USER_FILTERS = [['customer','🎭 客户'],['staff','👑 员工'],['全部','全部']];
-const ROLE_NAME = { super:'超级管理员', admin:'店长', dm:'DM', user:'客户' };
+const ROLE_NAME = { super:'超级管理员', admin:'管理员', dm:'DM', user:'客户' };
 function roleBadge(u){
   if(u.role === 'super' || u.super === true)
     return '<span class="badge" style="background:rgba(251,146,60,.15);color:var(--accent)">👑 超级管理员</span>';
-  if(u.role === 'admin') return '<span class="badge" style="background:rgba(251,146,60,.15);color:var(--accent)">🛡️ 店长</span>';
+  if(u.role === 'admin') return '<span class="badge" style="background:rgba(251,146,60,.15);color:var(--accent)">🛡️ 管理员</span>';
   if(u.role === 'dm')    return '<span class="badge">🗡️ DM</span>';
   return '<span class="badge">🎭 客户</span>';
 }
@@ -3568,7 +3568,7 @@ function renderAdmUsers(){
       const roleOps = u.super === true ? '<span style="font-size:12px;color:var(--accent)">👑 最高权限</span>'
         : mine ? '<span style="font-size:12px;color:var(--text2)">当前登录</span>'
         : !isSuper() ? '<span style="font-size:12px;color:var(--text2)">🔒 仅超级管理员可改</span>'
-        : [['admin','设为店长'],['dm','设为 DM'],['user','设为客户']]
+        : [['admin','设为管理员'],['dm','设为 DM'],['user','设为客户']]
             .filter(([r]) => r !== (u.role || 'user'))
             .map(([r,t])=>`<button class="op-btn" data-action="set-role" data-phone="${u.phone}" data-role="${r}">${t}</button>`)
             .join('');
@@ -4915,7 +4915,7 @@ function dmLeave(ts){
   if(l.some(x => x.phone === phone && x.ts === +ts)) return;
   l.push({ id:Date.now(), phone, ts:+ts, at:Date.now() });
   saveLeave(l);
-  /* 通知管理员与店长 */
+  /* 通知超级管理员与管理员 */
   lsAccounts().filter(u => roleOf(u) === 'admin' || roleOf(u) === 'super').forEach(u=>{
     pushNotice(u.phone, 'DM 请假申请', `${state.user.username} 申请 ${dateLabel(+ts)} 请假，请安排替补。`);
   });
@@ -5021,7 +5021,7 @@ const ADM_TAB_PERM = {
   dash:['super','admin'], bookings:['super','admin'], orders:['super','admin'], scripts:['super','admin'],
   reviews:['super','admin'], users:['super','admin'], customers:['super','admin'],
   msgs:['super','admin'], notice:['super','admin'], community:['super','admin'], venue:['super','admin'],
-  /* 操作日志与数据备份：店长同样可用；清空数据、删除账号、改权限等破坏性操作仍仅超级管理员 */
+  /* 操作日志与数据备份：管理员同样可用；清空数据、删除账号、改权限等破坏性操作仍仅超级管理员 */
   logs:['super','admin'], backup:['super','admin']
 };
 const DM_TAB_PERM = { msgs:['super','admin','dm'], today:['super','admin','dm'], credit:['super','admin','dm'],
