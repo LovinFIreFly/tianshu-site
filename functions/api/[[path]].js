@@ -1141,8 +1141,11 @@ async function checkCaptcha(env, id, answer) {
       if (role) {
         const names = (sc.roles || []).map(r => r.name);
         if (names.length && names.indexOf(role) < 0) return json({ error: '角色不存在' }, 400);
-        if (ses && bkAll.list.some(b => b.sessionId === ses.id && b.role === role && b.status !== 'cancelled'))
-          return json({ error: `角色「${role}」已被选走，换一个吧` }, 409);
+        /* 同一剧本 + 同一天 + 同一时段，同一角色只能被一个人选走
+           （原来只在"已排了场次"时才查重，没排场次就会重复选角） */
+        const taken = bkAll.list.some(b => String(b.sid) === String(sc.id) && b.ts === ts && b.time === time &&
+          b.role === role && b.status !== 'cancelled');
+        if (taken) return json({ error: `角色「${role}」已被选走，换一个吧` }, 409);
       }
     }
     /* 59：优惠券（定金抵扣） */

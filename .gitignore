@@ -8,6 +8,12 @@ _check.js
 _c.js
 _f.mjs
 
+# 本地 Python 版运行时产生的数据（含账号与客户信息，绝不入库）
+data/
+__pycache__/
+*.pyc
+_smoke.py
+
 # 旧方案备份（现在用 Pages Functions，不再需要 Worker）
 tianshu-worker.js
 
