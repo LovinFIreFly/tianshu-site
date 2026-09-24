@@ -1952,11 +1952,16 @@ function getPays(){ const p = lsGet('ts_pays', []); return Array.isArray(p) ? p 
 function getCoupons(){ const c = lsGet('ts_coupons', []); return Array.isArray(c) ? c : []; }
 function savePays(p){
   lsSet('ts_pays', p);
-  if(CLOUD.enabled) saveBiz('pays', p);
+  /* 订单只由员工整体写；客户的支付/退款走 /api/order/*（服务端算价与改状态） */
+  if(CLOUD.enabled && (state.isAdmin || state.isDm)) saveBiz('pays', p);
 }
 /* 收藏（想玩）与标签库 */
 function getFavs(){ const f = lsGet('ts_favs', {}); return (f && typeof f === 'object') ? f : {}; }
-function saveFavs(f){ lsSet('ts_favs', f); if(CLOUD.enabled) cloudPut('favs', f).catch(()=>{}); }
+function saveFavs(f){
+  lsSet('ts_favs', f);
+  /* 客户收藏走 /api/fav/toggle（只写自己那份），这里仅员工做整体同步 */
+  if(CLOUD.enabled && (state.isAdmin || state.isDm)) cloudPut('favs', f).catch(()=>{});
+}
 function myFavs(){ const p = state.user ? state.user.phone : ''; return (getFavs()[p] || []); }
 async function toggleFav(sid){
   if(!state.user) return toast('登录后即可收藏');
@@ -2003,9 +2008,9 @@ function cloudBad(status, msg){
   /* 连续失败 2 次以上才提示，并做指数退避（最多 2 分钟） */
   if(_cloudHealth.fails >= 2){
     const tip = status === 409 ? '（多端同时写入冲突，正在自动重试）'
-      : status === 403 ? '（GitHub 频率限制，稍后会自动重试）'
+      : status === 403 ? '（权限不足：该数据仅员工可读写，客户的写操作请使用对应接口）'
       : status === 422 ? '（文件体积超出限制）'
-      : status === 401 ? '（Token 失效，请更换）' : '';
+      : status === 401 ? '（登录已过期，请重新登录）' : '';
     netFail('云端同步异常 ' + _cloudHealth.lastErr + tip + '，数据已安全保存在本地');
   }
   _cloudHealth.backoffUntil = Date.now() + Math.min(120000, 10000 * Math.pow(2, Math.min(4, _cloudHealth.fails - 1)));
@@ -5013,6 +5018,8 @@ function recommendCars(){
 }
 /* 23：过期未成局的车队自动取消并通知 */
 function checkCarExpire(){
+  /* 只有管理端做自动清理与通知（客户端的 bookings 只有自己那份，写云端会被正确拒绝） */
+  if(!state.isAdmin) return;
   const now = Date.now(), today = midnight();
   let n = 0;
   state.bookings.filter(b => b.carNew && b.status === 'booked' && b.ts < today).forEach(ob=>{
@@ -6129,11 +6136,16 @@ function renderDmToday(){
     </div>`;
   }).join('');
 }
-function dmAssign(id, role){
+async function dmAssign(id, role){
   const b = state.bookings.find(x => x.id === +id);
   if(!b) return;
-  b.role = role; saveBookings();
-  if(b.phone) pushNotice(b.phone, '角色已分配', `你的角色是「${role}」，快来熟悉一下剧本吧～`);
+  b.role = role;
+  lsSet('ts_bookings', state.bookings);
+  /* 45：角色分配走服务端（校验该玩家在你自己的场次里，并自动通知玩家） */
+  const r = await apiPost('/dm/assign', { id:b.id, role });
+  if(!r.ok && !r.offline){ toast(r.error || '角色分配失败'); return; }
+  if(r.offline) queueOp('/dm/assign', { id:b.id, role });
+  if(state.user && state.isDm && state.dmTab === 'today') renderDmToday();
   toast(role ? `✅ 已分配角色：${role}` : '已取消角色分配');
 }
 /* 84/86：评价维度、点赞、商家回复 */
@@ -6312,7 +6324,9 @@ function renderAdmLogs(){
 function getNotices(){ const n = lsGet('ts_notices', []); return Array.isArray(n) ? n : []; }
 function saveNotices(n){
   lsSet('ts_notices', n);
-  if(CLOUD.enabled) cloudPut('notices', n).catch(()=>{});
+  /* 通知属于员工数据：客户端的通知由服务端接口产生（/api/... 内部会写），
+     客户自己不能整体覆盖通知表，否则会被服务端正确拒绝（403） */
+  if(CLOUD.enabled && (state.isAdmin || state.isDm)) cloudPut('notices', n).catch(()=>{});
 }
 /* 定向推送给某位客户 */
 function pushNotice(phone, title, text){

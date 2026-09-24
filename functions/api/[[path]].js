@@ -1645,7 +1645,7 @@ async function checkCaptcha(env, id, answer) {
   }
 
   /* ================= 45：DM 专属视图（只能看自己场次的客户） ================= */
-  if (parts[0] === 'dm' && (parts[1] === 'customers' || parts[1] === 'credit')) {
+  if (parts[0] === 'dm' && (parts[1] === 'customers' || parts[1] === 'credit' || parts[1] === 'assign')) {
     const meD = await readToken(request.headers.get('x-auth'), env.APP_KEY || '');
     const dmRole = meD ? meD.role : '';
     if (!staff && dmRole !== 'dm') return json({ error: '需要员工权限' }, 403);
@@ -1702,6 +1702,32 @@ async function checkCaptcha(env, id, answer) {
       await notify(env, phone, '信用分变动提醒',
         `因「${reason}」，你的信用分 ${before} → ${after} 分。${delta > 0 ? '感谢你的良好记录～' : '按时到场可逐步恢复。'}`, { kind: 'credit' });
       return json({ ok: true, before, after });
+    }
+
+    /* 45/91：DM 给玩家分配角色（只能操作自己场次的玩家，自动通知玩家） */
+    if (parts[1] === 'assign' && request.method === 'POST') {
+      let body; try { body = JSON.parse(await request.text()); } catch (e) { return json({ error: '参数错误' }, 400); }
+      const bid = String(body.id || '');
+      const role = cleanText(body.role, 20);
+      const bk = bkAll.list.find(x => String(x.id) === bid);
+      if (!bk) return json({ error: '预约不存在' }, 404);
+      if (!staff && !mineOf(bk)) return json({ error: '只能给自己场次的玩家分配角色' }, 403);
+      const w = await mutate(env, 'bookings', list => {
+        const t = list.find(x => String(x.id) === bid);
+        if (t) { t.role = role; t.roleBy = (meD && meD.username) || 'DM'; t.roleAt = Date.now(); }
+        return list;
+      }, '分配角色');
+      if (!w.ok) return json({ error: w.error }, 502);
+      if (bk.phone) {
+        await notify(env, bk.phone, role ? '角色已分配 🎭' : '角色分配已取消',
+          role ? `你在《${bk.title}》中的角色是「${role}」，提前熟悉一下剧本吧～` : `《${bk.title}》的角色分配已取消，到店由 DM 安排。`,
+          { kind: 'assign' });
+      }
+      await mutate(env, 'logs', list => list.concat([{
+        id: Date.now(), by: (meD && meD.username) || 'DM', role: 'dm',
+        text: `为「${bk.username || bk.phone}」分配角色「${role || '取消'}」（《${bk.title}》）`, kind: 'assign', at: Date.now(),
+      }]), '角色分配留痕');
+      return json({ ok: true, role });
     }
   }
 
