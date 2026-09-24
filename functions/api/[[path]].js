@@ -106,7 +106,10 @@ function b64url(bytes) {
   return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 function b64ToText(b64) {
-  const bin = atob(String(b64 || '').replace(/\s/g, ''));
+  /* 兼容 base64 与 base64url（令牌用的是 base64url：+ → -、/ → _）
+     ⚠️ 少了这两行转换，任何编码后含 - 或 _ 的令牌都会解码失败 → 被判为无效令牌（随机掉登录） */
+  const s = String(b64 || '').replace(/\s/g, '').replace(/-/g, '+').replace(/_/g, '/');
+  const bin = atob(s);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return new TextDecoder('utf-8').decode(bytes);
