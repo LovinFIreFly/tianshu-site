@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}预约管理 · {{ settings.shopName }}{% endblock %}
+{% block body %}
+<div class="between">
+  <h1>预约管理</h1>
+  <a class="btn btn-sm" href="{{ url_for('admin.dashboard') }}">← 回后台</a>
+</div>
+
+<div class="row mt" style="gap:6px">
+  <a class="pill" href="{{ url_for('admin.bookings', status='booked') }}" style="{{ 'color:var(--accent)' if status=='booked' }}">待开本 {{ counts.booked }}</a>
+  <a class="pill" href="{{ url_for('admin.bookings', status='arrived') }}" style="{{ 'color:var(--accent)' if status=='arrived' }}">已到店 {{ counts.arrived }}</a>
+  <a class="pill" href="{{ url_for('admin.bookings', status='done') }}" style="{{ 'color:var(--accent)' if status=='done' }}">已完成 {{ counts.done }}</a>
+  <a class="pill" href="{{ url_for('admin.bookings', status='cancelled') }}" style="{{ 'color:var(--accent)' if status=='cancelled' }}">已取消 {{ counts.cancelled }}</a>
+  <a class="pill" href="{{ url_for('admin.bookings', status='all') }}" style="{{ 'color:var(--accent)' if status=='all' }}">全部</a>
+</div>
+
+<form class="form-inline mt" method="get">
+  <input type="hidden" name="status" value="{{ status }}">
+  <div class="field"><input name="q" value="{{ q }}" placeholder="搜剧本 / 客户 / 手机号 / 核销码"></div>
+  <button class="btn btn-primary" type="submit">搜索</button>
+</form>
+
+<div class="scroll panel mt">
+  <table>
+    <tr><th>核销码</th><th>日期</th><th>剧本</th><th>客户</th><th>人数</th><th>模式</th><th>定金</th><th>状态</th><th>操作</th></tr>
+    {% for b in rows %}
+    <tr>
+      <td class="code-big" style="font-size:15px">{{ b.verifyCode or '—' }}</td>
+      <td>{{ b.day }} {{ b.time }}</td>
+      <td>{{ b.emoji or '' }} {{ b.title }}{% if b.role %} <span class="badge">{{ b.role }}</span>{% endif %}</td>
+      <td>{{ b.username }}<div class="sub">{{ b.phone[:3] }}****{{ b.phone[-4:] }}</div></td>
+      <td>{{ b.players }}</td>
+      <td>{{ b.mode or '—' }}</td>
+      <td>¥{{ b.deposit or 0 }}</td>
+      <td>
+        {% if b.status == 'cancelled' %}<span class="badge bad">已取消</span>
+        {% elif b.status == 'arrived' %}<span class="badge ok">已到店</span>
+        {% elif b.status == 'done' %}<span class="badge">已完成</span>
+        {% else %}<span class="badge ok">已订</span>{% endif %}
+      </td>
+      <td>
+        {% if b.status == 'booked' %}
+        <form method="post" action="{{ url_for('admin.verify') }}" style="display:inline">
+          <input type="hidden" name="code" value="{{ b.verifyCode }}">
+          <button class="btn btn-sm" type="submit">核销</button>
+        </form>
+        <form method="post" action="{{ url_for('admin.cancel_booking', bid=b.id) }}" style="display:inline"
+              onsubmit="return confirm('确定取消这条预约并退款？')">
+          <button class="btn btn-sm btn-danger" type="submit">取消</button>
+        </form>
+        {% else %}—{% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="9" class="empty">这个筛选下没有记录</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

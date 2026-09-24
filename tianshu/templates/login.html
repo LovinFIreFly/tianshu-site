@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}登录 · {{ settings.shopName }}{% endblock %}
+{% block body %}
+<div class="panel" style="max-width:420px;margin:40px auto">
+  <h1>登录</h1>
+  <p class="sub">手机号或用户名都行</p>
+  <form method="post" class="mt">
+    <div class="field"><label>账号</label>
+      <input name="account" autocomplete="username" required autofocus placeholder="手机号 / 用户名"></div>
+    <div class="field"><label>密码</label>
+      <input name="password" type="password" autocomplete="current-password" required placeholder="密码"></div>
+    <button class="btn btn-primary btn-block" type="submit">登 录</button>
+  </form>
+  <p class="sub mt">还没账号？<a href="{{ url_for('user.register') }}" style="color:var(--primary2)">去注册 →</a></p>
+  <p class="sub" style="margin-top:14px;opacity:.8">演示账号：FireFly / 123123（超管）· 调试debug / 123123（客户）</p>
+</div>
+{% endblock %}

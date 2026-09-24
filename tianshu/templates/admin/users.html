@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}客户管理 · {{ settings.shopName }}{% endblock %}
+{% block body %}
+<div class="between">
+  <h1>客户</h1>
+  <a class="btn btn-sm" href="{{ url_for('admin.dashboard') }}">← 回后台</a>
+</div>
+
+<form class="form-inline mt" method="get">
+  <div class="field"><input name="q" value="{{ q }}" placeholder="搜昵称 / 手机号"></div>
+  <button class="btn btn-primary" type="submit">搜索</button>
+</form>
+
+{% for r in rows %}
+{% set u = r.u %}
+<div class="panel mt">
+  <div class="between">
+    <div>
+      <b>{{ u.profile.nick or u.username }}</b>
+      <span class="sub">{{ u.phone[:3] }}****{{ u.phone[-4:] }}</span>
+      {% if u.banned %}<span class="badge bad">已拉黑</span>{% endif %}
+      {% if (u.credit or 100) < 60 %}<span class="badge bad">信用差</span>
+      {% elif (u.credit or 100) >= 90 %}<span class="badge ok">信用好</span>{% endif %}
+    </div>
+    <div class="sub">来过 {{ r.visits }} 次 · 消费 ¥{{ r.spent }} · 余额 ¥{{ u.balance or 0 }} · 信用 {{ u.credit or 100 }}</div>
+  </div>
+
+  <div class="row mt" style="gap:10px;align-items:flex-end">
+    <form class="form-inline" method="post" action="{{ url_for('admin.set_credit', phone=u.phone) }}">
+      <div class="field" style="max-width:90px"><label>信用分 ±</label><input name="delta" type="number" value="-10"></div>
+      <div class="field" style="max-width:180px"><label>原因</label><input name="reason" placeholder="跳车 / 迟到 / 表现好"></div>
+      <button class="btn btn-sm" type="submit">调整</button>
+    </form>
+
+    <form class="form-inline" method="post" action="{{ url_for('admin.recharge', phone=u.phone) }}">
+      <div class="field" style="max-width:110px"><label>充值(元)</label><input name="amount" type="number" value="200"></div>
+      <button class="btn btn-sm" type="submit">充值</button>
+    </form>
+
+    <form method="post" action="{{ url_for('admin.ban', phone=u.phone) }}"
+          onsubmit="return confirm('{{ '恢复这个账号？' if u.banned else '确定拉黑？拉黑后他登录不了、也约不了本' }}')">
+      {% if not u.banned %}<input type="hidden" name="reason" value="违反门店规矩">{% endif %}
+      <button class="btn btn-sm {{ 'btn-danger' if not u.banned else '' }}" type="submit">
+        {{ '恢复' if u.banned else '拉黑' }}
+      </button>
+    </form>
+  </div>
+
+  {% if u.creditLogs %}
+  <div class="sub mt" style="border-top:1px solid var(--line);padding-top:6px">
+    信用分流水：
+    {% for l in u.creditLogs[:4] %}
+      <span class="pill">{{ l.delta }} · {{ l.reason }}</span>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% if not rows %}<div class="panel empty">没有匹配的客户</div>{% endif %}
+{% endblock %}

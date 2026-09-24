@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}操作日志 · {{ settings.shopName }}{% endblock %}
+{% block body %}
+<div class="between">
+  <h1>操作日志</h1>
+  <a class="btn btn-sm" href="{{ url_for('admin.dashboard') }}">← 回后台</a>
+</div>
+<p class="sub">谁在什么时候动过什么，出问题先翻这里（只留最近 500 条）</p>
+
+<div class="scroll panel mt">
+  <table>
+    <tr><th>时间</th><th>谁</th><th>身份</th><th>干了什么</th></tr>
+    {% for l in rows %}
+    <tr>
+      <td class="sub">{{ day_label(l.at) }}</td>
+      <td>{{ l.by }}</td>
+      <td><span class="pill">{{ {'super':'超管','admin':'管理员','dm':'DM','user':'客户'}.get(l.role, l.role) }}</span></td>
+      <td>{{ l.text }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="empty">还没有日志</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% block title %}我的 · {{ settings.shopName }}{% endblock %}
+{% block body %}
+<div class="two">
+  <div>
+    <h1>我的预约</h1>
+    {% if bookings %}
+      {% for b in bookings %}
+      {% set o = order_of.get(b.id) %}
+      <div class="panel">
+        <div class="between">
+          <div>
+            <b>{{ b.emoji or '🎭' }} {{ b.title }}</b>
+            <span class="pill">{{ b.mode or '拼车' }}</span>
+            {% if b.role %}<span class="badge">{{ b.role }}</span>{% endif %}
+            {% if b.status == 'cancelled' %}<span class="badge bad">已取消</span>
+            {% elif b.status == 'arrived' %}<span class="badge ok">已到店</span>
+            {% else %}<span class="badge ok">已锁定</span>{% endif %}
+          </div>
+          <span class="sub">{{ b.day }} {{ b.time }}</span>
+        </div>
+        <div class="sub mt">{{ b.players }} 人 · 总价 ¥{{ b.amount or 0 }} · 定金 ¥{{ b.deposit or 0 }}
+          {% if o %} · 订单：{{ {'unpaid':'待付定金','paid':'已付定金','refunded':'已退款','closed':'已关闭'}.get(o.status, o.status) }}{% endif %}
+        </div>
+
+        {% if b.status != 'cancelled' %}
+        <div class="row mt" style="gap:10px">
+          <div>到店报这个码：<span class="code-big">{{ b.verifyCode or '—' }}</span></div>
+        </div>
+        {% endif %}
+
+        <div class="row mt" style="gap:8px">
+          {% if o and o.status == 'unpaid' %}
+          <form method="post" action="{{ url_for('user.order_act', oid=o.id, action='pay') }}">
+            <button class="btn btn-sm btn-accent" type="submit">付定金 ¥{{ o.deposit }}</button></form>
+          {% endif %}
+          {% if b.status != 'cancelled' %}
+            {% if o and o.status in ('unpaid','paid') %}
+            <form method="post" action="{{ url_for('user.order_act', oid=o.id, action='refund') }}">
+              <button class="btn btn-sm" type="submit">取消 / 退定金</button></form>
+            {% else %}
+            <form method="post" action="{{ url_for('user.cancel_booking', bid=b.id) }}">
+              <button class="btn btn-sm" type="submit">取消预约</button></form>
+            {% endif %}
+          {% endif %}
+          <a class="btn btn-sm" href="{{ url_for('public.script_detail', sid=b.sid) }}">再看一眼剧本</a>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="panel empty">还没有预约记录 —— <a href="{{ url_for('public.scripts') }}" style="color:var(--primary2)">去挑个本子</a></div>
+    {% endif %}
+  </div>
+
+  <div>
+    <div class="panel">
+      <h3>我的账号</h3>
+      <div class="between"><span>昵称</span><b>{{ me.profile.nick or me.username }}</b></div>
+      <div class="between"><span>手机号</span><span>{{ me.phone[:3] }}****{{ me.phone[-4:] }}</span></div>
+      <div class="between"><span>信用分</span>
+        <b style="color:{{ 'var(--ok)' if (me.credit or 100) >= 90 else ('var(--warn)' if (me.credit or 100) >= 60 else 'var(--danger)') }}">
+          {{ me.credit or 100 }}</b></div>
+      <div class="between"><span>余额</span><b>¥{{ me.balance or 0 }}</b></div>
+      <p class="sub mt">信用分扣了会收到通知，按时到店开本可以慢慢恢复。</p>
+    </div>
+
+    <div class="panel">
+      <h3>我的券（{{ coupons|length }}）</h3>
+      {% if coupons %}
+        {% for c in coupons %}
+        <div class="between" style="padding:4px 0">
+          <span>¥{{ c.amount }} 抵扣券 <span class="sub">{{ c.from or '门店' }}</span></span>
+          <span class="badge {{ 'bad' if c.used else 'ok' }}">{{ '已用' if c.used else '可用' }}</span>
+        </div>
+        {% endfor %}
+      {% else %}<p class="sub">还没有券，店里偶尔会发（邀请朋友注册也送）</p>{% endif %}
+    </div>
+
+    <div class="panel">
+      <div class="between">
+        <h3>消息（{{ unread }} 条未读）</h3>
+        {% if unread %}
+        <form method="post" action="{{ url_for('user.notice_read') }}">
+          <button class="btn btn-sm" type="submit">全部已读</button></form>
+        {% endif %}
+      </div>
+      {% for n in notices %}
+        <div style="border-top:1px solid var(--line);padding:8px 0">
+          <div class="between"><b>{{ n.title }}</b><span class="sub">{{ day_label(n.at) }}</span></div>
+          <p class="sub">{{ n.text }}</p>
+        </div>
+      {% else %}
+        <p class="sub">暂时没有消息</p>
+      {% endfor %}
+    </div>
+
+    <div class="panel">
+      <h3>我的心愿单</h3>
+      {% set want = scripts|selectattr('id')|list %}
+      {% set hit = [] %}
+      {% for s in scripts %}{% if s.id|string in fav_ids %}{% set _ = hit.append(s) %}{% endif %}{% endfor %}
+      {% if hit %}
+        {% for s in hit %}
+        <a class="between" style="padding:4px 0" href="{{ url_for('public.script_detail', sid=s.id) }}">
+          <span>{{ s.emoji }} {{ s.title }}</span><span class="sub">¥{{ s.price|int }}</span>
+        </a>
+        {% endfor %}
+      {% else %}
+        <p class="sub">在剧本页点「♡ 想玩」就会出现在这儿</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

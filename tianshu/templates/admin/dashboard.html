@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block title %}管理后台 · {{ settings.shopName }}{% endblock %}
+{% block body %}
+<div class="between">
+  <h1>管理后台</h1>
+  <div class="row" style="gap:6px">
+    <a class="btn btn-sm" href="{{ url_for('admin.bookings') }}">预约</a>
+    <a class="btn btn-sm" href="{{ url_for('admin.users') }}">客户</a>
+    <a class="btn btn-sm" href="{{ url_for('admin.scripts') }}">剧本</a>
+    <a class="btn btn-sm" href="{{ url_for('admin.orders') }}">订单</a>
+    <a class="btn btn-sm" href="{{ url_for('admin.logs') }}">日志</a>
+  </div>
+</div>
+
+<div class="panel">
+  <h3>到店核销（客人报 6 位码，输这儿）</h3>
+  <form class="form-inline" method="post" action="{{ url_for('admin.verify') }}">
+    <div class="field"><input name="code" inputmode="numeric" maxlength="6" placeholder="6 位核销码" required></div>
+    <button class="btn btn-accent" type="submit">核销</button>
+  </form>
+</div>
+
+<div class="stats">
+  <div><b>{{ stat.plays }}</b><span>累计开本</span></div>
+  <div><b>{{ stat.income }}</b><span>已收定金(元)</span></div>
+  <div><b>{{ sessions|length }}</b><span>今日场次</span></div>
+  <div><b>{{ pending|length }}</b><span>今日待核销</span></div>
+</div>
+
+<div class="two mt">
+  <div>
+    <h2>今天要来的人（{{ pending|length }}）</h2>
+    {% if pending %}
+    <div class="scroll panel">
+      <table>
+        <tr><th>时间</th><th>剧本</th><th>客户</th><th>人数</th><th>核销码</th></tr>
+        {% for b in pending %}
+        <tr>
+          <td>{{ b.time }}</td><td>{{ b.title }}</td><td>{{ b.username }}</td>
+          <td>{{ b.players }}</td><td class="code-big" style="font-size:15px">{{ b.verifyCode }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+    {% else %}<div class="panel empty">今天没有待核销的预约</div>{% endif %}
+
+    <h2>最近预约</h2>
+    <div class="scroll panel">
+      <table>
+        <tr><th>客户</th><th>剧本</th><th>日期</th><th>状态</th></tr>
+        {% for b in recent %}
+        <tr><td>{{ b.username }}</td><td>{{ b.title }}</td><td>{{ b.day }} {{ b.time }}</td>
+            <td>{{ {'booked':'已订','arrived':'已到店','cancelled':'已取消','done':'已完成'}.get(b.status, b.status) }}</td></tr>
+        {% else %}
+        <tr><td colspan="4" class="empty">还没有预约</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+
+  <div>
+    <h2>发券（拉回老客人）</h2>
+    <div class="panel">
+      <form method="post" action="{{ url_for('admin.coupon') }}">
+        <div class="field"><label>发给谁</label>
+          <select name="scope">
+            <option value="sleeping">好久没来的客人</option>
+            <option value="all">全部客户</option>
+          </select></div>
+        <div class="field"><label>多久没来算"好久"（天）</label><input name="sleepDays" type="number" value="30"></div>
+        <div class="field"><label>券面额（元）</label><input name="amount" type="number" value="20"></div>
+        <div class="field"><label>有效期（天）</label><input name="days" type="number" value="30"></div>
+        <button class="btn btn-primary btn-block" type="submit">发出去</button>
+      </form>
+    </div>
+
+    <h2>门店设置</h2>
+    <div class="panel">
+      <form method="post" action="{{ url_for('admin.settings') }}">
+        <div class="field"><label>店名</label><input name="shopName" value="{{ settings.shopName }}"></div>
+        <div class="field"><label>首页公告</label><input name="notice" value="{{ settings.notice }}"></div>
+        <div class="field"><label>定金比例（0.3 = 30%）</label><input name="depositRatio" value="{{ settings.depositRatio }}"></div>
+        <div class="field"><label>免费取消时限（小时）</label><input name="freeCancelHours" value="{{ settings.freeCancelHours }}"></div>
+        <div class="field"><label>临期取消扣分</label><input name="lateCancelPenalty" value="{{ settings.lateCancelPenalty }}"></div>
+        <div class="field"><label>指定 DM 加价（元/人）</label><input name="dmFee" value="{{ settings.dmFee }}"></div>
+        <div class="field"><label>DM 分成比例（暂未自动结算）</label><input name="dmRate" value="{{ settings.dmRate }}"></div>
+        <div class="field"><label>车队标签（逗号分隔）</label><input name="carTags" value="{{ settings.carTags|join(',') }}"></div>
+        <button class="btn btn-primary btn-block" type="submit">保存设置</button>
+      </form>
+    </div>
+
+    <h2>最近操作</h2>
+    <div class="panel">
+      {% for l in logs %}
+      <div class="sub" style="padding:3px 0">{{ l.by }}：{{ l.text }}</div>
+      {% else %}<p class="sub">还没有日志</p>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

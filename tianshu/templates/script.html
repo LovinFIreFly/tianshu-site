@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% block title %}{{ sc.title }} · {{ settings.shopName }}{% endblock %}
+{% block body %}
+<div class="two">
+  <div>
+    <div class="panel">
+      <div class="row" style="align-items:flex-start;gap:16px">
+        <div style="font-size:56px;line-height:1">{{ sc.emoji or '🎭' }}</div>
+        <div style="flex:1;min-width:200px">
+          <h1>{{ sc.title }}
+            {% if rating %}<span class="badge ok">★ {{ rating }}</span>{% endif %}
+            {% if sc.isNew %}<span class="badge new">上新</span>{% endif %}
+          </h1>
+          <div class="meta">{{ sc.players or '—' }} · {{ sc.dur or '时长待定' }} · 难度 {{ sc.diff or 3 }}/5 · {{ sc.type or '盒装' }}</div>
+          <div>{% for t in sc.tags or [] %}<span class="badge">{{ t }}</span>{% endfor %}</div>
+          <p class="mt" style="color:var(--text2)">{{ sc.desc or '门店还没写简介。' }}</p>
+          <div class="mt row" style="gap:10px">
+            <span class="price" style="font-size:20px">¥{{ sc.price|int }}<span class="sub">/人</span></span>
+            <form method="post" action="{{ url_for('public.fav', sid=sc.id) }}">
+              <button class="btn btn-sm" type="submit">{{ '❤ 已收藏' if sc.id|string in favs else '♡ 加进想玩' }}</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if sc.roles %}
+    <div class="panel">
+      <h3>角色（{{ sc.roles|length }} 个）
+        {% if sc.allowRolePick %}<span class="badge ok">可提前选角</span>
+        {% else %}<span class="pill">到店随机分配</span>{% endif %}
+      </h3>
+      <div class="row" style="gap:8px">
+        {% for r in sc.roles %}
+          <span class="pill">{{ r.name }}{% if r.name in taken %} ✓已选{% endif %}</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if sc.dms %}
+    <div class="panel">
+      <h3>可开本 DM</h3>
+      <div class="row" style="gap:8px">
+        {% for d in sc.dms %}<span class="pill">🗡 {{ d }}</span>{% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if settings.reviewsEnabled and reviews %}
+    <h2>玩家评价（{{ reviews|length }}）</h2>
+    {% for r in reviews %}
+    <div class="panel">
+      <div class="between">
+        <b>{{ r.username or '玩家' }}</b>
+        <span class="sub">{% for i in range(r.rating or 5) %}★{% endfor %} · {{ day_label(r.createdAt) }}</span>
+      </div>
+      <p style="color:var(--text2)">{{ r.text }}</p>
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+
+  <div>
+    <div class="panel">
+      <h3>预约这一本</h3>
+      <form method="post" action="{{ url_for('user.book') }}">
+        <input type="hidden" name="sid" value="{{ sc.id }}">
+        <div class="field"><label>日期</label>
+          <select name="ts">{% for d in days %}<option value="{{ d.ts }}">{{ d.label }}</option>{% endfor %}</select></div>
+        <div class="field"><label>开场时间</label>
+          <select name="time">
+            {% for t in ['13:00','15:30','19:00','20:30','22:00'] %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+          </select></div>
+        <div class="field"><label>人数（{{ lo }}-{{ hi }} 人）</label>
+          <input name="players" type="number" min="{{ lo }}" max="{{ hi }}" value="{{ lo }}"></div>
+        <div class="field"><label>玩法</label>
+          <select name="mode"><option value="拼车">拼车（跟别人凑一车）</option><option value="包车">包车（自己人一车）</option></select></div>
+
+        {% if dms %}
+        <div class="field"><label>指定 DM（每人 +¥{{ dm_fee|int }}）</label>
+          <select name="dmPhone">
+            <option value="">不用，店里安排</option>
+            {% for d in dms %}<option value="{{ d.phone }}">{{ d.name }}</option>{% endfor %}
+          </select></div>
+        {% endif %}
+
+        {% if sc.allowRolePick and sc.roles %}
+        <div class="field"><label>想演的角色（可选）</label>
+          <select name="role">
+            <option value="">到店再说</option>
+            {% for r in sc.roles %}{% if r.name not in taken %}<option value="{{ r.name }}">{{ r.name }}</option>{% endif %}{% endfor %}
+          </select></div>
+        {% endif %}
+
+        {% if me and coupons %}
+        <div class="field"><label>用优惠券</label>
+          <select name="couponId">
+            <option value="0">不用</option>
+            {% for c in coupons %}<option value="{{ c.id }}">减 ¥{{ c.amount }}{% if c.minAmount %}（满 {{ c.minAmount }} 可用）{% endif %}</option>{% endfor %}
+          </select></div>
+        {% endif %}
+
+        {% if me %}
+          <button class="btn btn-accent btn-block" type="submit">提交预约</button>
+          <p class="sub mt">定金 = 总价 × {{ (settings.depositRatio * 100)|int }}%，到店报核销码。</p>
+        {% else %}
+          <a class="btn btn-primary btn-block" href="{{ url_for('user.login', next=request.path) }}">登录后预约</a>
+        {% endif %}
+      </form>
+    </div>
+
+    {% if sessions %}
+    <div class="panel">
+      <h3>店里已排的场次</h3>
+      {% for s in sessions %}
+        <div class="between" style="padding:6px 0">
+          <span>{{ day_label(s.ts) }} {{ s.time }}</span>
+          <span class="pill">{{ s.roomId or '待定' }}</span>
+        </div>
+      {% endfor %}
+      <p class="sub">想约上面这些时段，直接在左边选同样的日期和时间就行</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

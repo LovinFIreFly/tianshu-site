@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}订单与日结 · {{ settings.shopName }}{% endblock %}
+{% block body %}
+<div class="between">
+  <h1>订单 / 日结</h1>
+  <a class="btn btn-sm" href="{{ url_for('admin.dashboard') }}">← 回后台</a>
+</div>
+
+<div class="row mt" style="gap:6px">
+  <a class="pill" href="{{ url_for('admin.orders') }}" style="{{ 'color:var(--accent)' if status=='all' }}">全部</a>
+  <a class="pill" href="{{ url_for('admin.orders', status='unpaid') }}" style="{{ 'color:var(--accent)' if status=='unpaid' }}">待付定金</a>
+  <a class="pill" href="{{ url_for('admin.orders', status='paid') }}" style="{{ 'color:var(--accent)' if status=='paid' }}">已付定金</a>
+  <a class="pill" href="{{ url_for('admin.orders', status='refunded') }}" style="{{ 'color:var(--accent)' if status=='refunded' }}">已退款</a>
+</div>
+
+<h2>每天收了多少钱（按场次日期）</h2>
+<div class="scroll panel">
+  <table>
+    <tr><th>场次日期</th><th>已收定金</th></tr>
+    {% for day, money in by_day %}
+    <tr><td>{{ day }}</td><td class="price">¥{{ money }}</td></tr>
+    {% else %}
+    <tr><td colspan="2" class="empty">还没有已支付的订单</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<h2>订单明细</h2>
+<div class="scroll panel">
+  <table>
+    <tr><th>#</th><th>客户</th><th>剧本</th><th>日期</th><th>总价</th><th>定金</th><th>状态</th></tr>
+    {% for o in rows %}
+    <tr>
+      <td class="sub">{{ o.id }}</td>
+      <td>{{ o.username }}</td>
+      <td>{{ o.title }}</td>
+      <td>{{ o.day }} {{ o.time }}</td>
+      <td>¥{{ o.amount or 0 }}</td>
+      <td class="price">¥{{ o.deposit or 0 }}</td>
+      <td>
+        {% if o.status == 'paid' %}<span class="badge ok">已付</span>
+        {% elif o.status == 'unpaid' %}<span class="badge warn">待付</span>
+        {% elif o.status == 'refunded' %}<span class="badge bad">已退</span>
+        {% else %}<span class="badge">{{ o.status }}</span>{% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="empty">没有订单</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

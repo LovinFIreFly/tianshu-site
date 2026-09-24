@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}{{ settings.shopName }} · 首页{% endblock %}
+{% block body %}
+
+<section class="hero">
+  <h1>{{ settings.shopName }}</h1>
+  <p>沉浸式剧本体验 · 一场好戏，从这儿开始</p>
+  {% if settings.notice %}<p class="sub" style="margin-top:10px">📣 {{ settings.notice }}</p>{% endif %}
+  <div class="stats">
+    <div><b>{{ stat.plays }}</b><span>累计开本</span></div>
+    <div><b>{{ scripts|length }}</b><span>在架剧本</span></div>
+    <div><b>{{ sessions|length }}</b><span>今日场次</span></div>
+    <div><b>{{ stat.income }}</b><span>已收定金(元)</span></div>
+  </div>
+  <div class="row" style="justify-content:center;margin-top:18px">
+    <a class="btn btn-primary" href="{{ url_for('public.scripts') }}">挑个本子</a>
+    <a class="btn btn-accent" href="{{ url_for('public.car') }}">去拼车</a>
+  </div>
+</section>
+
+<h2>🔥 热门本子</h2>
+{% if scripts %}
+<div class="grid">
+  {% for s in scripts %}
+  <a class="card juben" href="{{ url_for('public.script_detail', sid=s.id) }}">
+    <div class="cover">{{ s.emoji or '🎭' }}</div>
+    <h3>{{ s.title }}</h3>
+    <div class="meta">{{ s.players or '—' }} · {{ s.dur or '时长待定' }} · 难度 {{ s.diff or 3 }}/5</div>
+    <div class="foot-row">
+      <span class="price">¥{{ s.price|int }}<span class="sub">/人</span></span>
+      <span>
+        {% for t in (s.tags or [])[:2] %}<span class="badge">{{ t }}</span>{% endfor %}
+        {% if rating.get(s.id|string) %}<span class="badge ok">★ {{ rating[s.id|string] }}</span>{% endif %}
+      </span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="panel empty">剧本库还是空的 —— 用管理员账号登录，去「管理后台 → 剧本」加几个本子</div>
+{% endif %}
+
+<div class="two mt">
+  <div>
+    <h2>📅 今天的场次</h2>
+    {% if sessions %}
+      {% for s in sessions %}
+      <div class="panel between">
+        <div>
+          <b>{{ s.time }}</b> · {{ s.title }} <span class="pill">{{ s.roomId or '房间待定' }}</span>
+          <div class="sub">DM {{ s.dmName or '待安排' }} · 已报 {{ s.joined }}/{{ s.cap or '—' }} 人</div>
+        </div>
+        <a class="btn btn-sm" href="{{ url_for('public.script_detail', sid=s.sid) }}">去看看</a>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="panel empty">今天还没排场次，想玩就直接去剧本页挑时间</div>
+    {% endif %}
+  </div>
+  <div>
+    <h2>🚗 正在拼的车</h2>
+    {% if cars %}
+      {% for c in cars %}
+      <div class="panel">
+        <div class="between">
+          <b>{{ c.emoji }} {{ c.title }}</b><span class="pill">还差 {{ c.need }} 人</span>
+        </div>
+        <div class="sub">{{ c.day }} {{ c.time }} · 车主 {{ c.owner }} · {{ c.joined }}/{{ c.cap }}</div>
+      </div>
+      {% endfor %}
+      <a class="btn btn-block" href="{{ url_for('public.car') }}">去拼车大厅看全部</a>
+    {% else %}
+      <div class="panel empty">还没人开车，你可以开第一辆</div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

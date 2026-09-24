@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}剧本管理 · {{ settings.shopName }}{% endblock %}
+{% block body %}
+<div class="between">
+  <div>
+    <h1>剧本</h1>
+    <p class="sub">改价、上下架、填角色、开关「可提前选角」—— 客人能不能在网页上挑角色，就看那个开关</p>
+  </div>
+  <a class="btn btn-sm" href="{{ url_for('admin.dashboard') }}">← 回后台</a>
+</div>
+
+<div class="panel mt">
+  <h3>加一个新剧本</h3>
+  <form class="form-inline" method="post" action="{{ url_for('admin.script_new') }}">
+    <div class="field" style="flex:2 1 180px"><label>名字</label><input name="title" required placeholder="例：云使"></div>
+    <div class="field" style="flex:0 0 90px"><label>表情</label><input name="emoji" placeholder="☁️" maxlength="2"></div>
+    <div class="field" style="flex:0 0 110px"><label>单价(元)</label><input name="price" type="number" value="128"></div>
+    <button class="btn btn-accent" type="submit">建一个</button>
+  </form>
+  <p class="sub">建完在下面填角色、简介、上架状态（角色填了才能在网页上让客人选）</p>
+</div>
+
+{% for s in rows %}
+<div class="panel mt">
+  <form method="post" action="{{ url_for('admin.script_save', sid=s.id) }}">
+    <div class="between">
+      <b>{{ s.emoji or '🎭' }} {{ s.title }}</b>
+      <span class="sub">#{{ s.id }} · 已开 {{ s.plays or 0 }} 场</span>
+    </div>
+
+    <div class="row mt" style="gap:12px;align-items:flex-end">
+      <div class="field" style="flex:1 1 160px"><label>名字</label><input name="title" value="{{ s.title }}"></div>
+      <div class="field" style="flex:0 0 100px"><label>单价(元)</label><input name="price" type="number" value="{{ s.price|int }}"></div>
+      <div class="field" style="flex:0 0 120px"><label>人数</label><input name="players" value="{{ s.players or '' }}"></div>
+      <div class="field" style="flex:0 0 110px"><label>上架</label>
+        <select name="onSale"><option value="1" {{ 'selected' if s.onSale != False }}>上架中</option>
+          <option value="0" {{ 'selected' if s.onSale == False }}>已下架</option></select></div>
+      <div class="field" style="flex:0 0 140px"><label>可提前选角</label>
+        <select name="allowRolePick">
+          <option value="1" {{ 'selected' if s.allowRolePick }}>开（客人能选）</option>
+          <option value="0" {{ 'selected' if not s.allowRolePick }}>关（到店分配）</option>
+        </select></div>
+    </div>
+
+    <div class="field mt"><label>角色（逗号分隔，顺序就是列表顺序）</label>
+      <input name="roles" value="{{ (s.roles or [])|map(attribute='name')|join(', ') }}" placeholder="例：沈池, 阿澈, 江雪"></div>
+    <div class="field"><label>简介</label>
+      <textarea name="desc" rows="2">{{ s.desc or '' }}</textarea></div>
+
+    <button class="btn btn-primary" type="submit">保存这个本</button>
+    <a class="btn" href="{{ url_for('public.script_detail', sid=s.id) }}" target="_blank">看前台效果</a>
+  </form>
+</div>
+{% endfor %}
+
+{% if not rows %}
+<div class="panel empty">
+  剧本库是空的。默认没有内置剧本（每个店的本子都不一样），
+  你可以直接编辑 <b>data/scripts.json</b> 加几个，格式照抄：
+  <pre style="text-align:left;overflow-x:auto;margin-top:8px">[{"id":1,"title":"云使","emoji":"☁️","tags":["情感"],"players":"6人","price":128,
+  "desc":"简介…","onSale":true,"allowRolePick":true,
+  "roles":[{"name":"沈池"},{"name":"阿澈"}]}]</pre>
+  存盘后刷新本页即可。
+</div>
+{% endif %}
+{% endblock %}

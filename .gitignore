@@ -1,21 +1,30 @@
-# ===== 不入库的文件 =====
-# IDE / 助手数据
-.codebuddy/
+# ===== 不进仓库的文件 =====
 
-# 临时脚本（体检、提取脚本等）
+# 运行数据：这里有客人手机号，绝对不能提交
+data/
+备份-*.zip
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# IDE / 助手
+.codebuddy/
+.vscode/
+.idea/
+
+# 临时脚本（体检、提取用的）
 _*.js
+_*.py
 _check.js
 _c.js
 _f.mjs
 
-# 本地 Python 版运行时产生的数据（含账号与客户信息，绝不入库）
-data/
-__pycache__/
-*.pyc
-_smoke.py
+# 日志
+*.log
 
-# 旧方案备份（现在用 Pages Functions，不再需要 Worker）
-tianshu-worker.js
-
-# 微信小程序源码（暂缓上线；要开始做小程序时把下面这行删掉即可入库）
+# 微信小程序源码（暂时搁着，要做时把这行删掉即可入库）
 miniprogram/
