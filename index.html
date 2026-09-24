@@ -5591,6 +5591,15 @@ function sesGen(){
     }
     if(clash.length) return toast(`⚠️ 该房间这些天已有场次，请换房间或时段：${clash.slice(0,3).join('、')}${clash.length>3?' 等':''}`);
   }
+  /* 同行对照补充：同一 DM 同一时段也不能带两场（档期冲突提醒） */
+  if(dm){
+    const dclash = [];
+    for(let i=0;i<days;i++){
+      const ts = midnight() + i*DAY;
+      if(list.some(x => x.dm === dm && x.ts === ts && x.time === time && x.status !== 'cancelled')) dclash.push(dateLabel(ts));
+    }
+    if(dclash.length) return toast(`⚠️ 该 DM 在 ${time} 这些天已有场次：${dclash.slice(0,3).join('、')}${dclash.length>3?' 等':''}，请换时间或改派他人`);
+  }
   let n = 0;
   for(let i=0;i<days;i++){
     const ts = midnight() + i*DAY;
@@ -5652,10 +5661,20 @@ function sesSetDm(id, phone){
   const s = list.find(x => x.id === +id);
   if(!s) return;
   const u = lsAccounts().find(x => x.phone === phone);
-  s.dm = phone; s.dmName = u ? u.username : '';
-  saveSessions(list);
-  renderSessions();
-  toast(s.dmName ? `✅ 已指派 DM：${s.dmName}` : '已取消 DM 指派');
+  /* DM 档期冲突提醒：同一 DM 同一时段已有别的场次 */
+  const clash = phone ? list.find(x => x.id !== s.id && x.dm === phone && x.ts === s.ts &&
+    x.time === s.time && x.status !== 'cancelled') : null;
+  const doSet = ()=>{
+    s.dm = phone; s.dmName = u ? u.username : '';
+    saveSessions(list);
+    renderSessions();
+    toast(s.dmName ? `✅ 已指派 DM：${s.dmName}` : '已取消 DM 指派');
+  };
+  if(clash){
+    askConfirm(`⚠️ ${u ? u.username : '该 DM'} 在 ${dateLabel(s.ts)} ${s.time} 已有一场《${clash.title}》，仍要指派吗？`, doSet);
+    return;
+  }
+  doSet();
 }
 /* 43：给当天场次的客户发开本提醒 */
 function sesRemind(){
