@@ -1,38 +1,29 @@
 # -*- coding: utf-8 -*-
 """
-================================================================================
-  甜薯剧本杀 · 本地版（Python + Flask）
-================================================================================
-【一句话说明】
-  这是你线上网站（index.html + Cloudflare 云函数）的「本地版后端」：
-  逻辑一模一样，但用 Python 写、跑在你自己电脑上，数据全在 data 文件夹里。
+甜薯剧本杀 · 本地版（Flask）—— 2026.09 重新整理过一版
 
-【启动方式】
-  双击「启动本地网站.bat」→ 浏览器自动打开 http://localhost:8000
-  或者命令行： python app.py
-  第一次运行会自动安装运行库（Flask / rich / waitress），大约 10 秒。
+作者：甜薯（junbo）
+线上跑的是 index.html + Cloudflare Functions 那一套；这里是把同样的逻辑
+搬到 Python，数据落成 data/*.json，好处是想看什么直接拿记事本打开就行。
 
-【内置账号（首次运行自动创建，密码都是 123123）】
-  超级管理员 FireFly ｜ 管理员 FireFly2 ｜ DM dm测试 ｜ 客户 调试debug
+版本流水（给自己留的，别删）：
+  · 最早那份是 http.server 手搓的，路由写成一条 if/elif 长龙，加到第十几个接口
+    就改得手抖，所以 9 月下决心换成 Flask
+  · 换框架时顺手修了个老毛病：订单改完没存回文件（Python 里取出来的列表要存回"同一份"，
+    重新读一遍文件是拿不到你刚才改的）
+  · 还加过微信登录、拼车候补、优惠券、核销码 —— 都在下面，按块分了
+  · 待办：DM 分成比例想做成后台可配（现在还是结算时手填）；data 想加个自动备份
 
-【这个文件怎么读（从上到下就是一条数据流）】
-  1. 可调设置        ← 想改经营参数，先看这里
-  2. 数据存储        ← 所有数据 = data 目录下的 json 文件
-  3. 小工具          ← 密码加密、登录令牌、限流、通知
-  4. 业务规则 ★      ← 算价、定金、退款、拼车、信用分……改规则就改这一段
-  5. 读取类接口      ← 网页打开时要用它读数据
-  6. 登录注册接口
-  7. 客户动作接口    ← 下单、支付、退款、拼车、留言、评价、收藏
-  8. 员工后台 / DM   ← 核销、充值、发券、拉黑、改信用分、排场次
-  9. 网页与启动      ← 顺带看看浏览器里访问 http://localhost:8000/api/help
+不写代码也能用的读法：
+  · 调经营参数  → 搜「配置区」，改那几行；或者在网页后台点着改
+  · 有哪些接口  → 启动后开 http://localhost:8000/api/help
+  · 钱怎么算的  → 搜「老板最关心」，算价 / 定金 / 退款 / 扣信用分都在那一块
+  · 出问题咋办  → 文件最后有「排查小抄」，我平时就照那个查
 
-【小抄：我最常改的几件事】
-  · 定金比例/免费取消时限/指定DM加价 → 第 1 节 SETTINGS_DEFAULT，
-    改完删掉 data/settings.json 让它重新生成，或直接在网页后台改
-  · 剧本价格                          → 网页后台改，或 data/scripts.json
-  · 想加一个新接口                     → 第 7 节照抄一个函数，改两行即可
-  · 想知道有哪些接口                   → 浏览器打开 http://localhost:8000/api/help
-================================================================================
+三句提醒：
+  1) 本地版跟线上是两套数据，在这儿怎么试都不会影响店里在用的那个
+  2) data/ 里有客人手机号，整个文件夹别往群里发（吃过一次亏）
+  3) 依赖第一次运行会自动装；装不上一般是网络问题，重跑一次多半就好
 """
 
 import base64
@@ -53,7 +44,7 @@ import webbrowser
 # ============================== 0. 依赖自检 ==============================
 NEED = {'flask': 'Flask', 'rich': 'rich', 'waitress': 'waitress'}
 
-
+# 依赖这块懒得手写，缺啥让它自己补上（第一次运行会等十几秒）
 def _ensure_deps():
     """缺库就自动装（第一次运行需要，走的是国内镜像，很快）"""
     missing = []
@@ -87,10 +78,10 @@ for _s in (sys.stdout, sys.stderr):
 console = Console()
 
 # ============================== 1. 可调设置 ==============================
-PORT = 8000                      # 网页端口（被占用时会自动往后试 8001、8002…并在窗口里说明）
-OPEN_BROWSER = True              # 启动后自动打开浏览器（不想自动打开就改 False）
-LAN_MODE = False                 # 手机访问开关 ★
-#   · False（默认）= 只有这台电脑自己能打开 http://localhost:8000（最安全）
+PORT = 8000                      # 端口
+OPEN_BROWSER = True              # 万恶的弹窗
+LAN_MODE = False                 # 手机访问：平时用不上，要测手机再开
+#   · False（默认）= 只有这台电脑自己能打开 http://localhost:8000（最安全 何意味）
 #   · True         = 同一个 WiFi 下的手机也能打开，地址在启动窗口里会显示
 #                    （家里/店里测试手机端很好用；测试完建议改回 False）
 #   注意：localhost 永远只在"运行本程序的这台电脑"上有效，
@@ -106,7 +97,7 @@ DEMO_CODE = '1234'               # 本地通用验证码（线上会真发短信
 # 经营参数默认值（首次运行写进 data/settings.json，之后以那个文件为准）
 SETTINGS_DEFAULT = {
     "reviewsEnabled": True,      # 前台是否展示评分
-    "dmRate": 0.10,              # DM 分成比例
+    "dmRate": 0.10,              # DM 分成比例（TODO 还没接上去，现在是结算时手填的）
     "dmFee": 20,                 # 指定 DM 的加价（元/人）
     "depositRatio": 0.30,        # 定金比例（总价的 30%）
     "freeCancelHours": 24,       # 开场前 N 小时内取消算「临期」
@@ -124,8 +115,8 @@ SEED_USERS = [
 ]
 
 
-# ============================== 2. 数据存储 ==============================
-# 所有数据 = data/<名字>.json。想手动改数据，用记事本打开对应文件即可。
+# ==== 数据层：说白了就是 data/ 下的几个 json，没有数据库 ====
+# 想手动改数据？找到对应文件，记事本打开改完保存即可（改前先 python app.py --backup）。
 class Store:
     """读写 json 文件的小工具：先写临时文件再改名，断电也不会写坏数据"""
 
@@ -183,7 +174,7 @@ PROTECT_FIELDS = ('role', 'super', 'password', 'credit', 'creditLogs', 'banned',
                   'openid', 'first', 'invite', 'phone', 'username', 'email', 'oldPhone')
 
 
-# ============================== 3. 小工具 ==============================
+# ---- 零碎工具：密码、令牌、限流、通知。这些别随手改，改错了全站登不上 ----
 def now_ms():
     """当前时间（毫秒），和前端 JavaScript 的时间单位一致"""
     return int(time.time() * 1000)
@@ -386,9 +377,10 @@ def seed_if_empty():
         db.write('settings', SETTINGS_DEFAULT)
 
 
-# ============================== 4. 业务规则 ★ ==============================
-# 下面这段是「门店怎么算钱、怎么算规则」的地方。
-# 每一块都有注释说明，改错了也不会影响线上（两边数据是分开的）。
+# ============ ★ 老板最关心的一段：钱怎么算、分怎么扣 ============
+# 规矩只有一条：所有判断都放服务端。前端（网页）传过来的数字一律不信——
+# 之前有人按 F12 把 288 的本改成过 1 块钱，从那以后金额就只认这里算的。
+# 放心改：这儿改坏了也只影响本地这份，店里的线上版本不动。
 
 def player_range(script):
     """从「4-6人」里解析出最少/最多人数"""
@@ -534,6 +526,7 @@ def create_booking(user, body):
             return {'error': '优惠券不可用'}, 400
 
     # ④ 算钱：单价 = 剧本价 +（指定 DM 的加价）；定金 = 总价 × 定金比例 − 券
+    #    定金尾数四舍五入取整 —— 给客人报 229.6 这种数字，前台对账要骂人的
     price = float(sc.get('price') or 0) + (float(st['dmFee']) if body.get('dmPhone') else 0)
     amount = price * players
     deposit = round(amount * float(st['depositRatio']))
@@ -699,7 +692,10 @@ def car_action(user, body, action):
     return {'error': '未知操作'}, 400
 
 
-# ============================== 5. 读取类接口 ==============================
+# ---- 接口（读）：网页一打开就先调这一批 ----
+# 附：最早那份是 http.server 手搓的，36 个接口全靠一条 if/elif 长龙判断，
+#     加一个接口要改三个地方，改得手抖，9 月才换成现在这样（一个接口一个函数）。
+#     老文件还在移动硬盘里，真要对照再翻 —— 别再改回去了。
 app = Flask(__name__, static_folder=None)
 
 
@@ -948,7 +944,7 @@ def api_img(ym, name):
     return send_from_directory(os.path.join(IMG_DIR, ym), name)
 
 
-# ============================== 6. 登录 / 注册 ==============================
+# ---- 接口（登录注册）：令牌 = 身份证明，7 天过期，过期重新登 ----
 @app.post('/api/login')
 def api_login():
     """登录：返回令牌（令牌 = 身份证明，前端每次请求都带着它）"""
@@ -1052,7 +1048,7 @@ def api_register():
                    user={'phone': phone, 'username': name, 'role': 'user'}, invite=invite)
 
 
-# ============================== 7. 客户动作接口 ==============================
+# ---- 接口（客户）：下单、付款、退款、拼车、留言、评价、收藏 ----
 def need_login():
     """小助手：需要登录的接口开头调用它，返回响应就表示被拦住了"""
     u = me()
@@ -1065,7 +1061,7 @@ def need_login():
 
 @app.post('/api/booking/create')
 def api_booking_create():
-    """客户下单（服务端算价 + 校验余位与选角，自动生成待付定金订单）"""
+    """客户下单。算价、余位、选角全在这儿把关（网页传过来什么都不信）"""
     r = need_login()
     if r:
         return r
@@ -1379,11 +1375,11 @@ def api_account(action):
     return fail('未知操作', 404)
 
 
-# ============================== 8. 员工后台 / DM ==============================
+# ---- 接口（后台）：核销、充值、发券、拉黑、场次、结算 ----
 @app.post('/api/staff/<action>')
 def api_staff(action):
-    """员工后台：verify=核销 ban=拉黑 customer=看档案留痕 recharge=充值
-    coupon=发券 purge=清空业务数据 session=场次变更 settle=DM结算标记"""
+    """后台的几个动作：核销 / 拉黑 / 充值 / 发券 / 清空数据 / 场次变更 / 结算标记
+    （都是店里天天要点的，加新功能照抄一段，注意别把权限判断删了）"""
     if not is_staff():
         return fail('需要员工权限', 403)
     u, b = me(), body()
@@ -1596,7 +1592,7 @@ def api_notice_read():
     return jsonify(ok=True)
 
 
-# ============================== 9. 网页与数据整份读写 ==============================
+# ---- 网页 & 整份读写 & 启动 ----
 @app.put('/api/data/<key>')
 def api_data_put(key):
     """整份覆盖写数据（后台保存 / 多端同步用）；账号表有多重护栏，防止误清空"""
@@ -1638,6 +1634,8 @@ def api_data_put(key):
                 m['password'] = x.get('password') or o.get('password')
                 out.append(m)
             payload = out
+        # 三道护栏都是被坑过才加的：① 混进没手机号的记录 ② 一次砍掉一半账号 ③ 非员工改别人
+        # TODO 并发还是"读-改-写"，两个人同时保存理论上会丢一条；店里这点量先这么放着
         if any(not str(x.get('phone') or '') for x in payload):    # 没有手机号的非法记录
             return fail('提交中含缺少手机号的非法账号记录，已拒绝写入，请刷新页面后重试', 400)
         if len(cloud) >= 2 and len(payload) < len(cloud) / 2:      # 一次删一半以上账号
@@ -1711,7 +1709,7 @@ def api_remove(key):
 
 @app.get('/api/help')
 def api_help():
-    """（就是本页）所有接口一览，由代码自动生成 —— 想了解有哪些功能就看这里"""
+    """就是本页。接口清单是从代码里自动扒出来的，改完刷新一下就有"""
     rows = []
     for rule in sorted(app.url_map.iter_rules(), key=lambda r: str(r)):
         if not str(rule).startswith('/api') or str(rule) == '/api/help':
@@ -1805,12 +1803,51 @@ def pause_before_exit():
         pass
 
 
+def show_stats():
+    """--stats：随手写的小工具。看一眼库里有多少东西、账号都是谁（排查问题先跑它）"""
+    def n(key):
+        v = db.read(key)
+        return len(v) if isinstance(v, list) else (1 if isinstance(v, dict) else 0)
+
+    print('数据目录：%s' % DATA_DIR)
+    for label, key in (('账号', 'users'), ('剧本', 'scripts'), ('预约', 'bookings'), ('订单', 'pays'),
+                       ('场次', 'sessions'), ('评价', 'reviews'), ('留言', 'messages'),
+                       ('通知', 'notices'), ('优惠券', 'coupons'), ('操作日志', 'logs')):
+        print('  %-8s %s' % (label, n(key)))
+    users = db.rows('users')
+    if users:
+        print('账号明细：')
+        for u in users:
+            print('  %-12s %-13s %-6s 信用 %s' % (u.get('username'), u.get('phone'),
+                                               role_of(u), u.get('credit', 100)))
+
+
+def do_backup():
+    """--backup：把 data 整个打包成 zip 放在本目录（手改数据之前先跑一次，能救命）"""
+    import shutil
+    if not os.path.isdir(DATA_DIR):          # 还没启动过、没有 data 文件夹的情况
+        print('还没有 data 文件夹（没启动过服务？），没什么可备份的')
+        return
+    name = os.path.join(BASE_DIR, '备份-%s' % time.strftime('%Y%m%d-%H%M'))
+    shutil.make_archive(name, 'zip', DATA_DIR)
+    print('已备份：%s.zip' % name)
+
+
 def main():
     """启动服务
-    常用参数（可选）：  python app.py --lan            开手机访问
-                       python app.py --no-browser    不自动开浏览器
-                       python app.py --port 8080     换端口"""
+    平时双击 bat 就够了；自己敲命令时常用这几个：
+        python app.py --stats        看数据统计（不改任何东西）
+        python app.py --backup       把 data 打包备份
+        python app.py --lan          让手机也能访问（同一个 WiFi）
+        python app.py --port 8080    换端口
+        python app.py --no-browser   不自动开浏览器"""
     global OPEN_BROWSER, LAN_MODE, PORT
+    if '--stats' in sys.argv:
+        show_stats()
+        return
+    if '--backup' in sys.argv:
+        do_backup()
+        return
     if '--no-browser' in sys.argv:
         OPEN_BROWSER = False
     if '--lan' in sys.argv:
@@ -1844,6 +1881,16 @@ def main():
         pause_before_exit()
 
 
+# ============ 排查小抄（我平时出问题就照这个查，双击黑窗口一闪也看这里）============
+# 打不开网页 ERR_CONNECTION_REFUSED → 黑窗口没开或被你关了，先启动再看
+# 黑窗口闪一下就消失               → 去文件夹里直接双击 bat，看它停在哪儿报错
+# 登录一直说密码错                 → python app.py --stats 看账号在不在；密码让超管重置
+# 手机打不开                       → LAN_MODE 改 True 重启；确认手机和电脑同一个 WiFi
+# 想手改 data 又怕改坏             → 先 python app.py --backup，再动 json
+# 突然一堆 403                     → 令牌过期了（7 天），退出重新登录就行
+# 提示端口被占用                   → 上次的窗口没关干净；不想找就随它，会自动用 8001
+
+# —— 甜薯 · 2026.09 打烊之后写的
 if __name__ == '__main__':
     try:
         main()
