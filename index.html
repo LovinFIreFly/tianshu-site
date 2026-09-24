@@ -43,6 +43,8 @@ a{color:inherit;text-decoration:none}
 :/* hidden 属性必须真正生效：作者样式里的 display（如 .btn{display:inline-flex}）会覆盖浏览器默认的 [hidden]，
    导致“该隐藏的元素仍然显示”。这条全局规则杜绝此类问题。 */
 [hidden]{display:none !important}
+/* 双保险：非员工账号（客户 / 未登录）强制隐藏「返回工作台」按钮 */
+body:not(.is-staff) #btn-back-staff{display:none !important}
 :selection{background:rgba(139,92,246,.4)}
 ::-webkit-scrollbar{width:10px;height:10px}
 ::-webkit-scrollbar-thumb{background:#2e2850;border-radius:99px}
@@ -2345,6 +2347,7 @@ function loginAs(u){
   state.isDm    = role === 'dm';
   closeTopModal();
   logAct(`登录成功（${u.username} · ${ROLE_NAME[role] || role}）`);
+  refreshBackBtn();
   if(state.isAdmin){
     state.admTab = 'dash';
     go('page-admin'); renderAdmin(); navigate('admin');
@@ -2522,31 +2525,34 @@ function doLogout(){
   localStorage.removeItem('ts_token');     // 清除服务端令牌
   state.user = null;
   state.isAdmin = false; state.isDm = false;
+  refreshBackBtn();                        // 退出后按钮立即消失
   navigate('login');
   toast('已退出登录');
 }
-/* 员工端（管理员 / DM）切换到用户界面，并保留一个回工作台的入口（客户账号不显示） */
+/* 「返回工作台」按钮：唯一的显示判定入口
+   规则：当前登录者是 管理员/超级管理员/DM 才显示；客户永远不显示 */
+function refreshBackBtn(){
+  const btn = $('#btn-back-staff'); if(!btn) return;
+  const isStaff = !!(state.user && (state.isAdmin || state.isDm));
+  btn.hidden = !isStaff;
+  if(isStaff) btn.textContent = state.isAdmin ? '🛡️ 返回管理端' : '🗡️ 返回 DM 端';
+  /* CSS 双保险：非员工账号强制隐藏，即使出现状态异常也显示不出来 */
+  document.body.classList.toggle('is-staff', isStaff);
+}
 function enterFrontFromStaff(){
   enterApp();
-  const btn = $('#btn-back-staff');
-  if(!btn) return;
-  if(state.isAdmin || state.isDm){
-    btn.hidden = false;
-    btn.textContent = state.isAdmin ? '🛡️ 返回管理端' : '🗡️ 返回 DM 端';
-  }else{
-    btn.hidden = true;
-  }
+  refreshBackBtn();
   toast('已进入用户界面');
 }
 function backStaff(){
-  if(!state.isAdmin && !state.isDm){ go('page-login'); return; }
-  $('#btn-back-staff').hidden = true;
-  if(state.isAdmin){ state.admTab = 'dash'; go('page-admin'); renderAdmin(); }
-  else { state.dmTab = 'msgs'; go('page-dm'); renderDm(); }
+  refreshBackBtn();
+  if(!state.isAdmin && !state.isDm){ navigate('login'); return; }
+  if(state.isAdmin){ state.admTab = 'dash'; go('page-admin'); renderAdmin(); navigate('admin'); }
+  else { state.dmTab = 'msgs'; go('page-dm'); renderDm(); navigate('dm'); }
 }
 function enterApp(){
-  go('page-app'); renderAll(); switchTab('home');
-  const back = $('#btn-back-staff'); if(back) back.hidden = true;
+  go('page-app'); renderAll(); switchTabSilent('home');
+  refreshBackBtn();
   const u = state.user;
   navigate('home');                       // 进入客户端时同步网址
   /* 展示统一用昵称（没有昵称时回落到账号名） */
@@ -3341,6 +3347,7 @@ function switchTab(name){
 function admLogout(){
   localStorage.removeItem('ts_user'); state.user = null;
   state.isAdmin = false; state.isDm = false;
+  refreshBackBtn();
   go('page-login'); toast('已退出管理端');
 }
 const ADM_TABS = ['dash','bookings','orders','scripts','reviews','users','customers','msgs','notice','community','venue','logs','backup'];
@@ -4242,6 +4249,7 @@ function msgDel(id){
 function dmLogout(){
   localStorage.removeItem('ts_user'); state.user = null;
   state.isAdmin = false; state.isDm = false;
+  refreshBackBtn();
   go('page-login'); toast('已退出 DM 端');
 }
 function renderDm(){
@@ -5960,9 +5968,10 @@ async function restoreSession(){
       lsSet('ts_user', state.user);
       state.isAdmin = r === 'admin' || r === 'super';
       state.isDm    = r === 'dm';
-      if(state.isAdmin){ state.admTab = 'dash'; showPage('page-admin'); renderAdmin(); navigate('admin'); }
-      else if(state.isDm){ state.dmTab = 'msgs'; showPage('page-dm'); renderDm(); navigate('dm'); }
+      if(state.isAdmin){ state.admTab = 'dash'; go('page-admin'); renderAdmin(); navigate('admin'); }
+      else if(state.isDm){ state.dmTab = 'msgs'; go('page-dm'); renderDm(); navigate('dm'); }
       else { enterApp(); navigate('home'); }
+      refreshBackBtn();
       return true;
     }catch(e){ /* 网络异常：回落本地 */ }
   }
@@ -5973,9 +5982,10 @@ async function restoreSession(){
   state.isDm    = r === 'dm';
   state.user = { phone:acc.phone, username:acc.username, role:r };
   lsSet('ts_user', state.user);
-  if(state.isAdmin){ state.admTab = 'dash'; showPage('page-admin'); renderAdmin(); navigate('admin'); }
-  else if(state.isDm){ state.dmTab = 'msgs'; showPage('page-dm'); renderDm(); navigate('dm'); }
+  if(state.isAdmin){ state.admTab = 'dash'; go('page-admin'); renderAdmin(); navigate('admin'); }
+  else if(state.isDm){ state.dmTab = 'msgs'; go('page-dm'); renderDm(); navigate('dm'); }
   else { enterApp(); navigate('home'); }
+  refreshBackBtn();
   return true;
 }
 window.addEventListener('load', async ()=>{
