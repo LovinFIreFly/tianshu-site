@@ -839,7 +839,7 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
     <h2>注册账号</h2>
     <p class="sub">验证通过后即可创建账号</p>
     <div class="field"><span class="ico" aria-hidden="true">📱</span><input id="reg-phone" type="tel" maxlength="11" placeholder="手机号" aria-label="手机号"></div>
-    <div class="field"><span class="ico" aria-hidden="true">📧</span><input id="reg-email" type="email" placeholder="邮箱（填了就用邮箱收验证码）" aria-label="邮箱"></div>
+    <div class="field"><span class="ico" aria-hidden="true">📧</span><input id="reg-email" type="email" placeholder="邮箱（必填，用于接收验证码）" aria-label="邮箱"></div>
     <div class="code-row">
       <div class="field"><span class="ico" aria-hidden="true">🔑</span><input id="reg-code" type="tel" maxlength="6" placeholder="验证码" aria-label="验证码"></div>
       <button class="btn-code" id="btn-code-reg" data-action="send-code" data-t="reg">获取验证码</button>
@@ -869,7 +869,7 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
     <h2>找回密码</h2>
     <p class="sub">验证手机号后即可重置密码</p>
     <div class="field"><span class="ico" aria-hidden="true">📱</span><input id="forgot-phone" type="tel" maxlength="11" placeholder="注册手机号" aria-label="手机号"></div>
-    <div class="field"><span class="ico" aria-hidden="true">📧</span><input id="forgot-email" type="email" placeholder="邮箱（填了就用邮箱收验证码）" aria-label="邮箱"></div>
+    <div class="field"><span class="ico" aria-hidden="true">📧</span><input id="forgot-email" type="email" placeholder="邮箱（必填，用于接收验证码）" aria-label="邮箱"></div>
     <div class="code-row">
       <div class="field"><span class="ico" aria-hidden="true">🔑</span><input id="forgot-code" type="tel" maxlength="6" placeholder="验证码" aria-label="验证码"></div>
       <button class="btn-code" id="btn-code-forgot" data-action="send-code" data-t="forgot">获取验证码</button>
@@ -2392,22 +2392,25 @@ function onRegInput(){
 }
 async function doRegister(){
   const phone    = $('#reg-phone').value.trim();
+  const email    = $('#reg-email').value.trim();
   const code     = $('#reg-code').value.trim();
   const username = $('#reg-name').value.trim();
   const pwd      = $('#reg-pwd').value, pwd2 = $('#reg-pwd2').value;
   const invite   = $('#reg-invite').value.trim();
   if(!/^1\d{10}$/.test(phone)) return toast('请输入正确的 11 位手机号');
-  if(!code) return toast('请输入短信验证码');
+  if(!email) return toast('请填写邮箱（用于接收验证码）');
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast('邮箱格式不正确');
+  if(!code) return toast('请输入验证码');
   if(!/^[\u4e00-\u9fa5A-Za-z0-9_]{2,16}$/.test(username)) return toast('用户名需 2-16 位（中文/字母/数字/下划线）');
   if(pwd.length < 6) return toast('密码至少 6 位');
   if(pwd !== pwd2) return toast('两次输入的密码不一致');
-  /* 服务端模式：由服务端校验验证码并落库 */
+  /* 服务端模式：由服务端校验验证码并落库（必须带上 email，服务端按邮箱匹配验证码） */
   if(useWorker()){
     try{
       const res = await fetch(`${CLOUD.api}/register`, {
         method:'POST',
         headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ phone, username, password:pwd, code })
+        body: JSON.stringify({ phone, email, username, password:pwd, code })
       });
       const d = await res.json().catch(()=>({}));
       if(!res.ok || !d.ok) return toast(d.error || '注册失败');
