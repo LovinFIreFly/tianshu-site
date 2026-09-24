@@ -40,6 +40,10 @@ const APPEND_KEYFIELD = { users: 'phone' };
 const STAFF_ONLY = ['settings', 'rooms', 'sessions', 'scripts', 'taglib', 'badwords', 'notices'];
 
 const MAX_BODY = 8 * 1024 * 1024;
+/* ---------- 运行期用到的常量（缺一个都会让接口 500，务必保留） ---------- */
+const MAX_IMG = 700 * 1024;                       // 单张图片上传上限
+const NEVER_READ = ['codes', 'wx'];               // 这两个文件任何情况下都不对外读取
+const DEFAULT_BADWORDS = ['傻逼', '傻b', '垃圾玩意', '去死', '死全家', '骗子店', '滚蛋', '脑残'];
 
 /* ---------- 36：CORS 白名单（不再对全网开放） ----------
    允许：自己的 Pages 域名 / 自有域名 / 本地调试 / 小程序（无 Origin）
@@ -661,7 +665,10 @@ async function verifyCode(env, phone, code, purpose) {
   return { ok: true };
 }
 
-  /* ================= 40/41：算术人机验证（防脚本注册 / 刷验证码） =================
+  /* 账号自助接口（改密码/换绑手机/注销）使用 verifyCode 的别名，参数顺序一致 */
+const checkCode = verifyCode;
+
+/* ================= 40/41：算术人机验证（防脚本注册 / 刷验证码） =================
    题目与答案哈希存 codes.json，5 分钟过期，一次性消费 */
 function capHash(v) {
   let h = 5381;

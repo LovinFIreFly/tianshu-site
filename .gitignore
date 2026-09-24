@@ -1,0 +1,15 @@
+# ===== 不入库的文件 =====
+# IDE / 助手数据
+.codebuddy/
+
+# 临时脚本（体检、提取脚本等）
+_*.js
+_check.js
+_c.js
+_f.mjs
+
+# 旧方案备份（现在用 Pages Functions，不再需要 Worker）
+tianshu-worker.js
+
+# 微信小程序源码（暂缓上线；要开始做小程序时把下面这行删掉即可入库）
+miniprogram/
