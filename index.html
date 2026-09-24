@@ -1904,7 +1904,11 @@ const CLOUD = {
     logs:     'logs.json',
     posts:    'posts.json',
     badwords: 'badwords.json',
-    scripts:  'scripts.json'   // 管理端新增/编辑的剧本（之前只在本地，客户看不到）
+    scripts:  'scripts.json',  // 管理端新增/编辑的剧本（之前只在本地，客户看不到）
+    wants:    'wants.json',    // 拼车需求（客户端发布，管理端撮合台读取）
+    waitlist: 'waitlist.json', // 候补队列
+    coupons:  'coupons.json',  // 优惠券
+    settles:  'settles.json'   // DM 结算单
   }
 };
 /* ---------- 云端配置：Token 只存本机，网页源码不包含任何密钥 ---------- */
@@ -2361,15 +2365,21 @@ async function cloudSync(force){
     cloudGet('reviews'), cloudGet('settings'), cloudGet('notices'), cloudGet('rooms'),
     cloudGet('sessions'), cloudGet('carmsgs'), cloudGet('taglib'), cloudGet('posts'), cloudGet('scripts')
   ]);
-  let users, bookings, messages, pays, logs, favs, dmleave, badwords;
+  let users, bookings, messages, pays, logs, favs, dmleave, badwords, wants, coupons, settles;
   if(staffNow){
     const st1 = await Promise.all([
       cloudGet('bookings'), cloudGet('messages'), cloudGet('dmleave'),
       isAdm ? cloudGet('users') : null, isAdm ? cloudGet('pays') : null,
-      isAdm ? cloudGet('logs') : null, isAdm ? cloudGet('favs') : null, isAdm ? cloudGet('badwords') : null
+      isAdm ? cloudGet('logs') : null, isAdm ? cloudGet('favs') : null, isAdm ? cloudGet('badwords') : null,
+      isAdm ? cloudGet('wants') : null, isAdm ? cloudGet('coupons') : null, isAdm ? cloudGet('settles') : null
     ]);
     bookings = st1[0]; messages = st1[1]; dmleave = st1[2];
     users = st1[3]; pays = st1[4]; logs = st1[5]; favs = st1[6]; badwords = st1[7];
+    wants = st1[8]; coupons = st1[9]; settles = st1[10];
+    /* 运营工具需要的数据：拼车需求（撮合台）、优惠券、结算单 */
+    if(Array.isArray(wants))   lsSet('ts_wants', wants.filter(w => w && w.status === 'open'));
+    if(Array.isArray(coupons)) lsSet('ts_coupons', coupons);
+    if(Array.isArray(settles)) lsSet('ts_settles', settles);
   }else if(state.user && state.user.phone){
     /* 客户：自己的档案 / 预约 / 订单 / 留言 / 券 / 收藏 + 公开聚合与名册 */
     const mine = await Promise.all([
@@ -7061,11 +7071,28 @@ function isSuper(){
   const u = lsAccounts().find(x => x.phone === state.user.phone);
   return !!(u && u.super === true);
 }
-/* 按用户名直接登录（调试快捷键用） */
-function quickLogin(username){
-  const u = lsAccounts().find(x => x.username === username);
-  if(!u) return toast('账号不存在：' + username);
-  loginAs(u);
+/* 快捷登录（调试快捷键用）：必须向服务端换取令牌，否则只是"看起来登录了"，
+   所有接口仍按匿名处理 → 员工数据全部 403 */
+async function quickLogin(username){
+  const acc = lsAccounts().find(x => x.username === username);
+  const PWD = '123123';                       // 内置演示账号统一密码
+  if(useWorker()){
+    const tries = acc ? [acc.phone, acc.username] : [username];
+    for(const account of tries){
+      const d = await apiPost('/login', { account, password: PWD });
+      if(d.ok && d.token){
+        lsSet('ts_token', d.token);
+        loginAs(d.user);
+        toast('🔐 已通过服务端校验，欢迎回来 ' + d.user.username);
+        cloudSync(true);
+        return;
+      }
+    }
+    toast('⚠️ 快捷登录失败：改过密码的账号请手动登录一次（默认密码 123123）');
+    return;
+  }
+  if(!acc) return toast('账号不存在：' + username);
+  loginAs(acc);
 }
 /* ===== 全局错误兜底：任何一处异常只提示，不再让整站事件失效 ===== */
 window.addEventListener('error', e=>{

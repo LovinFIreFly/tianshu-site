@@ -25,7 +25,9 @@ const DEMO_CODE = '1234';          // 演示用短信验证码（正式应接短
 const TOKEN_DAYS = 7;              // 38：令牌有效期由 30 天缩短为 7 天
 
 const ALLOWED = ['users', 'bookings', 'reviews', 'settings', 'messages', 'notices',
-  'rooms', 'sessions', 'carmsgs', 'pays', 'favs', 'taglib', 'dmleave', 'posts', 'badwords', 'logs', 'scripts'];
+  'rooms', 'sessions', 'carmsgs', 'pays', 'favs', 'taglib', 'dmleave', 'posts', 'badwords', 'logs', 'scripts',
+  /* v3 新增：拼车需求 / 候补队列 / 优惠券 / DM 结算单 */
+  'wants', 'waitlist', 'coupons', 'settles'];
 
 /* 访客无需密钥即可写入的业务数据 */
 const PUBLIC_WRITE = ['bookings', 'messages', 'reviews', 'posts', 'favs', 'carmsgs', 'pays', 'users'];
