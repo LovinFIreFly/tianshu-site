@@ -16,7 +16,11 @@
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://dummyimage.com/300x300/8b5cf6/ffffff&text=%F0%9F%8D%A0">
 <!-- 124：PWA（可直接添加到手机桌面） -->
-<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22%E7%94%9C%E8%96%AF%E5%89%A7%E6%9C%AC%E6%9D%80%22%2C%22short_name%22%3A%22%E7%94%9C%E8%96%AF%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230e0c1a%22%2C%22theme_color%22%3A%22%238b5cf6%22%7D">
+<!-- 52：PWA 正式文件（可添加到手机桌面、离线打开外壳） -->
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
 :root{
   color-scheme:dark;
@@ -866,7 +870,7 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
     <div class="field"><span class="ico" aria-hidden="true">🔒</span><input id="reg-pwd2" type="password" placeholder="确认密码" aria-label="确认密码"></div>
     <p id="reg-pwd-tip" class="hint-dev" style="text-align:left"></p>
     <div class="field"><span class="ico" aria-hidden="true">🎁</span><input id="reg-invite" placeholder="邀请码（选填）" aria-label="邀请码"></div>
-    <p class="hint-dev">🎁 邀请码功能即将上线，当前填写暂不生效</p>
+    <p class="hint-dev">🎁 填写好友的邀请码，你和好友各得一张 ¥15 定金抵扣券</p>
     <div class="agree on" data-action="toggle-agree" role="checkbox" aria-checked="true" tabindex="0">
       <span class="dot" aria-hidden="true"></span>
       <span>我已阅读并同意 <a class="lnk" data-action="show-agreement">《用户协议》</a> 与 <a class="lnk" data-action="show-privacy">《隐私政策》</a></span>
@@ -954,6 +958,8 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
       <div id="order-list"></div>
       <div class="sec"><b>📊 我的账单</b><span>按月统计</span></div>
       <div class="adm-panel" id="bill-box"></div>
+      <div class="sec"><b>🎟️ 我的优惠券</b><span>定金抵扣</span></div>
+      <div class="adm-panel" id="coupon-box"></div>
     </div>
 
     <!-- 用户留言 -->
@@ -980,6 +986,20 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
         <div class="chips" id="car-chips"></div>
         <div style="flex:1"></div>
         <span class="car-sub" id="car-count" style="margin:0"></span>
+      </div>
+      <!-- 14：发布拼车需求，系统自动撮合 -->
+      <div class="adm-panel">
+        <h3>发起拼车需求 <span class="car-sub" style="margin:0">系统自动匹配同剧本同时段的玩家</span></h3>
+        <div class="form-grid">
+          <div class="f-item"><label>剧本</label><div class="box"><select id="want-script"></select></div></div>
+          <div class="f-item"><label>日期</label><div class="box"><select id="want-day"></select></div></div>
+          <div class="f-item"><label>时间</label><div class="box"><select id="want-time"></select></div></div>
+          <div class="f-item"><label>人数</label><div class="box"><input id="want-players" type="number" min="1" max="8" value="1"></div></div>
+        </div>
+        <div class="f-item" style="margin-top:10px"><label>备注（选填）</label><div class="box"><input id="want-note" placeholder="如：新手求带 / 只想玩情感本" maxlength="60"></div></div>
+        <button class="btn btn-accent btn-sm" style="margin-top:12px;width:100%;height:42px" data-action="want-create">📣 发布需求并自动匹配</button>
+        <div id="want-result" style="margin-top:12px"></div>
+        <p class="car-sub">同一剧本 + 同一时段 + 同一天的需求会自动互相通知；店家也可以在后台帮忙撮合成团。</p>
       </div>
       <div id="car-recommend"></div>
       <div class="sec"><b>全部车队</b><span>点击卡片查看详情 / 上车</span></div>
@@ -1054,6 +1074,7 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
       <button class="navi" data-action="adm-tab" data-t="customers">📋 客户信息</button>
       <button class="navi" data-action="adm-tab" data-t="msgs">💬 用户留言</button>
       <button class="navi" data-action="adm-tab" data-t="venue">🏠 场地预约</button>
+      <button class="navi" data-action="adm-tab" data-t="ops">🧩 运营工具</button>
       <button class="navi" data-action="adm-tab" data-t="notice">📢 消息中心</button>
       <button class="navi" data-action="adm-tab" data-t="community">🌍 社区管理</button>
       <button class="navi" data-action="adm-tab" data-t="dmfiles">📈 DM 档案</button>
@@ -1101,6 +1122,8 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
         <div class="adm-toolbar">
           <div class="chips" id="adm-bk-chips"></div>
           <div style="flex:1"></div>
+          <div class="f-item" style="width:180px;margin:0"><div class="box"><input id="adm-verify-code" placeholder="输入 6 位核销码" maxlength="6" inputmode="numeric"></div></div>
+          <button class="btn btn-primary btn-sm" data-action="adm-verify">✅ 核销</button>
           <button class="btn btn-ghost btn-sm" data-action="adm-export">📥 导出 CSV</button>
         </div>
         <div class="bk-wrap"><table class="bk-table" id="adm-bk-table"></table></div>
@@ -1170,6 +1193,12 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
           <span class="car-sub" id="adm-msg-count" style="margin:0"></span>
         </div>
         <div id="adm-msg-list"></div>
+      </section>
+      <!-- 运营工具：撮合台 / DM 结算 / 财务对账 / 费率 / 发券 -->
+      <section id="adm-ops" hidden>
+        <h2>运营工具</h2>
+        <p class="sub">拼车撮合 · DM 结算 · 财务对账 · 费率设置 · 优惠券发放</p>
+        <div id="ops-body"></div>
       </section>
       <!-- 消息中心 -->
       <section id="adm-notice" hidden>
@@ -1352,6 +1381,12 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
       <section id="dm-today" hidden>
         <h2>今日场次</h2>
         <p class="sub">今日你要带的场 · 可为玩家分配角色</p>
+        <div class="adm-toolbar">
+          <div class="f-item" style="width:180px;margin:0"><div class="box"><input id="dm-verify-code" placeholder="输入 6 位核销码" maxlength="6" inputmode="numeric"></div></div>
+          <button class="btn btn-primary btn-sm" data-action="adm-verify">✅ 核销到场</button>
+          <div style="flex:1"></div>
+          <span class="car-sub" style="margin:0">客户在「我的预约」里能看到自己的核销码</span>
+        </div>
         <div id="dm-today-list"></div>
       </section>
       <section id="dm-sched" hidden>
@@ -1535,6 +1570,7 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
           <div class="f-check">
             <button type="button" id="scf-newbie" data-action="scf-toggle" data-f="newbie">🌱 新手友好</button>
             <button type="button" id="scf-onsale" data-action="scf-toggle" data-f="onSale">🛒 上架中</button>
+            <button type="button" id="scf-rolepick" data-action="scf-toggle" data-f="allowRolePick">🎭 可提前选角</button>
           </div>
         </div>
         <div class="f-item full"><label>剧本简介</label><div class="box ta"><textarea id="scf-desc" placeholder="写一段吸引人的介绍…"></textarea></div></div>
@@ -1688,11 +1724,14 @@ const state = {
   carFilter:    '全部',
   curCar:       null,
   orderFilter:  '全部',
+  agg:          null,       // 客户端的服务端聚合数据（评分/余位/车队/榜单，不含他人手机号）
   /* 场地排期 */
   sesDay:       0,
   /* 剧本筛选 */
   favOnly:      false,
-  pickDm:       '',          // 指定 DM 的手机号
+  pickDm:       '',          // 指定 DM
+  pickRole:     '',          // 线上选角
+  pickCouponId: 0,           // 使用的优惠券
   dmChoice:     'random',    // random=随机（门店指派） / assign=指定
   avatarDraft:  '',          // 编辑资料页里刚上传的头像
   rvDims:       {},          // 评价分维度
@@ -1759,8 +1798,8 @@ function switchTabSilent(name){      // 路由触发时不再回写地址，避�
   document.querySelectorAll('.nav .links button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
   if(name === 'msg')  renderMsgTab();
   if(name === 'car')  renderCarTab();
-  if(name === 'me')   renderProfileEditor();
-  if(name === 'book'){ renderMyOrders(); renderMyBills(); }
+  if(name === 'me'){  renderProfileEditor(); renderSecurityPanel(); }
+  if(name === 'book'){ renderMyOrders(); renderMyBills(); renderMyCoupons(); }
   if(name === 'comm') renderCommTab();
   window.scrollTo(0, 0);
 }
@@ -1910,6 +1949,7 @@ function saveCarMsgs(m){
   if(CLOUD.enabled) saveBiz('carmsgs', m);
 }
 function getPays(){ const p = lsGet('ts_pays', []); return Array.isArray(p) ? p : []; }
+function getCoupons(){ const c = lsGet('ts_coupons', []); return Array.isArray(c) ? c : []; }
 function savePays(p){
   lsSet('ts_pays', p);
   if(CLOUD.enabled) saveBiz('pays', p);
@@ -1918,14 +1958,16 @@ function savePays(p){
 function getFavs(){ const f = lsGet('ts_favs', {}); return (f && typeof f === 'object') ? f : {}; }
 function saveFavs(f){ lsSet('ts_favs', f); if(CLOUD.enabled) cloudPut('favs', f).catch(()=>{}); }
 function myFavs(){ const p = state.user ? state.user.phone : ''; return (getFavs()[p] || []); }
-function toggleFav(sid){
+async function toggleFav(sid){
   if(!state.user) return toast('登录后即可收藏');
   const f = getFavs(), p = state.user.phone;
   const list = f[p] || [];
   const i = list.indexOf(+sid);
   if(i >= 0){ list.splice(i, 1); toast('已取消收藏'); }
   else{ list.push(+sid); toast('❤️ 已加入我的想玩清单'); }
-  f[p] = list; saveFavs(f);
+  f[p] = list; lsSet('ts_favs', f);           // 只写本地（云端只存自己的那份）
+  const r = await apiPost('/fav/toggle', { sid });
+  if(!r.ok && r.offline) queueOp('/fav/toggle', { sid });
   renderList(); renderHomeGrids();
   if(state.curScript && state.curScript.id === +sid) openDetail(+sid);
 }
@@ -2019,9 +2061,12 @@ function clearTomb(key, ids){
 async function cloudRemove(key, ids){
   if(!CLOUD.enabled || !useWorker() || !ids || !ids.length) return false;
   try{
+    const hdrs = { 'Content-Type':'application/json' };
+    if(CLOUD.token) hdrs['x-app-key'] = CLOUD.token;
+    const tk1 = lsGet('ts_token', ''); if(tk1) hdrs['x-auth'] = tk1;
     const res = await fetch(`${CLOUD.api}/remove/${key}`, {
       method:'POST',
-      headers:{ 'Content-Type':'application/json', ...(CLOUD.token ? { 'x-app-key': CLOUD.token } : {}) },
+      headers:hdrs,
       body: JSON.stringify({ ids })
     });
     if(res.ok){ clearTomb(key, ids); cloudOk(); return true; }
@@ -2058,6 +2103,7 @@ async function flushOutbox(){
       if(job.mode === 'put')         ok = await cloudPut(job.key, job.data);
       else if(job.mode === 'append') ok = await cloudAppend(job.key, job.data);
       else if(job.mode === 'remove') ok = await cloudRemove(job.key, job.data);
+      else if(job.op)                ok = (await apiPost(job.op, job.body)).ok;   // 服务端接口意图补传
     }catch(e){ ok = false; }
     if(!ok) rest.push(job);
   }
@@ -2071,9 +2117,13 @@ async function flushOutbox(){
 async function cloudAppend(key, items){
   if(!CLOUD.enabled || !useWorker() || !items || !items.length) return false;
   try{
+    /* 带上登录令牌：服务端据此记录操作人，并拒绝匿名冒充 */
+    const hdrs = { 'Content-Type':'application/json' };
+    const tk = lsGet('ts_token', ''); if(tk) hdrs['x-auth'] = tk;
+    if(CLOUD.token) hdrs['x-app-key'] = CLOUD.token;
     const res = await fetch(`${CLOUD.api}/append/${key}`, {
       method:'POST',
-      headers:{ 'Content-Type':'application/json' },
+      headers:hdrs,
       body: JSON.stringify({ items: items.slice(0, 500) })
     });
     if(res.ok){ cloudOk(); return true; }
@@ -2118,6 +2168,7 @@ async function cloudPut(key, data){
         try{
           const headers = { 'Content-Type':'application/json' };
           if(CLOUD.token) headers['x-app-key'] = CLOUD.token;   // 管理密钥（设置类数据需要）
+          const tk0 = lsGet('ts_token', ''); if(tk0) headers['x-auth'] = tk0;   // 登录令牌：服务端据此判定身份
           const res = await fetch(`${CLOUD.api}/data/${key}`, {
             method:'PUT', headers, body: JSON.stringify(data)
           });
@@ -2261,18 +2312,88 @@ async function saveSettings(s){
   if(CLOUD.enabled) await cloudPut('settings', s);
 }
 /* 同步一次：拉取云端 → 合并到本地 → 刷新当前界面 */
+/* ---------- 服务端接口小助手（自动带登录令牌） ---------- */
+function authHeaders(){
+  const h = { 'Content-Type':'application/json' };
+  const tk = lsGet('ts_token', ''); if(tk) h['x-auth'] = tk;
+  if(CLOUD.token) h['x-app-key'] = CLOUD.token;
+  return h;
+}
+async function apiGet(path){
+  if(!useWorker()) return null;
+  try{
+    const res = await fetch(CLOUD.api + path, { headers: authHeaders() });
+    if(!res.ok) return null;
+    return await res.json();
+  }catch(e){ return null; }
+}
+async function apiPost(path, body){
+  if(!useWorker()) return { ok:false, offline:true };
+  try{
+    const res = await fetch(CLOUD.api + path, { method:'POST', headers: authHeaders(), body: JSON.stringify(body || {}) });
+    const d = await res.json().catch(()=>({}));
+    return Object.assign({ ok: res.ok && d.ok !== false, _status:res.status }, d);
+  }catch(e){ return { ok:false, offline:true }; }
+}
+/* 断网时把「意图」排队，恢复网络后由 flushOutbox 补传 */
+function queueOp(path, body){
+  const q = getOutbox().filter(x => !(x.op === path && JSON.stringify(x.body) === JSON.stringify(body)));
+  q.push({ op:path, body, at:Date.now() });
+  setOutbox(q);
+}
+
 async function cloudSync(force){
   if(!CLOUD.enabled) return;
   /* 刚做完重置时跳过合并，避免把云端旧数据拉回来 */
   if(Date.now() - (lsGet('ts_reset_at', 0) || 0) < 10000) return;
   /* 退避期内自动同步跳过（手动重试 force=true 例外） */
   if(cloudBusy() && !force) return;
-  const [users, bookings, reviews, settings, messages, notices, rooms, sessions, carmsgs, pays, logs,
-         favs, taglib, dmleave, posts, badwords, scripts] = await Promise.all([
-    cloudGet('users'), cloudGet('bookings'), cloudGet('reviews'), cloudGet('settings'), cloudGet('messages'), cloudGet('notices'),
-    cloudGet('rooms'), cloudGet('sessions'), cloudGet('carmsgs'), cloudGet('pays'), cloudGet('logs'),
-    cloudGet('favs'), cloudGet('taglib'), cloudGet('dmleave'), cloudGet('posts'), cloudGet('badwords'), cloudGet('scripts')
+  /* 33：按身份取数 —— 员工读全量；客户只读公开数据 + 自己的数据（服务端不返回他人手机号） */
+  const isAdm = !!state.isAdmin, isDmS = !!state.isDm, staffNow = isAdm || isDmS;
+  const [reviews, settings, notices, rooms, sessions, carmsgs, taglib, posts, scripts] = await Promise.all([
+    cloudGet('reviews'), cloudGet('settings'), cloudGet('notices'), cloudGet('rooms'),
+    cloudGet('sessions'), cloudGet('carmsgs'), cloudGet('taglib'), cloudGet('posts'), cloudGet('scripts')
   ]);
+  let users, bookings, messages, pays, logs, favs, dmleave, badwords;
+  if(staffNow){
+    const st1 = await Promise.all([
+      cloudGet('bookings'), cloudGet('messages'), cloudGet('dmleave'),
+      isAdm ? cloudGet('users') : null, isAdm ? cloudGet('pays') : null,
+      isAdm ? cloudGet('logs') : null, isAdm ? cloudGet('favs') : null, isAdm ? cloudGet('badwords') : null
+    ]);
+    bookings = st1[0]; messages = st1[1]; dmleave = st1[2];
+    users = st1[3]; pays = st1[4]; logs = st1[5]; favs = st1[6]; badwords = st1[7];
+  }else if(state.user && state.user.phone){
+    /* 客户：自己的档案 / 预约 / 订单 / 留言 / 券 / 收藏 + 公开聚合与名册 */
+    const mine = await Promise.all([
+      apiGet('/verify'), apiGet('/my/bookings'), apiGet('/my/orders'), apiGet('/my/messages'),
+      apiGet('/my/favs'), apiGet('/agg/summary'), apiGet('/roster')
+    ]);
+    const me = mine[0], myBk = mine[1], myOrders = mine[2], myMsgs = mine[3], myFavs = mine[4], agg = mine[5], roster = mine[6];
+    if(me && me.ok && me.user){
+      const accs = lsAccounts();
+      const i = accs.findIndex(x => x.phone === me.user.phone);
+      if(i >= 0) accs[i] = Object.assign(accs[i], me.user, { password: accs[i].password || '' });
+      else accs.push(Object.assign({ password:'' }, me.user));
+      saveAccountsLocal(accs);
+    }
+    if(Array.isArray(myBk))     { state.bookings = myBk; lsSet('ts_bookings', myBk); }
+    if(Array.isArray(myOrders)) lsSet('ts_pays', myOrders);
+    if(Array.isArray(myMsgs))   lsSetMessages(myMsgs);
+    if(Array.isArray(myFavs))   { const f = getFavs(); f[state.user.phone] = myFavs; lsSet('ts_favs', f); }
+    if(agg && typeof agg === 'object') state.agg = agg;      // 评分/余位/车队/榜单（无手机号）
+    if(Array.isArray(roster)){
+      /* 公开名册：只保留昵称、头像、性别、年龄段，用于车队显示与同性/同龄筛选 */
+      const accs = lsAccounts().filter(u => u.phone === state.user.phone || u.roster);
+      roster.forEach(p=>{
+        if(!p || !p.username) return;
+        const rec = { username:p.username, phone:'', role:p.role || 'user', profile:p.profile || {}, roster:true };
+        const old = accs.find(u => u.roster && u.username === p.username);
+        if(old) Object.assign(old, rec); else accs.push(rec);
+      });
+      saveAccountsLocal(accs);
+    }
+  }
   /* 过滤「墓碑」：本地刚删掉的记录，即使云端还有也不再拉回来 */
   const notTomb = (key, arr) => (arr || []).filter(x => !isTomb(key, x && (x.id != null ? x.id : x.phone)));
   const mergeById = (key, cloud, local) => {
@@ -2315,14 +2436,23 @@ async function cloudSync(force){
     saveAccountsLocal([...map.values()]);
   }
   if(Array.isArray(bookings)){
-    const map = new Map(state.bookings.map(b=>[b.id, b]));
-    notTomb('bookings', bookings).forEach(b=>{
-      const l = map.get(b.id);
-      if(!l) map.set(b.id, b);
-      else if(b.status==='arrived' || b.status==='done' || b.status==='cancelled') l.status = b.status;
-    });
-    state.bookings = [...map.values()];
-    lsSet('ts_bookings', state.bookings);
+  const map = new Map(state.bookings.map(b=>[b.id, b]));
+  notTomb('bookings', bookings).forEach(b=>{
+    const l = map.get(b.id);
+    if(!l) map.set(b.id, b);
+    else if(b.status==='arrived' || b.status==='done' || b.status==='cancelled') l.status = b.status;
+  });
+  state.bookings = [...map.values()];
+  /* 老数据迁移：给历史预约补 6 位核销码（核销靠它，员工端跑一次即可） */
+  let needFix = false;
+  state.bookings.forEach(b=>{
+    if(!b.verifyCode && b.status !== 'cancelled'){
+      b.verifyCode = String(Math.floor(100000 + Math.random() * 900000));
+      needFix = true;
+    }
+  });
+  lsSet('ts_bookings', state.bookings);
+  if(needFix) saveBookings();
   }
   if(Array.isArray(reviews))  lsSetReviews(mergeById('reviews', reviews, getReviews()));
   if(Array.isArray(messages)) lsSetMessages(mergeById('messages', messages, getMessages()));
@@ -2445,17 +2575,20 @@ async function doRegister(){
   /* 服务端模式：由服务端校验验证码并落库（必须带上 email，服务端按邮箱匹配验证码） */
   if(useWorker()){
     try{
+      /* 41：注册需要人机验证（服务端强制） + 11：邀请码返利 */
+      const cap = await askCaptcha();
       const res = await fetch(`${CLOUD.api}/register`, {
         method:'POST',
         headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ phone, email, username, password:pwd, code })
+        body: JSON.stringify({ phone, email, username, password:pwd, code, invite,
+          captchaId:cap.id, captchaAnswer:cap.answer })
       });
       const d = await res.json().catch(()=>({}));
       if(!res.ok || !d.ok) return toast(d.error || '注册失败');
       lsSet('ts_token', d.token);
       ['reg-phone','reg-code','reg-name','reg-pwd','reg-pwd2','reg-invite'].forEach(id=>$('#'+id).value='');
       loginAs(d.user);
-      toast('🎉 注册成功，已自动登录');
+      toast(d.invite ? `🎉 注册成功！你的邀请码：${d.invite}` : '🎉 注册成功，已自动登录');
       return;
     }catch(e){ return toast('网络异常，注册失败'); }
   }
@@ -2506,6 +2639,13 @@ async function doForgot(){
   go('page-login');
   toast('✅ 密码已重置，请用新密码登录');
 }
+/* 40/41：人机验证（服务端出题+判题）。只有被风控要求时才弹，正常用户无感 */
+async function askCaptcha(){
+  const c = await apiGet('/captcha');
+  if(!c || !c.id) return { id:'', answer:'' };
+  const ans = window.prompt('🛡️ 需要人机验证：' + c.q, '');
+  return { id:c.id, answer: ans === null ? '' : String(ans).trim() };
+}
 /* 获取短信验证码：服务端生成 + 5 分钟有效；未接短信服务商时为演示模式（页面显示验证码） */
 async function sendCode(el){
   const t = el.dataset.t || 'login';
@@ -2530,20 +2670,29 @@ async function sendCode(el){
   /* 服务端模式：真实验证码由服务端下发 */
   if(useWorker()){
     btn.disabled = true; btn.textContent = '发送中…';
-    try{
+    const payload = { phone, email, purpose: t === 'forgot' ? 'reset' : 'register' };
+    const doSend = async (extra)=>{
       const res = await fetch(`${CLOUD.api}/code/send`, {
         method:'POST',
         headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ phone, email, purpose: t === 'forgot' ? 'reset' : 'register' })
+        body: JSON.stringify(Object.assign({}, payload, extra || {}))
       });
       const d = await res.json().catch(()=>({}));
-      if(!res.ok || !d.ok){
+      return { ok: res.ok && d.ok, d };
+    };
+    try{
+      let r = await doSend();
+      if(!r.ok && r.d && r.d.needCaptcha){         // 只有被风控盯上时才要求人机验证
+        const cap = await askCaptcha();
+        if(cap.id) r = await doSend({ captchaId:cap.id, captchaAnswer:cap.answer });
+      }
+      if(!r.ok){
         btn.disabled = false; btn.textContent = '重新获取';
-        return toast(d.error || '验证码发送失败');
+        return toast((r.d && r.d.error) || '验证码发送失败');
       }
       startCount(60);
-      const where = d.channel === 'email' ? '邮箱' : '手机';
-      if(d.devCode) toast(`验证码已发送（演示模式：${d.devCode}，${d.ttl} 秒内有效）`);
+      const where = r.d.channel === 'email' ? '邮箱' : '手机';
+      if(r.d.devCode) toast(`验证码已发送（演示模式：${r.d.devCode}，${r.d.ttl} 秒内有效）`);
       else toast(`📧 验证码已发送至你的${where}，5 分钟内有效`);
       return;
     }catch(e){
@@ -2751,6 +2900,9 @@ function renderList(){
   if(kw) list = list.filter(s => s.title.includes(kw) || (s.tags||[]).some(t=>t.includes(kw)));
   list = filterScripts(list);
   fillFilters();
+  /* 标签管理是员工功能，客户不显示入口 */
+  const tl = document.querySelector('[data-action="open-taglib"]');
+  if(tl) tl.hidden = !(state.isAdmin || state.isDm);
   $('#sc-count').textContent = `共 ${list.length} 个本`;
   $('#all-grid').innerHTML = list.length
     ? list.map(jubenCard).join('')
@@ -3044,6 +3196,10 @@ function tryBook(){
     b.mode===mode && (mode==='包车' || b.carNew===carNew || b.carOwner===carOwner));
   if(dup) return toast('你已经预约过这场了，可在“我的预约”中查看');
 
+  /* 20：仅当后台为该剧本开启「可提前选角」时才显示选角；59：可叠加优惠券 */
+  const coupons = (state.agg && !state.isAdmin && !state.isDm)
+    ? (state.agg.myCoupons || []).filter(c => (c.minAmount || 0) <= state.bkN * s.price)
+    : getCoupons().filter(c => !c.used && (c.all || c.phone === (state.user && state.user.phone)) && (c.minAmount || 0) <= state.bkN * s.price);
   $('#book-modal').innerHTML = `
     <div class="m-head"><button class="m-close" data-action="close-modal" data-modal="modal-book" aria-label="关闭">✕</button></div>
     <div style="padding:0 36px 36px">
@@ -3053,12 +3209,22 @@ function tryBook(){
       <div class="c-row"><label>模式</label><b>${mode==='包车'?'👑 包车':(carNew?'🚗 拼车 · 单开一辆车':'🚗 拼车 · 加入“'+carOwner+'”的车')}</b></div>
       <div class="c-row"><label>人数</label><b>${state.bkN} 人</b></div>
       <div class="c-row"><label>预留电话</label><b>${state.user ? state.user.phone : '-'}</b></div>
-      <button class="btn btn-accent" style="width:100%;height:50px" data-action="submit-book">提交预约</button>
+      ${(s.allowRolePick && s.roles && s.roles.length) ? `
+      <div class="f-item" style="margin-top:12px"><label>🎭 选择角色（本剧本支持提前选角）</label>
+        <div class="msg-cats">${s.roles.map(r=>`<button class="chip-sm ${state.pickRole===r.name?'on':''}" data-action="pick-role" data-r="${escapeHtml(r.name)}">${escapeHtml(r.name)}</button>`).join('')}</div>
+        <p class="car-sub">不选也可以，到店由 DM 分配；已被选走的角色会提示冲突。</p></div>` : ''}
+      ${coupons.length ? `
+      <div class="f-item" style="margin-top:12px"><label>🎟️ 使用优惠券（可选）</label>
+        <div class="box"><select data-action="pick-coupon">
+          <option value="">不使用优惠券</option>
+          ${coupons.map(c=>`<option value="${c.id}" ${String(state.pickCouponId)===String(c.id)?'selected':''}>抵扣 ¥${c.amount}（满 ¥${c.minAmount||0} 可用）</option>`).join('')}
+        </select></div></div>` : ''}
+      <button class="btn btn-accent" style="width:100%;height:50px;margin-top:8px" data-action="submit-book">提交预约</button>
       <p style="text-align:center;font-size:12px;color:var(--text2);margin-top:12px">${mode==='拼车'?'拼车满员前可随时退出，开演前 2 小时可免费取消':'包车请提前 15 分钟到店，开演前 2 小时可免费取消'}</p>
     </div>`;
   openModal('modal-book');
 }
-function submitBook(){
+async function submitBook(){
   const s = state.curScript; if(!s) return;
   /* 复用 tryBook 的校验逻辑，重新推导一遍当前选择 */
   let time = state.time, carOwner = null, carNew = false, mode;
@@ -3072,7 +3238,40 @@ function submitBook(){
       mode = '拼车'; carOwner = c.owner; time = c.time;
     }
   }
-  /* 37：若该时段已排场次，校验余位并绑定场次 */
+  const dmAssigned = state.dmChoice === 'assign' && state.pickDm;
+  const role  = s.allowRolePick ? (state.pickRole || '') : '';   // 20：只有开启选角的剧本才带角色
+  const btn = document.querySelector('[data-action="submit-book"]');
+  if(btn){ btn.disabled = true; btn.textContent = '提交中…'; }
+
+  /* 31：优先走服务端下单 —— 金额、余位、选角冲突、优惠券全部由服务端判定 */
+  const r = await apiPost('/booking/create', {
+    sid:s.id, ts:state.selTs, time, players:state.bkN, mode,
+    dmPhone: dmAssigned ? state.pickDm : '', role,
+    couponId: state.pickCouponId || 0,
+  });
+  if(r.ok && r.booking){
+    state.bookings.unshift(r.booking);
+    lsSet('ts_bookings', state.bookings);
+    if(r.order){ const py = getPays(); py.unshift(r.order); lsSet('ts_pays', py); }
+    state.pickRole = ''; state.pickCouponId = 0;
+    state.agg = null;
+    await cloudSync(true);
+    if(dmAssigned){
+      const dmU = lsAccounts().find(x => x.phone === state.pickDm);
+      if(dmU) pushNotice(dmU.phone, '收到指定预约 🎯',
+        `${displayName()} 指定你主持《${s.title}》${dateLabel(state.selTs)} ${time}（${state.bkN} 人），请提前准备。`);
+    }
+    closeModal('modal-book'); closeModal('modal-detail');
+    toast('🎉 预约成功！请支付定金锁定座位');
+    switchTab('book');
+    return;
+  }
+  if(!r.offline){
+    if(btn){ btn.disabled = false; btn.textContent = '提交预约'; }
+    toast(r.error || '预约失败，请稍后重试');
+    return;
+  }
+  /* 离线兜底：本地先记一条，联网后由队列补传（服务端会重新校验，可能被拒绝） */
   let sessionId = 0;
   const ses = getSessions().find(x => x.sid === s.id && x.ts === state.selTs && x.time === time && x.status === 'open');
   if(ses){
@@ -3080,36 +3279,29 @@ function submitBook(){
     if(left < state.bkN) return toast(`该场次仅剩 ${left} 个位置，请减少人数或换个时段`);
     sessionId = ses.id;
   }
-  /* DM 选择：指定 → 立即绑定并通知 DM；随机 → 留给管理员指派 */
-  const dmAssigned = state.dmChoice === 'assign' && state.pickDm;
   const dmU = dmAssigned ? lsAccounts().find(x => x.phone === state.pickDm) : null;
   state.bookings.unshift({ id:Date.now(), sid:s.id, title:s.title, emoji:s.emoji, g:s.g,
-    day:dateLabel(state.selTs), ts:state.selTs, time, players:state.bkN, price:s.price,
-    status:'booked', mode, carNew, carOwner, sessionId,
+    day:dateLabel(state.selTs), ts:state.selTs, time, players:state.bkN,
+    status:'booked', mode, carNew, carOwner, sessionId, role,
     dmMode: state.dmChoice === 'assign' ? 'assign' : 'random',
     dmPhone: dmAssigned ? state.pickDm : '',
     dmName: dmU ? (nickOf(dmU.phone) || dmU.username) : '',
     dmFee: dmAssigned ? DM_FEE : 0,
     price: s.price + (dmAssigned ? DM_FEE : 0),
     phone: state.user ? state.user.phone : '' });
-  saveBookings();
-  /* 66：下单即生成待支付定金单 */
-  createOrder(state.bookings[0]);
-  /* 指定 DM：通知 DM 本人 */
-  if(dmAssigned && dmU){
-    pushNotice(dmU.phone, '收到指定预约 🎯',
-      `${displayName()} 指定你主持《${s.title}》${dateLabel(state.selTs)} ${time}（${state.bkN} 人），请提前准备。`);
-  }
+  lsSet('ts_bookings', state.bookings);
+  queueOp('/booking/create', { sid:s.id, ts:state.selTs, time, players:state.bkN, mode,
+    dmPhone: dmAssigned ? state.pickDm : '', role, couponId: state.pickCouponId || 0 });
   closeModal('modal-book'); closeModal('modal-detail');
-  toast(mode==='拼车' ? '🎉 拼车预约成功！请支付定金锁定座位' : '🎉 包车预约成功！请支付定金锁定座位');
+  toast('🎉 已预约（离线保存，联网后自动同步并生成订单）');
   switchTab('book');
 }
 
 /* ---------- 预约列表 ---------- */
 function bkRows(list){
   if(!list.length)
-    return `<tbody><tr><td colspan="7" class="empty-cell"><div class="e" aria-hidden="true">🎟️</div>还没有预约，去挑一个本吧</td></tr></tbody>`;
-  const head = `<thead><tr><th>剧本</th><th>场次</th><th>模式</th><th>人数</th><th>人均</th><th>状态</th><th>操作</th></tr></thead>`;
+    return `<tbody><tr><td colspan="8" class="empty-cell"><div class="e" aria-hidden="true">🎟️</div>还没有预约，去挑一个本吧</td></tr></tbody>`;
+  const head = `<thead><tr><th>剧本</th><th>场次</th><th>模式</th><th>人数</th><th>人均</th><th>状态</th><th>核销码</th><th>操作</th></tr></thead>`;
   const body = list.map(b=>{
     const modeTxt = b.mode==='包车' ? '<span class="st car">👑 包车</span>'
       : b.carNew ? '<span class="st car">🚗 拼车·单开</span>'
@@ -3124,6 +3316,7 @@ function bkRows(list){
       <td>${b.status==='booked' ? '<span class="st on">✓ 已预约</span>'
           : b.status==='arrived' ? '<span class="st on">✓ 已到场</span>'
           : b.status==='done' ? '<span class="st off">已完成</span>' : '<span class="st off">已取消</span>'}</td>
+      <td>${(b.status==='booked' && b.verifyCode) ? `<b style="font-family:ui-monospace,monospace;letter-spacing:2px">${b.verifyCode}</b>` : '—'}</td>
       <td>${b.status==='booked'
           ? `<button class="btn-cancel" data-action="cancel-bk" data-id="${b.id}">取消</button>`
           : '—'}</td>
@@ -3142,8 +3335,8 @@ async function saveBookings(){
   lsSet('ts_bookings', state.bookings);        // 本地备份
   renderBookings(); refreshMe();
   if(state.isAdmin) renderAdmin();
-  /* 管理员全量覆盖；其他设备追加合并（只上报自己这份，服务端与最新数据合并） */
-  if(CLOUD.enabled){
+  /* 31：预约数据仅员工可整体写；客户一律走 /api/booking/* 接口（服务端算价与校验） */
+  if(CLOUD.enabled && (state.isAdmin || state.isDm)){
     if(CLOUD.token) await cloudPut('bookings', state.bookings);
     else await cloudAppend('bookings', state.bookings);
   }
@@ -3202,7 +3395,7 @@ function reviewListHtml(s){
   if(!rs.length) return '';
   return `<div class="sec" style="margin-top:26px"><b>⭐ 玩家评价</b><span>来自真实到店玩家</span></div>
     <div class="rv-list">${rs.map(r=>`<div class="rv-item">
-      <div class="top"><b>${r.anonymous?'匿名玩家':(r.username||'玩家')}</b>
+      <div class="top"><b>${r.anonymous?'匿名玩家':escapeHtml(r.username||'玩家')}</b>
         <span class="stars">${'⭐'.repeat(r.rating)}</span>
         <span class="time">${new Date(r.createdAt).toLocaleDateString()}</span></div>
       ${r.text?`<details class="spoiler"><summary>⚠️ 含剧透，点击展开评价</summary><p>${escapeHtml(r.text)}</p></details>`:''}
@@ -3331,7 +3524,7 @@ function renderRvImgs(){
   const clr = document.querySelector('[data-action="rv-clear-img"]');
   if(clr) clr.hidden = !(state.rvImgs || []).length;
 }
-function submitReview(){
+async function submitReview(){
   const b = state.curReview; if(!b) return;
   const text = $('#rv-text').value.trim();
   const reviews = getReviews();
@@ -3350,26 +3543,27 @@ function submitReview(){
   if(!state.rvStar) return toast('先点亮小星星再提交哦～');
   const anonEl = $('#rv-anon');
   const anon = anonEl ? anonEl.classList.contains('on') : false;
-  const bad = hasBadWord(text);
+  const payload = { bid:b.id, rating:state.rvStar, text, dims:state.rvDims || {},
+    anonymous:anon, imgs:state.rvImgs || [] };
+  /* 49/88：走服务端 —— 服务端校验「只能评自己的场次」、查重、敏感词折叠、差评预警 */
+  const res = await apiPost('/review/create', payload);
+  if(!res.ok && !res.offline){ toast(res.error || '评价提交失败'); return; }
+  const bad = res.ok ? !!res.hidden : hasBadWord(text);
   const ses = getSessions().find(s => s.id === b.sessionId);
-  const r = { id:Date.now(), sid:b.sid, bid:b.id, rating:state.rvStar,
-    text, anonymous: anon,
+  const r = res.review || { id:Date.now(), sid:b.sid, bid:b.id, rating:state.rvStar, text, anonymous:anon,
     username: anon ? '' : (displayName() || maskPhone(state.user.phone)),
     dims: state.rvDims || {}, imgs: state.rvImgs || [],
     dmPhone: (ses && ses.dm) || b.dmPhone || '', followUps: [], likes: [],
     reply: '', hidden: bad, createdAt: Date.now() };
-  reviews.unshift(r);
-  saveReviews(reviews);
-  /* 88：差评预警 —— 通知管理员与 DM */
-  if(state.rvStar <= 2){
-    lsAccounts().filter(u => roleOf(u) === 'admin' || roleOf(u) === 'super').forEach(u=>
-      pushNotice(u.phone, '⚠️ 差评预警', `《${b.title}》收到 ${state.rvStar} 星评价${text ? '：'+text.slice(0,30) : ''}，请及时处理。`));
-    if(r.dmPhone) pushNotice(r.dmPhone, '⚠️ 差评预警', `你带的《${b.title}》收到 ${state.rvStar} 星评价，可查看并回复。`);
-  }
+  const list = getReviews();
+  if(!list.some(x => String(x.bid) === String(b.id))) list.unshift(r);
+  lsSetReviews(list);
+  if(res.offline) queueOp('/review/create', payload);
   b.reviewPending = false; b.reviewed = true;
-  saveBookings();
+  lsSet('ts_bookings', state.bookings);
   state.rvDims = {}; state.rvImgs = []; state.followUpId = 0;
   closeModal('modal-review');
+  renderBookings();
   toast(bad ? '🎀 评价已提交（含敏感词已自动折叠待审核）' : '🎀 感谢你的评价，甜薯会更努力哒！');
 }
 function cancelReview(){
@@ -3407,8 +3601,123 @@ function admLogout(){
   refreshBackBtn();
   go('page-login'); toast('已退出管理端');
 }
-const ADM_TABS = ['dash','bookings','orders','scripts','reviews','users','customers','msgs','notice','community','dmfiles','venue','logs','backup'];
+const ADM_TABS = ['dash','bookings','orders','scripts','reviews','users','customers','msgs','notice','community','dmfiles','venue','ops','logs','backup'];
 const ORDER_FILTERS = [['全部','全部'],['unpaid','待支付'],['paid','已支付'],['refunded','已退款']];
+/* ================= 15/26/27/50/59：运营工具 ================= */
+function getWants(){ const w = lsGet('ts_wants', []); return Array.isArray(w) ? w : []; }
+function getSettles(){ const s = lsGet('ts_settles', []); return Array.isArray(s) ? s : []; }
+function getSettingsLocal(){
+  const s = lsGet('ts_settings', {}) || {};
+  return Object.assign({ reviewsEnabled:true, dmRate:0.1, dmFee:20, depositRatio:0.3, freeCancelHours:24, lateCancelPenalty:2 }, s);
+}
+function renderOps(){
+  const box = $('#ops-body'); if(!box) return;
+  const st = getSettingsLocal();
+  const month = new Date().toISOString().slice(0,7);
+  /* 15：拼车需求撮合台 */
+  const groups = {};
+  getWants().filter(w => w.status === 'open').forEach(w=>{
+    const k = w.sid + '|' + w.ts + '|' + w.time;
+    (groups[k] = groups[k] || []).push(w);
+  });
+  const wantHtml = Object.keys(groups).length ? Object.keys(groups).map(k=>{
+    const list = groups[k], g = list[0];
+    const total = list.reduce((n,w)=>n + (w.players || 1), 0);
+    return `<div class="msg-item"><div class="top"><b>《${escapeHtml(g.title)}》</b>
+        <span class="time">${dateLabel(g.ts)} ${g.time} · ${list.length} 位 / 共 ${total} 人</span></div>
+      <p>${list.map(w=>escapeHtml(w.username) + `（${w.players} 人${w.note ? ' · ' + escapeHtml(w.note) : ''}）`).join('、')}</p>
+      <div style="margin-top:10px"><button class="op-btn ok" data-action="want-form" data-ids="${list.map(w=>w.id).join(',')}">🤝 一键撮合成团</button></div></div>`;
+  }).join('') : emptyBox('🤝','暂无待撮合的拼车需求（客户在拼车页发布后会出现在这里）');
+  /* 26：DM 结算 */
+  const settleRows = lsAccounts()
+    .filter(u => roleOf(u) === 'dm' || roleOf(u) === 'admin' || roleOf(u) === 'super')
+    .map(u=>{
+      const bks = state.bookings.filter(b => b.dmPhone === u.phone && b.status !== 'cancelled' &&
+        new Date(b.ts || 0).toISOString().slice(0,7) === month);
+      const revenue = bks.reduce((n,b)=> n + (b.price || 0) * (b.players || 1), 0);
+      const amount = Math.round(revenue * (st.dmRate || 0.1));
+      const settled = getSettles().some(s => s.phone === u.phone && s.ym === month);
+      return { u, n:bks.length, revenue, amount, settled };
+    });
+  /* 27：财务对账（近 7 天） */
+  const payList = getPays();
+  const reconRows = Array.from({length:7},(_,i)=> midnight() - (6-i)*DAY).map(ts=>{
+    const dayPays = payList.filter(o => new Date(o.createdAt || 0).setHours(0,0,0,0) === ts);
+    const paid   = dayPays.filter(o=>o.status==='paid').reduce((n,o)=>n + (o.deposit || 0), 0);
+    const refund = dayPays.filter(o=>o.status==='refunded').reduce((n,o)=>n + (o.deposit || 0), 0);
+    const unpaid = dayPays.filter(o=>o.status==='unpaid').reduce((n,o)=>n + (o.deposit || 0), 0);
+    const bk = state.bookings.filter(b => b.ts === ts && b.status !== 'cancelled');
+    const gross = bk.reduce((n,b)=> n + (b.price || 0) * (b.players || 1), 0);
+    return `<tr><td>${dateLabel(ts)}</td><td>${bk.length}</td><td>¥${gross}</td>
+      <td style="color:var(--ok)">¥${paid}</td><td style="color:var(--accent)">¥${unpaid}</td>
+      <td style="color:var(--full)">¥${refund}</td><td><b>¥${paid - refund}</b></td></tr>`;
+  }).join('');
+  box.innerHTML = `
+    <div class="adm-panel">
+      <h3>🤝 拼车撮合台 <span class="car-sub" style="margin:0">把同一剧本同时段的需求合成一车，自动生成预约与待付定金</span></h3>
+      ${wantHtml}
+    </div>
+    <div class="adm-panel">
+      <h3>💰 DM 结算（${month}） <span class="car-sub" style="margin:0">分成比例 ${Math.round((st.dmRate || 0.1) * 100)}% · 可在下方调整</span></h3>
+      <div class="bk-wrap"><table class="bk-table">
+        <thead><tr><th>DM</th><th>带本数</th><th>产生流水</th><th>应结分成</th><th>状态</th><th>操作</th></tr></thead>
+        <tbody>${settleRows.map(r=>`<tr>
+          <td><b>${escapeHtml(r.u.username)}</b></td><td>${r.n} 场</td>
+          <td>¥${r.revenue}</td><td style="color:var(--accent);font-weight:600">¥${r.amount}</td>
+          <td>${r.settled ? '<span class="st on">已结算</span>' : '<span class="st off">待结算</span>'}</td>
+          <td>${r.settled ? '—' : `<button class="op-btn ok" data-action="settle-save" data-phone="${r.u.phone}" data-name="${escapeHtml(r.u.username)}" data-n="${r.n}" data-rev="${r.revenue}" data-amt="${r.amount}">标记已结算</button>`}</td>
+        </tr>`).join('')}</tbody></table></div>
+      ${getSettles().length ? `<p class="car-sub">最近结算：${getSettles().slice(-3).reverse().map(s=>`${s.ym} ${escapeHtml(s.username)} ¥${s.amount}`).join(' · ')}</p>` : ''}
+    </div>
+    <div class="adm-panel">
+      <h3>📊 财务日结对账（近 7 天）</h3>
+      <div class="bk-wrap"><table class="bk-table">
+        <thead><tr><th>日期</th><th>场次</th><th>应收总额</th><th>已收定金</th><th>待收定金</th><th>已退款</th><th>净收</th></tr></thead>
+        <tbody>${reconRows}</tbody></table></div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:10px" data-action="ops-export">📥 导出对账 CSV</button>
+    </div>
+    <div class="adm-panel">
+      <h3>⚙️ 经营参数</h3>
+      <div class="form-grid">
+        <div class="f-item"><label>指定 DM 加价（元/人）</label><div class="box"><input id="op-dmfee" type="number" min="0" value="${st.dmFee}"></div></div>
+        <div class="f-item"><label>定金比例（%）</label><div class="box"><input id="op-ratio" type="number" min="0" max="100" value="${Math.round((st.depositRatio || 0.3) * 100)}"></div></div>
+        <div class="f-item"><label>免费取消时限（小时）</label><div class="box"><input id="op-free" type="number" min="0" value="${st.freeCancelHours}"></div></div>
+        <div class="f-item"><label>DM 分成比例（%）</label><div class="box"><input id="op-rate" type="number" min="0" max="100" value="${Math.round((st.dmRate || 0.1) * 100)}"></div></div>
+        <div class="f-item"><label>临期取消扣分（每 10 分）</label><div class="box"><input id="op-pen" type="number" min="0" max="10" value="${st.lateCancelPenalty}"></div></div>
+      </div>
+      <button class="btn btn-primary btn-sm" style="margin-top:12px;width:100%;height:42px" data-action="ops-save">保存经营参数</button>
+      <p class="car-sub">保存后立即生效：订单金额、定金比例、退款规则均由服务端按这些参数计算。</p>
+    </div>
+    <div class="adm-panel">
+      <h3>🎟️ 发放优惠券 <span class="car-sub" style="margin:0">定金抵扣券，可在下单时使用</span></h3>
+      <div class="form-grid">
+        <div class="f-item"><label>抵扣金额（元）</label><div class="box"><input id="cp-amount" type="number" min="1" value="20"></div></div>
+        <div class="f-item"><label>最低消费（元）</label><div class="box"><input id="cp-min" type="number" min="0" value="0"></div></div>
+        <div class="f-item"><label>有效天数</label><div class="box"><input id="cp-days" type="number" min="1" value="30"></div></div>
+        <div class="f-item"><label>发放对象</label><div class="box"><select id="cp-all"><option value="all">全员</option><option value="one">指定手机号</option></select></div></div>
+      </div>
+      <div class="f-item" style="margin-top:10px"><label>指定手机号（选「指定」时填写）</label><div class="box"><input id="cp-phone" placeholder="13800000000" maxlength="11" inputmode="numeric"></div></div>
+      <button class="btn btn-accent btn-sm" style="margin-top:12px;width:100%;height:42px" data-action="coupon-issue">🎁 发放优惠券</button>
+    </div>
+    <div class="adm-panel">
+      <h3>💰 会员充值 <span class="car-sub" style="margin:0">余额可在下单时直接抵扣定金</span></h3>
+      <div class="form-grid">
+        <div class="f-item"><label>客户手机号</label><div class="box"><input id="rc-phone" maxlength="11" inputmode="numeric" placeholder="13800000000"></div></div>
+        <div class="f-item"><label>充值金额（元）</label><div class="box"><input id="rc-amount" type="number" min="1" value="500"></div></div>
+        <div class="f-item"><label>备注</label><div class="box"><input id="rc-note" placeholder="如：充 500 送 50"></div></div>
+      </div>
+      <button class="btn btn-primary btn-sm" style="margin-top:12px;width:100%;height:42px" data-action="recharge">💳 确认充值</button>
+      <p class="car-sub">客户可在「我的 → 会员中心」看到余额与流水，下单会先问是否用余额抵扣。</p>
+    </div>
+    <div class="adm-panel">
+      <h3>🔔 沉睡客户回访 <span class="car-sub" style="margin:0">给较久没到店的客户发券（自动排除从没来过的）</span></h3>
+      <div class="form-grid">
+        <div class="f-item"><label>未到店天数</label><div class="box"><input id="sl-days" type="number" min="7" value="30"></div></div>
+        <div class="f-item"><label>券面额（元）</label><div class="box"><input id="sl-amount" type="number" min="1" value="20"></div></div>
+      </div>
+      <button class="btn btn-accent btn-sm" style="margin-top:12px;width:100%;height:42px" data-action="sleep-coupon">🎁 一键发放回访券</button>
+    </div>`;
+}
 function renderAdmin(){
   /* 权限过滤：无权限的侧边栏项直接隐藏 */
   document.querySelectorAll('#page-admin .adm-side .navi').forEach(b=>{
@@ -3435,6 +3744,7 @@ function renderAdmin(){
   if(state.admTab === 'logs') renderAdmLogs();
   if(state.admTab === 'backup') renderCloudCfg();
   if(state.admTab === 'venue'){ renderRooms(); renderSessions(); }
+  if(state.admTab === 'ops') renderOps();
 }
 
 /* ---------- 评分管理 ---------- */
@@ -3543,20 +3853,31 @@ function renderOccupancy(){
 function renderRoi(){
   const box = $('#dash-roi'); if(!box) return;
   const rows = SCRIPTS.map(s=>{
-    const bs = state.bookings.filter(b => b.sid === s.id && b.status !== 'cancelled');
+    const all = state.bookings.filter(b => b.sid === s.id);
+    const bs  = all.filter(b => b.status !== 'cancelled');
     const income = bs.reduce((n,b)=> n + b.price*b.players, 0);
     const cost = s.cost || 0;
-    return { s, times:bs.length, income, cost, roi:cost ? ((income-cost)/cost*100).toFixed(0)+'%' : '—' };
-  }).sort((a,b)=> b.income - a.income).slice(0, 8);
+    /* 25：实测数据 —— 取消率（翻车参考）与玩家复购率 */
+    const cancelRate = all.length ? all.filter(b => b.status === 'cancelled').length / all.length : 0;
+    const byPhone = {};
+    bs.forEach(b => { if(b.phone) byPhone[b.phone] = (byPhone[b.phone] || 0) + 1; });
+    const players = Object.keys(byPhone).length;
+    const repeat = players ? Object.values(byPhone).filter(n => n >= 2).length / players : 0;
+    return { s, times:bs.length, income, cost, cancelRate, players, repeat,
+      roi:cost ? ((income-cost)/cost*100).toFixed(0)+'%' : '—' };
+  }).sort((a,b)=> b.income - a.income).slice(0, 10);
   box.innerHTML = `<div class="bk-wrap"><table class="bk-table">
-    <thead><tr><th>剧本</th><th>开本次数</th><th>收入</th><th>购入成本</th><th>ROI</th></tr></thead>
+    <thead><tr><th>剧本</th><th>开本</th><th>收入</th><th>成本</th><th>ROI</th><th>取消率</th><th>玩家数</th><th>复购率</th></tr></thead>
     <tbody>${rows.map(r=>`<tr>
       <td><b>${escapeHtml(r.s.title)}</b></td>
       <td>${r.times} 次</td>
       <td style="color:var(--accent);font-weight:600">¥${r.income}</td>
       <td>${r.cost ? '¥'+r.cost : '<span style="color:var(--text2)">未填</span>'}</td>
-      <td>${r.roi}</td></tr>`).join('')}</tbody></table></div>
-    <p class="car-sub">购入成本可在剧本编辑里填写（字段 cost），用于计算回本情况。</p>`;
+      <td>${r.roi}</td>
+      <td style="color:${r.cancelRate > 0.3 ? 'var(--full)' : 'var(--text2)'}">${Math.round(r.cancelRate*100)}%</td>
+      <td>${r.players}</td>
+      <td>${Math.round(r.repeat*100)}%</td></tr>`).join('')}</tbody></table></div>
+    <p class="car-sub">取消率＝取消场次占比（越高说明越容易翻车）；复购率＝玩过两次以上的玩家占比。购入成本可在剧本编辑里填。</p>`;
 }
 /* 101：后台全局搜索（客户 / 预约 / 剧本 / 留言 / 评价） */
 function globalSearch(kw){
@@ -3618,7 +3939,7 @@ function admBkRows(list){
     }
     return `<tr>
       <td>${maskPhone(b.phone)}</td>
-      <td><div class="bk-td"><div class="scr-mini" style="background:${G(b)}" aria-hidden="true">${b.emoji}</div><b>${b.title}</b></div></td>
+      <td><div class="bk-td"><div class="scr-mini" style="background:${G(b)}" aria-hidden="true">${b.emoji}</div><b>${escapeHtml(b.title)}</b></div></td>
       <td>${b.day} ${b.time}</td>
       <td>${modeTxt}</td>
       <td>${b.players} 人</td>
@@ -3711,7 +4032,7 @@ function refreshFrontScripts(){
 const DIFF_NAMES = ['新手','简单','普通','困难','地狱'];
 function scNew(){
   state.scEdit = null;
-  state.scf = {hot:false, isNew:true, featured:false, newbie:false, onSale:true};
+  state.scf = {hot:false, isNew:true, featured:false, newbie:false, onSale:true, allowRolePick:false};
   state.scfImg = ''; state.scfRoles = [];
   openScForm({ title:'', tags:'', players:'4-6人', dur:'约4小时', diff:3, rating:8.5, price:88, desc:'',
     type:'盒装', stock:'在库', dms:[] });
@@ -3720,7 +4041,7 @@ function scEdit(id){
   const s = SCRIPTS.find(x=>x.id===id); if(!s) return;
   state.scEdit = id;
   state.scf = { hot:!!s.hot, isNew:!!s.isNew, featured:!!s.featured,
-    newbie:!!s.newbie, onSale:s.onSale !== false };
+    newbie:!!s.newbie, onSale:s.onSale !== false, allowRolePick:!!s.allowRolePick };
   state.scfImg = s.img || '';
   state.scfRoles = (s.roles||[]).map(r=>({name:r.name||'', img:r.img||''}));
   openScForm({ title:s.title, tags:(s.tags||[]).join(','), players:s.players,
@@ -3768,6 +4089,7 @@ function renderScfFlags(){
   $('#scf-hot').classList.toggle('on', state.scf.hot);
   $('#scf-new').classList.toggle('on', state.scf.isNew);
   $('#scf-feat').classList.toggle('on', state.scf.featured);
+  const rp = $('#scf-rolepick'); if(rp) rp.classList.toggle('on', !!state.scf.allowRolePick);
 }
 function scfToggle(f){ state.scf[f] = !state.scf[f]; renderScfFlags(); }
 function scSave(){
@@ -3796,6 +4118,7 @@ function scSave(){
     stock: $('#scf-stock').value || '在库',
     newbie: !!state.scf.newbie,
     onSale: state.scf.onSale !== false,
+    allowRolePick: !!state.scf.allowRolePick,       // 20：开启后客户才能在线上选角
     dms: Array.from($('#scf-dms').selectedOptions || []).map(o => o.value),
     hot: state.scf.hot, isNew: state.scf.isNew, featured: state.scf.featured,
   };
@@ -3877,7 +4200,7 @@ function renderAdmUsers(){
             .map(([r,t])=>`<button class="op-btn" data-action="set-role" data-phone="${u.phone}" data-role="${r}">${t}</button>`)
             .join('');
       return `<tr>
-        <td><b>${u.username}</b>${u.invite?`<small style="display:block;color:var(--text2);font-size:11px">邀请码 ${u.invite}</small>`:''}</td>
+        <td><b>${escapeHtml(u.username)}</b>${u.invite?`<small style="display:block;color:var(--text2);font-size:11px">邀请码 ${escapeHtml(u.invite)}</small>`:''}</td>
         <td>${maskPhone(u.phone)}</td>
         <td>${new Date(u.first).toLocaleDateString()}</td>
         <td>${new Date(u.last).toLocaleDateString()}</td>
@@ -3920,10 +4243,16 @@ function delUser(phone){
 /* 清空全部数据（本地 + 云端），只保留 3 个内置账号 */
 function purgeData(){
   if(!isSuper()) return toast('🔒 仅超级管理员可清空数据');
-  askConfirm('将清空所有账号（仅保留内置的管理员 / DM / 调试账号）、预约、评价与留言，并同步删除云端记录。确定继续？', ()=>{
-    resetAllData();
+  /* 44：破坏性操作要求手动输入确认口令，避免误触灾难 */
+  const word = window.prompt('⚠️ 此操作会清空全部业务数据（预约/订单/留言/评价/社区/通知/日志），账号与剧本保留，且无法撤销。\n\n请输入「确认清空」四个字继续：');
+  if(word !== '确认清空') return toast('已取消（未输入确认口令）');
+  askConfirm('最后确认：立即清空全部业务数据？', async ()=>{
+    const r = await apiPost('/staff/purge', {});
+    resetAllData();                                  // 本地与内置账号同时重置
+    if(!r.ok && !r.offline) toast(r.error || '云端清空失败，请检查权限');
+    await cloudSync(true);
     renderAdmUsers(); renderAll();
-    toast('🧹 已清空本地与云端数据，仅保留内置账号');
+    toast(r.ok ? '🧹 已清空本地与云端业务数据' : '🧹 已清空本地数据（云端请稍后重试）');
   });
 }
 /* 调整账号权限：客户 ⇄ 管理员 / DM */
@@ -4079,7 +4408,31 @@ function renderCustList(scope){
     : `<div class="adm-panel">${emptyBox('🔍', '没有匹配的客户')}</div>`;
 }
 const renderCustomers = () => renderCustList('adm');
-const renderDmCredit  = () => renderCustList('dm');
+/* 45：DM 只能看到自己场次的客户（服务端过滤，不再依赖本地账号表） */
+async function renderDmCredit(){
+  const box = $('#dm-cust-list'); if(!box) return;
+  const cnt = $('#dm-cust-count');
+  const kw = (state.dmCustKw || '').trim().toLowerCase();
+  if(!state.dmCustomers){
+    const list = await apiGet('/dm/customers');
+    state.dmCustomers = Array.isArray(list) ? list : [];
+  }
+  const list = state.dmCustomers.filter(c => !kw ||
+    String(c.username || '').toLowerCase().includes(kw) || String(c.phone || '').includes(kw));
+  if(cnt) cnt.textContent = `共 ${list.length} 位客户 · 仅显示你场次的客户`;
+  box.innerHTML = list.length ? list.map(c=>{
+    const lv = creditLevel(c.credit || 100);
+    return `<div class="cust-card" style="cursor:default">
+      <span class="av" aria-hidden="true">🎭</span>
+      <span class="info">
+        <b>${escapeHtml(c.username || '客户')}</b>
+        <small>${escapeHtml(c.phoneMask || '')} · 玩过 ${c.plays || 0} 次 · 累计 ¥${c.spend || 0}</small>
+        <span class="credit-pill ${lv.cls}" style="display:inline-block;margin-top:6px">${c.credit || 100} 分 · ${lv.t}</span>
+      </span>
+      <button class="op-btn danger" data-action="dm-credit" data-phone="${c.phone}" data-name="${escapeHtml(c.username || '')}">加分 / 扣分</button>
+    </div>`;
+  }).join('') : `<div class="adm-panel">${emptyBox('🧑‍🤝‍🧑','还没有你场次的客户记录')}</div>`;
+}
 function clearCustSearch(scope){
   const inp = $(scope === 'adm' ? '#cust-search' : '#dm-cust-search');
   if(scope === 'adm') state.custKw = ''; else state.dmCustKw = '';
@@ -4094,6 +4447,8 @@ function openCustomer(phone){
   state.curCustomer = phone;
   renderCustomer();
   openModal('modal-customer');
+  /* 57：员工查看客户档案留痕（服务端记录「谁在何时看了谁」） */
+  if(state.isAdmin || state.isDm) apiPost('/staff/customer', { phone });
 }
 function renderCustomer(){
   const u = lsAccounts().find(x => x.phone === state.curCustomer);
@@ -4103,12 +4458,17 @@ function renderCustomer(){
   $('#cust-title').textContent = `${u.username||'客户'} 的档案`;
   $('#cust-body').innerHTML = `
     <div class="adm-panel">
-      <h3>基础信息</h3>
+      <h3>基础信息 ${u.banned ? '<span class="credit-pill bad">已限制</span>' : ''}</h3>
       <div class="kv">
         <div class="cell"><b>${maskPhone(u.phone)}</b><span>手机号</span></div>
         <div class="cell"><b>${new Date(u.first||Date.now()).toLocaleDateString()}</b><span>注册时间</span></div>
         <div class="cell"><b>${new Date(u.last||Date.now()).toLocaleDateString()}</b><span>最近活跃</span></div>
       </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+        <button class="op-btn ${u.banned?'ok':'danger'}" data-action="ban-user" data-phone="${u.phone}">${u.banned ? '恢复账号' : '⛔ 拉黑账号（禁止登录与预约）'}</button>
+        ${(typeof u.credit === 'number' && u.credit < 60) ? '<span class="badge new">⚠️ 信用分偏低，可考虑限制</span>' : ''}
+      </div>
+      ${u.banned && u.banReason ? `<p class="car-sub">限制原因：${escapeHtml(u.banReason)}</p>` : ''}
     </div>
     <div class="adm-panel">
       <h3>游玩数据</h3>
@@ -4212,18 +4572,32 @@ function renderMsgTab(){
   $('#msg-mine').innerHTML = msgs.length ? msgs.map(m=>msgItemHtml(m, true)).join('')
     : `<div class="adm-panel">${emptyBox('📮', '还没有留言，说点什么吧～')}</div>`;
 }
-function submitMsg(){
+async function submitMsg(){
   if(!state.user) return toast('请先登录');
   const text = $('#msg-text').value.trim();
   if(!text) return toast('说点什么再提交吧～');
   if(text.length > 300) return toast('留言请控制在 300 字以内');
+  /* 49：走服务端落库 —— 服务端做敏感词判定与频率限制（绕过前端也拦得住） */
+  const r = await apiPost('/msg/create', { cat:state.msgCat, text });
+  if(r.ok){
+    const msgs = getMessages();
+    if(r.msg) msgs.unshift(r.msg);
+    lsSetMessages(msgs);
+    $('#msg-text').value = '';
+    renderMsgTab();
+    toast(r.hidden ? '📮 已提交（命中敏感词，待人工审核）' : '📮 留言已送达，感谢你的反馈！');
+    return;
+  }
+  if(!r.offline){ toast(r.error || '提交失败，请稍后重试'); return; }
+  /* 离线：本地先记，联网后补传 */
   const msgs = getMessages();
   msgs.unshift({ id:Date.now(), phone:state.user.phone, username:displayName() || '玩家',
     cat:state.msgCat, text, status:'pending', reply:'', repliedBy:'', createdAt:Date.now() });
-  saveMessages(msgs);
+  lsSetMessages(msgs);
+  queueOp('/msg/create', { cat:state.msgCat, text });
   $('#msg-text').value = '';
   renderMsgTab();
-  toast('📮 留言已送达，感谢你的反馈！');
+  toast('📮 已离线保存，联网后自动同步');
 }
 function renderMsgList(scope){
   const f    = scope === 'adm' ? state.admMsgFilter : state.dmMsgFilter;
@@ -4393,6 +4767,121 @@ function saveProfile(patch){
   if(state.curTab === 'book'){ renderMyOrders(); }
   toast('✅ 资料已保存并同步到云端');
 }
+/* ================= 54/55：账号安全（改密码 / 换绑手机 / 注销）+ 19：常玩队友 ================= */
+function renderSecurityPanel(){
+  if(!state.user) return;
+  const anchor = $('#profile-editor');
+  if(!anchor) return;
+  if(!$('#security-box')) anchor.insertAdjacentHTML('afterend', '<div id="security-box"></div>');
+  const box = $('#security-box'); if(!box) return;
+  const me = lsAccounts().find(u => u.phone === state.user.phone) || {};
+  /* 6/8/10/11/13：会员中心（余额 / 积分 / 等级折扣 / 邀请码 / 成就徽章） */
+  const spent = state.bookings.filter(b => b.phone === state.user.phone && b.status !== 'cancelled')
+    .reduce((n,b)=> n + (b.price || 0) * (b.players || 1), 0);
+  const tier = spent >= 3000 ? ['💎 钻石会员', 10] : spent >= 1500 ? ['🥇 黄金会员', 5]
+    : spent >= 500 ? ['🥈 白银会员', 2] : ['🌱 新客', 0];
+  const doneN = state.bookings.filter(b => b.status === 'done').length;
+  const badges = [];
+  if(doneN >= 1)  badges.push('🎬 完成首本');
+  if(doneN >= 5)  badges.push('🎭 资深玩家');
+  if(doneN >= 10) badges.push('🏆 十场老玩家');
+  if((Number(me.credit) || 100) >= 110) badges.push('⭐ 信用之星');
+  if((Number(me.points) || 0) >= 100) badges.push('💯 积分达人');
+  if(me.invitedBy) badges.push('🤝 好友推荐');
+  const balLogs = Array.isArray(me.balanceLogs) ? me.balanceLogs.slice(0, 5) : [];
+  box.innerHTML = `
+    <div class="adm-panel">
+      <h3>会员中心 <span class="credit-pill good">${tier[0]}</span></h3>
+      <div class="kv">
+        <div class="cell"><b>¥${Number(me.balance) || 0}</b><span>会员余额</span></div>
+        <div class="cell"><b>${Number(me.points) || 0}</b><span>积分</span></div>
+        <div class="cell"><b>${spent}</b><span>累计消费</span></div>
+        <div class="cell"><b>${tier[1] ? tier[1] + '%' : '—'}</b><span>下单折扣</span></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+        <span class="chip-sm on">邀请码：${escapeHtml(me.invite || '—')}</span>
+        ${me.invite ? `<button class="chip-sm" data-action="copy-invite" data-code="${escapeHtml(me.invite)}">复制邀请码</button>` : ''}
+        <span class="car-sub">好友注册时填你的邀请码，双方各得 ¥15 定金券 + 积分</span>
+      </div>
+      ${badges.length ? `<div class="pf-tags" style="margin-top:12px">${badges.map(b=>`<span class="pf-tag gold">${b}</span>`).join('')}</div>` : ''}
+      ${balLogs.length ? `<div style="margin-top:14px">
+        <h3 style="font-size:14px;margin-bottom:6px">余额流水（最近 5 条）</h3>
+        ${balLogs.map(l=>`<div class="log-row"><span class="d ${l.delta > 0 ? 'plus' : 'minus'}">${l.delta > 0 ? '+' : ''}${l.delta}</span>
+          <b>${escapeHtml(l.reason || '')}</b><span class="tm">${new Date(l.at).toLocaleString()}</span></div>`).join('')}</div>` : ''}
+      <p class="car-sub">完成开本 +10 积分、评价 +5 积分；余额由门店充值，下单时可直接抵扣定金。</p>
+    </div>
+    <div class="adm-panel">
+      <h3>常玩队友 <span class="car-sub" id="mate-sub" style="margin:0"></span></h3>
+      <div id="mate-list"></div>
+    </div>
+    <div class="adm-panel">
+      <h3>账号安全</h3>
+      <div class="f-item"><label>修改密码（需要邮箱/短信验证码）</label>
+        <div style="display:flex;gap:8px">
+          <div class="box" style="flex:1"><input id="sec-pwd" type="password" placeholder="新密码（至少 6 位）"></div>
+          <button class="btn btn-ghost btn-sm" data-action="sec-send" data-p="reset">获取验证码</button>
+        </div>
+        <div class="box" style="margin-top:8px"><input id="sec-code" placeholder="验证码" inputmode="numeric"></div>
+        <button class="btn btn-primary btn-sm" style="margin-top:10px;width:100%;height:40px" data-action="sec-pwd">确认修改密码</button>
+      </div>
+      <div class="f-item" style="margin-top:16px"><label>换绑手机号</label>
+        <div style="display:flex;gap:8px">
+          <div class="box" style="flex:1"><input id="sec-phone" placeholder="新手机号" maxlength="11" inputmode="numeric"></div>
+          <button class="btn btn-ghost btn-sm" data-action="sec-send" data-p="bind">获取验证码</button>
+        </div>
+        <div class="box" style="margin-top:8px"><input id="sec-phone-code" placeholder="验证码" inputmode="numeric"></div>
+        <button class="btn btn-primary btn-sm" style="margin-top:10px;width:100%;height:40px" data-action="sec-phone">确认换绑</button>
+      </div>
+      <div class="f-item" style="margin-top:16px"><label>注销账号（个人信息删除权）</label>
+        <p class="car-sub">注销后账号、预约、订单、留言、收藏都会被永久删除，无法恢复。</p>
+        <button class="btn btn-danger btn-sm" style="margin-top:8px" data-action="sec-delete">申请注销账号</button>
+      </div>
+      <p class="car-sub">当前账号：${escapeHtml(me.username || state.user.username)}${me.email ? '（邮箱 ' + escapeHtml(me.email) + '）' : '（未绑定邮箱，验证码走短信通道）'}</p>
+    </div>`;
+  renderMates();
+}
+function renderMates(){
+  const box = $('#mate-list'); if(!box) return;
+  const meName = state.user ? (state.user.username || '') : '';
+  const count = {};
+  const pools = (state.agg && Array.isArray(state.agg.carPool)) ? state.agg.carPool : [];
+  pools.filter(c => c.mine).forEach(c=>{
+    (c.members || []).forEach(m=>{
+      if(!m.username || m.username === meName) return;
+      count[m.username] = (count[m.username] || 0) + 1;
+    });
+  });
+  const list = Object.entries(count).sort((a,b)=>b[1]-a[1]).slice(0, 8);
+  const sub = $('#mate-sub'); if(sub) sub.textContent = list.length ? `一起玩过 ${list.length} 位` : '';
+  box.innerHTML = list.length ? list.map(([name, n])=>
+    `<div class="rv-item"><div class="top"><b>${escapeHtml(name)}</b>
+      <span class="stars">一起玩过 ${n} 次</span>
+      <button class="op-btn ok" data-action="mate-invite" data-name="${escapeHtml(name)}">一键再约</button></div></div>`).join('')
+    : `<div>${emptyBox('🧑‍🤝‍🧑','加入或发起车队后，一起拼过车的队友会出现在这里')}</div>`;
+}
+async function mateInvite(name){
+  if(!state.user) return toast('请先登录');
+  fillWantForm();
+  const sid = +($('#want-script') && $('#want-script').value) || (SCRIPTS[0] && SCRIPTS[0].id);
+  const sc = SCRIPTS.find(s => s.id === sid);
+  if(!sc) return toast('请先选择剧本');
+  const ts = midnight() + DAY, time = '19:00';
+  const r = await apiPost('/want/create', { sid:sc.id, ts, time, players:1, note:`邀请「${name}」一起玩` });
+  if(!r.ok && !r.offline){ toast(r.error || '邀请失败'); return; }
+  if(r.offline) queueOp('/want/create', { sid:sc.id, ts, time, players:1, note:`邀请「${name}」一起玩` });
+  toast(`📣 已发布再约需求：《${sc.title}》明天 19:00，队友会收到通知`);
+}
+async function secSendCode(purpose){
+  const target = purpose === 'bind' ? ($('#sec-phone').value.trim()) : ((lsAccounts().find(u => u.phone === state.user.phone) || {}).email || '');
+  if(purpose === 'bind' && !/^1\d{10}$/.test(target)) return toast('请先填写新手机号');
+  if(purpose !== 'bind' && !target) return toast('当前账号未绑定邮箱，请使用「忘记密码」走手机号找回');
+  const cap = await apiGet('/captcha');
+  let body = { purpose, captchaId: cap && cap.id, captchaAnswer: cap ? (window.prompt('人机验证：' + cap.q) || '') : '' };
+  if(purpose === 'bind') body.phone = target; else body.email = target;
+  const r = await apiPost('/code/send', body);
+  if(!r.ok) return toast(r.error || '发送失败');
+  toast(r.devCode ? `验证码（演示）：${r.devCode}` : '验证码已发送，请查收');
+}
 function renderProfileEditor(){
   const p = myProfile();
   const u = state.user ? lsAccounts().find(x => x.phone === state.user.phone) : null;
@@ -4436,7 +4925,31 @@ function renderProfileEditor(){
 const CAR_FILTERS = [['全部','全部'],['today','今天'],['week','本周'],['gender','同性拼车'],['age','同龄拼车'],['mine','我的']];
 const TIME_SLOTS = ['14:00','16:00','19:00','20:00','21:00'];
 /* 由真实预约数据推导车队：一条「单开」预约 = 一个车队 */
+/* 年龄段（与服务端一致，用于同性/同龄拼车筛选） */
+const CAR_TAGS = ['不跳车','准时到场','新手友好','硬核玩家','可通宵','奶妈友好'];
+function ageBucketOf(age){
+  const n = parseInt(age, 10);
+  if(!n) return '';
+  if(n <= 18) return '18岁及以下';
+  if(n <= 24) return '18-24';
+  if(n <= 30) return '25-30';
+  if(n <= 35) return '31-35';
+  if(n <= 45) return '36-45';
+  return '45岁以上';
+}
 function carList(){
+  /* 33：客户使用服务端聚合（不含手机号）；员工/离线时本地推导 */
+  if(state.agg && Array.isArray(state.agg.carPool) && !state.isAdmin && !state.isDm){
+    return state.agg.carPool.map(c => Object.assign({}, c, {
+      ownerKey: c.owner, ownerPhone: '',
+      script: SCRIPTS.find(x => x.id === c.sid) || { id:c.sid, title:'剧本', emoji:'🎭', tags:[], price:0, g:'' },
+      members: (c.members || []).map((m, i) => ({
+        username:m.username, gender:m.gender, ageBucket:m.ageBucket, players:m.players,
+        status:'booked', carNew:i === 0, phone:'',
+      })),
+      reserved: c.reserved || 0,
+    }));
+  }
   const today = midnight();
   const out = [];
   state.bookings.filter(b => b.carNew && b.status === 'booked' && b.ts >= today).forEach(ob=>{
@@ -4452,13 +4965,13 @@ function carList(){
     const need = Math.max(0, pr.min - joined);
     out.push({ id:'own-'+ob.id, owner, ownerKey, ownerPhone:ob.phone, sid:ob.sid, ts:ob.ts, time:ob.time,
       cap:pr.max, min:pr.min, joined, need, script:s, members:[ob].concat(mates),
-      reserved: ob.reserved || 0 });
+      reserved: ob.reserved || 0, tags: ob.carTags || [], mine: ob.phone === (state.user ? state.user.phone : '') });
   });
   return out.sort((a,b)=> a.ts - b.ts || a.time.localeCompare(b.time));
 }
 function myCarIds(){
   const p = state.user ? state.user.phone : '';
-  return carList().filter(c => c.ownerPhone === p || c.members.some(b => b.phone === p));
+  return carList().filter(c => c.mine || c.ownerPhone === p || c.members.some(b => b.phone === p));
 }
 /* 20：按性别 / 年龄筛选车队 */
 function carMatchFilter(c){
@@ -4468,14 +4981,16 @@ function carMatchFilter(c){
   if(f === 'gender'){
     const me = myProfile();
     if(!me.gender) return true;
-    const o = profileOf(c.ownerPhone);
-    return o.gender === me.gender;
+    const o = c.ownerPhone ? profileOf(c.ownerPhone) : null;
+    const g = (o && o.gender) || (c.members[0] && c.members[0].gender) || '';
+    return g === me.gender;
   }
   if(f === 'age'){
     const me = myProfile();
     if(!me.age) return true;
-    const o = profileOf(c.ownerPhone);
-    return o.age && Math.abs(o.age - me.age) <= 5;
+    const o = c.ownerPhone ? profileOf(c.ownerPhone) : null;
+    const b = (o && ageBucketOf(o.age)) || (c.members[0] && c.members[0].ageBucket) || '';
+    return !!b && b === ageBucketOf(me.age);
   }
   return true;
 }
@@ -4528,6 +5043,7 @@ function carCardHtml(c){
   </button>`;
 }
 function renderCarTab(){
+  fillWantForm();
   $('#car-chips').innerHTML = CAR_FILTERS.map(([v,t])=>
     `<button class="chip ${state.carFilter===v?'on':''}" data-action="car-filter" data-f="${v}">${t}</button>`).join('');
   const all = state.carFilter === 'mine' ? myCarIds() : carList().filter(carMatchFilter);
@@ -4553,8 +5069,10 @@ function renderCar(){
   const c = carList().find(x => x.id === state.curCar);
   if(!c){ closeModal('modal-car'); return; }
   const p = state.user ? state.user.phone : '';
-  const isOwner = c.ownerPhone === p;
-  const joined  = c.members.some(b => b.phone === p);
+  const myName = state.user ? (state.user.username || '') : '';
+  const isOwner = c.ownerPhone ? (c.ownerPhone === p) : (!!c.mine && c.owner === myName);
+  const joined  = !!c.mine || c.members.some(b => b.phone === p);
+  const full    = c.joined >= c.cap;
   const pct = Math.min(100, Math.round(c.joined / c.cap * 100));
   const msgs = getCarMsgs().filter(m => m.carId === c.id).slice(0, 30);
   $('#car-title').textContent = `《${c.script.title}》${dateLabel(c.ts)} ${c.time}`;
@@ -4563,30 +5081,36 @@ function renderCar(){
       <h3>车队进度 <span class="credit-pill ${c.need ? 'mid' : 'good'}">${c.joined}/${c.cap} 人</span></h3>
       <div class="car-bar"><i style="width:${pct}%"></i></div>
       <p class="car-sub">${c.need ? `还差 ${c.need} 人成局（最少 ${c.min} 人）` : '已成局，等待开场～'}${c.reserved ? ` · 车主预留 ${c.reserved} 位` : ''}</p>
+      ${(c.tags && c.tags.length) ? `<div class="pf-tags" style="margin-top:8px">${c.tags.map(t=>`<span class="pf-tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
       <div class="kv">
         <div class="cell"><b>${escapeHtml(c.owner)}</b><span>车主</span></div>
         <div class="cell"><b>${c.time}</b><span>开场时间</span></div>
         <div class="cell"><b>${c.members.length}</b><span>已报名人数</span></div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
-        ${(!isOwner && !joined) ? `<button class="btn btn-accent btn-sm" data-action="car-join" data-id="${c.id}">🚗 一键上车</button>` : ''}
+        ${(!isOwner && !joined && !full) ? `<button class="btn btn-accent btn-sm" data-action="car-join" data-id="${c.id}">🚗 一键上车</button>` : ''}
+        ${(!isOwner && !joined && full) ? `<button class="btn btn-ghost btn-sm" data-action="car-wait" data-id="${c.id}">⏳ 满员 · 加入候补</button>` : ''}
         ${(!isOwner && joined) ? `<button class="btn btn-ghost btn-sm" data-action="car-quit" data-id="${c.id}">退出车队</button>` : ''}
-        ${c.need ? `<button class="btn btn-ghost btn-sm" data-action="car-to-private" data-id="${c.id}">👑 改包车</button>` : ''}
+        ${(!joined && c.need) ? `<button class="btn btn-ghost btn-sm" data-action="car-to-private" data-id="${c.id}">👑 改包车</button>` : ''}
         <button class="btn btn-ghost btn-sm" data-action="car-share" data-id="${c.id}">🔗 分享邀请</button>
       </div>
-      ${isOwner ? `<div class="f-item" style="margin-top:12px"><label>熟人预留位（0-3，预留后其他人无法占满）</label>
+      ${isOwner ? `<div class="f-item" style="margin-top:12px"><label>车队标签（最多 4 个，让队友更放心）</label>
+        <div class="msg-cats">${CAR_TAGS.map(t=>`<button class="chip-sm ${(c.tags||[]).includes(t)?'on':''}" data-action="car-tag" data-id="${c.id}" data-t="${escapeHtml(t)}">${escapeHtml(t)}</button>`).join('')}</div></div>
+        <div class="f-item" style="margin-top:12px"><label>熟人预留位（0-3，预留后其他人无法占满）</label>
         <div class="box"><input id="car-reserved" type="number" min="0" max="3" value="${c.reserved||0}" data-car="${c.id}"></div></div>
         <button class="btn btn-ghost btn-sm" style="margin-top:10px" data-action="car-save-reserved" data-id="${c.id}">保存预留位</button>` : ''}
     </div>
     <div class="adm-panel">
       <h3>成员</h3>
       ${c.members.map(b=>{
-        const pf = profileOf(b.phone);
+        const isRoster = !b.phone && !!b.username;
+        const pf = isRoster ? { gender:b.gender || '', ageBucket:b.ageBucket || '', age:null } : profileOf(b.phone);
+        const nm = isRoster ? b.username : (nickOf(b.phone) || '玩家');
         return `<div class="rv-item"><div class="top">
-          <b>${escapeHtml(nickOf(b.phone) || '玩家')}${b.carNew ? '（车主）' : ''}</b>
+          <b>${escapeHtml(nm)}${b.carNew ? '（车主）' : ''}</b>
           <span class="stars">${b.players} 人</span>
           ${pf.gender ? `<span class="badge">${pf.gender}</span>` : ''}
-          ${pf.age ? `<span class="badge">${pf.age} 岁</span>` : ''}
+          ${(pf.ageBucket || pf.age) ? `<span class="badge">${pf.ageBucket || pf.age + ' 岁'}</span>` : ''}
           <span class="time">${b.status === 'booked' ? '已报名' : b.status}</span></div></div>`;
       }).join('')}
     </div>
@@ -4603,77 +5127,156 @@ function renderCar(){
       </div>
     </div>`;
 }
-function carJoin(id){
+async function carJoin(id){
   if(!state.user) return toast('请先登录');
   const c = carList().find(x => x.id === id);
   if(!c) return;
   const left = c.cap - c.joined - (c.reserved || 0);
-  if(left <= 0) return toast('车位已满');
+  if(left <= 0) return toast('车位已满，可加入候补队列');
+  /* 31：走服务端 —— 余位校验、写库、通知车主/成局通知都由服务端完成 */
+  const r = await apiPost('/car/join', { carId:id });
+  if(r.ok){
+    state.agg = null;
+    await cloudSync(true);
+    renderCar(); renderCarTab();
+    toast('🚗 上车成功，等待发车');
+    return;
+  }
+  if(!r.offline){ toast(r.error || '上车失败'); return; }
+  /* 离线：本地先记，联网后补传（服务端会再校验一次） */
   state.bookings.unshift({ id:Date.now(), sid:c.sid, title:c.script.title, emoji:c.script.emoji,
     g:c.script.g, day:dateLabel(c.ts), ts:c.ts, time:c.time, players:1, price:c.script.price,
     status:'booked', mode:'拼车', carNew:false, carOwner:c.ownerKey,
     phone: state.user.phone });
-  saveBookings();
-  /* 30：成局 / 有人加入，通知车主与成员 */
-  pushNotice(c.ownerPhone, '有人加入你的车队', `${displayName()} 加入了《${c.script.title}》${dateLabel(c.ts)} ${c.time} 的车队。`);
-  const after = carList().find(x => x.id === id);
-  if(after && !after.need){
-    after.members.forEach(b=>{
-      if(b.phone) pushNotice(b.phone, '车队已成局 🎉', `《${c.script.title}》${dateLabel(c.ts)} ${c.time} 人数已满，准时到场哦～`);
-    });
-  }
+  lsSet('ts_bookings', state.bookings);
+  queueOp('/car/join', { carId:id });
   renderCar(); renderCarTab();
-  toast('🚗 上车成功，等待发车');
+  toast('🚗 已上车（离线保存，联网后自动同步）');
+}
+/* 17：满员候补 */
+async function carWait(id){
+  if(!state.user) return toast('请先登录');
+  const r = await apiPost('/car/wait', { carId:id });
+  if(r.ok) toast(r.position ? `⏳ 已加入候补，当前第 ${r.position} 位，有空位会通知你` : '⏳ 你已在候补队列中');
+  else toast(r.error || '加入候补失败');
+}
+/* 18：车队标签（车主） */
+async function carTag(id, tag){
+  const c = carList().find(x => x.id === id);
+  if(!c) return;
+  const tags = (c.tags || []).slice();
+  const i = tags.indexOf(tag);
+  if(i >= 0) tags.splice(i, 1);
+  else{ if(tags.length >= 4) return toast('最多选 4 个标签'); tags.push(tag); }
+  const r = await apiPost('/car/tags', { carId:id, tags });
+  if(!r.ok && !r.offline){ toast(r.error || '保存失败'); return; }
+  const local = state.bookings.find(b => 'own-' + b.id === id);
+  if(local) local.carTags = tags;
+  if(state.agg && c.mine === false) c.tags = tags;
+  lsSet('ts_bookings', state.bookings);
+  renderCar(); renderCarTab();
+  toast('✅ 车队标签已更新');
 }
 function carQuit(id){
   const c = carList().find(x => x.id === id);
   if(!c) return;
   const p = state.user.phone;
-  askConfirm('确定退出这个车队？', ()=>{
+  askConfirm('确定退出这个车队？有空位时会自动通知候补的玩家。', async ()=>{
+    const r = await apiPost('/car/quit', { carId:id });
+    if(!r.ok && !r.offline){ toast(r.error || '退出失败'); return; }
+    if(r.offline) queueOp('/car/quit', { carId:id });
     state.bookings = state.bookings.filter(b => !(b.phone === p && !b.carNew && b.carOwner === c.ownerKey
       && b.sid === c.sid && b.ts === c.ts && b.time === c.time && b.status === 'booked'));
-    saveBookings();
-    pushNotice(c.ownerPhone, '有人退出车队', `${displayName()} 退出了《${c.script.title}》${dateLabel(c.ts)} ${c.time} 的车队。`);
+    lsSet('ts_bookings', state.bookings);
+    state.agg = null;
+    if(!r.offline) await cloudSync(true);
     closeModal('modal-car'); renderCarTab();
     toast('已退出车队');
   });
 }
-/* 27：生成分享文案并复制 */
+/* 14：发布拼车需求（服务端自动撮合同剧本同时段的玩家） */
+function fillWantForm(){
+  const ss = $('#want-script'); if(!ss) return;
+  if(ss.options.length) return;                       // 只初始化一次，避免覆盖用户选择
+  ss.innerHTML = SCRIPTS.filter(s => s.onSale !== false)
+    .map(s=>`<option value="${s.id}">${escapeHtml(s.title)}</option>`).join('');
+  $('#want-day').innerHTML = Array.from({length:7},(_,i)=>{
+    const ts = midnight() + i*DAY;
+    return `<option value="${ts}">${dateLabel(ts)}</option>`;
+  }).join('');
+  $('#want-time').innerHTML = ['14:00','16:00','19:00','20:00','21:00']
+    .map(t=>`<option value="${t}">${t}</option>`).join('');
+}
+async function wantCreate(){
+  if(!state.user) return toast('请先登录');
+  const body = {
+    sid: +$('#want-script').value, ts: +$('#want-day').value, time: $('#want-time').value,
+    players: parseInt($('#want-players').value, 10) || 1, note: $('#want-note').value.trim(),
+  };
+  const r = await apiPost('/want/create', body);
+  if(!r.ok && !r.offline){ toast(r.error || '发布失败'); return; }
+  if(r.offline) queueOp('/want/create', body);
+  const m = r.matched || [];
+  $('#want-result').innerHTML = m.length
+    ? `<div class="msg-item"><div class="top"><b>🎯 已匹配到 ${m.length} 位同好</b></div>
+        <p>${m.map(x=>escapeHtml(x.username) + `（${x.players} 人）`).join('、')}</p>
+        <p class="car-sub">已给他们发去通知，可在拼车大厅/车队里碰头～</p></div>`
+    : `<p class="car-sub">需求已发布，有同剧本同时段的玩家会收到通知。</p>`;
+  toast(m.length ? `🎯 已匹配到 ${m.length} 位玩家` : '📣 需求已发布');
+}
+/* 27/16：生成分享文案 + 落地页链接（点开直接打开该车队） */
 function carShare(id){
   const c = carList().find(x => x.id === id);
   if(!c) return;
-  const txt = `【甜薯剧本杀】一起开本吗？\n《${c.script.title}》${dateLabel(c.ts)} ${c.time}\n目前 ${c.joined}/${c.cap} 人，${c.need ? `还差 ${c.need} 人` : '即将成局'}，来甜薯找我拼车～`;
+  const link = location.origin + location.pathname + '#/car/' + encodeURIComponent(id);
+  const txt = `【甜薯剧本杀】一起开本吗？\n《${c.script.title}》${dateLabel(c.ts)} ${c.time}\n目前 ${c.joined}/${c.cap} 人，${c.need ? `还差 ${c.need} 人` : '即将成局'}${c.tags && c.tags.length ? '\n车队标签：' + c.tags.join(' / ') : ''}\n点开直接上车 → ${link}`;
   if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(txt).then(()=>toast('🔗 邀请文案已复制，快去发给朋友'), ()=>toast(txt));
+    navigator.clipboard.writeText(txt).then(()=>toast('🔗 邀请文案+链接已复制，发到群里就能上车'), ()=>toast(txt));
   }else toast(txt);
 }
-function carSendMsg(id){
+async function carSendMsg(id){
   const t = $('#car-msg').value.trim();
   if(!t) return toast('说点什么吧～');
   const m = getCarMsgs();
   m.push({ id:Date.now(), carId:id, by:displayName() || '玩家', phone:state.user.phone, text:t, at:Date.now() });
-  saveCarMsgs(m);
+  lsSet('ts_carmsgs', m);
   $('#car-msg').value = '';
+  const r = await apiPost('/car/msg', { carId:id, text:t });
+  if(!r.ok && !r.offline){ toast(r.error || '发送失败'); }
   renderCar();
 }
-function carSaveReserved(id){
+async function carSaveReserved(id){
   const c = carList().find(x => x.id === id);
   if(!c) return;
   const n = Math.max(0, Math.min(3, parseInt($('#car-reserved').value, 10) || 0));
+  const r = await apiPost('/car/reserved', { carId:id, n });
+  if(!r.ok && !r.offline){ toast(r.error || '保存失败'); return; }
   const ob = state.bookings.find(b => b.id === +id.replace('own-',''));
-  if(ob){ ob.reserved = n; saveBookings(); }
+  if(ob){ ob.reserved = n; lsSet('ts_bookings', state.bookings); }
+  if(state.agg && Array.isArray(state.agg.carPool)){
+    const a = state.agg.carPool.find(x => x.id === id); if(a) a.reserved = n;
+  }
   renderCar(); renderCarTab();
   toast('✅ 预留位已保存');
 }
-/* 28：人数不够，直接转包车 */
+/* 28：人数不够，直接转包车（走服务端下单，金额服务端计算） */
 function carToPrivate(id){
   const c = carList().find(x => x.id === id);
   if(!c) return;
-  askConfirm(`改为包车《${c.script.title}》${dateLabel(c.ts)} ${c.time}？将为你新建一条包车预约。`, ()=>{
-    state.bookings.unshift({ id:Date.now(), sid:c.sid, title:c.script.title, emoji:c.script.emoji,
-      g:c.script.g, day:dateLabel(c.ts), ts:c.ts, time:c.time, players:c.min, price:c.script.price,
-      status:'booked', mode:'包车', carNew:false, carOwner:null, phone: state.user.phone });
-    saveBookings();
+  askConfirm(`改为包车《${c.script.title}》${dateLabel(c.ts)} ${c.time}？将为你新建一条包车预约。`, async ()=>{
+    const r = await apiPost('/booking/create', { sid:c.sid, ts:c.ts, time:c.time, players:c.min, mode:'包车' });
+    if(r.ok && r.booking){
+      state.bookings.unshift(r.booking);
+      lsSet('ts_bookings', state.bookings);
+    }else if(r.offline){
+      state.bookings.unshift({ id:Date.now(), sid:c.sid, title:c.script.title, emoji:c.script.emoji,
+        g:c.script.g, day:dateLabel(c.ts), ts:c.ts, time:c.time, players:c.min, price:c.script.price,
+        status:'booked', mode:'包车', carNew:false, carOwner:null, phone: state.user.phone });
+      lsSet('ts_bookings', state.bookings);
+      queueOp('/booking/create', { sid:c.sid, ts:c.ts, time:c.time, players:c.min, mode:'包车' });
+    }else{
+      toast(r.error || '创建失败'); return;
+    }
     toast('👑 已为你创建包车预约');
     closeModal('modal-car'); switchTab('book');
   });
@@ -4714,28 +5317,39 @@ function canRefundDeposit(b){
   const hours = (ts - Date.now()) / 3600000;
   return hours >= PAY.freeCancelHours;
 }
-function payOrder(id){
+async function payOrder(id){
   const pays = getPays();
   const o = pays.find(x => x.id === +id);
   if(!o) return;
-  if(!PAY.enabled){
-    /* 模拟支付：真实接入后这里换成拉起收银台 */
-    askConfirm(`模拟支付定金 ¥${o.deposit}（未接入真实支付通道）。确定支付？`, ()=>{
-      o.status = 'paid'; o.paidAt = Date.now(); o.tradeNo = 'DEMO' + Date.now();
-      savePays(pays);
-      const b = state.bookings.find(x => x.id === o.bid);
-      if(b) b.orderStatus = 'booked';
-      saveBookings();
-      pushNotice(o.phone, '定金支付成功', `《${o.title}》定金 ¥${o.deposit} 已支付，座位已锁定，等你来玩～`);
+  /* 6：余额够就直接问是否用余额抵扣（余额由服务端扣款，前端改不了） */
+  const meAcc = lsAccounts().find(u => u.phone === (state.user ? state.user.phone : '')) || {};
+  const bal = Number(meAcc.balance) || 0;
+  const useBalance = bal >= o.deposit && !PAY.enabled &&
+    window.confirm(`你的会员余额 ¥${bal}\n\n【确定】用余额抵扣定金 ¥${o.deposit}\n【取消】走模拟支付（演示）`);
+  askConfirm(PAY.enabled
+    ? `即将跳转收银台支付定金 ¥${o.deposit}。`
+    : `模拟支付定金 ¥${o.deposit}（尚未接入真实支付通道，仅用于演示）。确定支付？`, async ()=>{
+    /* 31：支付状态由服务端判定与写入，前端无法自己把订单标记成「已支付」 */
+    const r = await apiPost('/order/act', { id:o.id, action:'pay', useBalance });
+    if(r.ok){
+      await cloudSync(true);
       renderMyOrders(); renderBookings();
-      toast('✅ 模拟支付成功（正式支付尚未接入）');
-    });
-    return;
-  }
-  toast('已提交支付，请在收银台完成付款…');
-  /* 真实接入位置：调起 微信/支付宝 收银台，回调后执行上面同样的标记逻辑 */
+      toast('✅ 支付成功，座位已锁定');
+      return;
+    }
+    if(!r.offline){ toast(r.error || '支付失败'); return; }
+    /* 离线：本地先标，联网后补传（服务端仍会校验订单归属） */
+    o.status = 'paid'; o.paidAt = Date.now();
+    lsSet('ts_pays', pays);
+    const b0 = state.bookings.find(x => x.id === o.bid);
+    if(b0) b0.orderStatus = 'booked';
+    lsSet('ts_bookings', state.bookings);
+    queueOp('/order/act', { id:o.id, action:'pay' });
+    renderMyOrders(); renderBookings();
+    toast('✅ 已支付（离线保存，联网后自动同步）');
+  });
 }
-function refundOrder(id){
+async function refundOrder(id){
   const pays = getPays();
   const o = pays.find(x => x.id === +id);
   if(!o) return;
@@ -4743,15 +5357,36 @@ function refundOrder(id){
   const free = b ? canRefundDeposit(b) : true;
   askConfirm(free
     ? `确认退款 ¥${o.deposit}？开场前 ${PAY.freeCancelHours} 小时外可全额退定金。`
-    : `距开场不足 ${PAY.freeCancelHours} 小时，按规则定金不退。仍要强制退款？`, ()=>{
-    o.status = 'refunded'; o.refundAt = Date.now();
-    savePays(pays);
-    if(b){ b.status = 'cancelled'; b.orderStatus = 'cancelled'; saveBookings(); }
-    logAct(`订单退款 ¥${o.deposit}（《${o.title}》）`);
-    pushNotice(o.phone, '退款已处理', `《${o.title}》定金 ¥${o.deposit} 已退回，预约已取消。`);
-    renderMyOrders(); renderBookings(); if(state.isAdmin) renderAdmin();
-    toast('✅ 已退款并取消预约');
+    : `距开场不足 ${PAY.freeCancelHours} 小时，按门店规则定金不退，取消会记录信用分扣分。仍要取消？`, async ()=>{
+    /* 42：能否退款由服务端按门店规则判定，前端绕不过 */
+    const r = await apiPost('/order/act', { id:o.id, action:'refund' });
+    if(r.ok){
+      await cloudSync(true);
+      renderMyOrders(); renderBookings(); if(state.isAdmin) renderAdmin();
+      toast(r.refunded ? '✅ 已退款并取消预约' : '已取消预约（超出免费取消时限，定金不退）');
+      return;
+    }
+    if(!r.offline){ toast(r.error || '操作失败'); return; }
+    o.status = free ? 'refunded' : 'closed'; o.refundAt = Date.now();
+    lsSet('ts_pays', pays);
+    if(b){ b.status = 'cancelled'; b.orderStatus = 'cancelled'; lsSet('ts_bookings', state.bookings); }
+    queueOp('/order/act', { id:o.id, action:'refund' });
+    renderMyOrders(); renderBookings();
+    toast('已在本地取消（联网后自动同步）');
   });
+}
+/* 59：我的优惠券（定金抵扣，由门店发放） */
+function renderMyCoupons(){
+  const box = $('#coupon-box'); if(!box) return;
+  const p = state.user ? state.user.phone : '';
+  const list = (state.agg && Array.isArray(state.agg.myCoupons) && !state.isAdmin && !state.isDm)
+    ? state.agg.myCoupons.map(c => ({ id:c.id, amount:c.amount, minAmount:c.minAmount, exp:c.exp, used:false }))
+    : getCoupons().filter(c => !c.used && (c.all || c.phone === p));
+  box.innerHTML = list.length ? list.map(c=>`
+    <div class="rv-item"><div class="top"><b>🎟️ 定金抵扣 ¥${c.amount}</b>
+      <span class="stars">满 ¥${c.minAmount || 0} 可用</span>
+      <span class="time">${c.exp ? '有效期至 ' + new Date(c.exp).toLocaleDateString() : '长期有效'}</span></div></div>`).join('')
+    : emptyBox('🎟️','暂无可用优惠券，关注门店活动吧～');
 }
 /* 69：客户端订单中心 */
 function renderMyOrders(){
@@ -4815,6 +5450,8 @@ function renderAdmOrders(){
 const SES_STATUS = { open:'待开', locked:'已锁', ongoing:'进行中', done:'已结束', cancelled:'已取消' };
 function roomName(id){ const r = getRooms().find(x => x.id === +id); return r ? r.name : '—'; }
 function sessionJoined(s){
+  /* 33：客户用服务端聚合的余位数据（本地只有自己的预约） */
+  if(state.agg && state.agg.sessionJoin) return state.agg.sessionJoin[s.id] || 0;
   return state.bookings.filter(b => b.sessionId === s.id && b.status !== 'cancelled')
     .reduce((n,b)=>n + b.players, 0);
 }
@@ -4915,6 +5552,16 @@ function sesGen(){
   if(!s) return;
   const dmAcc = lsAccounts().find(u => u.phone === dm);
   const list = getSessions();
+  /* 22：同一房间同一时段不能排两场（防撞房） */
+  if(roomId){
+    const clash = [];
+    for(let i=0;i<days;i++){
+      const ts = midnight() + i*DAY;
+      if(list.some(x => x.roomId === roomId && x.ts === ts && x.time === time && x.status !== 'cancelled'))
+        clash.push(dateLabel(ts));
+    }
+    if(clash.length) return toast(`⚠️ 该房间这些天已有场次，请换房间或时段：${clash.slice(0,3).join('、')}${clash.length>3?' 等':''}`);
+  }
   let n = 0;
   for(let i=0;i<days;i++){
     const ts = midnight() + i*DAY;
@@ -4933,15 +5580,25 @@ function sesSetStatus(id, st){
   const list = getSessions();
   const s = list.find(x => x.id === +id);
   if(!s) return;
+  /* 58：取消/锁定需要填写原因（会写进场次并通知已报名客户） */
+  const reason = (st === 'cancelled' || st === 'locked')
+    ? (window.prompt(st === 'cancelled' ? '取消原因（会通知已报名客户）' : '锁定原因（如：包场/装修/维护）', st === 'cancelled' ? '门店原因取消' : '包场') || '')
+    : '';
   s.status = st;
+  if(reason) s.statusReason = reason;
   saveSessions(list);
+  /* 服务端同步（含房间冲突兜底与留痕） */
+  apiPost('/staff/session', { id, status: st, reason }).then(r=>{
+    if(r && !r.ok && !r.offline) toast(r.error || '服务端同步失败');
+    else if(r && r.ok) cloudSync(true);
+  });
   /* 45：场次取消 / 变动通知已报名客户 */
   if(st === 'cancelled'){
     state.bookings.filter(b => b.sessionId === s.id && b.status === 'booked').forEach(b=>{
-      pushNotice(b.phone, '场次变动通知', `《${s.title}》${dateLabel(s.ts)} ${s.time} 的场次已被取消，请联系门店改约。`);
+      pushNotice(b.phone, '场次变动通知', `《${s.title}》${dateLabel(s.ts)} ${s.time} 的场次${reason ? '（' + reason + '）' : ''}已被取消，请联系门店改约。`);
     });
   }
-  renderSessions(); logAct(`场次《${s.title}》${s.time} 状态改为 ${SES_STATUS[st]}`);
+  renderSessions(); logAct(`场次《${s.title}》${s.time} 状态改为 ${SES_STATUS[st]}${reason ? '（' + reason + '）' : ''}`);
   toast('✅ 场次状态已更新');
 }
 function sesDel(id){
@@ -5035,19 +5692,24 @@ function renderCommTab(){
   $('#comm-count').textContent = `共 ${list.length} 条`;
   $('#comm-list').innerHTML = list.length ? list.map(postCard).join('') : `<div class="adm-panel">${emptyBox('🌍','还没有动态，来发第一条吧')}</div>`;
 }
-function commPost(){
+async function commPost(){
   if(!state.user) return toast('请先登录');
   const title = $('#cm-title').value.trim();
   const text  = $('#cm-text').value.trim();
   if(!title) return toast('请填写标题');
   if(!text)  return toast('请填写内容');
-  const bad = badHit(title + text);
+  const payload = { type:state.postType || 'diary', title, text, imgs:state.cmImgs || [] };
+  /* 49：社区内容也走服务端审核 */
+  const r = await apiPost('/post/create', payload);
+  if(!r.ok && !r.offline){ toast(r.error || '发布失败'); return; }
+  const bad = r.ok ? !!r.hidden : badHit(title + text);
   const posts = getPosts();
-  posts.unshift({ id:Date.now(), type:state.postType || 'diary', title, text,
-    imgs: state.cmImgs || [], phone:state.user.phone, username:displayName() || '玩家',
+  posts.unshift(r.post || { id:Date.now(), type:payload.type, title, text,
+    imgs: payload.imgs, phone:state.user.phone, username:displayName() || '玩家',
     at:Date.now(), likes:[], reports:[], hidden:bad,
-    spoiler: state.postType === 'diary' || state.postType === 'guide' });
-  savePosts(posts);
+    spoiler: payload.type === 'diary' || payload.type === 'guide' });
+  lsSet('ts_posts', posts);
+  if(r.offline) queueOp('/post/create', payload);
   $('#cm-title').value = ''; $('#cm-text').value = ''; state.cmImgs = []; renderCmImgs();
   renderCommTab();
   toast(bad ? '已发布（命中敏感词，待审核）' : '🌍 发布成功');
@@ -5060,14 +5722,17 @@ function renderCmImgs(){
   const c = document.querySelector('[data-action="cm-clear-img"]');
   if(c) c.hidden = !(state.cmImgs || []).length;
 }
-function postLike(id){
+async function postLike(id){
   const p0 = state.user && state.user.phone; if(!p0) return toast('请先登录');
   const posts = getPosts();
   const p = posts.find(x => x.id === +id); if(!p) return;
   p.likes = p.likes || [];
   const i = p.likes.indexOf(p0);
   if(i >= 0) p.likes.splice(i, 1); else p.likes.push(p0);
-  savePosts(posts); renderCommTab();
+  lsSet('ts_posts', posts);
+  const r = await apiPost('/post/like', { id });
+  if(!r.ok && r.offline) queueOp('/post/like', { id });
+  renderCommTab();
 }
 function postReport(id){
   const reason = window.prompt('举报原因（如：广告 / 人身攻击 / 剧透不标注）');
@@ -5507,7 +6172,7 @@ function emptyBox(icon, text){
 const ADM_TAB_PERM = {
   dash:['super','admin'], bookings:['super','admin'], orders:['super','admin'], scripts:['super','admin'],
   reviews:['super','admin'], users:['super','admin'], customers:['super','admin'],
-  msgs:['super','admin'], notice:['super','admin'], community:['super','admin'], dmfiles:['super','admin'], venue:['super','admin'],
+  msgs:['super','admin'], notice:['super','admin'], community:['super','admin'], dmfiles:['super','admin'], venue:['super','admin'], ops:['super','admin'],
   /* 操作日志与数据备份：管理员同样可用；清空数据、删除账号、改权限等破坏性操作仍仅超级管理员 */
   logs:['super','admin'], backup:['super','admin']
 };
@@ -5689,7 +6354,10 @@ function noticeReadAll(){
     x.readBy = x.readBy || [];
     if(!x.readBy.includes(p) && (!x.to || x.to.includes(p))) x.readBy.push(p);
   });
-  saveNotices(n); renderNotices(); refreshBell();
+  lsSet('ts_notices', n);
+  /* 已读状态只写自己那一份（服务端记录 readBy），不再整体覆盖通知文件 */
+  apiPost('/notice/read', { ids: [] }).then(r=>{ if(!r.ok && r.offline) queueOp('/notice/read', { ids: [] }); });
+  renderNotices(); refreshBell();
   toast('✅ 已全部标记为已读');
 }
 function noticeSend(){
@@ -5742,16 +6410,33 @@ function backupExport(){
   logAct('导出数据备份'); toast('📥 备份文件已下载');
 }
 function backupImport(file){
+  /* 48：导入前做结构与体积校验，防止畸形/超大数据把站点写坏 */
+  if(file.size > 8 * 1024 * 1024) return toast('⚠️ 备份文件超过 8MB，请确认文件是否正确');
   const r = new FileReader();
   r.onload = ()=>{
+    let d = null;
     try{
-      const d = JSON.parse(r.result);
-      if(!d || typeof d.data !== 'object') throw new Error('格式不正确');
-      BACKUP_KEYS.forEach(k=>{ if(d.data[k] != null) lsSet(k, d.data[k]); });
+      d = JSON.parse(r.result);
+      if(!d || typeof d !== 'object') throw new Error('不是合法 JSON');
+      if(!d.data || typeof d.data !== 'object') throw new Error('缺少 data 字段');
+      const keys = Object.keys(d.data);
+      const bad = keys.filter(k => k && k.indexOf('ts_') !== 0);
+      if(bad.length) throw new Error('包含未知字段：' + bad.slice(0,3).join(','));
+    }catch(e){ return toast('⚠️ 备份文件校验失败：' + e.message); }
+    const summary = BACKUP_KEYS.filter(k => d.data[k] != null).map(k=>{
+      const v = d.data[k];
+      return k.replace('ts_','') + (Array.isArray(v) ? ':' + v.length + '条' : '');
+    }).join('、');
+    askConfirm(`备份校验通过（${summary}）。导入会覆盖现有数据，确定继续？`, ()=>{
+      try{
+        BACKUP_KEYS.forEach(k=>{ if(d.data[k] != null) lsSet(k, d.data[k]); });
+      }catch(err){
+        return toast('⚠️ 写入失败，可能是浏览器存储已满');
+      }
       logAct('导入数据备份');
       toast('✅ 备份已导入，正在重新加载…');
       setTimeout(()=>location.reload(), 1200);
-    }catch(e){ toast('⚠️ 备份文件解析失败'); }
+    });
   };
   r.readAsText(file);
 }
@@ -5881,6 +6566,52 @@ const ACTIONS = {
   'dm-choice':   el=>{ state.dmChoice = el.dataset.m; if(state.dmChoice !== 'assign') state.pickDm = ''; renderMode(); },
   'dm-pick':     el=>{ state.pickDm = el.dataset.phone; renderMode(); toast('已选择 DM：' + (nickOf(state.pickDm) || '该主持人')); },
   'dm-info':     el=>openDmProfile(el.dataset.phone),
+  'pick-role':   el=>{ state.pickRole = (state.pickRole === el.dataset.r) ? '' : el.dataset.r; tryBook(); },
+  'pick-coupon': el=>{ state.pickCouponId = el.value ? +el.value : 0; tryBook(); },
+  /* 21：核销（管理端 / DM 端通用，输入客户出示的 6 位核销码） */
+  /* 45：DM 给客户调信用分（服务端会校验该客户是否在自己的场次里） */
+  'dm-credit':   async el=>{
+    const phone = el.dataset.phone, nm = el.dataset.name || '客户';
+    const n = window.prompt(`调整「${nm}」的信用分（正数加分，负数扣分，范围 -100 ~ 100）`, '-10');
+    if(n === null) return;
+    const delta = parseInt(n, 10);
+    if(!delta) return toast('请输入非 0 的分值');
+    const reason = window.prompt('调整原因（客户会收到通知）', delta > 0 ? '表现优秀' : '中途跳车') || '';
+    const r = await apiPost('/dm/credit', { phone, delta, reason });
+    if(!r.ok) return toast(r.error || '调整失败');
+    state.dmCustomers = null;
+    renderDmCredit();
+    toast(`✅ ${nm} 信用分：${r.before} → ${r.after}`);
+  },
+  /* 30：拉黑 / 恢复账号 */
+  'ban-user':    el=>{
+    const phone = el.dataset.phone;
+    const acc = lsAccounts().find(x => x.phone === phone);
+    if(!acc) return;
+    if(acc.super === true) return toast('👑 超级管理员不可限制');
+    const reason = acc.banned ? '' : (window.prompt('拉黑原因（会展示给客户，如：多次跳票未付定金）', '违反门店规则') || '');
+    askConfirm(acc.banned ? `恢复「${acc.username}」的账号？` : `拉黑「${acc.username}」？该账号将无法登录与预约。`, async ()=>{
+      const r = await apiPost('/staff/ban', { phone, reason });
+      if(!r.ok){ toast(r.error || '操作失败'); return; }
+      const list = lsAccounts();
+      const u = list.find(x => x.phone === phone);
+      if(u){ u.banned = !!r.banned; u.banReason = r.banned ? (reason || '违反门店规则') : ''; saveAccountsLocal(list); }
+      renderCustomer(); renderCustomers();
+      toast(r.banned ? '⛔ 已拉黑该账号' : '✅ 已恢复该账号');
+    });
+  },
+  'adm-verify':  async ()=>{
+    const inp = ['#adm-verify-code','#dm-verify-code'].map(s=>$(s)).filter(e => e && e.offsetParent)[0]
+      || $('#adm-verify-code') || $('#dm-verify-code');
+    const code = inp ? String(inp.value || '').trim() : '';
+    if(!/^\d{6}$/.test(code)) return toast('请输入 6 位核销码');
+    const r = await apiPost('/staff/verify', { code });
+    if(!r.ok) return toast(r.error || '核销失败');
+    if(inp) inp.value = '';
+    toast(`✅ 已核销：《${r.booking.title}》${r.booking.day} ${r.booking.time}（${r.booking.username || '客户'}）`);
+    await cloudSync(true);
+    if(state.isAdmin) renderAdmin(); else if(state.isDm) renderDm();
+  },
   /* 提交 */
   'try-book':    tryBook,
   'step-n':      el=>stepN(+el.dataset.d),
@@ -5997,6 +6728,150 @@ const ACTIONS = {
   'car-send':    el=>carSendMsg(el.dataset.id),
   'car-save-reserved': el=>carSaveReserved(el.dataset.id),
   'car-to-private': el=>carToPrivate(el.dataset.id),
+  'car-wait':    el=>carWait(el.dataset.id),
+  'car-tag':     el=>carTag(el.dataset.id, el.dataset.t),
+  /* 14/19：拼车需求与再约 */
+  'want-create': wantCreate,
+  'mate-invite': el=>mateInvite(el.dataset.name),
+  /* 11：复制邀请码 */
+  'copy-invite': el=>{
+    const code = el.dataset.code || '';
+    if(!code) return;
+    const txt = `我在甜薯剧本杀玩本，注册时填我的邀请码 ${code}，我们各得一张 ¥15 定金抵扣券～`;
+    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(()=>toast('🔗 邀请文案已复制'), ()=>toast(txt));
+    else toast(txt);
+  },
+  /* 6：会员充值 */
+  'recharge':    async ()=>{
+    const phone = $('#rc-phone').value.trim(), amount = parseInt($('#rc-amount').value, 10) || 0;
+    if(!/^1\d{10}$/.test(phone)) return toast('请填写 11 位客户手机号');
+    if(!amount) return toast('请填写充值金额');
+    const r = await apiPost('/staff/recharge', { phone, amount, note:$('#rc-note').value.trim() });
+    if(!r.ok) return toast(r.error || '充值失败');
+    toast(`💳 充值成功：¥${r.before} → ¥${r.after}`);
+    $('#rc-note').value = '';
+  },
+  /* 12：沉睡客户回访券 */
+  'sleep-coupon': async ()=>{
+    const days = parseInt($('#sl-days').value, 10) || 30;
+    const amount = parseInt($('#sl-amount').value, 10) || 20;
+    askConfirm(`给「${days} 天未到店」的客户发放 ¥${amount} 定金抵扣券？`, async ()=>{
+      const r = await apiPost('/staff/coupon', { all:'sleeping', sleepDays:days, amount, minAmount:0, days:30 });
+      if(!r.ok) return toast(r.error || '发放失败');
+      toast(r.count ? `🎁 已给 ${r.count} 位沉睡客户发券` : (r.msg || '没有符合条件的客户'));
+    });
+  },
+  /* 15：店家撮合成团 */
+  'want-form':   async el=>{
+    const ids = String(el.dataset.ids).split(',').map(s=>+s).filter(Boolean);
+    if(!ids.length) return toast('没有可撮合的需求');
+    askConfirm(`把这 ${ids.length} 位玩家合成一车？会为他们生成预约与待付定金订单，并推送通知。`, async ()=>{
+      const r = await apiPost('/want/form', { ids });
+      if(!r.ok) return toast(r.error || '撮合失败');
+      toast(`🤝 已撮合成团，共 ${r.created} 人`);
+      await cloudSync(true);
+      if(state.isAdmin) renderAdmin();
+    });
+  },
+  /* 26：DM 结算标记 */
+  'settle-save': async el=>{
+    const r = await apiPost('/staff/settle', {
+      ym: new Date().toISOString().slice(0,7), phone: el.dataset.phone, username: el.dataset.name,
+      sessions: +el.dataset.n || 0, revenue: +el.dataset.rev || 0,
+      rate: getSettingsLocal().dmRate || 0.1, amount: +el.dataset.amt || 0,
+    });
+    if(!r.ok) return toast(r.error || '结算失败');
+    const list = getSettles(); if(r.settle) list.push(r.settle);
+    lsSet('ts_settles', list);
+    renderOps(); toast('✅ 已标记结算并通知 DM');
+  },
+  /* 50：保存经营参数 */
+  'ops-save': async ()=>{
+    const cur = Object.assign({}, lsGet('ts_settings', {}) || {});
+    cur.dmFee = +$('#op-dmfee').value || 0;
+    cur.depositRatio = Math.max(0, Math.min(1, (+$('#op-ratio').value || 30) / 100));
+    cur.freeCancelHours = +$('#op-free').value || 0;
+    cur.dmRate = Math.max(0, Math.min(1, (+$('#op-rate').value || 10) / 100));
+    cur.lateCancelPenalty = +$('#op-pen').value || 0;
+    lsSet('ts_settings', cur);
+    const ok = await cloudPut('settings', cur);
+    toast(ok ? '✅ 经营参数已保存（已同步云端）' : '⚠️ 已保存本地，云端同步失败');
+    renderOps();
+  },
+  /* 27：导出对账 CSV */
+  'ops-export': ()=>{
+    const payList = getPays();
+    const rows = [['日期','场次','应收总额','已收定金','待收定金','已退款','净收']];
+    Array.from({length:7},(_,i)=> midnight() - (6-i)*DAY).forEach(ts=>{
+      const dayPays = payList.filter(o => new Date(o.createdAt || 0).setHours(0,0,0,0) === ts);
+      const paid   = dayPays.filter(o=>o.status==='paid').reduce((n,o)=>n + (o.deposit || 0), 0);
+      const refund = dayPays.filter(o=>o.status==='refunded').reduce((n,o)=>n + (o.deposit || 0), 0);
+      const unpaid = dayPays.filter(o=>o.status==='unpaid').reduce((n,o)=>n + (o.deposit || 0), 0);
+      const bk = state.bookings.filter(b => b.ts === ts && b.status !== 'cancelled');
+      const gross = bk.reduce((n,b)=> n + (b.price || 0) * (b.players || 1), 0);
+      rows.push([dateLabel(ts), bk.length, gross, paid, unpaid, refund, paid - refund]);
+    });
+    const csv = '\ufeff' + rows.map(r=>r.join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv' }));
+    a.download = `甜薯财务对账-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click(); URL.revokeObjectURL(a.href);
+    toast('📥 对账 CSV 已下载');
+  },
+  /* 59：发券 */
+  'coupon-issue': async ()=>{
+    const mode = $('#cp-all').value;
+    const body = { amount:+$('#cp-amount').value || 0, minAmount:+$('#cp-min').value || 0,
+      days:+$('#cp-days').value || 30 };
+    if(!body.amount) return toast('请填写抵扣金额');
+    if(mode === 'all')       body.all = true;
+    else if(mode === 'sleeping'){
+      body.all = 'sleeping';
+      body.sleepDays = +($('#sl-days') ? $('#sl-days').value : 30) || 30;
+    }else{
+      body.all = false;
+      body.phone = $('#cp-phone').value.trim();
+      if(!/^1\d{10}$/.test(body.phone)) return toast('请填写正确的手机号');
+    }
+    const r = await apiPost('/staff/coupon', body);
+    if(!r.ok) return toast(r.error || '发放失败');
+    toast(r.count ? `🎁 已发放 ${r.count} 张优惠券` : (r.msg || '没有符合条件的客户'));
+  },
+  /* 54/55：账号安全 */
+  'sec-send':    el=>secSendCode(el.dataset.p),
+  'sec-pwd':     async ()=>{
+    const pw = $('#sec-pwd').value, code = $('#sec-code').value.trim();
+    if(pw.length < 6) return toast('密码至少 6 位');
+    const r = await apiPost('/account/pwd', { password:pw, code });
+    if(!r.ok) return toast(r.error || '修改失败');
+    $('#sec-pwd').value = ''; $('#sec-code').value = '';
+    toast('✅ 密码已修改，下次用新密码登录');
+  },
+  'sec-phone':   async ()=>{
+    const np = $('#sec-phone').value.trim(), code = $('#sec-phone-code').value.trim();
+    if(!/^1\d{10}$/.test(np)) return toast('请填写 11 位新手机号');
+    const r = await apiPost('/account/phone', { newPhone:np, code });
+    if(!r.ok) return toast(r.error || '换绑失败');
+    state.user.phone = np; lsSet('ts_user', state.user);
+    $('#sec-phone').value = ''; $('#sec-phone-code').value = '';
+    toast('✅ 手机号已换绑，数据已迁移');
+    await cloudSync(true);
+  },
+  'sec-delete':  ()=>{
+    if(!state.user) return;
+    askConfirm('确定注销账号？账号、预约、订单、留言、收藏都会被永久删除，无法恢复。', async ()=>{
+      const cap = await apiGet('/captcha');
+      const code = window.prompt('人机验证：' + (cap ? cap.q : '') + '\n请输入答案') || '';
+      const r0 = await apiPost('/code/send', { purpose:'delete', email:(lsAccounts().find(u=>u.phone===state.user.phone)||{}).email || '', phone:state.user.phone, captchaId:cap && cap.id, captchaAnswer:code });
+      if(!r0.ok) return toast(r0.error || '验证码发送失败');
+      const vcode = window.prompt('请输入验证码' + (r0.devCode ? '（演示：' + r0.devCode + '）' : ''));
+      if(!vcode) return;
+      const r = await apiPost('/account/delete', { code:vcode });
+      if(!r.ok) return toast(r.error || '注销失败');
+      toast('账号已注销，感谢你的陪伴 🍠');
+      doLogout();
+    });
+  },
   /* 个人资料 */
   'pick-avatar': el=>{ state.avatarDraft = el.dataset.a; state.pickAvatar = el.dataset.a;
     document.querySelectorAll('[data-action="pick-avatar"]').forEach(b=>b.classList.toggle('on', b===el)); },
@@ -6077,7 +6952,7 @@ document.addEventListener('change', e=>{
     const f = e.target.files && e.target.files[0];
     e.target.value = '';
     if(!f || !state.scfFileTarget) return;
-    compressImage(f, 420, dataURL=>{
+    compressAndStore(f, 420, dataURL=>{
       if(state.scfFileTarget.type === 'cover'){
         state.scfImg = dataURL; renderScfImg();
       }else{
@@ -6093,6 +6968,18 @@ const CAN_WEBP = (()=>{
   try{ return document.createElement('canvas').toDataURL('image/webp').indexOf('data:image/webp') === 0; }
   catch(e){ return false; }
 })();
+/* 37/47/53：图片优先上传到服务端独立存储，返回短链接（不再把 base64 塞进 localStorage/数据文件）；
+   上传失败（未登录/未接服务端/超限）时回退为本地 base64，保证功能不中断 */
+async function storeImage(dataURL){
+  if(!useWorker() || !lsGet('ts_token','')) return dataURL;
+  const r = await apiPost('/upload', { data:dataURL });
+  if(r.ok && r.url) return r.url;
+  if(r.error) toast('⚠️ 图片上传失败，已改用本地暂存：' + r.error);
+  return dataURL;
+}
+function compressAndStore(file, maxW, cb){
+  compressImage(file, maxW, async dataURL=>{ cb(await storeImage(dataURL)); });
+}
 function compressImage(file, maxW, cb){
   const reader = new FileReader();
   reader.onload = ()=>{
@@ -6257,6 +7144,13 @@ try{
     window.addEventListener('hashchange', applyRoute);
     refreshBell();               // 消息中心未读角标
     checkCarExpire();            // 过期未成局车队自动取消
+    /* 16：拼车落地页（把 #/car/xxx 链接发到群里，点开直接打开该车队） */
+    const mCar = location.hash.match(/^#\/car\/(.+)$/);
+    if(mCar) setTimeout(()=>{ try{ switchTab('car'); openCar(decodeURIComponent(mCar[1])); }catch(e){} }, 500);
+    /* 52：注册 Service Worker（PWA 可添加到手机桌面；仅 http(s) 环境生效） */
+    if('serviceWorker' in navigator && /^https?:/.test(location.protocol)){
+      navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    }
     /* 云端未配置时给出一次性提示（仅管理端可见） */
     if(state.isAdmin && !cloudReady() && !lsGet('ts_cloud_hinted', false)){
       lsSet('ts_cloud_hinted', true);
@@ -6283,7 +7177,7 @@ try{
     const f = e.target.files && e.target.files[0];
     e.target.value = '';
     if(!f) return;
-    compressImage(f, 240, dataURL=>{
+    compressAndStore(f, 240, dataURL=>{
       state.avatarDraft = dataURL; state.pickAvatar = '';
       renderProfileEditor();
       toast('🖼️ 照片已就绪，点「保存资料」生效');
@@ -6298,7 +7192,7 @@ try{
     const f = e.target.files && e.target.files[0];
     e.target.value = '';
     if(!f) return;
-    compressImage(f, 240, dataURL=>{
+    compressAndStore(f, 240, dataURL=>{
       state.dmAvatarDraft = dataURL;
       const accounts = lsAccounts();
       const u = accounts.find(x => x.phone === state.dmProfilePhone);
@@ -6312,7 +7206,7 @@ try{
     const f = e.target.files && e.target.files[0];
     e.target.value = '';
     if(!f) return;
-    compressImage(f, 480, dataURL=>{
+    compressAndStore(f, 480, dataURL=>{
       state.cmImgs = (state.cmImgs || []).concat(dataURL).slice(0, 3);
       renderCmImgs();
     });
@@ -6323,7 +7217,7 @@ try{
     const f = e.target.files && e.target.files[0];
     e.target.value = '';
     if(!f) return;
-    compressImage(f, 360, dataURL=>{
+    compressAndStore(f, 360, dataURL=>{
       state.rvImgs = (state.rvImgs || []).concat(dataURL).slice(0, 3);
       renderRvImgs();
     });

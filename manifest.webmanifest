@@ -1,0 +1,21 @@
+{
+  "name": "甜薯剧本杀 · 预约",
+  "short_name": "甜薯剧本杀",
+  "description": "在线选本 · 一键拼车 · 预约开本 · 玩家社区",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e0c1a",
+  "theme_color": "#8b5cf6",
+  "lang": "zh-CN",
+  "categories": ["entertainment", "lifestyle"],
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./icon.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "拼车大厅", "url": "./#/home" },
+    { "name": "我的预约", "url": "./#/book" }
+  ]
+}
