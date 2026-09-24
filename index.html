@@ -1995,6 +1995,11 @@ const isCustomer = u => (u.role || 'user') === 'user';
 function customerAccounts(){ return lsAccounts().filter(isCustomer); }
 function saveAccountsLocal(a){ lsSet('ts_accounts', a); }   // 本地备份（永远先写本地）
 function saveAccountsQuiet(a){ saveAccountsLocal(a); if(CLOUD.enabled) cloudPut('users', a).catch(()=>{}); }
+/* 公开名册（无手机号）：单独存 ts_roster，只用于拼车展示昵称/性别/年龄段。
+   ⚠️ 绝不写进账号表 —— 混进去会把真实账号挤掉，导致超管被判成「无权限」 */
+function getRoster(){ const r = lsGet('ts_roster', []); return Array.isArray(r) ? r : []; }
+function saveRoster(r){ lsSet('ts_roster', Array.isArray(r) ? r.slice(0, 1000) : []); }
+function rosterFind(username){ return getRoster().find(x => x && x.username === username) || null; }
 function getReviews(){ const r = lsGet('ts_reviews', []); return Array.isArray(r) ? r : []; }
 function lsSetReviews(r){ lsSet('ts_reviews', r); }
 function getMessages(){ const m = lsGet('ts_messages', []); return Array.isArray(m) ? m : []; }
@@ -2457,16 +2462,10 @@ async function cloudSync(force){
     if(Array.isArray(myFavs))   { const f = getFavs(); f[state.user.phone] = myFavs; lsSet('ts_favs', f); }
     if(agg && typeof agg === 'object') state.agg = agg;      // 评分/余位/车队/榜单（无手机号）
     if(Array.isArray(roster)){
-      /* 公开名册：只保留昵称、头像、性别、年龄段，用于车队显示与同性/同龄筛选
-         ⚠️ 要保留「自己」那条完整记录（手机号/信用分等），否则切回员工账号时会被当成游客 */
-      const accs = lsAccounts().filter(u => u.phone === state.user.phone || u.username === state.user.username || u.roster);
-      roster.forEach(p=>{
-        if(!p || !p.username) return;
-        const rec = { username:p.username, phone:'', role:p.role || 'user', profile:p.profile || {}, roster:true };
-        const old = accs.find(u => u.roster && u.username === p.username);
-        if(old) Object.assign(old, rec); else accs.push(rec);
-      });
-      saveAccountsLocal(accs);
+      /* 33：公开名册单独存，绝不碰账号表（车队成员已由服务端带上性别/年龄段） */
+      saveRoster(roster.filter(p => p && p.username).map(p => ({
+        username: p.username, role: p.role || 'user', profile: p.profile || {},
+      })));
     }
   }
   /* 过滤「墓碑」：本地刚删掉的记录，即使云端还有也不再拉回来 */
@@ -6848,6 +6847,22 @@ const MIGRATIONS = [
       const cur = lsGet('ts_user', null);
       if(cur && cur.username === LEGACY_SUPER){ cur.username = SUPER_ADMIN; lsSet('ts_user', cur); state.user = cur; }
     } },
+  /* v7：修复「公开名册被混进账号表」造成的本地账号缓存污染
+     症状：超管进后台每行都显示「仅超级管理员可改」、手机号全是 -、时间 Invalid Date */
+  { v:7, run(){
+      const all   = lsAccounts();
+      const clean = all.filter(u => u && u.phone);                  // 有手机号 = 真实账号
+      const junk  = all.filter(u => u && !u.phone && u.username);   // 无手机号 = 名册记录
+      if(junk.length){
+        const names = new Set(getRoster().map(r => r.username));
+        const keep  = getRoster().slice();
+        junk.forEach(j => { if(!names.has(j.username)) keep.push({ username:j.username, role:j.role || 'user', profile:j.profile || {} }); });
+        saveRoster(keep);
+        saveAccountsLocal(clean);        // 只清本地缓存，绝不把这份数据推上云端
+      }
+      /* 被污染过 → 稍后从云端把真实账号拉回来（等登录态恢复完成，避免被当成客户） */
+      if(junk.length || !clean.length) setTimeout(()=>{ try{ cloudSync(true); }catch(e){} }, 3000);
+    } },
 ];
 function runMigrations(){
   const from = lsGet('ts_ver', 0);
@@ -7434,8 +7449,13 @@ function ensureSuperAdmin(){
 /* 当前登录者是否为超级管理员 */
 function isSuper(){
   if(!state.user) return false;
-  const u = lsAccounts().find(x => x.phone === state.user.phone);
-  return !!(u && u.super === true);
+  const accs = lsAccounts();
+  /* 账号表按手机号匹配；缓存不完整时按用户名兜底；再不行用登录令牌里的角色兜底
+     —— 否则缓存一旦异常，超管会被判成「没有权限」 */
+  const u = accs.find(x => x.phone && x.phone === state.user.phone)
+         || accs.find(x => x.username && x.username === state.user.username);
+  if(u && (u.super === true || u.role === 'super')) return true;
+  return state.user.role === 'super';
 }
 /* 快捷登录（调试快捷键用）：必须向服务端换取令牌，否则只是"看起来登录了"，
    所有接口仍按匿名处理 → 员工数据全部 403 */
@@ -7527,12 +7547,15 @@ async function restoreSession(){
       return true;
     }catch(e){ /* 网络异常：回落本地 */ }
   }
-  const acc = lsAccounts().find(x => x.phone === u.phone);
-  if(!acc) return false;
-  const r = roleOf(acc);
+  /* 本地回落：账号缓存不完整时，也不能把员工降级成客户
+     （角色以登录时写入 ts_user 的令牌角色为准） */
+  const acc = lsAccounts().find(x => x.phone === u.phone)
+           || lsAccounts().find(x => x.username && x.username === u.username);
+  const r = acc ? roleOf(acc) : (['admin','super','dm'].includes(u.role) ? u.role : 'user');
+  if(!acc && r === 'user') return false;
   state.isAdmin = r === 'admin' || r === 'super';
   state.isDm    = r === 'dm';
-  state.user = { phone:acc.phone, username:acc.username, role:r };
+  state.user = { phone:acc ? acc.phone : u.phone, username:(acc && acc.username) || u.username, role:r };
   lsSet('ts_user', state.user);
   if(state.isAdmin){ state.admTab = 'dash'; go('page-admin'); renderAdmin(); navigate('admin'); }
   else if(state.isDm){ state.dmTab = 'msgs'; go('page-dm'); renderDm(); navigate('dm'); }

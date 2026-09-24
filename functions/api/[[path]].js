@@ -991,6 +991,14 @@ async function checkCaptcha(env, id, answer) {
           return out;
         }).filter(Boolean);
       }
+      /* 防呆（重要）：拒绝「把账号表写空 / 砍掉一半以上」的异常提交。
+         典型事故：某台设备本地缓存被污染成不含手机号的记录，一路写上来会把全站账号清空。 */
+      const beforeN = (Array.isArray(cur.data) ? cur.data : []).length;
+      const junkN = payload.filter(u => !String((u && u.phone) || '')).length;
+      if (junkN) return json({ error: '提交中有 ' + junkN + ' 条缺少手机号的非法账号记录，已拒绝写入，请刷新页面后重试' }, 400);
+      if (beforeN >= 2 && data.length < beforeN / 2) {
+        return json({ error: '本次提交会删除一半以上账号，为安全已拒绝（如确需批量删除请分几次操作）' }, 409);
+      }
     }
     /* ---------- 34：日志署名由令牌决定，匿名无法伪造操作人 ---------- */
     if (key === 'logs') {
