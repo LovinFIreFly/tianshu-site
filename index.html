@@ -2023,7 +2023,8 @@ async function cloudGet(key, quiet){
   /* Worker 代理模式：读取对所有访客开放 */
   if(useWorker()){
     try{
-      const res = await fetch(`${CLOUD.api}/data/${key}`);
+      /* 关键：读取也要带登录令牌 —— 账号/预约/订单/留言等员工数据只对员工开放读取 */
+      const res = await fetch(`${CLOUD.api}/data/${key}`, { headers: authHeaders() });
       if(res.status === 404){ cloudOk(); return null; }
       if(!res.ok) throw Object.assign(new Error('HTTP '+res.status), { status:res.status });
       const d = await res.json();
@@ -2264,8 +2265,9 @@ async function cloudDiagnose(){
     lines.push(CLOUD.token ? '管理密钥：已填写，可修改设置类数据' : '管理密钥：未填写（仅客户权限，无法修改设置类数据）');
     for(const key of Object.keys(CLOUD.files)){
       try{
-        const r = await fetch(`${CLOUD.api}/data/${key}`);
-        lines.push(`${CLOUD.files[key]}：HTTP ${r.status}${r.status === 404 ? '（尚未创建）' : r.ok ? ' ✔' : ' ✘'}`);
+        const r = await fetch(`${CLOUD.api}/data/${key}`, { headers: authHeaders() });
+        const who = r.status === 403 ? '（权限不足：请确认已用管理员/DM 账号登录）' : '';
+        lines.push(`${CLOUD.files[key]}：HTTP ${r.status}${r.status === 404 ? '（尚未创建）' : r.ok ? ' ✔' : ' ✘' + who}`);
       }catch(e){ lines.push(`${CLOUD.files[key]}：失败 ${e.message}`); }
     }
     return lines;
