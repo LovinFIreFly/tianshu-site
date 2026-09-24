@@ -547,6 +547,11 @@ button,.juben,.chip,.chip-sm,.cust-card,.stat-card,.adm-panel,.msg-item,.car-car
 #net-banner button{padding:5px 14px;border-radius:999px;background:rgba(255,255,255,.22);font-size:12px;font-weight:600;color:#fff}
 #net-banner button:hover{background:rgba(255,255,255,.35)}
 @keyframes slideDown{from{transform:translateY(-100%)}to{transform:none}}
+/* 待同步提示（本地已保存，云端正在补传） */
+.sync-pill{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:880;display:flex;align-items:center;gap:6px;padding:10px 16px;border-radius:999px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(109,40,217,.45);animation:starPop .3s var(--spring) both}
+.sync-pill:hover{filter:brightness(1.1)}
+.sync-pill:active{transform:scale(.96)}
+@media (max-width:640px){.sync-pill{right:12px;bottom:calc(12px + env(safe-area-inset-bottom));padding:9px 14px;font-size:12px}}
 /* 消息铃铛 */
 .bell{position:relative;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2);flex:none}
 .bell:hover{background:rgba(255,255,255,.08);color:var(--text)}
@@ -793,6 +798,7 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
   <span id="net-text">网络连接异常，数据暂存在本地</span>
   <button data-action="net-retry">立即重试</button>
 </div>
+<button id="sync-pill" class="sync-pill" data-action="sync-now" hidden aria-live="polite">☁️ <span id="sync-text">待同步</span></button>
 
 <!-- ========== 欢迎页 ========== -->
 <div class="page active" id="page-welcome">
@@ -833,6 +839,7 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
     <h2>注册账号</h2>
     <p class="sub">验证通过后即可创建账号</p>
     <div class="field"><span class="ico" aria-hidden="true">📱</span><input id="reg-phone" type="tel" maxlength="11" placeholder="手机号" aria-label="手机号"></div>
+    <div class="field"><span class="ico" aria-hidden="true">📧</span><input id="reg-email" type="email" placeholder="邮箱（填了就用邮箱收验证码）" aria-label="邮箱"></div>
     <div class="code-row">
       <div class="field"><span class="ico" aria-hidden="true">🔑</span><input id="reg-code" type="tel" maxlength="6" placeholder="验证码" aria-label="验证码"></div>
       <button class="btn-code" id="btn-code-reg" data-action="send-code" data-t="reg">获取验证码</button>
@@ -862,13 +869,14 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
     <h2>找回密码</h2>
     <p class="sub">验证手机号后即可重置密码</p>
     <div class="field"><span class="ico" aria-hidden="true">📱</span><input id="forgot-phone" type="tel" maxlength="11" placeholder="注册手机号" aria-label="手机号"></div>
+    <div class="field"><span class="ico" aria-hidden="true">📧</span><input id="forgot-email" type="email" placeholder="邮箱（填了就用邮箱收验证码）" aria-label="邮箱"></div>
     <div class="code-row">
       <div class="field"><span class="ico" aria-hidden="true">🔑</span><input id="forgot-code" type="tel" maxlength="6" placeholder="验证码" aria-label="验证码"></div>
       <button class="btn-code" id="btn-code-forgot" data-action="send-code" data-t="forgot">获取验证码</button>
     </div>
     <div class="field"><span class="ico" aria-hidden="true">🔒</span><input id="fg-pwd" type="password" placeholder="新密码（至少 6 位）" aria-label="新密码"></div>
     <div class="field"><span class="ico" aria-hidden="true">🔒</span><input id="fg-pwd2" type="password" placeholder="确认新密码" aria-label="确认新密码"></div>
-    <p class="hint-dev">💡 演示模式：验证码请输入 <b style="color:var(--primary2)">1234</b></p>
+    <p class="hint-dev">📱 点击「获取验证码」，验证码会发送到该手机号（5 分钟内有效）</p>
     <button class="btn btn-accent" style="width:100%;height:50px" data-action="do-forgot">重置密码</button>
   </div>
 </div>
@@ -1192,6 +1200,7 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
         <p class="sub">后台关键操作留痕，最多保留 300 条</p>
         <div class="adm-toolbar">
           <button class="btn btn-danger btn-sm" data-action="log-clear">🗑️ 清空日志</button>
+          <button class="btn btn-ghost btn-sm" data-action="sync-now">☁️ 立即同步</button>
           <div style="flex:1"></div>
           <span class="car-sub" id="log-count" style="margin:0"></span>
         </div>
@@ -1665,6 +1674,59 @@ const state = {
   pplFilter:    '全部',
 };
 
+/* ================= 网址路由：每个界面一个独立地址 =================
+   #/login 登录 · #/home 首页 · #/scripts 剧本 · #/car 拼车
+   #/book 我的预约 · #/me 我的 · #/msg 留言 · #/comm 社区
+   #/admin/dash 管理端 · #/dm/msgs DM 端
+   直接改地址栏也能跳到对应界面；未登录访问内页会被引导去登录 */
+const APP_TABS = ['home','scripts','book','me','msg','car','comm'];
+function navigate(route, replace){
+  const h = '#/' + String(route || '');
+  try{
+    if(location.hash === h) return;
+    if(replace){ history.replaceState(null, '', h); applyRoute(); }
+    else location.hash = h;
+  }catch(e){ /* file:// 下不支持则忽略 */ }
+}
+function applyRoute(){
+  const h = String(location.hash || '').replace(/^#\/?/, '');
+  const seg = h.split('/').filter(Boolean);
+  const p = seg[0] || '', sub = seg[1] || '';
+  if(!p){
+    go(state.user ? 'page-app' : 'page-welcome');
+    return;
+  }
+  if(p === 'login'){ go('page-login'); return; }
+  if(p === 'register'){ go('page-reg'); return; }
+  if(p === 'forgot'){ go('page-forgot'); return; }
+  if(p === 'admin'){
+    if(!state.isAdmin){ toast('🔒 请先登录管理员账号'); navigate('login'); return; }
+    if(sub) state.admTab = sub;
+    go('page-admin'); renderAdmin(); return;
+  }
+  if(p === 'dm'){
+    if(!state.isDm){ toast('🔒 请先登录 DM 账号'); navigate('login'); return; }
+    if(sub) state.dmTab = sub;
+    go('page-dm'); renderDm(); return;
+  }
+  if(APP_TABS.includes(p)){
+    if(!state.user){ navigate('login'); return; }
+    go('page-app'); switchTabSilent(p);
+    return;
+  }
+  go(state.user ? 'page-app' : 'page-welcome');
+}
+function switchTabSilent(name){      // 路由触发时不再回写地址，避免循环
+  state.curTab = name;
+  APP_TABS.forEach(t => $('#tab-'+t).style.display = t === name ? 'block' : 'none');
+  document.querySelectorAll('.nav .links button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+  if(name === 'msg')  renderMsgTab();
+  if(name === 'car')  renderCarTab();
+  if(name === 'me')   renderProfileEditor();
+  if(name === 'book'){ renderMyOrders(); renderMyBills(); }
+  if(name === 'comm') renderCommTab();
+  window.scrollTo(0, 0);
+}
 const $ = s => document.querySelector(s);
 const G = s => `linear-gradient(150deg,${s.g[0]},${s.g[1]})`;
 const DAY = 86400000;
@@ -1903,6 +1965,70 @@ async function cloudGet(key, quiet){
     return null;
   }
 }
+/* ---------- 删除墓碑：防止「合并」把刚删掉的记录又同步回来 ---------- */
+function getTomb(){ const t = lsGet('ts_tomb', {}); return (t && typeof t === 'object') ? t : {}; }
+function addTomb(key, ids){
+  const t = getTomb();
+  t[key] = Array.from(new Set([...(t[key] || []), ...ids.map(String)])).slice(-500);
+  lsSet('ts_tomb', t);
+}
+const isTomb = (key, id) => (getTomb()[key] || []).includes(String(id));
+function clearTomb(key, ids){
+  const t = getTomb();
+  t[key] = (t[key] || []).filter(x => !ids.map(String).includes(x));
+  lsSet('ts_tomb', t);
+}
+/* 服务端删除：删掉云端记录，避免合并时复活 */
+async function cloudRemove(key, ids){
+  if(!CLOUD.enabled || !useWorker() || !ids || !ids.length) return false;
+  try{
+    const res = await fetch(`${CLOUD.api}/remove/${key}`, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', ...(CLOUD.token ? { 'x-app-key': CLOUD.token } : {}) },
+      body: JSON.stringify({ ids })
+    });
+    if(res.ok){ clearTomb(key, ids); cloudOk(); return true; }
+    console.warn('删除同步失败：', key, res.status);
+    return false;
+  }catch(e){ console.warn('删除同步异常：', key, e); return false; }
+}
+
+/* ---------- 待同步队列：本地永远先改，云端后台补传（网络恢复后 30 秒内完成） ---------- */
+function getOutbox(){ const q = lsGet('ts_outbox', []); return Array.isArray(q) ? q : []; }
+function setOutbox(q){ lsSet('ts_outbox', q); refreshSyncBadge(); }
+function refreshSyncBadge(){
+  const pill = $('#sync-pill'); if(!pill) return;
+  const n = getOutbox().length;
+  pill.hidden = n === 0;
+  const t = $('#sync-text'); if(t) t.textContent = n ? `待同步 ${n} 项` : '';
+}
+function queuePush(key, mode, data){
+  const q = getOutbox().filter(x => !(x.key === key && x.mode === mode));
+  q.push({ key, mode, data, at:Date.now() });
+  setOutbox(q);
+  flushOutbox();
+}
+let _flushing = false;
+async function flushOutbox(){
+  if(_flushing || !cloudReady()) return;
+  const q = getOutbox();
+  if(!q.length) return;
+  _flushing = true;
+  const rest = [];
+  for(const job of q){
+    let ok = false;
+    try{
+      if(job.mode === 'put')         ok = await cloudPut(job.key, job.data);
+      else if(job.mode === 'append') ok = await cloudAppend(job.key, job.data);
+      else if(job.mode === 'remove') ok = await cloudRemove(job.key, job.data);
+    }catch(e){ ok = false; }
+    if(!ok) rest.push(job);
+  }
+  setOutbox(rest);
+  _flushing = false;
+  if(!rest.length) toast('☁️ 本地数据已全部同步到云端');
+}
+
 /* 追加合并：把本地新增/变更的记录上报给服务端，由服务端与最新全量合并
    —— 客户没有管理密钥也能安全写入，不会覆盖其他设备的记录 */
 async function cloudAppend(key, items){
@@ -1919,11 +2045,15 @@ async function cloudAppend(key, items){
     return false;
   }catch(e){ console.warn('追加同步异常：', key, e); return false; }
 }
-/* 业务数据统一保存策略：管理员=全量覆盖，普通用户=追加合并 */
+/* 业务数据统一保存策略：本地先改好，云端后台补传；失败自动进队列重试 */
 function saveBiz(key, data, single){
   if(!CLOUD.enabled) return;
-  if(CLOUD.token) cloudPut(key, data).catch(()=>{});
-  else cloudAppend(key, single || data).catch(()=>{});
+  const mode = CLOUD.token ? 'put' : 'append';
+  const payload = CLOUD.token ? data : (single || data);
+  (async ()=>{
+    const ok = mode === 'put' ? await cloudPut(key, payload) : await cloudAppend(key, payload);
+    if(!ok) queuePush(key, mode, payload);      // 失败入队，网络恢复后自动补传
+  })();
 }
 /* 同一文件的写入串行化：避免并发 PUT 造成 409 SHA 冲突 */
 const _cloudQueue = {};
@@ -2106,10 +2236,17 @@ async function cloudSync(force){
     cloudGet('rooms'), cloudGet('sessions'), cloudGet('carmsgs'), cloudGet('pays'), cloudGet('logs'),
     cloudGet('favs'), cloudGet('taglib'), cloudGet('dmleave'), cloudGet('posts'), cloudGet('badwords'), cloudGet('scripts')
   ]);
-  if(Array.isArray(rooms))    lsSet('ts_rooms', rooms);
-  if(Array.isArray(sessions)) lsSet('ts_sessions', sessions);
-  if(Array.isArray(carmsgs))  lsSet('ts_carmsgs', carmsgs);
-  if(Array.isArray(pays))     lsSet('ts_pays', pays);
+  /* 过滤「墓碑」：本地刚删掉的记录，即使云端还有也不再拉回来 */
+  const notTomb = (key, arr) => (arr || []).filter(x => !isTomb(key, x && (x.id != null ? x.id : x.phone)));
+  const mergeById = (key, cloud, local) => {
+    const m = new Map((local || []).map(x => [String(x.id), x]));
+    notTomb(key, cloud).forEach(x => { if(!m.has(String(x.id))) m.set(String(x.id), x); });
+    return [...m.values()];
+  };
+  if(Array.isArray(rooms))    lsSet('ts_rooms', notTomb('rooms', rooms));
+  if(Array.isArray(sessions)) lsSet('ts_sessions', notTomb('sessions', sessions));
+  if(Array.isArray(carmsgs))  lsSet('ts_carmsgs', mergeById('carmsgs', carmsgs, getCarMsgs()));
+  if(Array.isArray(pays))     lsSet('ts_pays', mergeById('pays', pays, getPays()));
   /* 剧本库：云端为准（管理端编辑后的版本） */
   if(Array.isArray(scripts) && scripts.length){ SCRIPTS = scripts; lsSet('ts_scripts', scripts); refreshFrontScripts(); }
   /* 标签库 / 敏感词：云端有值就用云端 */
@@ -2124,31 +2261,25 @@ async function cloudSync(force){
     });
     lsSet('ts_favs', cur);
   }
-  /* DM 请假：按 id 合并 */
-  if(Array.isArray(dmleave)){
-    const m = new Map(getLeave().map(x => [x.id, x]));
-    dmleave.forEach(x => { if(!m.has(x.id)) m.set(x.id, x); });
-    lsSet('ts_dmleave', [...m.values()]);
-  }
-  /* 社区帖子：按 id 合并 */
-  if(Array.isArray(posts)){
-    const m = new Map(getPosts().map(x => [x.id, x]));
-    posts.forEach(x => { if(!m.has(x.id)) m.set(x.id, x); });
-    lsSet('ts_posts', [...m.values()].sort((a,b)=>b.at-a.at));
-  }
-  if(Array.isArray(notices)){
-    const map = new Map(getNotices().map(n=>[n.id, n]));
-    notices.forEach(n=>{ if(!map.has(n.id)) map.set(n.id, n); });
-    lsSet('ts_notices', [...map.values()]);
-  }
+  if(Array.isArray(dmleave)) lsSet('ts_dmleave', mergeById('dmleave', dmleave, getLeave()));
+  if(Array.isArray(posts))   lsSet('ts_posts', mergeById('posts', posts, getPosts()).sort((a,b)=>b.at-a.at));
+  if(Array.isArray(notices)) lsSet('ts_notices', mergeById('notices', notices, getNotices()));
   if(Array.isArray(users)){
+    const t = getTomb();
     const map = new Map(lsAccounts().map(u=>[u.phone, u]));
-    users.forEach(u=>{ const l = map.get(u.phone); if(!l || (u.last||0) > (l.last||0)) map.set(u.phone, u); });
+    users.forEach(u=>{
+      if((t.users || []).includes(String(u.phone))) return;      // 已删除的账号不再拉回
+      const l = map.get(u.phone);
+      /* 服务端返回的账号不含密码（安全），这里必须补回本地已有的密码，
+         否则下次写回云端会把所有人的密码清空，导致全站无法登录 */
+      const merged = Object.assign({}, u, { password: u.password || (l && l.password) || '' });
+      if(!l || (u.last||0) > (l.last||0)) map.set(u.phone, merged);
+    });
     saveAccountsLocal([...map.values()]);
   }
   if(Array.isArray(bookings)){
     const map = new Map(state.bookings.map(b=>[b.id, b]));
-    bookings.forEach(b=>{
+    notTomb('bookings', bookings).forEach(b=>{
       const l = map.get(b.id);
       if(!l) map.set(b.id, b);
       else if(b.status==='arrived' || b.status==='done' || b.status==='cancelled') l.status = b.status;
@@ -2156,21 +2287,9 @@ async function cloudSync(force){
     state.bookings = [...map.values()];
     lsSet('ts_bookings', state.bookings);
   }
-  if(Array.isArray(reviews)){
-    const map = new Map(getReviews().map(r=>[r.id, r]));
-    reviews.forEach(r=>{ if(!map.has(r.id)) map.set(r.id, r); });
-    lsSetReviews([...map.values()]);
-  }
-  if(Array.isArray(messages)){
-    const map = new Map(getMessages().map(m=>[m.id, m]));
-    messages.forEach(m=>{ if(!map.has(m.id)) map.set(m.id, m); });
-    lsSetMessages([...map.values()]);
-  }
-  if(Array.isArray(logs)){
-    const map = new Map(lsGet('ts_logs', []).map(x => [x.id, x]));
-    logs.forEach(x => { if(!map.has(x.id)) map.set(x.id, x); });
-    lsSet('ts_logs', [...map.values()].sort((a,b)=>b.at-a.at).slice(0, 300));
-  }
+  if(Array.isArray(reviews))  lsSetReviews(mergeById('reviews', reviews, getReviews()));
+  if(Array.isArray(messages)) lsSetMessages(mergeById('messages', messages, getMessages()));
+  if(Array.isArray(logs))     lsSet('ts_logs', mergeById('logs', logs, getLogs()).sort((a,b)=>b.at-a.at).slice(0, 300));
   if(settings && typeof settings === 'object') lsSet('ts_settings', Object.assign({reviewsEnabled:true}, settings));
   refreshCurrent();
 }
@@ -2184,11 +2303,31 @@ function refreshCurrent(){
 }
 
 /* ================= 账号：登录 / 注册 / 找回密码 ================= */
-/* 统一登录：按账号角色分流到 客户端 / 管理端 / DM 端 */
-function doLogin(){
+/* 统一登录：优先走服务端校验（本地无服务端时自动回落本地校验） */
+async function doLogin(){
   const acc = $('#in-acc').value.trim(), pwd = $('#in-pwd').value;
   if(!acc) return toast('请输入手机号或用户名');
   if(!pwd) return toast('请输入密码');
+  /* 服务端模式：身份由服务端判定，浏览器改 localStorage 无法提权 */
+  if(useWorker()){
+    try{
+      const res = await fetch(`${CLOUD.api}/login`, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ account:acc, password:pwd })
+      });
+      const d = await res.json().catch(()=>({}));
+      if(res.ok && d.ok){
+        lsSet('ts_token', d.token);
+        $('#in-acc').value = ''; $('#in-pwd').value = '';
+        loginAs(d.user);                            // role 来自服务端令牌
+        toast('🔐 已通过服务端校验');
+        return;
+      }
+      toast(d.error || '登录失败');
+      return;
+    }catch(e){ /* 网络异常时回落本地校验 */ }
+  }
   const accounts = lsAccounts();
   const u = accounts.find(x => x.phone === acc || x.username === acc);
   if(!u) return toast('账号不存在，请先注册');
@@ -2208,14 +2347,14 @@ function loginAs(u){
   logAct(`登录成功（${u.username} · ${ROLE_NAME[role] || role}）`);
   if(state.isAdmin){
     state.admTab = 'dash';
-    go('page-admin'); renderAdmin();
+    go('page-admin'); renderAdmin(); navigate('admin');
     toast('🛡️ 欢迎回来，管理员 ' + u.username);
   }else if(role === 'dm'){
     state.dmTab = 'msgs';
-    go('page-dm'); renderDm();
+    go('page-dm'); renderDm(); navigate('dm');
     toast('🗡️ 欢迎回来，DM ' + u.username);
   }else{
-    enterApp();
+    enterApp(); navigate('home');
     toast('🎉 欢迎回来，' + u.username);
   }
 }
@@ -2251,17 +2390,35 @@ function onRegInput(){
     else { wt.textContent = '✅ 密码可用'; wt.style.color = 'var(--ok)'; }
   }
 }
-function doRegister(){
+async function doRegister(){
   const phone    = $('#reg-phone').value.trim();
   const code     = $('#reg-code').value.trim();
   const username = $('#reg-name').value.trim();
   const pwd      = $('#reg-pwd').value, pwd2 = $('#reg-pwd2').value;
   const invite   = $('#reg-invite').value.trim();
   if(!/^1\d{10}$/.test(phone)) return toast('请输入正确的 11 位手机号');
-  if(code !== '1234') return toast('验证码不正确，演示版请输入 1234');
+  if(!code) return toast('请输入短信验证码');
   if(!/^[\u4e00-\u9fa5A-Za-z0-9_]{2,16}$/.test(username)) return toast('用户名需 2-16 位（中文/字母/数字/下划线）');
   if(pwd.length < 6) return toast('密码至少 6 位');
   if(pwd !== pwd2) return toast('两次输入的密码不一致');
+  /* 服务端模式：由服务端校验验证码并落库 */
+  if(useWorker()){
+    try{
+      const res = await fetch(`${CLOUD.api}/register`, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ phone, username, password:pwd, code })
+      });
+      const d = await res.json().catch(()=>({}));
+      if(!res.ok || !d.ok) return toast(d.error || '注册失败');
+      lsSet('ts_token', d.token);
+      ['reg-phone','reg-code','reg-name','reg-pwd','reg-pwd2','reg-invite'].forEach(id=>$('#'+id).value='');
+      loginAs(d.user);
+      toast('🎉 注册成功，已自动登录');
+      return;
+    }catch(e){ return toast('网络异常，注册失败'); }
+  }
+  if(code !== '1234') return toast('验证码不正确，演示版请输入 1234');
   const accounts = lsAccounts();
   if(accounts.some(u=>u.phone === phone)) return toast('该手机号已注册，请直接登录');
   if(nameTaken(username)) return toast('用户名已被占用，换一个吧');
@@ -2272,14 +2429,32 @@ function doRegister(){
   loginAs({ username, phone, role:'user' });
   toast('🎉 注册成功，欢迎加入甜薯！');
 }
-function doForgot(){
+async function doForgot(){
   const phone = $('#forgot-phone').value.trim();
+  const email = $('#forgot-email') ? $('#forgot-email').value.trim() : '';
   const code  = $('#forgot-code').value.trim();
   const p1 = $('#fg-pwd').value, p2 = $('#fg-pwd2').value;
-  if(!/^1\d{10}$/.test(phone)) return toast('请输入正确的 11 位手机号');
-  if(code !== '1234') return toast('验证码不正确，演示版请输入 1234');
+  if(!/^1\d{10}$/.test(phone) && !email) return toast('请输入正确的手机号或邮箱');
+  if(!code) return toast('请输入验证码');
   if(p1.length < 6) return toast('新密码至少 6 位');
   if(p1 !== p2) return toast('两次输入的新密码不一致');
+  /* 服务端模式：服务端校验验证码后改密 */
+  if(useWorker()){
+    try{
+      const res = await fetch(`${CLOUD.api}/pwd/reset`, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ phone, email, code, password:p1 })
+      });
+      const d = await res.json().catch(()=>({}));
+      if(!res.ok || !d.ok) return toast(d.error || '重置失败');
+      ['forgot-phone','forgot-code','fg-pwd','fg-pwd2'].forEach(id=>$('#'+id).value='');
+      navigate('login');
+      toast('✅ 密码已重置，请用新密码登录');
+      return;
+    }catch(e){ return toast('网络异常，重置失败'); }
+  }
+  if(code !== '1234') return toast('验证码不正确，演示版请输入 1234');
   const accounts = lsAccounts();
   const u = accounts.find(x => x.phone === phone);
   if(!u) return toast('该手机号未注册');
@@ -2290,25 +2465,62 @@ function doForgot(){
   go('page-login');
   toast('✅ 密码已重置，请用新密码登录');
 }
-function sendCode(el){
+/* 获取短信验证码：服务端生成 + 5 分钟有效；未接短信服务商时为演示模式（页面显示验证码） */
+async function sendCode(el){
   const t = el.dataset.t || 'login';
   const phone = $('#'+t+'-phone').value.trim();
+  const emailEl = $('#'+t+'-email');
+  const email = emailEl ? emailEl.value.trim() : '';
   const btn = $('#btn-code-'+t);
   if(!btn) return;
-  if(!/^1\d{10}$/.test(phone)) return toast('请先输入正确的手机号');
-  let n = 60;
-  btn.disabled = true; btn.textContent = n+'s';
-  clearInterval(state.codeTimer);
-  state.codeTimer = setInterval(()=>{
-    if(--n <= 0){ clearInterval(state.codeTimer); btn.disabled = false; btn.textContent = '重新获取'; }
-    else btn.textContent = n+'s';
-  }, 1000);
+  if(!/^1\d{10}$/.test(phone) && !email) return toast('请先输入正确的手机号或邮箱');
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast('邮箱格式不正确');
+
+  const startCount = (sec)=>{
+    let n = sec;
+    btn.disabled = true; btn.textContent = n + 's';
+    clearInterval(state.codeTimer);
+    state.codeTimer = setInterval(()=>{
+      if(--n <= 0){ clearInterval(state.codeTimer); btn.disabled = false; btn.textContent = '重新获取'; }
+      else btn.textContent = n + 's';
+    }, 1000);
+  };
+
+  /* 服务端模式：真实验证码由服务端下发 */
+  if(useWorker()){
+    btn.disabled = true; btn.textContent = '发送中…';
+    try{
+      const res = await fetch(`${CLOUD.api}/code/send`, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ phone, email, purpose: t === 'forgot' ? 'reset' : 'register' })
+      });
+      const d = await res.json().catch(()=>({}));
+      if(!res.ok || !d.ok){
+        btn.disabled = false; btn.textContent = '重新获取';
+        return toast(d.error || '验证码发送失败');
+      }
+      startCount(60);
+      const where = d.channel === 'email' ? '邮箱' : '手机';
+      if(d.devCode) toast(`验证码已发送（演示模式：${d.devCode}，${d.ttl} 秒内有效）`);
+      else toast(`📧 验证码已发送至你的${where}，5 分钟内有效`);
+      return;
+    }catch(e){
+      btn.disabled = false; btn.textContent = '重新获取';
+      return toast('网络异常，验证码发送失败');
+    }
+  }
+  /* 本地模式（未接服务端）保持演示行为 */
+  startCount(60);
   toast('验证码已发送（演示：1234）');
 }
 function doLogout(){
-  localStorage.removeItem('ts_user'); state.user = null;
+  localStorage.removeItem('ts_user');
+  localStorage.removeItem('ts_token');     // 清除服务端令牌
+  state.user = null;
   state.isAdmin = false; state.isDm = false;
-  go('page-login'); toast('已退出登录');
+  navigate('login');
+  toast('已退出登录');
 }
 /* 员工端（管理员 / DM）切换到用户界面，并保留一个回工作台的入口（客户账号不显示） */
 function enterFrontFromStaff(){
@@ -2333,6 +2545,7 @@ function enterApp(){
   go('page-app'); renderAll(); switchTab('home');
   const back = $('#btn-back-staff'); if(back) back.hidden = true;
   const u = state.user;
+  navigate('home');                       // 进入客户端时同步网址
   /* 展示统一用昵称（没有昵称时回落到账号名） */
   refreshMyDisplay();
   $('#me-phone').textContent = maskPhone(u && u.phone);
@@ -2525,12 +2738,15 @@ function taglibAdd(){
   if(lib.includes(t)) return toast('该标签已存在');
   lib.push(t); saveTagLib(lib);
   $('#taglib-new').value = '';
+  logAct(`新增剧本标签「${t}」`);
   renderTagLib(); renderChips(); renderList();
   toast('✅ 标签已添加');
 }
 function taglibDel(t){
   const lib = getTagLib().filter(x => x !== t);
-  saveTagLib(lib); renderTagLib(); renderChips(); renderList();
+  saveTagLib(lib);
+  logAct(`删除剧本标签「${t}」`);
+  renderTagLib(); renderChips(); renderList();
   toast('已删除标签');
 }
 
@@ -3115,17 +3331,9 @@ function bindSearch(){
 
 /* ================= Tab 切换 ================= */
 function switchTab(name){
-  state.curTab = name;
-  ['home','scripts','book','me','msg','car','comm'].forEach(t=>$('#tab-'+t).style.display = t===name ? 'block' : 'none');
-  document.querySelectorAll('.nav .links button').forEach(b=>b.classList.toggle('on', b.dataset.tab===name));
-  if(name === 'msg') renderMsgTab();
-  if(name === 'car') renderCarTab();
-  if(name === 'comm') renderCommTab();
-  if(name === 'me')  renderProfileEditor();
-  if(name === 'book'){ renderMyOrders(); renderMyBills(); }
-  window.scrollTo(0,0);
+  switchTabSilent(name);
+  navigate(name);                    // 切换栏目同步更新网址
 }
-
 /* ================= 管理后台 ================= */
 function admLogout(){
   localStorage.removeItem('ts_user'); state.user = null;
@@ -3180,14 +3388,18 @@ function toggleReviews(){
   const s = getSettings();
   s.reviewsEnabled = !s.reviewsEnabled;
   saveSettings(s);
+  logAct(`${s.reviewsEnabled ? '开启' : '关闭'}前台评分展示`);
   refreshCurrent();          // 立即刷新前台/后台界面，同步生效
   if(state.isAdmin) renderAdmin();
   toast(s.reviewsEnabled ? '✅ 已开启前台评分展示' : '🔒 已关闭前台评分展示');
 }
 function rvDel(id){
   askConfirm('确定删除这条评价？删除后无法恢复。', ()=>{
-    saveReviews(getReviews().filter(r=>r.id!==id));
+    addTomb('reviews', [id]);
+    lsSetReviews(getReviews().filter(r => r.id !== +id));
+    logAct(`删除玩家评价 #${id}`);
     renderAdmin();
+    cloudRemove('reviews', [id]).then(ok => { if(!ok) queuePush('reviews', 'remove', [id]); });
     toast('已删除该评价');
   });
 }
@@ -3349,15 +3561,23 @@ function admFinish(id){  // 第二步：确认完成 → 邀请客户评价
   b.status = 'done';
   b.reviewPending = getSettings().reviewsEnabled;   // 关闭评分展示时不打扰客户
   saveBookings();
+  logAct(`确认场次完成（《${b.title}》${maskPhone(b.phone)}）`);
   toast('🎉 已确认完成，已邀请客户评价本次体验');
 }
 function admCancel(id){
   const b = state.bookings.find(x=>x.id===id); if(!b) return;
-  b.status = 'cancelled'; saveBookings(); toast('已取消该预约');
+  b.status = 'cancelled'; saveBookings();
+  logAct(`取消预约（《${b.title}》${maskPhone(b.phone)}）`);
+  toast('已取消该预约');
 }
 function admDel(id){
+  const b = state.bookings.find(x => x.id === id);
+  addTomb('bookings', [id]);
   state.bookings = state.bookings.filter(x=>x.id!==id);
-  saveBookings(); toast('已删除该记录');
+  saveBookings();
+  logAct(`删除预约记录（《${b ? b.title : id}》）`);
+  cloudRemove('bookings', [id]).then(ok => { if(!ok) queuePush('bookings', 'remove', [id]); });
+  toast('已删除该记录');
 }
 function admExportCSV(){
   if(!state.bookings.length) return toast('暂无可导出的数据');
@@ -3519,10 +3739,12 @@ function scSave(){
 function scDel(id){
   const s = SCRIPTS.find(x=>x.id===id); if(!s) return;
   askConfirm(`确定下架删除《${s.title}》？已有预约记录会保留剧本名。`, ()=>{
+    addTomb('scripts', [id]);
     SCRIPTS = SCRIPTS.filter(x=>x.id!==id);
     persistScripts();
     refreshFrontScripts();
     renderAdmScripts();
+    logAct(`删除剧本《${s.title}》`);
     toast('剧本已删除');
   });
 }
@@ -3599,11 +3821,15 @@ function delUser(phone){
   if(state.user && state.user.phone === phone) return toast('不能删除当前登录的账号');
   askConfirm(`确定删除账号「${acc.username}」？该账号的预约、评价、留言会一并删除，且无法恢复。`, async ()=>{
     const bset = new Set(state.bookings.filter(b => b.phone === phone).map(b => b.id));
+    addTomb('users', [phone]);                       // 防止云端把账号同步回来
+    addTomb('bookings', [...bset]);
     saveAccountsQuiet(lsAccounts().filter(x => x.phone !== phone));
     state.bookings = state.bookings.filter(b => b.phone !== phone);
     await saveBookings();
     saveReviews(getReviews().filter(r => !bset.has(r.bid)));
     saveMessages(getMessages().filter(m => m.phone !== phone));
+    cloudRemove('users', [phone]).catch(()=>{});
+    if(bset.size) cloudRemove('bookings', [...bset]).catch(()=>{});
     logAct(`删除账号「${acc.username}」及其记录`);
     renderAdmUsers();
     toast('🗑️ 已删除该账号及其所有记录');
@@ -3982,6 +4208,7 @@ function msgHandle(id){
   if(!m) return;
   m.status = 'handled'; m.repliedBy = operatorName();
   saveMessages(msgs);
+  logAct(`标记留言已处理（${m.username || maskPhone(m.phone)}）`);
   if(state.isDm) renderDmMsgs(); else renderAdmMsgs();
   toast('✅ 已标记为已处理');
 }
@@ -3989,15 +4216,21 @@ function msgDelMine(id){
   const m = getMessages().find(x => x.id === +id);
   if(!m || !state.user || m.phone !== state.user.phone) return toast('只能删除自己的留言');
   askConfirm('确定删除这条留言？删除后无法恢复。', ()=>{
-    saveMessages(getMessages().filter(x => x.id !== +id));
+    addTomb('messages', [id]);
+    lsSet('ts_messages', getMessages().filter(x => x.id !== +id));
     renderMsgTab();
+    cloudRemove('messages', [id]).then(ok => { if(!ok) queuePush('messages', 'remove', [id]); });
     toast('已删除该留言');
   });
 }
 function msgDel(id){
   askConfirm('确定删除这条留言？删除后无法恢复。', ()=>{
-    saveMessages(getMessages().filter(m => m.id !== +id));
+    addTomb('messages', [id]);
+    lsSet('ts_messages', getMessages().filter(m => m.id !== +id));
     if(state.isDm) renderDmMsgs(); else renderAdmMsgs();
+    renderMsgTab();
+    logAct(`删除玩家留言 #${id}`);
+    cloudRemove('messages', [id]).then(ok => { if(!ok) queuePush('messages', 'remove', [id]); });
     toast('已删除该留言');
   });
 }
@@ -4508,8 +4741,13 @@ function roomAdd(){
 }
 function roomDel(id){
   askConfirm('删除该房间？已排场次不受影响。', ()=>{
+    const r0 = getRooms().find(r => r.id === +id);
+    addTomb('rooms', [id]);
     saveRooms(getRooms().filter(r => r.id !== +id));
-    renderRooms(); toast('已删除房间');
+    logAct(`删除房间「${r0 ? r0.name : id}」`);
+    renderRooms();
+    cloudRemove('rooms', [id]).then(ok => { if(!ok) queuePush('rooms', 'remove', [id]); });
+    toast('已删除房间');
   });
 }
 function renderSessions(){
@@ -4612,8 +4850,12 @@ function sesDel(id){
         pushNotice(b.phone, '场次取消通知', `《${s.title}》${dateLabel(s.ts)} ${s.time} 的场次已取消，请联系门店改约。`);
       });
     }
+    addTomb('sessions', [id]);
     saveSessions(list.filter(x => x.id !== +id));
-    renderSessions(); toast('已删除场次');
+    logAct(`删除场次（《${s ? s.title : id}》${s ? dateLabel(s.ts)+' '+s.time : ''}）`);
+    renderSessions();
+    cloudRemove('sessions', [id]).then(ok => { if(!ok) queuePush('sessions', 'remove', [id]); });
+    toast('已删除场次');
   });
 }
 function sesSetDm(id, phone){
@@ -4740,12 +4982,17 @@ function postHide(id){
   const posts = getPosts();
   const p = posts.find(x => x.id === +id); if(!p) return;
   p.hidden = !p.hidden; savePosts(posts); renderAdmCommunity(); renderCommTab();
+  logAct(`${p.hidden ? '折叠' : '恢复'}社区内容《${p.title}》`);
   toast(p.hidden ? '已折叠' : '已恢复');
 }
 function postDel(id){
   askConfirm('删除这条社区内容？', ()=>{
-    savePosts(getPosts().filter(p => p.id !== +id));
-    renderAdmCommunity(); renderCommTab(); toast('已删除');
+    addTomb('posts', [id]);
+    lsSet('ts_posts', getPosts().filter(p => p.id !== +id));
+    renderAdmCommunity(); renderCommTab();
+    logAct(`删除社区内容 #${id}`);
+    cloudRemove('posts', [id]).then(ok => { if(!ok) queuePush('posts', 'remove', [id]); });
+    toast('已删除');
   });
 }
 function renderAdmCommunity(){
@@ -4781,10 +5028,12 @@ function badAdd(){
   if(list.includes(w)) return toast('已存在');
   list.push(w); saveBadWords(list);
   $('#bad-new').value = '';
+  logAct(`新增敏感词「${w}」`);
   renderAdmCommunity(); toast('✅ 已添加敏感词');
 }
 function badDel(w){
   saveBadWords(getBadWords().filter(x => x !== w));
+  logAct(`删除敏感词「${w}」`);
   renderAdmCommunity(); toast('已删除');
 }
 
@@ -4919,11 +5168,13 @@ function dmLeave(ts){
   lsAccounts().filter(u => roleOf(u) === 'admin' || roleOf(u) === 'super').forEach(u=>{
     pushNotice(u.phone, 'DM 请假申请', `${state.user.username} 申请 ${dateLabel(+ts)} 请假，请安排替补。`);
   });
-  logAct(`DM ${state.user.username} 申请 ${dateLabel(+ts)} 请假`);
+  logAct(`DM ${displayName()} 申请 ${dateLabel(+ts)} 请假`);
   renderDmSchedule(); toast('✅ 请假已提交，已通知门店');
 }
 function dmCancelLeave(ts){
+  addTomb('dmleave', getLeave().filter(x => x.phone === state.user.phone && x.ts === +ts).map(x=>x.id));
   saveLeave(getLeave().filter(x => !(x.phone === state.user.phone && x.ts === +ts)));
+  logAct(`DM ${displayName()} 撤销 ${dateLabel(+ts)} 请假`);
   renderDmSchedule(); toast('已销假');
 }
 /* 83：DM 带本记录与分成 */
@@ -5056,8 +5307,9 @@ function upgradeRoles(){
 }
 
 /* ---------- 操作日志 ---------- */
+function getLogs(){ const l = lsGet('ts_logs', []); return Array.isArray(l) ? l : []; }
 function logAct(text){
-  const l = lsGet('ts_logs', []);
+  const l = getLogs();
   l.unshift({ id:Date.now(), by:(state.user && state.user.username) || '系统',
     role:myRole(), text, at:Date.now() });
   const trimmed = l.slice(0, 300);
@@ -5220,8 +5472,13 @@ function noticeSend(){
 }
 function noticeDel(id){
   askConfirm('确定删除这条消息？', ()=>{
-    saveNotices(getNotices().filter(x => x.id !== +id));
-    renderAdmNotice(); toast('已删除该消息');
+    addTomb('notices', [id]);                       // 先打墓碑，防止被合并回来
+    const left = getNotices().filter(x => x.id !== +id);
+    lsSet('ts_notices', left);                      // 本地立即生效
+    renderAdmNotice(); renderNotices();             // 界面马上更新
+    logAct(`删除消息 #${id}`);
+    cloudRemove('notices', [id]).then(ok => { if(!ok) queuePush('notices', 'remove', [id]); });
+    toast('已删除该消息');
   });
 }
 function renderAdmNotice(){
@@ -5324,10 +5581,10 @@ function runMigrations(){
 
 /* ================= 事件委托 ================= */
 const ACTIONS = {
-  'go-login':    ()=>go('page-login'),
-  'go-register': ()=>go('page-reg'),
-  'go-forgot':   ()=>go('page-forgot'),
-  'go-welcome':  ()=>go('page-welcome'),
+  'go-login':    ()=>navigate('login'),
+  'go-register': ()=>navigate('register'),
+  'go-forgot':   ()=>navigate('forgot'),
+  'go-welcome':  ()=>navigate(''),
   'do-login':    doLogin,
   'do-register': doRegister,
   'do-forgot':   doForgot,
@@ -5400,7 +5657,7 @@ const ACTIONS = {
       return toast('🔒 该栏目需要更高权限（当前身份：' + (ROLE_NAME[myRole()] || myRole()) + '）');
     state.admTab = el.dataset.t; renderAdmin();
   },
-  'adm-home':    enterFrontFromStaff,
+  'adm-home':    ()=>{ enterFrontFromStaff(); navigate('home'); },
   'back-staff':  backStaff,
   'adm-logout':  ()=>askConfirm('确定退出管理端？', admLogout),
   'adm-filter':  el=>{ state.admFilter = el.dataset.f; renderAdmBookings(); },
@@ -5513,15 +5770,19 @@ const ACTIONS = {
   'backup-export': backupExport,
   'backup-import': ()=>$('#backup-file').click(),
   'log-clear':   ()=>askConfirm('清空全部操作日志？', ()=>{
+    const ids = getLogs().map(x => x.id);
     lsSet('ts_logs', []);
-    if(CLOUD.enabled && CLOUD.token) cloudPut('logs', []).catch(()=>{});   // 云端一并清空
+    addTomb('logs', ids);                                   // 防止合并时复活
+    if(CLOUD.token) cloudPut('logs', []).catch(()=>{});
+    else if(ids.length) cloudRemove('logs', ids).then(ok => { if(!ok) queuePush('logs', 'remove', ids); });
     renderAdmLogs(); toast('日志已清空');
   }),
   'net-retry':   netRetry,
+  'sync-now':    ()=>{ toast('☁️ 正在补传…'); flushOutbox(); },
   'toggle-theme': toggleTheme,
   'dm-logout':   ()=>askConfirm('确定退出 DM 端？', dmLogout),
   'dm-tab':      el=>{ state.dmTab = el.dataset.t; renderDm(); },
-  'dm-home':     enterFrontFromStaff,
+  'dm-home':     ()=>{ enterFrontFromStaff(); navigate('home'); },
   'dm-msg-filter': el=>{ state.dmMsgFilter = el.dataset.f; renderDmMsgs(); },
   'dm-cust-clear': ()=>clearCustSearch('dm'),
   'toast':       el=>toast(el.dataset.msg || '功能开发中'),
@@ -5676,10 +5937,32 @@ document.querySelectorAll('.mask').forEach(m=>{
 });
 
 /* ================= 启动 & 清理 ================= */
-/* 刷新后按账号角色恢复到对应端 */
-function restoreSession(){
+/* 刷新后恢复登录态：服务端模式下以服务端令牌为准（身份不可本地伪造） */
+async function restoreSession(){
   const u = state.user;
   if(!u || !u.phone) return false;
+  /* 服务端模式：拿令牌去服务端确认身份 */
+  if(useWorker()){
+    const token = lsGet('ts_token', '');
+    if(!token){ localStorage.removeItem('ts_user'); return false; }
+    try{
+      const res = await fetch(`${CLOUD.api}/verify`, { headers:{ 'x-auth': token } });
+      const d = await res.json().catch(()=>({}));
+      if(!res.ok || !d.ok){
+        localStorage.removeItem('ts_token'); localStorage.removeItem('ts_user');
+        return false;
+      }
+      const r = d.user.role;
+      state.user = { phone:d.user.phone, username:d.user.username, role:r };
+      lsSet('ts_user', state.user);
+      state.isAdmin = r === 'admin' || r === 'super';
+      state.isDm    = r === 'dm';
+      if(state.isAdmin){ state.admTab = 'dash'; showPage('page-admin'); renderAdmin(); navigate('admin'); }
+      else if(state.isDm){ state.dmTab = 'msgs'; showPage('page-dm'); renderDm(); navigate('dm'); }
+      else { enterApp(); navigate('home'); }
+      return true;
+    }catch(e){ /* 网络异常：回落本地 */ }
+  }
   const acc = lsAccounts().find(x => x.phone === u.phone);
   if(!acc) return false;
   const r = roleOf(acc);
@@ -5687,16 +5970,23 @@ function restoreSession(){
   state.isDm    = r === 'dm';
   state.user = { phone:acc.phone, username:acc.username, role:r };
   lsSet('ts_user', state.user);
-  if(state.isAdmin){ state.admTab = 'dash'; go('page-admin'); renderAdmin(); }
-  else if(state.isDm){ state.dmTab = 'msgs'; go('page-dm'); renderDm(); }
-  else enterApp();
+  if(state.isAdmin){ state.admTab = 'dash'; showPage('page-admin'); renderAdmin(); navigate('admin'); }
+  else if(state.isDm){ state.dmTab = 'msgs'; showPage('page-dm'); renderDm(); navigate('dm'); }
+  else { enterApp(); navigate('home'); }
   return true;
 }
-window.addEventListener('load', ()=>{
-  try{
-    runMigrations();             // 版本化数据迁移（含账号重置与权限升级）
+window.addEventListener('load', async ()=>{
+try{
+  runMigrations();             // 版本化数据迁移（含账号重置与权限升级）
     applyTheme(lsGet('ts_theme', 'dark'));
-    if(!restoreSession()) go('page-welcome');
+    /* 先恢复登录态，再按地址栏定位界面（支持直接粘贴网址进入） */
+    const restored = await restoreSession();
+    if(!restored){
+      const h = String(location.hash || '').replace(/^#\/?/, '');
+      if(['login','register','forgot'].includes(h.split('/')[0])) go('page-' + h.split('/')[0]);
+      else go('page-welcome');
+    }
+    window.addEventListener('hashchange', applyRoute);
     refreshBell();               // 消息中心未读角标
     checkCarExpire();            // 过期未成局车队自动取消
     /* 云端未配置时给出一次性提示（仅管理端可见） */
@@ -5704,6 +5994,9 @@ window.addEventListener('load', ()=>{
       lsSet('ts_cloud_hinted', true);
       setTimeout(()=>toast('☁️ 云端未配置：数据暂存本机，请在「数据备份 → 云端同步配置」填写 Token'), 1500);
     }
+    /* 待同步队列：启动补传 + 每 15 秒重试（网络通畅时 30 秒内必达） */
+    refreshSyncBadge();
+    setTimeout(()=>flushOutbox(), 800);
   }catch(e){
     console.error('[启动失败]', e);
     toast('⚠️ 启动出现问题，部分功能可能不可用');
@@ -5762,10 +6055,11 @@ window.addEventListener('load', ()=>{
     if(f) backupImport(f);
   });
   /* 网络状态 */
-  window.addEventListener('online',  ()=>{ netOk(); toast('🌐 网络已恢复，正在同步…'); if(CLOUD.enabled) cloudSync(); });
+  window.addEventListener('online',  ()=>{ netOk(); toast('🌐 网络已恢复，正在同步…'); if(CLOUD.enabled) cloudSync(); flushOutbox(); });
   window.addEventListener('offline', ()=> netFail('当前处于离线状态，数据已保存在本地'));
   cloudSync();                                        // 启动时从云端合并数据
-  if(CLOUD.enabled) setInterval(()=>cloudSync(), 30000);   // 每 30 秒同步一次（降低云端频率压力）
+  if(CLOUD.enabled) setInterval(()=>cloudSync(), 30000);   // 每 30 秒拉取一次
+  setInterval(()=>flushOutbox(), 15000);                   // 每 15 秒补传待同步数据
   const bn = $('#banner');
   bn.addEventListener('mouseenter', ()=>clearInterval(state.bannerTimer));
   bn.addEventListener('mouseleave', ()=>bannerStart());
