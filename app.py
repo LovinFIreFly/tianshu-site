@@ -736,6 +736,22 @@ def role_of(u):
     return u.get('role') or 'user'
 
 
+def dm_customers_of(me_phone):
+    """DM 只能看到「自己场次里」的客户（最小权限原则：别人的客户看不到）"""
+    mine = [x.get('id') for x in read_list('sessions') if str(x.get('dm')) == str(me_phone)]
+    users = {str(x.get('phone')): x for x in read_list('users')}
+    out, seen = [], set()
+    for bk in read_list('bookings'):
+        if bk.get('sessionId') in mine or str(bk.get('dmPhone')) == str(me_phone):
+            p = str(bk.get('phone'))
+            if p and p not in seen:
+                seen.add(p)
+                u = users.get(p, {})
+                out.append({'phone': p, 'username': u.get('username') or bk.get('username'),
+                            'credit': u.get('credit', 100)})
+    return out
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = 'TianshuLocal/1.0'
 
@@ -875,6 +891,25 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({'error': '请先登录'}, 401)
             return self._json([public_user(x) for x in read_list('users') if not x.get('banned')])
 
+        # DM 端数据（客户名单只含自己场次的）
+        if parts[:2] == ['dm', 'customers']:
+            if not token:
+                return self._json({'error': '请先登录'}, 401)
+            return self._json(dm_customers_of(phone))
+        if parts[:2] == ['dm', 'practices']:
+            if not token:
+                return self._json({'error': '请先登录'}, 401)
+            return self._json([x for x in read_list('practices')
+                               if str(x.get('phone')) == phone or staff])
+
+        # DM 的公开资料（段位/简介/可开本，客户也能看）
+        if parts[:2] == ['dm', 'profile']:
+            u2 = find_user((qs.get('phone') or [''])[0])
+            if not u2:
+                return self._json({'ok': False, 'error': '该 DM 不存在'}, 404)
+            return self._json({'ok': True, 'username': u2.get('username'),
+                               'profile': u2.get('profile') or {}, 'dmProfile': u2.get('dmProfile') or {}})
+
         # 图片（上传后的图片就从这个地址读）
         if parts[:1] == ['img'] and len(parts) >= 3:
             rel = os.path.join('img', *parts[1:])
@@ -902,6 +937,18 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({'error': '该数据仅员工可写'}, 403)
         if key in LOGIN_WRITE and not token:
             return self._json({'error': '请先登录后再操作'}, 403)
+
+        # 房间冲突校验：同一个房间、同一天、同一时段不能排两场（防撞房）
+        if key == 'sessions' and isinstance(payload, list):
+            used = {}
+            for s in payload:
+                if not isinstance(s, dict) or s.get('status') == 'cancelled' or not s.get('roomId'):
+                    continue
+                k = '%s|%s|%s' % (s.get('roomId'), s.get('ts'), s.get('time'))
+                if k in used:
+                    return self._json({'error': '房间冲突：该房间 %s %s 已排了《%s》'
+                                                % (day_label(s.get('ts')), s.get('time'), used[k])}, 409)
+                used[k] = s.get('title')
 
         # 账号表的护栏：客户只能改自己，且受保护字段一律保持原值
         if key == 'users' and isinstance(payload, list):
@@ -1093,7 +1140,7 @@ class Handler(BaseHTTPRequestHandler):
             res, code = order_act(user, b, staff)
             return self._json(res, code)
 
-        if head == 'car':
+        if head == 'car' and act != 'reserved':        # reserved 在下面员工/车主接口里处理
             user2 = dict(user, _staff=staff)
             res, code = car_action(user2, b, act)
             return self._json(res, code)
@@ -1262,6 +1309,313 @@ class Handler(BaseHTTPRequestHandler):
             push_log(user.get('username'), role_of(user), '注销了账号（数据已删除）')
             return self._json({'ok': True})
 
+        # ================= 员工（管理员 / DM）专用接口 =================
+        my_role = role_of(user) if user else 'user'
+        if head == 'staff' and act:
+            if not staff:
+                return self._json({'error': '需要员工权限'}, 403)
+            # 扫码/输码核销：客户到店出示 6 位码，员工核销
+            if act == 'verify':
+                code = str(b.get('code') or '').strip()
+                bookings = read_list('bookings')
+                hit = next((x for x in bookings if str(x.get('verifyCode')) == code and x.get('status') == 'booked'), None)
+                if not hit:
+                    return self._json({'error': '核销码无效，或该预约已核销/已取消'}, 404)
+                hit['status'], hit['arrivedAt'] = 'arrived', now_ms()
+                hit['verifiedBy'] = (user or {}).get('username') or '员工'
+                write_json('bookings', bookings)
+                notify(hit.get('phone'), '已到店核销 ✅',
+                       '《%s》%s %s 已核销，祝你玩得开心～' % (hit.get('title'), hit.get('day'), hit.get('time')), 'verify')
+                push_log(hit['verifiedBy'], my_role, '核销《%s》（码 %s）' % (hit.get('title'), code))
+                return self._json({'ok': True, 'booking': hit})
+            # 拉黑 / 恢复账号
+            if act == 'ban':
+                users = read_list('users')
+                target = next((x for x in users if str(x.get('phone')) == str(b.get('phone'))), None)
+                if not target:
+                    return self._json({'error': '账号不存在'}, 404)
+                if target.get('super') is True:
+                    return self._json({'error': '超级管理员不可限制'}, 403)
+                target['banned'] = not target.get('banned')
+                target['banReason'] = clean_text(b.get('reason'), 60) if target['banned'] else ''
+                write_json('users', users)
+                push_log((user or {}).get('username'), my_role,
+                         ('拉黑' if target['banned'] else '恢复') + '账号 ' + str(target.get('username')))
+                return self._json({'ok': True, 'banned': target['banned']})
+            # 查看客户档案留痕（谁在什么时候看了谁）
+            if act == 'customer':
+                push_log((user or {}).get('username'), my_role, '查看客户档案 ' + str(b.get('phone')))
+                return self._json({'ok': True})
+            # 会员充值（余额）
+            if act == 'recharge':
+                users = read_list('users')
+                target = next((x for x in users if str(x.get('phone')) == str(b.get('phone'))), None)
+                if not target:
+                    return self._json({'error': '该手机号还没有注册账号'}, 404)
+                amount = int(b.get('amount') or 0)
+                before = int(target.get('balance') or 0)
+                target['balance'] = before + amount
+                wl = target.get('walletLogs') or []
+                wl.insert(0, {'id': now_ms(), 'delta': amount, 'note': clean_text(b.get('note'), 40),
+                              'by': (user or {}).get('username'), 'at': now_ms()})
+                target['walletLogs'] = wl[:100]
+                write_json('users', users)
+                notify(target.get('phone'), '会员余额变动 💳',
+                       '充值 ¥%d，当前余额 ¥%d。' % (amount, target['balance']), 'wallet')
+                return self._json({'ok': True, 'before': before, 'after': target['balance']})
+            # 发券（沉睡客户回访 / 全员）
+            if act == 'coupon':
+                users = read_list('users')
+                bookings = read_list('bookings')
+                scope = str(b.get('all') or 'sleeping')
+                amount = int(b.get('amount') or 0) or 20
+                days = int(b.get('days') or 30)
+                sleep_days = int(b.get('sleepDays') or 30)
+                cut = now_ms() - sleep_days * 86400000
+                customers = [x for x in users if role_of(x) == 'user']
+                picked = []
+                for c in customers:
+                    if scope == 'all':
+                        picked.append(c)
+                        continue
+                    last = max([bk.get('createdAt') or 0 for bk in bookings
+                                if str(bk.get('phone')) == str(c.get('phone'))] or [c.get('first') or 0])
+                    if last < cut:                       # 超过 N 天没消费 = 沉睡客户
+                        picked.append(c)
+                coupons = read_list('coupons')
+                for c in picked:
+                    coupons.append({'id': now_ms() + secrets.randbelow(999), 'phone': c.get('phone'),
+                                    'amount': amount, 'minAmount': int(b.get('minAmount') or 0),
+                                    'kind': 'deposit', 'exp': now_ms() + days * 86400000,
+                                    'used': False, 'from': '门店回访'})
+                    notify(c.get('phone'), '送你一张优惠券 🎁',
+                           '好久不见～送你一张 %d 元定金抵扣券（%d 天内有效），快来开本吧！' % (amount, days), 'coupon')
+                write_json('coupons', coupons)
+                return self._json({'ok': True, 'count': len(picked),
+                                   'msg': '' if picked else '没有符合条件的客户'})
+            # 清空业务数据（保留账号和剧本）—— 只有超级管理员能做
+            if act == 'purge':
+                if my_role != 'super':
+                    return self._json({'error': '仅超级管理员可清空数据'}, 403)
+                for key in ('bookings', 'pays', 'messages', 'reviews', 'posts', 'notices',
+                            'carmsgs', 'logs', 'wants', 'waitlist', 'codes'):
+                    write_json(key, [])
+                push_log((user or {}).get('username'), 'super', '清空了全部业务数据')
+                return self._json({'ok': True})
+            # 场次状态变更（取消 / 锁定 / 恢复）并通知已报名客户
+            if act == 'session':
+                sessions = read_list('sessions')
+                s = next((x for x in sessions if str(x.get('id')) == str(b.get('id'))), None)
+                if not s:
+                    return self._json({'error': '场次不存在'}, 404)
+                s['status'] = str(b.get('status') or 'open')
+                if b.get('reason'):
+                    s['statusReason'] = clean_text(b.get('reason'), 60)
+                write_json('sessions', sessions)
+                if s['status'] == 'cancelled':
+                    for bk in read_list('bookings'):
+                        if bk.get('sessionId') == s.get('id') and bk.get('status') == 'booked':
+                            notify(bk.get('phone'), '场次变动通知',
+                                   '《%s》%s %s 的场次%s已被取消，请联系门店改约。'
+                                   % (s.get('title'), day_label(s.get('ts')), s.get('time'),
+                                      '（%s）' % s.get('statusReason') if s.get('statusReason') else ''), 'session')
+                return self._json({'ok': True})
+            # DM 结算标记
+            if act == 'settle':
+                settles = read_list('settles')
+                hit = False
+                for x in settles:
+                    if (b.get('id') and str(x.get('id')) == str(b.get('id'))) or \
+                       (b.get('dmPhone') and str(x.get('dmPhone')) == str(b.get('dmPhone')) and
+                            (not b.get('month') or x.get('month') == b.get('month'))):
+                        x['settled'] = True
+                        x['settledAt'] = now_ms()
+                        x['settledBy'] = (user or {}).get('username')
+                        hit = True
+                write_json('settles', settles)
+                return self._json({'ok': True, 'count': len(settles) if hit else 0})
+            return self._json({'error': '未知操作'}, 400)
+
+        # ---------- DM 端 ----------
+        if head == 'dm' and act:
+            if not (staff or my_role == 'dm'):
+                return self._json({'error': '需要 DM 权限'}, 403)
+            me_phone = str((user or {}).get('phone'))
+            # 我场次里的客户（只给这几个人，别的客户看不到）
+            if act == 'customers':
+                return self._json(dm_customers_of(me_phone))
+            # 调整客户信用分
+            if act == 'credit':
+                users = read_list('users')
+                target = next((x for x in users if str(x.get('phone')) == str(b.get('phone'))), None)
+                if not target:
+                    return self._json({'error': '客户不存在'}, 404)
+                delta = max(-100, min(100, int(b.get('delta') or 0)))
+                before = int(target.get('credit', 100))
+                after = max(0, min(120, before + delta))
+                target['credit'] = after
+                logs = target.get('creditLogs') or []
+                logs.insert(0, {'id': now_ms(), 'delta': after - before,
+                                'reason': clean_text(b.get('reason'), 40) or '门店调整',
+                                'by': (user or {}).get('username'), 'at': now_ms()})
+                target['creditLogs'] = logs[:100]
+                write_json('users', users)
+                notify(target.get('phone'), '信用分变动',
+                       '信用分 %d → %d 分。原因：%s' % (before, after, b.get('reason') or '门店调整'), 'credit')
+                return self._json({'ok': True, 'before': before, 'after': after})
+            # 开本前分配角色
+            if act == 'assign':
+                bookings = read_list('bookings')
+                bk = next((x for x in bookings if str(x.get('id')) == str(b.get('id'))), None)
+                if not bk:
+                    return self._json({'error': '预约不存在'}, 404)
+                bk['role'] = clean_text(b.get('role'), 20)
+                write_json('bookings', bookings)
+                notify(bk.get('phone'), '你的角色已分配 🎭',
+                       '《%s》%s %s 你的角色是：%s' % (bk.get('title'), bk.get('day'), bk.get('time'),
+                                                    bk['role'] or '现场分配'), 'role')
+                return self._json({'ok': True})
+            # 我的练本申请
+            if act == 'practices':
+                return self._json([x for x in read_list('practices')
+                                   if str(x.get('phone')) == me_phone or staff])
+            return self._json({'error': '未知操作'}, 400)
+
+        # ---------- 练本申请 / 学本资料 / 通知已读 / 改期 / 预留位 / 店家撮合 ----------
+        if head == 'practice' and act == 'create':
+            lst = read_list('practices')
+            lst.insert(0, {'id': now_ms(), 'phone': (user or {}).get('phone'),
+                           'username': (user or {}).get('username'), 'sid': b.get('sid'),
+                           'ts': b.get('ts') or 0, 'note': clean_text(b.get('note'), 200),
+                           'status': 'pending', 'at': now_ms()})
+            write_json('practices', lst[:500])
+            return self._json({'ok': True})
+
+        if head == 'practice' and act == 'update':
+            if not staff:
+                return self._json({'error': '需要员工权限'}, 403)
+            lst = read_list('practices')
+            for x in lst:
+                if str(x.get('id')) == str(b.get('id')):
+                    x['status'] = str(b.get('status') or 'planned')
+            write_json('practices', lst)
+            for x in lst:
+                if str(x.get('id')) == str(b.get('id')) and x.get('phone'):
+                    notify(x.get('phone'), '练本申请已处理',
+                           '你的练本申请状态：%s' % x.get('status'), 'guide')
+            return self._json({'ok': True})
+
+        if head == 'guide' and act in ('save', 'del'):
+            if not staff:
+                return self._json({'error': '需要员工权限'}, 403)
+            lst = read_list('guides')
+            if act == 'del':
+                write_json('guides', [x for x in lst if str(x.get('id')) != str(b.get('id'))])
+                return self._json({'ok': True})
+            gid = int(b.get('id') or 0)
+            hit = next((x for x in lst if x.get('id') == gid), None)
+            data = {'sid': b.get('sid') or 0, 'type': str(b.get('type') or '解析'),
+                    'title': clean_text(b.get('title'), 60), 'text': clean_text(b.get('text'), 5000),
+                    'links': (b.get('links') or [])[:8], 'by': (user or {}).get('username'), 'at': now_ms()}
+            if hit:
+                hit.update(data)
+            else:
+                lst.insert(0, dict(data, id=now_ms(), super=bool(b.get('super'))))
+            write_json('guides', lst[:500])
+            return self._json({'ok': True})
+
+        if head == 'notice' and act == 'read':
+            ids = [str(x) for x in (b.get('ids') or [])]
+            lst = read_list('notices')
+            me_p = str((user or {}).get('phone'))
+            for x in lst:
+                if (not ids or str(x.get('id')) in ids):
+                    rb = x.get('readBy') or []
+                    if me_p not in rb:
+                        rb.append(me_p)
+                    x['readBy'] = rb
+            write_json('notices', lst)
+            return self._json({'ok': True})
+
+        if head == 'order' and act == 'reschedule':
+            bookings = read_list('bookings')
+            bk = next((x for x in bookings if str(x.get('id')) == str(b.get('id'))), None)
+            if not bk:
+                return self._json({'error': '预约不存在'}, 404)
+            if str(bk.get('phone')) != str((user or {}).get('phone')) and not staff:
+                return self._json({'error': '只能改自己的预约'}, 403)
+            new_ts, new_time = int(b.get('ts') or 0), str(b.get('time') or bk.get('time'))
+            # 如果新时段已排了场次，检查还有没有位置
+            ses = next((x for x in read_list('sessions') if str(x.get('sid')) == str(bk.get('sid'))
+                        and x.get('ts') == new_ts and x.get('time') == new_time and x.get('status') == 'open'), None)
+            if ses:
+                used = sum((x.get('players') or 1) for x in bookings
+                           if x.get('sessionId') == ses.get('id') and x.get('status') != 'cancelled'
+                           and x.get('id') != bk.get('id'))
+                if (ses.get('cap') or 99) - used < (bk.get('players') or 1):
+                    return self._json({'error': '新时段余位不足，换个时间吧'}, 409)
+                bk['sessionId'] = ses.get('id')
+            bk['ts'], bk['time'], bk['day'] = new_ts, new_time, day_label(new_ts)
+            bk['rescheduleCount'] = (bk.get('rescheduleCount') or 0) + 1
+            write_json('bookings', bookings)
+            for o in read_list('pays'):
+                if o.get('bid') == bk.get('id'):
+                    o['ts'], o['time'], o['day'] = new_ts, new_time, bk['day']
+                    write_json('pays', read_list('pays'))
+                    break
+            notify(bk.get('phone'), '改期成功 📅',
+                   '《%s》已改到 %s %s，定金保留。' % (bk.get('title'), bk['day'], new_time), 'booking')
+            return self._json({'ok': True})
+
+        if head == 'car' and act == 'reserved':
+            bookings = read_list('bookings')
+            owner_id = str(b.get('carId') or '').replace('own-', '')
+            ob = next((x for x in bookings if str(x.get('id')) == owner_id), None)
+            if not ob:
+                return self._json({'error': '车队不存在'}, 404)
+            if str(ob.get('phone')) != str((user or {}).get('phone')) and not staff:
+                return self._json({'error': '仅车主可设置预留位'}, 403)
+            ob['reserved'] = max(0, min(3, int(b.get('n') or 0)))
+            write_json('bookings', bookings)
+            return self._json({'ok': True, 'reserved': ob['reserved']})
+
+        if head == 'want' and act == 'form':
+            if not staff:
+                return self._json({'error': '需要员工权限'}, 403)
+            ids = [str(x) for x in (b.get('ids') or [])]
+            wants = read_list('wants')
+            picked = [x for x in wants if str(x.get('id')) in ids and x.get('status') == 'open']
+            if not picked:
+                return self._json({'error': '没有可撮合的需求'}, 404)
+            bookings, pays, created = read_list('bookings'), read_list('pays'), 0
+            first = picked[0]
+            for i, w in enumerate(picked):
+                u = find_user(w.get('phone')) or {}
+                bid = now_ms() + secrets.randbelow(900) + i
+                bookings.append({'id': bid, 'phone': w.get('phone'), 'username': w.get('username'),
+                                 'sid': w.get('sid'), 'title': '', 'day': day_label(w.get('ts')),
+                                 'ts': w.get('ts'), 'time': w.get('time'), 'players': w.get('players') or 1,
+                                 'price': 0, 'status': 'booked', 'mode': '拼车',
+                                 'carNew': i == 0, 'carOwner': first.get('username'),
+                                 'carCap': 8, 'carMin': 4, 'carTags': [], 'reserved': 0,
+                                 'sessionId': 0, 'dmPhone': '', 'role': '',
+                                 'verifyCode': '%06d' % secrets.randbelow(1000000), 'createdAt': now_ms()})
+                pays.append({'id': bid + 1, 'bid': bid, 'phone': w.get('phone'), 'username': w.get('username'),
+                             'title': w.get('title') or '', 'day': day_label(w.get('ts')), 'ts': w.get('ts'),
+                             'time': w.get('time'), 'players': w.get('players') or 1, 'price': 0,
+                             'amount': 0, 'deposit': 0, 'couponId': 0, 'status': 'unpaid',
+                             'channel': 'demo', 'createdAt': now_ms()})
+                created += 1
+                notify(w.get('phone'), '门店帮你撮合成团了 🤝',
+                       '同一场次的玩家已凑齐，%s %s 一起去玩吧！' % (day_label(w.get('ts')), w.get('time')), 'car')
+            for w in wants:
+                if str(w.get('id')) in ids:
+                    w['status'] = 'formed'
+            write_json('bookings', bookings)
+            write_json('pays', pays)
+            write_json('wants', wants)
+            return self._json({'ok': True, 'created': created})
+
         # ---------- 追加合并（客户没权限整份覆盖，就用这个安全地加自己那条）----------
         if head == 'append' and act:
             key = act.replace('.json', '')
@@ -1326,7 +1680,7 @@ class Handler(BaseHTTPRequestHandler):
 # ================================================================
 def main():
     try:
-        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stdout.reconfigure(errors='replace')      # 编码跟随系统控制台，个别汉字打不出也不会崩
     except Exception:
         pass
     seed_if_empty()
