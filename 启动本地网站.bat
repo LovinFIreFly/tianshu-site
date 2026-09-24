@@ -20,7 +20,7 @@ if not defined PY (
   pause
   exit /b
 )
-start "" cmd /c "timeout /t 3 >nul & start "" http://localhost:8000"
+rem 浏览器由 app.py 在服务就绪后自动打开（不用在这里猜时间）
 %PY% app.py
 echo.
 echo 本地网站已停止。数据都保存在 data 文件夹里，不会丢。

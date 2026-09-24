@@ -43,10 +43,12 @@ import mimetypes
 import os
 import re
 import secrets
+import socket
 import subprocess
 import sys
 import threading
 import time
+import webbrowser
 
 # ============================== 0. 依赖自检 ==============================
 NEED = {'flask': 'Flask', 'rich': 'rich', 'waitress': 'waitress'}
@@ -75,10 +77,24 @@ from rich.panel import Panel                                                  # 
 from rich.table import Table                                                  # noqa: E402
 from werkzeug.exceptions import HTTPException                                 # noqa: E402
 
+# 中文控制台（GBK）打不出表情符号，这里兜底成「?」，绝不让程序因此崩溃
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(errors='replace')
+    except Exception:
+        pass
+
 console = Console()
 
 # ============================== 1. 可调设置 ==============================
-PORT = 8000                      # 网页端口（被占用时改成 8001 等）
+PORT = 8000                      # 网页端口（被占用时会自动往后试 8001、8002…并在窗口里说明）
+OPEN_BROWSER = True              # 启动后自动打开浏览器（不想自动打开就改 False）
+LAN_MODE = False                 # 手机访问开关 ★
+#   · False（默认）= 只有这台电脑自己能打开 http://localhost:8000（最安全）
+#   · True         = 同一个 WiFi 下的手机也能打开，地址在启动窗口里会显示
+#                    （家里/店里测试手机端很好用；测试完建议改回 False）
+#   注意：localhost 永远只在"运行本程序的这台电脑"上有效，
+#        手机上打开 localhost 会报「ERR_CONNECTION_REFUSED」，这是正常的。
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 IMG_DIR = os.path.join(DATA_DIR, 'img')
@@ -1735,28 +1751,103 @@ def static_files(filename):
         return Response(f.read(), mimetype=ctype)
 
 
-def banner():
-    """启动横幅（把该知道的信息一次说清）"""
+def lan_ip():
+    """找出这台电脑在 WiFi 里的地址（手机要用它来访问你电脑）"""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(('8.8.8.8', 80))         # 不会真的发数据，只是让系统选出正在用的网卡
+        return s.getsockname()[0]
+    except Exception:
+        return ''
+    finally:
+        s.close()
+
+
+def pick_port(host, start):
+    """端口被占用就自动往后找（8000→8009），并告诉用户原因"""
+    for p in range(start, start + 10):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                # ⚠️ Windows 上不要加 SO_REUSEADDR：它会让"已被占用的端口"也能绑定成功，
+                #    结果误判为端口空闲。直接 bind，占用时会抛错，这才是可靠的判断。
+                s.bind((host, p))
+                return p
+            except OSError:
+                continue
+    return start
+
+
+def banner(port, lan=''):
+    """启动横幅：把该知道的信息一次说清"""
     t = Table(show_header=False, box=None, padding=(0, 2))
     t.add_column(style='bold cyan', justify='right')
     t.add_column()
-    t.add_row('网址', '[b]http://localhost:%d[/]' % PORT)
-    t.add_row('接口一览', '[b]http://localhost:%d/api/help[/]' % PORT)
+    t.add_row('电脑上打开', '[b]http://localhost:%d[/]' % port)
+    if lan:
+        t.add_row('手机上打开', '[b]http://%s:%d[/] [dim]（手机连同一个 WiFi）[/]' % (lan, port))
+    else:
+        t.add_row('手机也能看', '[dim]把文件第 1 节的 LAN_MODE 改成 True 再重启[/]')
+    t.add_row('接口一览', '[b]http://localhost:%d/api/help[/]' % port)
     t.add_row('数据目录', DATA_DIR)
     t.add_row('内置账号', 'FireFly（超管）/ FireFly2（管理员）/ dm测试（DM）/ 调试debug（客户）')
     t.add_row('密码', '123123')
     t.add_row('停止', '按 Ctrl + C')
-    console.print(Panel(t, title='🍠 甜薯剧本杀 · 本地版已启动', border_style='magenta'))
+    console.print(Panel(t, title='甜薯剧本杀 · 本地版已启动', border_style='magenta'))
+    console.print('[dim]这个窗口要一直开着，网页才能用；关掉窗口 = 关闭本地网站。[/]')
+
+
+def pause_before_exit():
+    """双击运行时万一出错，别让黑窗口一闪而过，留着让你看清报错"""
+    try:
+        if sys.stdin and sys.stdin.isatty():
+            input('\n按回车键关闭这个窗口…')
+    except Exception:
+        pass
 
 
 def main():
+    """启动服务
+    常用参数（可选）：  python app.py --lan            开手机访问
+                       python app.py --no-browser    不自动开浏览器
+                       python app.py --port 8080     换端口"""
+    global OPEN_BROWSER, LAN_MODE, PORT
+    if '--no-browser' in sys.argv:
+        OPEN_BROWSER = False
+    if '--lan' in sys.argv:
+        LAN_MODE = True
+    if '--port' in sys.argv:
+        try:
+            PORT = int(sys.argv[sys.argv.index('--port') + 1])
+        except Exception:
+            pass
     seed_if_empty()
-    banner()
+    host = '0.0.0.0' if LAN_MODE else '127.0.0.1'
+    port = pick_port(host, PORT)
+    if port != PORT:
+        console.print('[yellow]提示：端口 %d 被占用了（可能已经开着一个服务窗口），本次改用 %d[/]' % (PORT, port))
+    lan = lan_ip() if LAN_MODE else ''
+    if LAN_MODE and not lan:
+        console.print('[yellow]提示：没检测到 WiFi 地址，手机可能连不上，请确认电脑已联网[/]')
+    banner(port, lan)
+    if OPEN_BROWSER:
+        threading.Timer(1.2, lambda: webbrowser.open('http://localhost:%d' % port)).start()
     try:
-        waitress.serve(app, host='127.0.0.1', port=PORT, threads=8)     # 只允许本机访问，更安全
+        from waitress import create_server
+        server = create_server(app, host=host, port=port, threads=8)   # 先把端口占住，有问题会立刻报错
+        server.run()
     except KeyboardInterrupt:
         console.print('\n[yellow]已停止[/]，数据都在 data 文件夹里，不会丢。')
+    except Exception as e:
+        console.print('[red]启动失败：%s[/]' % e)
+        console.print('常见原因：① 端口被占用（把之前的黑窗口关掉再试）'
+                      ' ② 杀毒软件/防火墙拦截 ③ data 文件夹没有写入权限')
+        pause_before_exit()
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:                          # 兜底：任何启动错误都留在窗口里
+        console.print('[red]启动出错：%s[/]' % e)
+        console.print_exception()
+        pause_before_exit()
