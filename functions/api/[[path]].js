@@ -98,6 +98,15 @@ function rate(key, max, winMs) {
 const clientIp = (request) =>
   request.headers.get('CF-Connecting-IP') ||
   String(request.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown';
+/* 只查看不计数：用于「只统计失败次数」的限流（成功操作不应消耗额度、
+   更不该让同一 WiFi 下的其他正常顾客被误伤） */
+function ratePeek(key, winMs) {
+  const now = Date.now();
+  const arr = (_RL.get(key) || []).filter(t => now - t < winMs);
+  _RL.set(key, arr);
+  return arr.length;
+}
+function rateClear(key) { _RL.delete(key); }
 
 /* ---------------- 加密工具 ---------------- */
 function b64url(bytes) {
@@ -486,21 +495,35 @@ export async function onRequest(context) {
 
   /* ---------- POST /api/login 服务端登录 ---------- */
   if (request.method === 'POST' && parts[0] === 'login') {
-    if (!rate('login:' + clientIp(request), 20, 600000)) return json({ ok: false, error: '尝试过于频繁，请 10 分钟后再试' }, 429);
+    /* 41/35：防爆破限流 —— 只统计「失败」次数、成功即清零
+       · 同一 IP：20 次失败 / 10 分钟（暴力破解仍被拦）
+       · 同一 IP + 同一账号：8 次失败 / 10 分钟（精准锁定被盯上的账号）
+       这样门店 WiFi 下多个顾客正常登录不会被误伤 */
+    const ip = clientIp(request);
+    const ipFailKey = 'loginf:ip:' + ip;
+    if (ratePeek(ipFailKey, 600000) >= 20) {
+      return json({ ok: false, error: '同一网络登录失败次数过多，请 10 分钟后再试' }, 429);
+    }
     let body;
     try { body = JSON.parse(await request.text()); } catch (e) { return json({ ok: false, error: '参数错误' }, 400); }
     const acc = String(body.account || '').trim();
     const pw = String(body.password || '');
     if (!acc || !pw) return json({ ok: false, error: '请填写账号与密码' }, 400);
+    const accKey = 'loginf:acc:' + ip + ':' + acc.toLowerCase();
+    if (ratePeek(accKey, 600000) >= 8) {
+      return json({ ok: false, error: '该账号密码错误次数过多，请 10 分钟后再试，或联系门店重置密码' }, 429);
+    }
+    const fail = () => { rate(ipFailKey, 9999, 600000); rate(accKey, 9999, 600000); };
 
     const cur = await readFile(env, 'users');
     if (!cur.ok) return json({ ok: false, error: '云端读取失败 ' + cur.status }, 502);
     const users = Array.isArray(cur.data) ? cur.data : [];
     const u = users.find(x => x.phone === acc || x.username === acc);
-    if (!u) return json({ ok: false, error: '账号不存在' }, 404);
+    if (!u) { fail(); return json({ ok: false, error: '账号不存在' }, 404); }
     /* 30：被门店限制的账号不能登录 */
     if (u.banned) return json({ ok: false, error: '该账号已被限制使用：' + (u.banReason || '违反门店规则') }, 403);
-    if (!(await verifyPassword(pw, u.password))) return json({ ok: false, error: '密码错误' }, 401);
+    if (!(await verifyPassword(pw, u.password))) { fail(); return json({ ok: false, error: '密码错误' }, 401); }
+    rateClear(ipFailKey); rateClear(accKey);      // 登录成功清零，不累积失败额度
 
     /* 旧弱哈希自动升级为 PBKDF2 */
     let upgraded = false;
@@ -641,9 +664,10 @@ if (request.method === 'GET' && parts[0] === 'captcha') {
 /* ---------- POST /api/code/send 发送验证码 ---------- */
 if (request.method === 'POST' && parts[0] === 'code' && parts[1] === 'send') {
 /* 40：同 IP 限流，防批量刷验证码（邮箱/短信费用被刷） */
-if (!rate('send:' + clientIp(request), 15, 600000)) return json({ ok: false, error: '请求过于频繁，请稍后再试' }, 429);
-/* 40/41：同一 IP 一小时内发得越多，越必须过人机验证（前几次体验优先，超限强制） */
-const ipSends = rate('sendfast:' + clientIp(request), 3, 3600000);
+/* 门店 WiFi 下多位顾客同时发码不会误伤（单目标仍限 60 秒 1 条 / 每天 10 条） */
+if (!rate('send:' + clientIp(request), 30, 600000)) return json({ ok: false, error: '请求过于频繁，请稍后再试' }, 429);
+/* 40/41：同一 IP 发得越多，越必须过人机验证（前几次免验证，超限强制） */
+const ipSends = rate('sendfast:' + clientIp(request), 6, 3600000);
 let body;
   try { body = JSON.parse(await request.text()); } catch (e) { return json({ ok: false, error: '参数错误' }, 400); }
   /* 40/41：前 3 次可免人机验证（体验优先），超过后必须过验证；带验证码时一律校验 */
@@ -747,8 +771,9 @@ async function checkCaptcha(env, id, answer) {
 
 /* ---------- POST /api/register 注册（服务端落库，强制客户身份） ---------- */
   if (request.method === 'POST' && parts[0] === 'register') {
-    /* 41：注册限流，防脚本批量注册占位 */
-    if (!rate('reg:' + clientIp(request), 5, 3600000)) return json({ ok: false, error: '注册过于频繁，请稍后再试' }, 429);
+    /* 41：注册限流，防脚本批量注册占位（门店 WiFi 一群朋友一起注册也够用；
+       注册本身已强制人机验证，脚本刷不进） */
+    if (!rate('reg:' + clientIp(request), 12, 3600000)) return json({ ok: false, error: '注册过于频繁，请稍后再试' }, 429);
     let body;
     try { body = JSON.parse(await request.text()); } catch (e) { return json({ ok: false, error: '参数错误' }, 400); }
     const phone = String(body.phone || '').trim();
@@ -1071,7 +1096,8 @@ async function checkCaptcha(env, id, answer) {
   /* ================= 31：创建预约（服务端算价 + 余位/选角/优惠券校验） ================= */
   if (request.method === 'POST' && parts[0] === 'booking' && parts[1] === 'create') {
     if (!token) return json({ error: '请先登录' }, 401);
-    if (!rate('bk:' + clientIp(request), 30, 3600000)) return json({ error: '操作过于频繁，请稍后再试' }, 429);
+    /* 同一 WiFi（店内/包间）多人同时下单也够用 */
+    if (!rate('bk:' + clientIp(request), 60, 3600000)) return json({ error: '操作过于频繁，请稍后再试' }, 429);
     let body;
     try { body = JSON.parse(await request.text()); } catch (e) { return json({ error: '参数错误' }, 400); }
     const me = (await loadArr(env, 'users')).list.find(x => x.phone === token.phone);
