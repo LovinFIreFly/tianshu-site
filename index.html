@@ -952,6 +952,7 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
 
     <!-- 我的预约 -->
     <div id="tab-book" style="display:none">
+      <div id="prep-card"></div>
       <div class="sec" style="margin-top:0"><b>🎟️ 我的预约</b><span id="bk-count"></span></div>
       <div class="bk-wrap"><table class="bk-table" id="bk-table"></table></div>
       <div class="sec"><b>🧾 我的订单</b><span>定金 / 支付 / 退款</span></div>
@@ -1241,8 +1242,24 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
       <!-- DM 成长档案 -->
       <section id="adm-dmfiles" hidden>
         <h2>DM 成长档案</h2>
-        <p class="sub">带本量 · 好评率 · 分成 · 客户指定次数 —— 数据来自真实排班与评价</p>
+        <p class="sub">带本量 · 好评率 · 段位 · 分成 · 客户指定次数 —— 数据来自真实排班与评价</p>
         <div id="adm-dmfile-list"></div>
+        <div class="adm-panel">
+          <h3>📚 学本资料库管理 <span class="car-sub" style="margin:0">DM 端「学本资料」里可以看到</span></h3>
+          <div class="form-grid">
+            <div class="f-item"><label>关联剧本</label><div class="box"><select id="gd-script"></select></div></div>
+            <div class="f-item"><label>类型</label><div class="box"><select id="gd-type"><option>解析</option><option>话术</option><option>复盘</option><option>资料</option></select></div></div>
+            <div class="f-item full"><label>标题</label><div class="box"><input id="gd-title" maxlength="60" placeholder="如：《雾山夜行》角色动机解析"></div></div>
+            <div class="f-item full"><label>内容</label><div class="box ta"><textarea id="gd-text" maxlength="4000" placeholder="要点写在这里，DM 端会完整显示"></textarea></div></div>
+            <div class="f-item full"><label>参考资料链接（选填，一行一个，格式：名称|网址）</label><div class="box ta"><textarea id="gd-links" placeholder="背景音乐|https://...&#10;视频教程|https://..."></textarea></div></div>
+          </div>
+          <button class="btn btn-primary btn-sm" style="margin-top:12px;width:100%;height:42px" data-action="guide-save">💾 保存资料</button>
+          <div id="gd-list" style="margin-top:14px"></div>
+        </div>
+        <div class="adm-panel">
+          <h3>📅 练本申请 <span class="car-sub" id="pr-count" style="margin:0"></span></h3>
+          <div id="pr-list"></div>
+        </div>
       </section>
       <!-- 操作日志 -->
       <section id="adm-logs" hidden>
@@ -1362,6 +1379,7 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
       <button class="navi" data-action="dm-tab" data-t="sched">📅 我的排班</button>
       <button class="navi" data-action="dm-tab" data-t="stats">📈 成长档案</button>
       <button class="navi" data-action="dm-tab" data-t="credit">📋 客户信用</button>
+      <button class="navi" data-action="dm-tab" data-t="guides">📚 学本资料</button>
       <button class="navi" data-action="dm-tab" data-t="me">🗡️ 我的主页</button>
       <div class="sp"></div>
       <button class="navi" data-action="dm-home">👤 进入用户界面</button>
@@ -1403,6 +1421,24 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
         <h2>我的 DM 主页</h2>
         <p class="sub">玩家在剧本详情页可以看到你的介绍</p>
         <div id="dm-me-box"></div>
+      </section>
+      <section id="dm-guides" hidden>
+        <h2>学本资料库</h2>
+        <p class="sub">剧本解析 · 开本话术 · 复盘教程 · 可申请练本</p>
+        <div class="adm-toolbar">
+          <div class="f-item" style="width:200px;margin:0"><div class="box"><select id="dg-script"></select></div></div>
+          <div class="f-item" style="width:130px;margin:0"><div class="box"><select id="dg-type">
+            <option value="">全部类型</option><option>解析</option><option>话术</option><option>复盘</option><option>资料</option>
+          </select></div></div>
+          <button class="btn btn-ghost btn-sm" data-action="dg-filter">筛选</button>
+          <div style="flex:1"></div>
+          <button class="btn btn-accent btn-sm" data-action="dg-practice">📅 申请练本</button>
+        </div>
+        <div id="dg-list"></div>
+        <div class="adm-panel">
+          <h3>我的练本申请 <span class="car-sub" style="margin:0">门店安排后会通知你</span></h3>
+          <div id="dg-practices"></div>
+        </div>
       </section>
       <section id="dm-credit" hidden>
         <h2>客户信用</h2>
@@ -1462,6 +1498,24 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
     <div style="padding:0 36px 36px">
       <h3 id="taglib-title" style="font-size:18px;font-weight:700;margin-bottom:8px">标签管理</h3>
       <div id="taglib-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 改期弹窗 ========== -->
+<div class="mask" id="modal-resched" role="dialog" aria-modal="true" aria-labelledby="rs-title">
+  <div class="modal small">
+    <div class="m-head"><button class="m-close" data-action="close-modal" data-modal="modal-resched" aria-label="关闭">✕</button></div>
+    <div style="padding:0 36px 36px">
+      <h3 id="rs-title" style="font-size:18px;font-weight:700;margin-bottom:6px">改期</h3>
+      <p class="car-sub" id="rs-tip"></p>
+      <div class="msg-cats" id="rs-days" style="margin-top:12px"></div>
+      <div class="f-item" style="margin-top:12px"><label>开场时间</label><div class="box"><select id="rs-time"></select></div></div>
+      <div style="display:flex;gap:12px;margin-top:18px">
+        <button class="btn btn-ghost" style="flex:1" data-action="close-modal" data-modal="modal-resched">取消</button>
+        <button class="btn btn-primary" style="flex:1" data-action="rs-submit">确认改期</button>
+      </div>
+      <p class="car-sub" style="margin-top:10px">改期后定金保留、座位重新锁定；新时段若已排场次会校验余位。</p>
     </div>
   </div>
 </div>
@@ -1574,6 +1628,7 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
           </div>
         </div>
         <div class="f-item full"><label>剧本简介</label><div class="box ta"><textarea id="scf-desc" placeholder="写一段吸引人的介绍…"></textarea></div></div>
+        <div class="f-item full"><label>开本准备提示（开启场提醒时会推送给玩家）</label><div class="box ta"><textarea id="scf-prep" maxlength="300" placeholder="如：建议提前阅读角色背景；可自带小道具；本局含恐怖元素，胆小慎入"></textarea></div></div>
         <div class="f-item full"><label>角色介绍（名字 + 图片，可留空）</label>
           <div id="scf-roles"></div>
           <button type="button" class="btn btn-ghost btn-sm" data-action="scf-add-role">＋ 添加角色</button>
@@ -1908,7 +1963,9 @@ const CLOUD = {
     wants:    'wants.json',    // 拼车需求（客户端发布，管理端撮合台读取）
     waitlist: 'waitlist.json', // 候补队列
     coupons:  'coupons.json',  // 优惠券
-    settles:  'settles.json'   // DM 结算单
+    settles:  'settles.json',  // DM 结算单
+    guides:   'guides.json',   // DM 学本资料库（解析/话术/复盘）
+    practices:'practices.json' // 练本申请
   }
 };
 /* ---------- 云端配置：Token 只存本机，网页源码不包含任何密钥 ---------- */
@@ -3337,13 +3394,95 @@ function bkRows(list){
           : b.status==='done' ? '<span class="st off">已完成</span>' : '<span class="st off">已取消</span>'}</td>
       <td>${(b.status==='booked' && b.verifyCode) ? `<b style="font-family:ui-monospace,monospace;letter-spacing:2px">${b.verifyCode}</b>` : '—'}</td>
       <td>${b.status==='booked'
-          ? `<button class="btn-cancel" data-action="cancel-bk" data-id="${b.id}">取消</button>`
+          ? `<button class="op-btn" data-action="resched-bk" data-id="${b.id}">改期</button>
+             <button class="btn-cancel" data-action="cancel-bk" data-id="${b.id}">取消</button>`
           : '—'}</td>
     </tr>`;
   }).join('');
   return head + '<tbody>' + body + '</tbody>';
 }
+/* ============ 改期（换时段保留定金） ============ */
+function openResched(id){
+  const b = state.bookings.find(x => x.id === +id);
+  if(!b) return;
+  state.resched = { id:b.id, ts:b.ts, time:b.time, script: SCRIPTS.find(s => s.id === b.sid) || {} };
+  renderResched();
+  openModal('modal-resched');
+}
+function renderResched(){
+  const r = state.resched; if(!r) return;
+  const set = getSettingsLocal();
+  const hours = r.ts ? (r.ts - Date.now()) / 3600000 : 999;
+  const free = hours >= (set.freeCancelHours || 24);
+  $('#rs-tip').textContent = free
+    ? `开场前 ${set.freeCancelHours} 小时外可自助改期，定金保留；每场最多自助改期 2 次。`
+    : `⚠️ 距原开场不足 ${set.freeCancelHours} 小时，可能无法自助改期（以提交结果为准，必要时联系门店）。`;
+  $('#rs-days').innerHTML = Array.from({length:7},(_,i)=>{
+    const ts = midnight() + (i+1)*DAY;
+    return `<button class="chip ${r.ts===ts?'on':''}" data-action="rs-day" data-ts="${ts}">${dateLabel(ts)}</button>`;
+  }).join('');
+  const tt = $('#rs-time');
+  if(!tt.dataset.filled){
+    tt.dataset.filled = '1';
+    tt.innerHTML = ['14:00','16:00','19:00','20:00','21:00'].map(t=>`<option value="${t}">${t}</option>`).join('');
+  }
+  tt.value = r.time;
+}
+async function submitResched(){
+  const r = state.resched; if(!r) return;
+  const dayEl = document.querySelector('#rs-days .chip.on');
+  const ts = dayEl ? +dayEl.dataset.ts : r.ts;
+  const time = $('#rs-time').value;
+  if(ts === r.ts && time === r.time) return toast('请选择新的日期或时间');
+  const res = await apiPost('/order/reschedule', { id:r.id, ts, time });
+  if(!res.ok){ toast(res.error || '改期失败'); return; }
+  const b = state.bookings.find(x => x.id === r.id);
+  if(b){ b.ts = ts; b.time = time; b.day = dateLabel(ts); b.rescheduleCount = (b.rescheduleCount || 0) + 1; lsSet('ts_bookings', state.bookings); }
+  closeModal('modal-resched');
+  state.resched = null;
+  renderBookings(); renderPrepCard();
+  toast(`✅ 已改期到 ${dateLabel(ts)} ${time}，定金保留`);
+}
+/* ============ 开本准备卡：48 小时内的场次（倒计时 + 房间 + DM + 准备提示 + 导航） ============ */
+function renderPrepCard(){
+  const box = $('#prep-card'); if(!box || !state.user) return;
+  const now = Date.now();
+  const soon = state.bookings
+    .filter(b => b.status === 'booked' && b.ts && b.ts >= midnight() && (b.ts + 20 * 3600000) - now < 48 * 3600000)
+    .sort((a, b) => a.ts - b.ts).slice(0, 2);
+  if(!soon.length){ box.innerHTML = ''; return; }
+  const set = getSettingsLocal();
+  const nav = set.storeAddr
+    ? `<a class="chip-sm" target="_blank" rel="noopener" href="https://uri.amap.com/search?keyword=${encodeURIComponent((set.storeName || '') + ' ' + set.storeAddr)}">📍 地图导航</a>`
+    : '';
+  box.innerHTML = soon.map(b=>{
+    const sc = SCRIPTS.find(s => s.id === b.sid) || {};
+    const ses = getSessions().find(s => String(s.id) === String(b.sessionId));
+    const start = b.ts + (parseInt(b.time, 10) || 19) * 3600000;
+    const leftH = Math.max(0, Math.round((start - now) / 3600000));
+    const when = leftH <= 1 ? '即将开场 🔥' : (leftH <= 24 ? `约 ${leftH} 小时后` : `约 ${Math.round(leftH / 24)} 天后`);
+    const room = ses ? roomName(ses.roomId) : '待安排';
+    const dm = (ses && ses.dmName) || b.dmName || '待指派';
+    return `<div class="adm-panel" style="border-color:var(--primary)">
+      <h3>⏰ ${escapeHtml(b.title)} <span class="credit-pill mid">${when}</span></h3>
+      <div class="kv">
+        <div class="cell"><b>${escapeHtml(b.day || '')}</b><span>${escapeHtml(b.time || '')} 开场</span></div>
+        <div class="cell"><b>${escapeHtml(room)}</b><span>房间</span></div>
+        <div class="cell"><b>${escapeHtml(dm)}</b><span>DM</span></div>
+        <div class="cell"><b>${b.players || 1}</b><span>人数</span></div>
+      </div>
+      ${sc.prep ? `<p class="car-sub">🎭 开本准备：${escapeHtml(sc.prep)}</p>` : ''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <span class="chip-sm">🕐 请提前 15 分钟到店</span>
+        <button class="chip-sm" data-action="resched-bk" data-id="${b.id}">改期</button>
+        ${b.verifyCode ? `<span class="chip-sm on">核销码 ${b.verifyCode}</span>` : ''}
+        ${nav}
+      </div>
+    </div>`;
+  }).join('');
+}
 function renderBookings(){
+  renderPrepCard();
   const n = state.bookings.filter(b=>b.status==='booked').length;
   $('#bk-count').textContent = n ? `共 ${n} 场待开始` : '';
   $('#bk-table').innerHTML   = bkRows(state.bookings);
@@ -3703,6 +3842,8 @@ function renderOps(){
         <div class="f-item"><label>免费取消时限（小时）</label><div class="box"><input id="op-free" type="number" min="0" value="${st.freeCancelHours}"></div></div>
         <div class="f-item"><label>DM 分成比例（%）</label><div class="box"><input id="op-rate" type="number" min="0" max="100" value="${Math.round((st.dmRate || 0.1) * 100)}"></div></div>
         <div class="f-item"><label>临期取消扣分（每 10 分）</label><div class="box"><input id="op-pen" type="number" min="0" max="10" value="${st.lateCancelPenalty}"></div></div>
+        <div class="f-item"><label>门店名称</label><div class="box"><input id="op-store" value="${escapeHtml(st.storeName || '甜薯剧本杀')}"></div></div>
+        <div class="f-item"><label>门店地址（用于开本提醒里的地图导航）</label><div class="box"><input id="op-addr" value="${escapeHtml(st.storeAddr || '')}" placeholder="如：杭州市西湖区文三路 100 号"></div></div>
       </div>
       <button class="btn btn-primary btn-sm" style="margin-top:12px;width:100%;height:42px" data-action="ops-save">保存经营参数</button>
       <p class="car-sub">保存后立即生效：订单金额、定金比例、退款规则均由服务端按这些参数计算。</p>
@@ -4061,7 +4202,7 @@ function scNew(){
   state.scEdit = null;
   state.scf = {hot:false, isNew:true, featured:false, newbie:false, onSale:true, allowRolePick:false};
   state.scfImg = ''; state.scfRoles = [];
-  openScForm({ title:'', tags:'', players:'4-6人', dur:'约4小时', diff:3, rating:8.5, price:88, desc:'',
+  openScForm({ title:'', tags:'', players:'4-6人', dur:'约4小时', diff:3, rating:8.5, price:88, desc:'', prep:'',
     type:'盒装', stock:'在库', dms:[] });
 }
 function scEdit(id){
@@ -4072,7 +4213,7 @@ function scEdit(id){
   state.scfImg = s.img || '';
   state.scfRoles = (s.roles||[]).map(r=>({name:r.name||'', img:r.img||''}));
   openScForm({ title:s.title, tags:(s.tags||[]).join(','), players:s.players,
-    dur:s.dur, diff:s.diff, price:s.price, desc:s.desc||'',
+    dur:s.dur, diff:s.diff, price:s.price, desc:s.desc||'', prep:s.prep||'',
     type:s.type||'盒装', stock:s.stock||'在库', dms:s.dms||[] });
 }
 function openScForm(v){
@@ -4086,6 +4227,7 @@ function openScForm(v){
     `<option value="${i+1}" ${i+1===v.diff?'selected':''}>${'★'.repeat(i+1)} ${n}</option>`).join('');
   $('#scf-price').value = v.price;
   $('#scf-desc').value = v.desc;
+  const prepEl = $('#scf-prep'); if(prepEl) prepEl.value = v.prep || '';
   $('#scf-type').innerHTML = SCRIPT_TYPES.map(t=>
     `<option value="${t}" ${t===v.type?'selected':''}>${t}</option>`).join('');
   $('#scf-stock').innerHTML = STOCK_STATE.map(t=>
@@ -4141,6 +4283,7 @@ function scSave(){
     diff: +$('#scf-diff').value || 3,
     price: Math.max(1, +$('#scf-price').value || 88),
     desc: $('#scf-desc').value.trim(),
+    prep: $('#scf-prep') ? $('#scf-prep').value.trim() : '',   // 开本准备提示
     type: $('#scf-type').value || '盒装',
     stock: $('#scf-stock').value || '在库',
     newbie: !!state.scf.newbie,
@@ -4730,7 +4873,7 @@ function renderDm(){
     if(b.dataset.t) b.hidden = !canTab('dm', b.dataset.t);
   });
   if(!canTab('dm', state.dmTab)) state.dmTab = 'msgs';
-  ['msgs','today','credit','sched','stats','me'].forEach(x => $('#dm-'+x).hidden = x !== state.dmTab);
+  ['msgs','today','credit','sched','stats','me','guides'].forEach(x => $('#dm-'+x).hidden = x !== state.dmTab);
   document.querySelectorAll('#page-dm .adm-side .navi')
     .forEach(b => b.classList.toggle('on', b.dataset.t === state.dmTab));
   if(state.dmTab === 'msgs')   renderDmMsgs();
@@ -4739,6 +4882,57 @@ function renderDm(){
   if(state.dmTab === 'sched')  renderDmSchedule();
   if(state.dmTab === 'stats')  renderDmGrowth();
   if(state.dmTab === 'me')     openDmProfileInto();
+  if(state.dmTab === 'guides') renderDmGuides();
+}
+/* ================= 学本资料库（DM 端） ================= */
+function getGuidesLocal(){ const g = lsGet('ts_guides', []); return Array.isArray(g) ? g : []; }
+async function renderDmGuides(){
+  const list = $('#dg-list'); if(!list) return;
+  const remote = await cloudGet('guides', true);
+  const guides = Array.isArray(remote) ? remote : getGuidesLocal();
+  if(Array.isArray(remote)) lsSet('ts_guides', remote);
+  const sel = $('#dg-script');
+  if(sel && !sel.dataset.filled){
+    sel.dataset.filled = '1';
+    sel.innerHTML = '<option value="">全部剧本</option>' + SCRIPTS.map(s=>`<option value="${s.id}">${escapeHtml(s.title)}</option>`).join('');
+  }
+  const sid = sel ? sel.value : '';
+  const typeEl = $('#dg-type');
+  const type = typeEl ? typeEl.value : '';
+  const shown = guides.filter(g => (!sid || String(g.sid) === sid) && (!type || g.type === type));
+  list.innerHTML = shown.length ? shown.map(g=>{
+    const sc = SCRIPTS.find(s => String(s.id) === String(g.sid));
+    return `<div class="adm-panel">
+      <h3>${escapeHtml(g.title)} <span class="badge">${escapeHtml(g.type || '资料')}</span>
+        ${sc ? `<span class="car-sub" style="margin:0">《${escapeHtml(sc.title)}》</span>` : ''}</h3>
+      <p style="white-space:pre-wrap;line-height:1.8">${escapeHtml(g.text)}</p>
+      ${(g.links || []).length ? `<div class="pf-tags" style="margin-top:8px">${g.links.map(l=>`<a class="pf-tag" href="${escapeHtml(l.url)}" target="_blank" rel="noopener">🔗 ${escapeHtml(l.name)}</a>`).join('')}</div>` : ''}
+      <p class="car-sub">${escapeHtml(g.by || '')} · ${new Date(g.at || Date.now()).toLocaleString()}</p>
+    </div>`;
+  }).join('') : `<div class="adm-panel">${emptyBox('📚','暂无资料，等门店上传～')}</div>`;
+  const ps = await apiGet('/dm/practices');
+  const box2 = $('#dg-practices');
+  if(box2){
+    const arr = Array.isArray(ps) ? ps : [];
+    const label = st => st === 'pending' ? '待处理' : st === 'planned' ? '已安排' : st === 'done' ? '已完成' : '暂不安排';
+    box2.innerHTML = arr.length ? arr.map(p=>`<div class="rv-item"><div class="top">
+        <b>《${escapeHtml(p.title || '未指定')}》</b>
+        <span class="stars">${p.ts ? dateLabel(p.ts) : '时间待定'}</span>
+        <span class="badge ${p.status === 'pending' ? 'new' : (p.status === 'done' ? 'done' : '')}">${label(p.status)}</span>
+        <span class="time">${new Date(p.at || Date.now()).toLocaleDateString()}</span></div>
+        ${p.note ? `<p class="car-sub">${escapeHtml(p.note)}</p>` : ''}</div>`).join('')
+      : `<div>${emptyBox('📅','还没有练本申请')}</div>`;
+  }
+}
+async function dmPractice(){
+  const sel = $('#dg-script');
+  const sid = sel ? +sel.value || 0 : 0;
+  const note = window.prompt('练本申请说明（想练哪个本、希望什么时间，门店会看到）', '想练本熟悉流程');
+  if(note === null) return;
+  const r = await apiPost('/practice/create', { sid, ts:0, note });
+  if(!r.ok) return toast(r.error || '申请失败');
+  toast('📅 已提交练本申请，门店会尽快安排');
+  renderDmGuides();
 }
 
 
@@ -5682,9 +5876,15 @@ function sesRemind(){
   const list = getSessions().filter(s => s.ts === ts && s.status === 'open');
   if(!list.length) return toast('今天没有待开场次');
   let n = 0;
+  const setR = getSettingsLocal();
   list.forEach(s=>{
+    const sc = SCRIPTS.find(x => x.id === s.sid) || {};
+    const prep = (sc.prep || '').trim();
+    const nav = setR.storeAddr ? `\n📍 门店：${setR.storeAddr}（可用地图搜索导航）` : '';
     state.bookings.filter(b => b.sessionId === s.id && b.status === 'booked').forEach(b=>{
-      pushNotice(b.phone, '开本提醒 ⏰', `《${s.title}》今天 ${s.time} 开场，房间：${roomName(s.roomId)}${s.dmName ? '，DM：'+s.dmName : ''}。请提前 15 分钟到店～`);
+      pushNotice(b.phone, '开本提醒 ⏰',
+        `《${s.title}》今天 ${s.time} 开场，房间：${roomName(s.roomId)}${s.dmName ? '，DM：' + s.dmName : ''}，请提前 15 分钟到店～`
+        + nav + (prep ? `\n🎭 开本准备：${prep}` : ''));
       n++;
     });
   });
@@ -5874,17 +6074,24 @@ function openDmProfileInto(){
 function openDmProfile(phone){
   openDmProfileRaw(phone, null);
 }
-function openDmProfileRaw(phone, box){
-  const u = lsAccounts().find(x => x.phone === phone);
+async function openDmProfileRaw(phone, box){
+  /* 优先取服务端公开资料（客户也能看到段位/简介/可开本），失败再退回本地 */
+  let srv = null;
+  try{ const r = await apiGet('/dm/profile?phone=' + encodeURIComponent(phone)); if(r && r.ok) srv = r; }catch(e){}
+  const u = lsAccounts().find(x => x.phone === phone) || (srv ? { username: srv.username } : null);
   if(!u){ if(!box) toast('该 DM 不存在'); return; }
   state.dmProfilePhone = phone;      // 供上传 / 移除照片后重新渲染
   state.dmProfileInBox = !!box;
   const pf = dmProfileOf(phone);
   const mine = state.user && state.user.phone === phone;
   const rs = getReviews().filter(r => r.dmPhone === phone && !r.hidden);
-  const avg = rs.length ? rs.reduce((n,r)=>n + r.rating, 0) / rs.length : 0;
+  const avg = (srv && srv.stats && srv.stats.rating) ? Number(srv.stats.rating)
+    : (rs.length ? rs.reduce((n,r)=>n + r.rating, 0) / rs.length : 0);
+  const rcCount = (srv && srv.stats) ? srv.stats.ratingCount : rs.length;
   const dmDim = rs.filter(r => r.dims && r.dims.dm).map(r => r.dims.dm);
-  const canRun = SCRIPTS.filter(s => (s.dms||[]).includes(phone));
+  const canRun = (srv && Array.isArray(srv.scripts) && srv.scripts.length)
+    ? srv.scripts.map(s => ({ id:s.id, title:s.title }))
+    : SCRIPTS.filter(s => (s.dms||[]).includes(phone));
   const isPic = pf.avatar && /^(data:|https?:)/.test(pf.avatar);
   const avHtml = isPic
     ? `<img class="dm-avatar" src="${pf.avatar}" alt="${escapeHtml(u.username)} 的头像">`
@@ -5893,15 +6100,18 @@ function openDmProfileRaw(phone, box){
     <div class="adm-panel">
       <div style="display:flex;align-items:center;gap:14px">
         ${avHtml}
-        <div><h3 style="margin:0">${escapeHtml(u.username)}</h3>
-          <p class="car-sub" style="margin:2px 0 0">${pf.style ? escapeHtml(pf.style) : 'DM'}</p></div>
+        <div><h3 style="margin:0">${escapeHtml(u.username)}
+          ${(srv && srv.stats) ? `<span class="pf-tag ${/[黄金铂金王者]/.test(srv.stats.tier) ? 'gold' : ''}">${escapeHtml(srv.stats.icon + ' ' + srv.stats.tier)}</span>` : ''}
+          ${(srv && srv.stats && srv.stats.warn) ? '<span class="badge new">⚠️ 近期评分下滑</span>' : ''}</h3>
+          <p class="car-sub" style="margin:2px 0 0">${escapeHtml((srv && srv.style) || pf.style || 'DM')}</p></div>
       </div>
       <div class="kv">
-        <div class="cell"><b>${rs.length ? avg.toFixed(1) : '—'}</b><span>综合评分</span></div>
+        <div class="cell"><b>${rcCount ? avg.toFixed(1) : '—'}</b><span>综合评分</span></div>
         <div class="cell"><b>${dmDim.length ? (dmDim.reduce((a,b)=>a+b,0)/dmDim.length).toFixed(1) : '—'}</b><span>主持得分</span></div>
-        <div class="cell"><b>${rs.length}</b><span>收到评价</span></div>
+        <div class="cell"><b>${rcCount}</b><span>收到评价</span></div>
+        ${(srv && srv.stats) ? `<div class="cell"><b>${srv.stats.done}</b><span>带本场次</span></div>` : ''}
       </div>
-      <p class="car-sub">${escapeHtml(pf.bio || '这位 DM 还没有写自我介绍～')}</p>
+      <p class="car-sub">${escapeHtml((srv && srv.bio) || pf.bio || '这位 DM 还没有写自我介绍～')}</p>
       ${pf.style ? `<div class="pf-tags"><span class="pf-tag">风格：${escapeHtml(pf.style)}</span></div>` : ''}
       <div class="sec" style="margin:16px 0 10px"><b>可开本</b><span>${canRun.length} 个</span></div>
       <div class="pf-tags">${canRun.length ? canRun.map(s=>`<span class="pf-tag">${escapeHtml(s.title)}</span>`).join('') : '<span class="pf-tag">待补充</span>'}</div>
@@ -6021,11 +6231,31 @@ function dmStatsOf(phone){
   return { ses, bks, done, revenue, rs, avg, goodRate, assigned, players, months, topTags,
     income: Math.round(revenue * DM_RATE) };
 }
+/* 6 段位成长体系（同行做法：带本量 + 好评率决定晋升，差评/退单触发警示） */
+const DM_TIER_DEFS = [
+  { name:'见习 DM', icon:'🌱', need:0,   rate:0   },
+  { name:'青铜 DM', icon:'🥉', need:5,   rate:3.5 },
+  { name:'白银 DM', icon:'🥈', need:15,  rate:4.0 },
+  { name:'黄金 DM', icon:'🥇', need:30,  rate:4.3 },
+  { name:'铂金 DM', icon:'💠', need:60,  rate:4.5 },
+  { name:'王者 DM', icon:'👑', need:100, rate:4.7 },
+];
 function dmLevel(st){
-  if(st.ses.length >= 30 && st.goodRate >= 0.9) return { t:'🏆 金牌 DM', cls:'gold' };
-  if(st.ses.length >= 15 && st.goodRate >= 0.8) return { t:'⭐ 资深 DM', cls:'gold' };
-  if(st.ses.length >= 5)  return { t:'🌱 成长中', cls:'' };
-  return { t:'🆕 新晋 DM', cls:'' };
+  const done = st.bks.length, avg = st.rs.length ? Number(st.avg) : 0;
+  let tier = DM_TIER_DEFS[0];
+  DM_TIER_DEFS.forEach(t => { if(done >= t.need && (!t.rate || avg >= t.rate)) tier = t; });
+  const i = DM_TIER_DEFS.indexOf(tier);
+  const next = i < DM_TIER_DEFS.length - 1 ? DM_TIER_DEFS[i + 1] : null;
+  return {
+    t: tier.icon + ' ' + tier.name,
+    cls: i >= 3 ? 'gold' : '',
+    next: next ? next.icon + ' ' + next.name : '',
+    needMore: next ? Math.max(0, next.need - done) : 0,
+    needRate: next ? Math.max(0, +(next.rate - avg).toFixed(2)) : 0,
+    pct: next ? Math.min(100, Math.round(done / Math.max(1, next.need) * 100)) : 100,
+    warn: (st.rs.length >= 3 && avg < 4.0) || (st.ses.length >= 5 && st.goodRate < 0.75),
+    idx: i,
+  };
 }
 /* 管理端：全部 DM 档案 */
 function renderAdmDmFiles(){
@@ -6062,6 +6292,66 @@ function renderAdmDmFiles(){
         ${st.topTags.map(t=>`<span class="pf-tag">擅长：${escapeHtml(t)}</span>`).join('')}</div>` : ''}
     </div>`;
   }).join('');
+  renderAdmGuides(); renderAdmPractices();
+}
+/* ================= 管理端：学本资料库 + 练本申请 ================= */
+async function renderAdmGuides(){
+  const list = $('#gd-list'); if(!list) return;
+  const sel = $('#gd-script');
+  if(sel && !sel.dataset.filled){
+    sel.dataset.filled = '1';
+    sel.innerHTML = '<option value="0">（不关联剧本）</option>' + SCRIPTS.map(s=>`<option value="${s.id}">${escapeHtml(s.title)}</option>`).join('');
+  }
+  const remote = await cloudGet('guides', true);
+  const guides = Array.isArray(remote) ? remote : getGuidesLocal();
+  if(Array.isArray(remote)) lsSet('ts_guides', remote);
+  list.innerHTML = guides.length ? guides.map(g=>{
+    const sc = SCRIPTS.find(s => String(s.id) === String(g.sid));
+    return `<div class="rv-item"><div class="top">
+      <b>${escapeHtml(g.title)}</b>
+      <span class="badge">${escapeHtml(g.type || '资料')}</span>
+      ${sc ? `<span class="stars">《${escapeHtml(sc.title)}》</span>` : ''}
+      <span class="time">${new Date(g.at || Date.now()).toLocaleDateString()}</span>
+      <button class="op-btn" data-action="guide-edit" data-id="${g.id}">编辑</button>
+      <button class="op-btn danger" data-action="guide-del" data-id="${g.id}">删除</button>
+    </div><p>${escapeHtml(String(g.text || '').slice(0, 80))}${String(g.text || '').length > 80 ? '…' : ''}</p></div>`;
+  }).join('') : emptyBox('📚','还没有资料，用上面的表单添加第一条');
+}
+async function renderAdmPractices(){
+  const box = $('#pr-list'); if(!box) return;
+  const remote = await cloudGet('practices', true);
+  const arr = Array.isArray(remote) ? remote : [];
+  const pending = arr.filter(p => p.status === 'pending').length;
+  const cnt = $('#pr-count'); if(cnt) cnt.textContent = `共 ${arr.length} 条 · 待处理 ${pending} 条`;
+  const label = st => st === 'pending' ? '待处理' : st === 'planned' ? '已安排' : st === 'done' ? '已完成' : '暂不安排';
+  box.innerHTML = arr.length ? arr.slice().sort((a,b)=>(b.at||0)-(a.at||0)).map(p=>`<div class="rv-item"><div class="top">
+      <b>${escapeHtml(p.username || 'DM')}</b>
+      <span class="stars">《${escapeHtml(p.title || '未指定')}》</span>
+      <span class="badge ${p.status === 'pending' ? 'new' : (p.status === 'done' ? 'done' : '')}">${label(p.status)}</span>
+      <span class="time">${new Date(p.at || Date.now()).toLocaleString()}</span></div>
+    ${p.note ? `<p class="car-sub">${escapeHtml(p.note)}</p>` : ''}
+    <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="op-btn ok" data-action="pr-update" data-id="${p.id}" data-st="planned">标记已安排</button>
+      <button class="op-btn" data-action="pr-update" data-id="${p.id}" data-st="done">标记已完成</button>
+      <button class="op-btn danger" data-action="pr-update" data-id="${p.id}" data-st="rejected">暂不安排</button>
+    </div></div>`).join('') : emptyBox('📅','暂无练本申请');
+}
+async function guideSave(){
+  const title = $('#gd-title').value.trim(), text = $('#gd-text').value.trim();
+  if(!title || !text) return toast('标题与内容都要填写');
+  const links = $('#gd-links').value.split('\n').map(l => l.trim()).filter(Boolean).map(l=>{
+    const i = l.indexOf('|');
+    return i > 0 ? { name:l.slice(0, i).trim(), url:l.slice(i + 1).trim() } : { name:'参考资料', url:l };
+  }).filter(l => /^https?:\/\//.test(l.url));
+  const r = await apiPost('/guide/save', {
+    id: state.gdEditId || 0, sid: +$('#gd-script').value || 0,
+    type: $('#gd-type').value, title, text, links,
+  });
+  if(!r.ok) return toast(r.error || '保存失败');
+  state.gdEditId = 0;
+  $('#gd-title').value = ''; $('#gd-text').value = ''; $('#gd-links').value = '';
+  toast('✅ 资料已保存，DM 端立即可见');
+  renderAdmGuides();
 }
 /* DM 端：自己的成长档案 */
 function renderDmGrowth(){
@@ -6073,7 +6363,13 @@ function renderDmGrowth(){
   const recent = st.bks.slice().sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,10);
   box.innerHTML = `
     <div class="adm-panel">
-      <h3>${lv.t} <span class="car-sub" style="margin:0">· 数据由排班、带本与玩家评价自动生成</span></h3>
+      <h3>${lv.t}
+        <span class="car-sub" style="margin:0">段位由「带本量 + 好评率」自动评定</span>
+        ${lv.warn ? '<span class="badge new">⚠️ 需要关注（差评或退单偏多）</span>' : ''}</h3>
+      ${lv.next
+        ? `<p class="car-sub">距离「${lv.next}」还差 <b style="color:var(--accent)">${lv.needMore}</b> 场${lv.needRate ? `，平均评分还需 +${lv.needRate}` : ''}</p>
+           <div class="credit-bar"><i style="width:${lv.pct}%"></i></div>`
+        : '<p class="car-sub">已达到最高段位 👑 保持好评就能稳住～</p>'}
       <div class="kv">
         <div class="cell"><b>${st.ses.length}</b><span>排班场次</span></div>
         <div class="cell"><b>${st.bks.length}</b><span>带本场次</span></div>
@@ -6230,7 +6526,8 @@ const ADM_TAB_PERM = {
   logs:['super','admin'], backup:['super','admin']
 };
 const DM_TAB_PERM = { msgs:['super','admin','dm'], today:['super','admin','dm'], credit:['super','admin','dm'],
-  sched:['super','admin','dm'], stats:['super','admin','dm'], me:['super','admin','dm'] };
+  sched:['super','admin','dm'], stats:['super','admin','dm'], me:['super','admin','dm'],
+  guides:['super','admin','dm'] };
 function roleOf(u){
   if(!u) return 'guest';
   if(u.super === true || u.username === SUPER_ADMIN) return 'super';   // 内置超管优先，避免迁移状态影响判权
@@ -6643,6 +6940,36 @@ const ACTIONS = {
     renderDmCredit();
     toast(`✅ ${nm} 信用分：${r.before} → ${r.after}`);
   },
+  /* 学本资料库（DM 端） */
+  'dg-filter':   ()=>renderDmGuides(),
+  'dg-practice': dmPractice,
+  /* 学本资料库（管理端） */
+  'guide-save':  guideSave,
+  'guide-del':   el=>askConfirm('删除这条资料？', async ()=>{
+    const r = await apiPost('/guide/del', { id:+el.dataset.id });
+    if(!r.ok) return toast(r.error || '删除失败');
+    toast('已删除该资料');
+    renderAdmGuides();
+  }),
+  'guide-edit':  async el=>{
+    const remote = await cloudGet('guides', true);
+    const g = (Array.isArray(remote) ? remote : getGuidesLocal()).find(x => String(x.id) === String(el.dataset.id));
+    if(!g) return toast('资料不存在');
+    state.gdEditId = g.id;
+    const sel = $('#gd-script'); if(sel) sel.value = String(g.sid || 0);
+    $('#gd-type').value = g.type || '解析';
+    $('#gd-title').value = g.title || '';
+    $('#gd-text').value = g.text || '';
+    $('#gd-links').value = (g.links || []).map(l => l.name + '|' + l.url).join('\n');
+    toast('已载入资料，修改后点「保存资料」');
+  },
+  /* 练本申请（管理端处理） */
+  'pr-update':   async el=>{
+    const r = await apiPost('/practice/update', { id:+el.dataset.id, status:el.dataset.st });
+    if(!r.ok) return toast(r.error || '操作失败');
+    toast('✅ 已更新并通知 DM');
+    renderAdmPractices();
+  },
   /* 30：拉黑 / 恢复账号 */
   'ban-user':    el=>{
     const phone = el.dataset.phone;
@@ -6790,6 +7117,10 @@ const ACTIONS = {
   'car-to-private': el=>carToPrivate(el.dataset.id),
   'car-wait':    el=>carWait(el.dataset.id),
   'car-tag':     el=>carTag(el.dataset.id, el.dataset.t),
+  /* 改期 */
+  'resched-bk':  el=>openResched(el.dataset.id),
+  'rs-day':      el=>{ if(state.resched){ state.resched.ts = +el.dataset.ts; renderResched(); } },
+  'rs-submit':   submitResched,
   /* 14/19：拼车需求与再约 */
   'want-create': wantCreate,
   'mate-invite': el=>mateInvite(el.dataset.name),
@@ -6853,6 +7184,8 @@ const ACTIONS = {
     cur.freeCancelHours = +$('#op-free').value || 0;
     cur.dmRate = Math.max(0, Math.min(1, (+$('#op-rate').value || 10) / 100));
     cur.lateCancelPenalty = +$('#op-pen').value || 0;
+    cur.storeName = $('#op-store').value.trim();
+    cur.storeAddr = $('#op-addr').value.trim();
     lsSet('ts_settings', cur);
     const ok = await cloudPut('settings', cur);
     toast(ok ? '✅ 经营参数已保存（已同步云端）' : '⚠️ 已保存本地，云端同步失败');

@@ -26,8 +26,8 @@ const TOKEN_DAYS = 7;              // 38：令牌有效期由 30 天缩短为 7 
 
 const ALLOWED = ['users', 'bookings', 'reviews', 'settings', 'messages', 'notices',
   'rooms', 'sessions', 'carmsgs', 'pays', 'favs', 'taglib', 'dmleave', 'posts', 'badwords', 'logs', 'scripts',
-  /* v3 新增：拼车需求 / 候补队列 / 优惠券 / DM 结算单 */
-  'wants', 'waitlist', 'coupons', 'settles'];
+  /* v3 新增：拼车需求 / 候补队列 / 优惠券 / DM 结算单 / 学本资料 / 练本申请 */
+  'wants', 'waitlist', 'coupons', 'settles', 'guides', 'practices'];
 
 /* 访客无需密钥即可写入的业务数据 */
 const PUBLIC_WRITE = ['bookings', 'messages', 'reviews', 'posts', 'favs', 'carmsgs', 'pays', 'users'];
@@ -313,6 +313,43 @@ function selfUser(u) {
 }
 /* 45：手机号脱敏（DM 视角展示用） */
 const maskPhone = p => String(p || '').replace(/^(\d{3})\d{4}(\d{4})$/, '$1****$2');
+
+/* ================= DM 段位成长体系（接单量 + 好评率决定晋升，退单/差评触发警示） ================= */
+const DM_TIERS = [
+  { name: '见习 DM', icon: '🌱', need: 0,   rate: 0 },
+  { name: '青铜 DM', icon: '🥉', need: 5,   rate: 3.5 },
+  { name: '白银 DM', icon: '🥈', need: 15,  rate: 4.0 },
+  { name: '黄金 DM', icon: '🥇', need: 30,  rate: 4.3 },
+  { name: '铂金 DM', icon: '💠', need: 60,  rate: 4.5 },
+  { name: '王者 DM', icon: '👑', need: 100, rate: 4.7 },
+];
+/* 统计某位 DM 的战绩：带本场次 / 评分 / 差评率 / 退单率 */
+async function dmStatsOf(env, phone) {
+  const [bk, rv] = await Promise.all([loadArr(env, 'bookings'), loadArr(env, 'reviews')]);
+  const mine = bk.list.filter(b => b.dmPhone === phone);
+  const done = mine.filter(b => b.status === 'done' || b.status === 'arrived');
+  const cancelled = mine.filter(b => b.status === 'cancelled');
+  const rs = rv.list.filter(r => r.dmPhone === phone && !r.hidden);
+  const avg = rs.length ? rs.reduce((n, r) => n + (Number(r.rating) || 0), 0) / rs.length : 0;
+  const lowRs = rs.filter(r => Number(r.rating) <= 2).length;
+  let tier = DM_TIERS[0], next = null;
+  for (let i = 0; i < DM_TIERS.length; i++) {
+    const t = DM_TIERS[i];
+    if (done.length >= t.need && (!t.rate || avg >= t.rate)) tier = t;
+  }
+  const idx = DM_TIERS.indexOf(tier);
+  if (idx < DM_TIERS.length - 1) next = DM_TIERS[idx + 1];
+  return {
+    sessions: mine.length, done: done.length, cancelled: cancelled.length,
+    rating: +avg.toFixed(2), ratingCount: rs.length,
+    lowRate: rs.length ? +(lowRs / rs.length * 100).toFixed(1) : 0,
+    cancelRate: mine.length ? +(cancelled.length / mine.length * 100).toFixed(1) : 0,
+    tier: tier.name, icon: tier.icon,
+    nextTier: next ? next.name : '', needMore: next ? Math.max(0, next.need - done.length) : 0,
+    needRating: next ? Math.max(0, +(next.rate - avg).toFixed(2)) : 0,
+    warn: (rs.length >= 3 && avg < 4.0) || (mine.length >= 5 && cancelled.length / mine.length > 0.2),
+  };
+}
 /* 8：会员等级（按累计消费）—— 用于下单折扣 */
 function tierOf(spent) {
   if (spent >= 3000) return { name: '钻石会员', disc: 0.10 };
@@ -826,8 +863,9 @@ async function checkCaptcha(env, id, answer) {
        · 仅管理员/超管：账号、订单、收藏、日志、敏感词、候补、券、结算
        · 管理员 + DM：预约、留言、请假（DM 工作必需）
        · 其余（剧本/场次/房间/评价/社区/标签/通知）所有访客可读 */
-    const STAFF_ONLY_READ = ['users', 'pays', 'favs', 'logs', 'badwords', 'wants', 'waitlist', 'coupons', 'settles'];
-    const DM_READ = ['bookings', 'messages', 'dmleave'];
+    const STAFF_ONLY_READ = ['users', 'pays', 'favs', 'logs', 'badwords', 'wants', 'waitlist', 'coupons', 'settles', 'practices'];
+    const DM_READ = ['bookings', 'messages', 'dmleave', 'guides'];
+    /* guides(学本资料)：DM 与员工可读 · practices(练本申请)：仅员工可读（DM 走 /api/dm/practices 只看自己的） */
     if (STAFF_ONLY_READ.includes(key) && !staff) return json({ error: '该数据仅员工可读' }, 403);
     if (DM_READ.includes(key) && !staff) {
       const meR = await readToken(request.headers.get('x-auth'), env.APP_KEY || '');
@@ -1649,8 +1687,142 @@ async function checkCaptcha(env, id, answer) {
     return await serveImage(env, p, request);
   }
 
+  /* ================= DM 公开主页（含段位）—— 客户也能看 ================= */
+  if (request.method === 'GET' && parts[0] === 'dm' && parts[1] === 'profile') {
+    const phone = url.searchParams.get('phone') || '';
+    const u = (await loadArr(env, 'users')).list.find(x => x.phone === phone);
+    if (!u) return json({ error: '该 DM 不存在' }, 404);
+    const pf = u.dmProfile || {};
+    const stats = await dmStatsOf(env, phone);
+    const scripts = (await loadArr(env, 'scripts')).list
+      .filter(s => (s.dms || []).indexOf(phone) >= 0)
+      .map(s => ({ id: s.id, title: s.title, tags: s.tags || [], diff: s.diff }));
+    return json({
+      ok: true, username: u.username, avatar: pf.avatar || '🗡️',
+      style: pf.style || '', bio: pf.bio || '', stats, scripts,
+    });
+  }
+
+  /* ================= 改期：换时段保留定金（服务端校验时限与容量） ================= */
+  if (request.method === 'POST' && parts[0] === 'order' && parts[1] === 'reschedule') {
+    if (!token) return json({ error: '请先登录' }, 401);
+    let body; try { body = JSON.parse(await request.text()); } catch (e) { return json({ error: '参数错误' }, 400); }
+    const nts = parseInt(body.ts, 10) || 0, ntime = String(body.time || '');
+    if (!nts || !ntime) return json({ error: '请选择新的日期与时间' }, 400);
+    const stR = await getSettings(env);
+    const bkAll = await loadArr(env, 'bookings');
+    const bk = bkAll.list.find(x => String(x.id) === String(body.id));
+    if (!bk) return json({ error: '预约不存在' }, 404);
+    if (bk.phone !== token.phone && !staff) return json({ error: '只能给自己的预约改期' }, 403);
+    if (bk.status !== 'booked') return json({ error: '当前状态不可改期' }, 400);
+    if (bk.ts === nts && bk.time === ntime) return json({ error: '新时间与原来相同' }, 400);
+    const hours = bk.ts ? (bk.ts - Date.now()) / 3600000 : 999;
+    if (hours < (Number(stR.freeCancelHours) || 24) && !staff) {
+      return json({ error: `距离开场不足 ${stR.freeCancelHours} 小时，无法自助改期，请联系门店` }, 200);
+    }
+    if ((bk.rescheduleCount || 0) >= 2 && !staff) return json({ error: '每场最多自助改期 2 次，如需再改请联系门店' }, 400);
+    const ses = (await loadArr(env, 'sessions')).list
+      .find(x => String(x.sid) === String(bk.sid) && x.ts === nts && x.time === ntime && x.status === 'open');
+    let sessionId = 0;
+    if (ses) {
+      const used = bkAll.list.filter(b => b.sessionId === ses.id && b.status !== 'cancelled' && b.id !== bk.id)
+        .reduce((n, b) => n + (b.players || 1), 0);
+      const left = (ses.cap || 99) - used;
+      if (left < (bk.players || 1)) return json({ error: `新时段仅剩 ${Math.max(0, left)} 个位置，容纳不下本次 ${bk.players} 人` }, 409);
+      sessionId = ses.id;
+    }
+    const oldLabel = bk.day + ' ' + bk.time;
+    const wR = await mutate(env, 'bookings', list => {
+      const t = list.find(x => String(x.id) === String(bk.id));
+      if (t) {
+        t.ts = nts; t.time = ntime; t.day = dayLabel(nts); t.sessionId = sessionId;
+        t.rescheduleCount = (t.rescheduleCount || 0) + 1;
+        t.rescheduleFrom = oldLabel; t.rescheduledAt = Date.now();
+      }
+      return list;
+    }, '预约改期');
+    if (!wR.ok) return json({ error: wR.error }, 502);
+    await mutate(env, 'pays', list => {
+      const o = list.find(x => x.bid === bk.id);
+      if (o) { o.ts = nts; o.time = ntime; o.day = dayLabel(nts); }
+      return list;
+    }, '订单改期');
+    await notify(env, bk.phone, '改期成功 ✅',
+      `《${bk.title}》已从「${oldLabel}」改到「${dayLabel(nts)} ${ntime}」，定金保留，座位已重新锁定。`, { kind: 'reschedule' });
+    return json({ ok: true, ts: nts, time: ntime, day: dayLabel(nts) });
+  }
+
+  /* ================= DM 学本资料库（剧本解析 / 开本话术 / 复盘教程） ================= */
+  if (request.method === 'POST' && parts[0] === 'guide' && (parts[1] === 'save' || parts[1] === 'del')) {
+    if (!staff) return json({ error: '需要员工权限' }, 403);
+    let body; try { body = JSON.parse(await request.text()); } catch (e) { return json({ error: '参数错误' }, 400); }
+    const meG = await readToken(request.headers.get('x-auth'), env.APP_KEY || '');
+    const byName = (meG && meG.username) || '管理端';
+    if (parts[1] === 'del') {
+      const w = await mutate(env, 'guides', list => list.filter(g => String(g.id) !== String(body.id)), '删除资料');
+      if (!w.ok) return json({ error: w.error }, 502);
+      return json({ ok: true });
+    }
+    const title = cleanText(body.title, 60), text = cleanText(body.text, 4000);
+    if (!title || !text) return json({ error: '标题与内容都要填写' }, 400);
+    const links = Array.isArray(body.links)
+      ? body.links.filter(l => l && l.url).slice(0, 5)
+        .map(l => ({ name: cleanText(l.name, 20) || '参考资料', url: cleanText(l.url, 300) }))
+      : [];
+    const rec = {
+      id: body.id ? Number(body.id) : Date.now(), sid: Number(body.sid) || 0,
+      title, type: cleanText(body.type, 8) || '解析', text, links, by: byName, at: Date.now(),
+    };
+    const w = await mutate(env, 'guides', list => {
+      const i = list.findIndex(g => String(g.id) === String(rec.id));
+      if (i >= 0) { list[i] = Object.assign(list[i], rec); return list; }
+      return list.concat([rec]);
+    }, '保存学本资料');
+    if (!w.ok) return json({ error: w.error }, 502);
+    return json({ ok: true, guide: rec });
+  }
+
+  /* ================= 练本申请（DM 发起，管理员安排） ================= */
+  if (request.method === 'POST' && parts[0] === 'practice' && parts[1] === 'create') {
+    const meP = await readToken(request.headers.get('x-auth'), env.APP_KEY || '');
+    const roleP = meP ? meP.role : '';
+    if (!staff && roleP !== 'dm') return json({ error: '仅 DM 可申请练本' }, 403);
+    let body; try { body = JSON.parse(await request.text()); } catch (e) { return json({ error: '参数错误' }, 400); }
+    const sc = (await loadArr(env, 'scripts')).list.find(x => String(x.id) === String(body.sid));
+    const rec = {
+      id: Date.now(), phone: (meP && meP.phone) || '', username: (meP && meP.username) || 'DM',
+      sid: Number(body.sid) || 0, title: sc ? sc.title : '（未指定剧本）',
+      ts: parseInt(body.ts, 10) || 0, note: cleanText(body.note, 100), status: 'pending', at: Date.now(),
+    };
+    const w = await mutate(env, 'practices', list => list.concat([rec]), '练本申请');
+    if (!w.ok) return json({ error: w.error }, 502);
+    const admins = (await loadArr(env, 'users')).list.filter(u => u.role === 'admin' || u.role === 'super');
+    for (const u of admins) {
+      await notify(env, u.phone, '📚 收到练本申请',
+        `${rec.username} 申请练习《${rec.title}》${rec.ts ? dayLabel(rec.ts) : ''}${rec.note ? '（' + rec.note + '）' : ''}`,
+        { kind: 'practice' });
+    }
+    return json({ ok: true, practice: rec });
+  }
+  if (request.method === 'POST' && parts[0] === 'practice' && parts[1] === 'update') {
+    if (!staff) return json({ error: '需要员工权限' }, 403);
+    let body; try { body = JSON.parse(await request.text()); } catch (e) { return json({ error: '参数错误' }, 400); }
+    const stP = ['pending', 'planned', 'done', 'rejected'].indexOf(body.status) >= 0 ? body.status : 'planned';
+    let hit = null;
+    const w = await mutate(env, 'practices', list => {
+      const t = list.find(x => String(x.id) === String(body.id));
+      if (t) { t.status = stP; t.updatedAt = Date.now(); hit = t; }
+      return list;
+    }, '练本申请处理');
+    if (!w.ok) return json({ error: w.error }, 502);
+    if (!hit) return json({ error: '申请不存在' }, 404);
+    const label = stP === 'planned' ? '已安排' : stP === 'done' ? '已完成' : stP === 'rejected' ? '暂不安排' : '待处理';
+    if (hit.phone) await notify(env, hit.phone, '练本申请已更新', `《${hit.title}》的练本申请已标记为「${label}」`, { kind: 'practice' });
+    return json({ ok: true, status: stP });
+  }
+
   /* ================= 45：DM 专属视图（只能看自己场次的客户） ================= */
-  if (parts[0] === 'dm' && (parts[1] === 'customers' || parts[1] === 'credit' || parts[1] === 'assign')) {
+  if (parts[0] === 'dm' && (parts[1] === 'customers' || parts[1] === 'credit' || parts[1] === 'assign' || parts[1] === 'practices')) {
     const meD = await readToken(request.headers.get('x-auth'), env.APP_KEY || '');
     const dmRole = meD ? meD.role : '';
     if (!staff && dmRole !== 'dm') return json({ error: '需要员工权限' }, 403);
@@ -1659,6 +1831,14 @@ async function checkCaptcha(env, id, answer) {
     const mySes = staff ? null : new Set(sesAll.list.filter(s => s.dm === meD.phone).map(s => s.id));
     const mineOf = (b) => staff ? true
       : ((b.sessionId && mySes.has(b.sessionId)) || (meD && b.dmPhone === meD.phone));
+
+    /* DM 查看自己的练本申请（员工可看全部） */
+    if (parts[1] === 'practices' && request.method === 'GET') {
+      const list = (await loadArr(env, 'practices')).list
+        .filter(p => staff || p.phone === (meD && meD.phone))
+        .sort((a, b) => (b.at || 0) - (a.at || 0));
+      return json(list);
+    }
 
     if (parts[1] === 'customers' && request.method === 'GET') {
       const us = await loadArr(env, 'users');
