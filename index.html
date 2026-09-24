@@ -2400,8 +2400,9 @@ async function cloudSync(force){
     if(Array.isArray(myFavs))   { const f = getFavs(); f[state.user.phone] = myFavs; lsSet('ts_favs', f); }
     if(agg && typeof agg === 'object') state.agg = agg;      // 评分/余位/车队/榜单（无手机号）
     if(Array.isArray(roster)){
-      /* 公开名册：只保留昵称、头像、性别、年龄段，用于车队显示与同性/同龄筛选 */
-      const accs = lsAccounts().filter(u => u.phone === state.user.phone || u.roster);
+      /* 公开名册：只保留昵称、头像、性别、年龄段，用于车队显示与同性/同龄筛选
+         ⚠️ 要保留「自己」那条完整记录（手机号/信用分等），否则切回员工账号时会被当成游客 */
+      const accs = lsAccounts().filter(u => u.phone === state.user.phone || u.username === state.user.username || u.roster);
       roster.forEach(p=>{
         if(!p || !p.username) return;
         const rec = { username:p.username, phone:'', role:p.role || 'user', profile:p.profile || {}, roster:true };
@@ -3737,6 +3738,14 @@ function renderOps(){
     </div>`;
 }
 function renderAdmin(){
+  /* 兜底：若本地账号缓存还没同步好（可能被公开名册覆盖过），主动拉一次再渲染 */
+  if(myRole() === 'guest' && state.user && (state.isAdmin || state.isDm)){
+    const last = lsGet('ts_resync_at', 0) || 0;
+    if(Date.now() - last > 15000){
+      lsSet('ts_resync_at', Date.now());
+      cloudSync(true);
+    }
+  }
   /* 权限过滤：无权限的侧边栏项直接隐藏 */
   document.querySelectorAll('#page-admin .adm-side .navi').forEach(b=>{
     if(b.dataset.t) b.hidden = !canTab('adm', b.dataset.t);
@@ -6211,8 +6220,13 @@ function roleOf(u){
 }
 function myRole(){
   if(!state.user) return 'guest';
-  const u = lsAccounts().find(x => x.phone === state.user.phone);
-  return u ? roleOf(u) : 'guest';
+  const u = lsAccounts().find(x => x.phone === state.user.phone)
+    || lsAccounts().find(x => x.username && x.username === state.user.username);
+  if(u) return roleOf(u);
+  /* 本地缓存可能还没同步到（或只有公开名册，里面不含手机号）——
+     此时用「登录令牌里的角色」兜底，否则会把自己当成游客，后台栏目会全部消失 */
+  const r = state.user.role;
+  return (r === 'super' || r === 'admin' || r === 'dm') ? r : 'user';
 }
 function canTab(scope, tab){
   if(myRole() === 'super') return true;
