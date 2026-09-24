@@ -59,7 +59,7 @@ body:not(.is-staff) #btn-back-staff{display:none !important}
 .f-item .box textarea:focus-visible,.role-edit input:focus-visible{outline:none}
 
 /* ===== 页面切换 ===== */
-.page{display:none;min-height:100vh}
+.page{display:none;min-height:100vh;min-height:100dvh}
 .page.active{display:flex;flex-direction:column}
 
 /* ===== 顶部导航（调大一档） ===== */
@@ -804,6 +804,27 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
   .banner-item .info .t{font-size:20px}
 }
 
+/* ===== 手机端专项修复：登录 / 注册 / 找回密码按钮「点了没反应」 =====
+   原因：这几页原来是「100vh + 垂直居中」布局，手机浏览器地址栏 / 键盘占位后
+        卡片底部（登录按钮）会被顶出可视区域或被键盘挡住，手指点不到。
+   改法：手机上改为从上往下排 + 底部留足空间，并去掉双击缩放的等待时间 */
+@media (max-width:1000px){
+  #page-login,#page-reg,#page-forgot{
+    align-items:flex-start;justify-content:flex-start;
+    padding:16px 14px calc(96px + env(safe-area-inset-bottom));
+    min-height:100dvh;
+  }
+  .login-card{width:100%;padding:22px 16px}
+  .login-card .back{margin-bottom:14px}
+  .login-card h2{font-size:21px}
+  .login-card .sub{margin:4px 0 20px}
+  .field input{height:50px}
+  .code-row .btn-code{height:50px}
+  .login-card .btn,.code-row .btn-code{font-size:16px}
+}
+/* 手指点击更跟手：去掉双击缩放等待（点击立刻生效） */
+button,[data-action],.lnk,.agree,.chip,.chip-sm{touch-action:manipulation}
+
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none !important;transition:none !important;scroll-behavior:auto !important}
 }
@@ -842,8 +863,8 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
     <button class="back" data-action="go-welcome">‹ 返回首页</button>
     <h2>账号登录</h2>
     <p class="sub">使用手机号或用户名登录</p>
-    <div class="field"><span class="ico" aria-hidden="true">👤</span><input id="in-acc" placeholder="手机号 / 用户名" aria-label="账号"></div>
-    <div class="field"><span class="ico" aria-hidden="true">🔒</span><input id="in-pwd" type="password" placeholder="密码" aria-label="密码"></div>
+    <div class="field"><span class="ico" aria-hidden="true">👤</span><input id="in-acc" placeholder="手机号 / 用户名" aria-label="账号" autocomplete="username" enterkeyhint="next"></div>
+    <div class="field"><span class="ico" aria-hidden="true">🔒</span><input id="in-pwd" type="password" placeholder="密码" aria-label="密码" autocomplete="current-password" enterkeyhint="go"></div>
     <p style="text-align:right;margin:2px 2px 18px;font-size:13px"><a class="lnk" data-action="go-forgot">忘记密码？</a></p>
     <button class="btn btn-accent" style="width:100%;height:50px" data-action="do-login">登 录</button>
     <p style="text-align:center;margin:20px 0 0;font-size:13px;color:var(--text2)">没有账号？<a class="lnk" data-action="go-register">前往注册 →</a></p>
@@ -867,7 +888,7 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
     <p id="reg-name-tip" class="hint-dev" style="text-align:left"></p>
     <p class="hint-dev" style="text-align:left">💡 如果提示重名，可以在名字后面加个空格或特殊字符哦～</p>
     <div class="field"><span class="ico" aria-hidden="true">🔒</span><input id="reg-pwd" type="password" placeholder="密码（至少 6 位）" aria-label="密码"></div>
-    <div class="field"><span class="ico" aria-hidden="true">🔒</span><input id="reg-pwd2" type="password" placeholder="确认密码" aria-label="确认密码"></div>
+    <div class="field"><span class="ico" aria-hidden="true">🔒</span><input id="reg-pwd2" type="password" placeholder="确认密码" aria-label="确认密码" autocomplete="new-password" enterkeyhint="go"></div>
     <p id="reg-pwd-tip" class="hint-dev" style="text-align:left"></p>
     <div class="field"><span class="ico" aria-hidden="true">🎁</span><input id="reg-invite" placeholder="邀请码（选填）" aria-label="邀请码"></div>
     <p class="hint-dev">🎁 填写好友的邀请码，你和好友各得一张 ¥15 定金抵扣券</p>
@@ -893,7 +914,7 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
       <button class="btn-code" id="btn-code-forgot" data-action="send-code" data-t="forgot">获取验证码</button>
     </div>
     <div class="field"><span class="ico" aria-hidden="true">🔒</span><input id="fg-pwd" type="password" placeholder="新密码（至少 6 位）" aria-label="新密码"></div>
-    <div class="field"><span class="ico" aria-hidden="true">🔒</span><input id="fg-pwd2" type="password" placeholder="确认新密码" aria-label="确认新密码"></div>
+    <div class="field"><span class="ico" aria-hidden="true">🔒</span><input id="fg-pwd2" type="password" placeholder="确认新密码" aria-label="确认新密码" autocomplete="new-password" enterkeyhint="go"></div>
     <p class="hint-dev">📱 点击「获取验证码」，验证码会发送到该手机号（5 分钟内有效）</p>
     <button class="btn btn-accent" style="width:100%;height:50px" data-action="do-forgot">重置密码</button>
   </div>
@@ -7340,10 +7361,34 @@ function fireAction(el){
   const fn = ACTIONS[el.dataset.action];
   if(fn) fn(el);
 }
+/* ---------- 手机端点按三保险（修「按钮点了没反应」） ----------
+   1) 记录按下位置：手指滑动超过 12px 就当成滚动，不算点击（不影响正常滚动）
+   2) 手指抬起后 300ms 内浏览器若没发出 click，我们就手动补发一次
+   3) 点空白处自动收起键盘，避免键盘把登录按钮挡住 */
+let _tapX = 0, _tapY = 0, _tapTimer = null, _sawClick = false;
+document.addEventListener('touchstart', e=>{
+  const t = e.touches && e.touches[0]; if(!t) return;
+  _tapX = t.clientX; _tapY = t.clientY;
+  const ae = document.activeElement;
+  if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)
+     && !(e.target.closest && e.target.closest('input,textarea,select,button,[data-action]'))){
+    ae.blur();                                   // 收起键盘
+  }
+}, {passive:true, capture:true});
+document.addEventListener('touchend', e=>{
+  const t = e.changedTouches && e.changedTouches[0]; if(!t) return;
+  if(Math.abs(t.clientX - _tapX) > 12 || Math.abs(t.clientY - _tapY) > 12) return;
+  const el = e.target.closest && e.target.closest('[data-action]');
+  if(!el || el.disabled) return;
+  _sawClick = false;
+  clearTimeout(_tapTimer);
+  _tapTimer = setTimeout(()=>{ if(!_sawClick) fireAction(el); }, 300);
+}, {passive:true});
 document.addEventListener('click', e=>{
   const el = e.target.closest('[data-action]');
   if(!el) return;
   if(el.disabled) return;
+  _sawClick = true; clearTimeout(_tapTimer);
   fireAction(el);
 });
 /* select 下拉（时间选择） */
@@ -7498,8 +7543,13 @@ document.addEventListener('keydown', e=>{
     if(e.key === 'PageDown' || e.code === 'PageDown'){ e.preventDefault(); quickLogin('dm测试'); return; }
   }
   /* 登录页按回车直接登录 */
-  if(e.key === 'Enter' && e.target && e.target.matches && e.target.matches('#in-acc, #in-pwd')){
-    doLogin(); return;
+  /* 手机键盘上的「前往/完成」也算回车：直接提交，不用再找按钮 */
+  if(e.key === 'Enter' && e.target && e.target.matches &&
+     e.target.matches('#in-acc, #in-pwd, #reg-pwd2, #fg-pwd2')){
+    if(e.target.matches('#reg-pwd2')) doRegister();
+    else if(e.target.matches('#fg-pwd2')) doForgot();
+    else doLogin();
+    return;
   }
   /* Ctrl / Cmd + K 全局搜索剧本 */
   if((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')){

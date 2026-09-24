@@ -1,0 +1,5 @@
+# 本地版用到的运行库（app.py 第一次运行会自动安装，一般不用手动执行）
+# 手动安装：python -m pip install -r requirements.txt
+Flask>=3.0
+rich>=13.0
+waitress>=3.0
