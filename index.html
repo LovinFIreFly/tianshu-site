@@ -450,6 +450,18 @@ select option{background:#1c1830;color:var(--text)}
 .spoiler summary{cursor:pointer;color:var(--text2);font-size:12px;padding:4px 0;user-select:none}
 .spoiler summary:hover{color:var(--primary2)}
 .spoiler p{margin-top:6px;color:var(--text2);line-height:1.7;word-break:break-word}
+/* 预约流程：DM 选择卡片 */
+.dmpick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.dmpick-card{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;cursor:pointer;transition:.2s;text-align:left}
+.dmpick-card:hover{border-color:var(--primary);transform:translateY(-2px)}
+.dmpick-card.on{border-color:var(--primary);background:rgba(139,92,246,.12)}
+.dmpick-card .dm-av{width:44px;height:44px;border-radius:50%;object-fit:cover;flex:none;background:var(--card2);font-size:20px}
+.dmpick-card .info{flex:1;min-width:0}
+.dmpick-card .info b{display:block;font-size:14px}
+.dmpick-card .info small{color:var(--text2);font-size:11.5px}
+.dmpick-card .cb{font-size:12px;font-weight:600;padding:5px 12px;border-radius:999px;background:rgba(139,92,246,.15);color:var(--primary2);flex:none;white-space:nowrap}
+.dmpick-card .cb.on{background:var(--primary);color:#fff}
+@media (max-width:640px){.dmpick-grid{grid-template-columns:1fr}}
 /* DM 头像（照片 / 图标两种形态） */
 .dm-avatar{width:72px;height:72px;border-radius:50%;object-fit:cover;flex:none;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:32px;background:var(--card2)}
 .rv-imgs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
@@ -1012,8 +1024,8 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
               <div class="cell"><b id="st-total">0</b><span>总场次</span></div>
             </div>
           </div>
-          <div id="profile-editor"></div>
           <div class="menu">
+            <button class="mi" data-action="go-profile">✏️ 编辑个人资料 <span>›</span></button>
             <button class="mi" data-action="toast" data-msg="客服功能开发中">💬 联系客服 <span>›</span></button>
             <button class="mi" data-action="toast" data-msg="请到店咨询会员卡">💎 会员中心 <span>›</span></button>
             <button class="mi" data-action="logout">🚪 退出登录 <span style="color:var(--full)">›</span></button>
@@ -1044,6 +1056,7 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
       <button class="navi" data-action="adm-tab" data-t="venue">🏠 场地预约</button>
       <button class="navi" data-action="adm-tab" data-t="notice">📢 消息中心</button>
       <button class="navi" data-action="adm-tab" data-t="community">🌍 社区管理</button>
+      <button class="navi" data-action="adm-tab" data-t="dmfiles">📈 DM 档案</button>
       <button class="navi" data-action="adm-tab" data-t="logs">📜 操作日志</button>
       <button class="navi" data-action="adm-tab" data-t="backup">💾 数据备份</button>
       <div class="sp"></div>
@@ -1196,6 +1209,12 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
           <div id="adm-post-list"></div>
         </div>
       </section>
+      <!-- DM 成长档案 -->
+      <section id="adm-dmfiles" hidden>
+        <h2>DM 成长档案</h2>
+        <p class="sub">带本量 · 好评率 · 分成 · 客户指定次数 —— 数据来自真实排班与评价</p>
+        <div id="adm-dmfile-list"></div>
+      </section>
       <!-- 操作日志 -->
       <section id="adm-logs" hidden>
         <h2>操作日志</h2>
@@ -1312,7 +1331,7 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
       <button class="navi on" data-action="dm-tab" data-t="msgs">📬 玩家留言</button>
       <button class="navi" data-action="dm-tab" data-t="today">🎟️ 今日场次</button>
       <button class="navi" data-action="dm-tab" data-t="sched">📅 我的排班</button>
-      <button class="navi" data-action="dm-tab" data-t="stats">📈 我的战绩</button>
+      <button class="navi" data-action="dm-tab" data-t="stats">📈 成长档案</button>
       <button class="navi" data-action="dm-tab" data-t="credit">📋 客户信用</button>
       <button class="navi" data-action="dm-tab" data-t="me">🗡️ 我的主页</button>
       <div class="sp"></div>
@@ -1341,9 +1360,9 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
         <div class="adm-panel"><div id="dm-sched"></div></div>
       </section>
       <section id="dm-stats" hidden>
-        <h2>我的战绩</h2>
-        <p class="sub">带本次数 / 评分 / 分成统计</p>
-        <div class="adm-panel"><div id="dm-stats"></div></div>
+        <h2>我的成长档案</h2>
+        <p class="sub">带本量 · 好评率 · 分成 · 被指定次数（自动统计，随云端同步）</p>
+        <div id="dm-growth"></div>
       </section>
       <section id="dm-me" hidden>
         <h2>我的 DM 主页</h2>
@@ -1420,6 +1439,16 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
       <h3 id="car-title" style="font-size:19px;font-weight:700;margin-bottom:14px">车队详情</h3>
       <div id="car-body"></div>
     </div>
+  </div>
+</div>
+
+<!-- ========== 编辑个人资料页 ========== -->
+<div class="page" id="page-profile">
+  <div class="login-card" style="width:100%;max-width:560px">
+    <button class="back" data-action="back-me">‹ 返回我的</button>
+    <h2 style="font-size:24px;font-weight:700">编辑个人资料</h2>
+    <p class="sub">昵称 = 展示名 · 登录仍用账号名</p>
+    <div id="profile-editor"></div>
   </div>
 </div>
 
@@ -1646,7 +1675,7 @@ const state = {
   scfFileTarget: null,      // 当前上传目标 {type:'cover'} 或 {type:'role', idx}
   /* 客户信息 / 留言 / DM 端 */
   custKw:       '',         // 管理端客户搜索关键词
-  userFilter:   'customer', // 用户管理筛选：customer / staff / 全部
+  userFilter:   '全部',       // 用户管理筛选：customer / staff / 全部
   dmCustKw:     '',         // DM 端客户搜索关键词
   msgCat:       '💡 建议',   // 用户留言分类
   admMsgFilter: '全部',
@@ -1663,7 +1692,9 @@ const state = {
   sesDay:       0,
   /* 剧本筛选 */
   favOnly:      false,
-  pickDm:       '',          // 指定 DM
+  pickDm:       '',          // 指定 DM 的手机号
+  dmChoice:     'random',    // random=随机（门店指派） / assign=指定
+  avatarDraft:  '',          // 编辑资料页里刚上传的头像
   rvDims:       {},          // 评价分维度
   rvImgs:       [],          // 评价配图
   followUpId:   0,           // 追评的评价 id
@@ -1701,6 +1732,10 @@ function applyRoute(){
   if(p === 'login'){ go('page-login'); return; }
   if(p === 'register'){ go('page-reg'); return; }
   if(p === 'forgot'){ go('page-forgot'); return; }
+  if(p === 'profile'){
+    if(!state.user){ navigate('login'); return; }
+    go('page-profile'); renderProfileEditor(); return;
+  }
   if(p === 'admin'){
     if(!state.isAdmin){ toast('🔒 请先登录管理员账号'); navigate('login'); return; }
     if(sub) state.admTab = sub;
@@ -2908,14 +2943,26 @@ function renderMode(){
     <button class="seg ${state.mode==='car'?'on':''}" data-action="set-mode" data-m="car">🚗 拼车<small>和陌生玩家一起拼，更划算</small></button>
     <button class="seg ${state.mode==='private'?'on':''}" data-action="set-mode" data-m="private">👑 包车<small>熟人包场，时间自由</small></button>`;
   const panel = $('#mode-panel');
-  /* 80：指定 DM 预约（可选加价） */
-  const dmSel = (s.dms && s.dms.length) ? `
-    <div class="f-item" style="margin-bottom:14px"><label>指定 DM（选填 · 指定需加价 ¥${DM_FEE}/人）</label>
-      <div class="box"><select data-action="pick-dm">
-        <option value="">不指定，由门店安排</option>
-        ${s.dms.map(p=>{ const u = lsAccounts().find(x=>x.phone===p); return u
-          ? `<option value="${p}" ${state.pickDm===p?'selected':''}>${escapeHtml(u.username)} ＋¥${DM_FEE}/人</option>` : ''; }).join('')}
-      </select></div></div>` : '';
+  /* 选择 DM：随机（门店安排）或指定（加价挑选），卡片点击看 DM 主页 */
+  const dmList = (s.dms || []).map(phone => ({ phone, u: lsAccounts().find(x => x.phone === phone) }))
+                              .filter(x => x.u);
+  const dmSection = `
+    <div class="sec" style="margin:18px 0 10px"><b>选择 DM</b><span>随机由门店安排 · 指定可选心仪主持人（＋¥${DM_FEE}/人）</span></div>
+    <div class="mode-seg">
+      <button class="seg ${state.dmChoice !== 'assign' ? 'on' : ''}" data-action="dm-choice" data-m="random">🎲 随机 DM<small>由门店安排最合适的主持人</small></button>
+      <button class="seg ${state.dmChoice === 'assign' ? 'on' : ''}" data-action="dm-choice" data-m="assign">👤 指定 DM<small>从可带本 DM 中挑选</small></button>
+    </div>
+    ${state.dmChoice === 'assign' ? (
+      dmList.length ? `<div class="dmpick-grid">${dmList.map(x => `
+        <div class="dmpick-card ${state.pickDm === x.phone ? 'on' : ''}" data-action="dm-info" data-phone="${x.phone}" role="button" tabindex="0" aria-label="查看 ${escapeHtml(x.u.username)} 主页">
+          ${avatarHtml(x.phone, 'dm-av')}
+          <span class="info"><b>${escapeHtml(nickOf(x.phone) || x.u.username)}</b>
+            <small>${escapeHtml((x.u.dmProfile && x.u.dmProfile.style) || '点击查看主页 →')}</small></span>
+          <span class="cb ${state.pickDm === x.phone ? 'on' : ''}" data-action="dm-pick" data-phone="${x.phone}" role="button" tabindex="0">${state.pickDm === x.phone ? '✓ 已选' : '选 TA'}</span>
+        </div>`).join('')}</div>`
+      : '<p class="car-sub">该剧本暂无可指定的 DM，将由门店安排</p>'
+    ) : ''}
+  `;
   if(state.mode === 'car'){
     const cars = genCars(s, state.selTs);
     const newOn = state.pick && state.pick.type === 'new';
@@ -2952,7 +2999,7 @@ function renderMode(){
       <div class="car-sub">包车可整场独享剧本，DM 全程只服务你们一车</div>`;
     setStepRange(pr.min, pr.max);
   }
-  if(dmSel) panel.insertAdjacentHTML('beforeend', dmSel);
+  panel.insertAdjacentHTML('beforeend', dmSection);
 }
 function setStepRange(min, max){
   state.stMin = min; state.stMax = max;
@@ -3033,16 +3080,26 @@ function submitBook(){
     if(left < state.bkN) return toast(`该场次仅剩 ${left} 个位置，请减少人数或换个时段`);
     sessionId = ses.id;
   }
+  /* DM 选择：指定 → 立即绑定并通知 DM；随机 → 留给管理员指派 */
+  const dmAssigned = state.dmChoice === 'assign' && state.pickDm;
+  const dmU = dmAssigned ? lsAccounts().find(x => x.phone === state.pickDm) : null;
   state.bookings.unshift({ id:Date.now(), sid:s.id, title:s.title, emoji:s.emoji, g:s.g,
     day:dateLabel(state.selTs), ts:state.selTs, time, players:state.bkN, price:s.price,
     status:'booked', mode, carNew, carOwner, sessionId,
-    dmPhone: state.pickDm || '',
-    dmFee: state.pickDm ? DM_FEE : 0,
-    price: s.price + (state.pickDm ? DM_FEE : 0),
+    dmMode: state.dmChoice === 'assign' ? 'assign' : 'random',
+    dmPhone: dmAssigned ? state.pickDm : '',
+    dmName: dmU ? (nickOf(dmU.phone) || dmU.username) : '',
+    dmFee: dmAssigned ? DM_FEE : 0,
+    price: s.price + (dmAssigned ? DM_FEE : 0),
     phone: state.user ? state.user.phone : '' });
   saveBookings();
   /* 66：下单即生成待支付定金单 */
   createOrder(state.bookings[0]);
+  /* 指定 DM：通知 DM 本人 */
+  if(dmAssigned && dmU){
+    pushNotice(dmU.phone, '收到指定预约 🎯',
+      `${displayName()} 指定你主持《${s.title}》${dateLabel(state.selTs)} ${time}（${state.bkN} 人），请提前准备。`);
+  }
   closeModal('modal-book'); closeModal('modal-detail');
   toast(mode==='拼车' ? '🎉 拼车预约成功！请支付定金锁定座位' : '🎉 包车预约成功！请支付定金锁定座位');
   switchTab('book');
@@ -3099,7 +3156,7 @@ function refreshMe(){
   const bs = state.bookings;
   $('#st-bk').textContent    = bs.filter(b=>b.status==='booked').length;
   $('#st-done').textContent  = bs.filter(b=>b.status==='done').length;
-  $('#st-total').textContent = bs.length;
+  $('#st-total').textContent = bs.filter(b=>b.status!=='cancelled').length;   // 已取消不计入总场次
 }
 
 /* ---------- 评分与评价 ---------- */
@@ -3350,7 +3407,7 @@ function admLogout(){
   refreshBackBtn();
   go('page-login'); toast('已退出管理端');
 }
-const ADM_TABS = ['dash','bookings','orders','scripts','reviews','users','customers','msgs','notice','community','venue','logs','backup'];
+const ADM_TABS = ['dash','bookings','orders','scripts','reviews','users','customers','msgs','notice','community','dmfiles','venue','logs','backup'];
 const ORDER_FILTERS = [['全部','全部'],['unpaid','待支付'],['paid','已支付'],['refunded','已退款']];
 function renderAdmin(){
   /* 权限过滤：无权限的侧边栏项直接隐藏 */
@@ -3374,6 +3431,7 @@ function renderAdmin(){
   if(state.admTab === 'msgs') renderAdmMsgs();
   if(state.admTab === 'notice') renderAdmNotice();
   if(state.admTab === 'community') renderAdmCommunity();
+  if(state.admTab === 'dmfiles') renderAdmDmFiles();
   if(state.admTab === 'logs') renderAdmLogs();
   if(state.admTab === 'backup') renderCloudCfg();
   if(state.admTab === 'venue'){ renderRooms(); renderSessions(); }
@@ -3531,11 +3589,12 @@ function renderAdmBookings(){
   const list = state.admFilter==='全部' ? state.bookings
     : state.bookings.filter(b=>b.status===state.admFilter);
   $('#adm-bk-table').innerHTML = admBkRows(list);
+  /* 通知 DM 有新的指定预约（在指派时已推送，这里无需处理） */
 }
 function admBkRows(list){
   if(!list.length)
-    return `<tbody><tr><td colspan="8" class="empty-cell"><div class="e" aria-hidden="true">📭</div>暂无预约记录</td></tr></tbody>`;
-  const head = `<thead><tr><th>客户</th><th>剧本</th><th>场次</th><th>模式</th><th>人数</th><th>总额</th><th>状态</th><th>操作</th></tr></thead>`;
+    return `<tbody><tr><td colspan="9" class="empty-cell"><div class="e" aria-hidden="true">📭</div>暂无预约记录</td></tr></tbody>`;
+  const head = `<thead><tr><th>客户</th><th>剧本</th><th>场次</th><th>模式</th><th>人数</th><th>总额</th><th>状态</th><th>DM</th><th>操作</th></tr></thead>`;
   const body = list.map(b=>{
     const modeTxt = b.mode==='包车' ? '👑 包车'
       : b.carNew ? '🚗 单开' : `🚗 “${b.carOwner||''}”的车`;
@@ -3545,6 +3604,18 @@ function admBkRows(list){
       : b.status==='arrived'
       ? `<button class="op-btn ok" data-action="adm-finish" data-id="${b.id}">确认完成</button>`
       : `<button class="op-btn danger" data-action="adm-del" data-id="${b.id}">删除</button>`;
+    /* DM 栏：指定 DM 显示名字；随机 DM 由管理员指派 */
+    let dmCell;
+    if (b.dmPhone) {
+      dmCell = `<span class="badge">${b.dmMode==='assign'?'👤 指定':'🎲 门店安排'} · ${escapeHtml(b.dmName||'')}</span>`;
+    } else if (b.status==='booked' && (myRole()==='admin' || myRole()==='super')) {
+      dmCell = `<select data-action="adm-assign-dm" data-id="${b.id}" style="width:100%;background:var(--card2);border-radius:8px;padding:5px 8px;font-size:12px">
+        <option value="">指派 DM…</option>
+        ${dmAccounts().map(d=>`<option value="${d.phone}">${escapeHtml(d.username)}</option>`).join('')}
+      </select>`;
+    } else {
+      dmCell = '<span style="color:var(--text2);font-size:12px">待安排</span>';
+    }
     return `<tr>
       <td>${maskPhone(b.phone)}</td>
       <td><div class="bk-td"><div class="scr-mini" style="background:${G(b)}" aria-hidden="true">${b.emoji}</div><b>${b.title}</b></div></td>
@@ -3555,6 +3626,7 @@ function admBkRows(list){
       <td>${b.status==='booked' ? '<span class="st on">✓ 待开始</span>'
           : b.status==='arrived' ? '<span class="st on">✓ 已到场</span>'
           : b.status==='done' ? '<span class="st off">已完成</span>' : '<span class="st off">已取消</span>'}</td>
+      <td>${dmCell}</td>
       <td>${ops}</td>
     </tr>`;
   }).join('');
@@ -3770,7 +3842,7 @@ function scReset(){
 }
 
 /* ---------- 用户管理（含权限调整） ---------- */
-const USER_FILTERS = [['customer','🎭 客户'],['staff','👑 员工'],['全部','全部']];
+const USER_FILTERS = [['全部','全部'],['customer','🎭 客户'],['staff','👑 员工']];
 const ROLE_NAME = { super:'超级管理员', admin:'管理员', dm:'DM', user:'客户' };
 function roleBadge(u){
   if(u.role === 'super' || u.super === true)
@@ -4264,7 +4336,7 @@ function renderDm(){
   if(state.dmTab === 'today')  renderDmToday();
   if(state.dmTab === 'credit') renderDmCredit();
   if(state.dmTab === 'sched')  renderDmSchedule();
-  if(state.dmTab === 'stats')  renderDmStats();
+  if(state.dmTab === 'stats')  renderDmGrowth();
   if(state.dmTab === 'me')     openDmProfileInto();
 }
 
@@ -4289,14 +4361,20 @@ function avatarOf(phone){
   const u = lsAccounts().find(x => x.phone === phone);
   return (u && u.profile && u.profile.avatar) || '🎭';
 }
+/* 头像统一渲染：照片用 <img>，图标用文字 */
+function avatarHtml(phone, cls){
+  const av = avatarOf(phone);
+  if(/^(data:|https?:)/.test(av)) return `<img class="${cls || ''}" src="${av}" alt="" style="object-fit:cover">`;
+  return `<span class="${cls || ''}" style="display:flex;align-items:center;justify-content:center">${av}</span>`;
+}
 /* 昵称/头像改动后，把所有展示位置一起刷新 */
 function refreshMyDisplay(){
   const name = displayName();
-  const av = avatarOf(state.user && state.user.phone);
+  const p = state.user ? state.user.phone : '';
   const hi = $('#hi-user');    if(hi) hi.textContent = state.user ? '已登录 ' + name : '';
   const me = $('#me-name');    if(me) me.textContent = name;
-  const mav = $('#me-avatar'); if(mav) mav.textContent = av;
-  const navAv = $('#nav-avatar'); if(navAv) navAv.textContent = av;
+  const mav = $('#me-avatar'); if(mav) mav.innerHTML = avatarHtml(p);
+  const navAv = $('#nav-avatar'); if(navAv) navAv.innerHTML = avatarHtml(p);
 }
 function saveProfile(patch){
   if(!state.user) return;
@@ -4321,11 +4399,25 @@ function renderProfileEditor(){
   const box = $('#profile-editor');
   if(!box || !u) return;
   const avatars = ['🎭','🍠','🐱','🐶','🦊','🐼','🦁','👻','🤖','🌙'];
+  const curAv = state.avatarDraft || p.avatar || '🎭';
+  const isPic = /^(data:|https?:)/.test(curAv);
   box.innerHTML = `
     <div class="adm-panel">
-      <h3>编辑资料 <span class="car-sub" style="margin:0">（昵称 = 展示名，登录仍用账号名 ${escapeHtml(u.username)}）</span></h3>
+      <h3>头像</h3>
+      <div class="up-row" style="margin-top:8px">
+        ${isPic ? `<img class="up-prev" src="${curAv}" alt="头像">` : `<span class="up-ph" style="font-size:26px">${curAv}</span>`}
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button type="button" class="btn btn-ghost btn-sm" data-action="avatar-pick">🖼️ 上传照片作为头像</button>
+          <button type="button" class="op-btn danger" data-action="avatar-clear" ${/^(data:|https?:)/.test(p.avatar||'')?'':'hidden'}>恢复默认图标</button>
+        </div>
+      </div>
+      <input type="file" id="avatar-file" accept="image/*" hidden>
+      <p class="car-sub">上传的照片会自动压缩；也会展示在车队、评价等位置。</p>
+    </div>
+    <div class="adm-panel">
+      <h3>基础信息</h3>
       <div class="msg-cats">${avatars.map(a=>
-        `<button class="chip-sm ${(p.avatar||'🎭')===a?'on':''}" data-action="pick-avatar" data-a="${a}">${a}</button>`).join('')}</div>
+        `<button class="chip-sm ${!isPic && (p.avatar||'🎭')===a?'on':''}" data-action="pick-avatar" data-a="${a}">${a}</button>`).join('')}</div>
       <div class="form-grid" style="margin-top:12px">
         <div class="f-item"><label>昵称</label><div class="box"><input id="pf-nick" value="${escapeHtml(p.nick||'')}" placeholder="${escapeHtml(u.username)}"></div></div>
         <div class="f-item"><label>年龄</label><div class="box"><input id="pf-age" type="number" min="10" max="80" value="${p.age||''}" placeholder="选填"></div></div>
@@ -5188,6 +5280,119 @@ function dmCancelLeave(ts){
   logAct(`DM ${displayName()} 撤销 ${dateLabel(+ts)} 请假`);
   renderDmSchedule(); toast('已销假');
 }
+/* ================= 83：DM 成长档案（管理端 + DM 端共用统计） ================= */
+/* 统计口径：排班场次 / 带本人数 / 产生流水 / 预估分成 / 平均评分 / 好评率 / 被指定次数 */
+function dmStatsOf(phone){
+  const ses = getSessions().filter(s => s.dm === phone && s.status !== 'cancelled');
+  const bks = state.bookings.filter(b => b.dmPhone === phone && b.status !== 'cancelled');
+  const done = bks.filter(b => b.status === 'done');
+  const revenue = bks.reduce((n,b) => n + b.price * b.players, 0);
+  const rs = getReviews().filter(r => r.dmPhone === phone && !r.hidden);
+  const avg = rs.length ? rs.reduce((n,r) => n + r.rating, 0) / rs.length : 0;
+  const good = rs.filter(r => r.rating >= 4).length;
+  const goodRate = rs.length ? good / rs.length : 0;
+  const assigned = bks.filter(b => b.dmMode === 'assign').length;
+  const players = bks.reduce((n,b) => n + b.players, 0);
+  /* 近 6 个月带本量（按月） */
+  const months = [];
+  for(let i = 5; i >= 0; i--){
+    const d = new Date(); d.setMonth(d.getMonth() - i, 1); d.setHours(0,0,0,0);
+    const y = d.getFullYear(), m = d.getMonth();
+    const n = bks.filter(b => { const t = new Date(b.ts || 0); return t.getFullYear() === y && t.getMonth() === m; }).length;
+    months.push({ label:(m+1)+'月', n });
+  }
+  /* 擅长类型 TOP3：按带本剧本标签统计 */
+  const tagCount = {};
+  bks.forEach(b => { const s = SCRIPTS.find(x => x.id === b.sid); (s&&s.tags||[]).forEach(t => tagCount[t] = (tagCount[t]||0)+1); });
+  const topTags = Object.keys(tagCount).sort((a,b)=>tagCount[b]-tagCount[a]).slice(0,3);
+  return { ses, bks, done, revenue, rs, avg, goodRate, assigned, players, months, topTags,
+    income: Math.round(revenue * DM_RATE) };
+}
+function dmLevel(st){
+  if(st.ses.length >= 30 && st.goodRate >= 0.9) return { t:'🏆 金牌 DM', cls:'gold' };
+  if(st.ses.length >= 15 && st.goodRate >= 0.8) return { t:'⭐ 资深 DM', cls:'gold' };
+  if(st.ses.length >= 5)  return { t:'🌱 成长中', cls:'' };
+  return { t:'🆕 新晋 DM', cls:'' };
+}
+/* 管理端：全部 DM 档案 */
+function renderAdmDmFiles(){
+  const box = $('#adm-dmfile-list'); if(!box) return;
+  const list = dmAccounts();
+  if(!list.length) return void (box.innerHTML = emptyBox('📈','暂无 DM 账号'));
+  box.innerHTML = list.map(u=>{
+    const st = dmStatsOf(u.phone);
+    const lv = dmLevel(st);
+    const maxN = Math.max(1, ...st.months.map(m=>m.n));
+    return `<div class="adm-panel">
+      <h3 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        ${avatarHtml(u.phone, 'dm-avatar')} ${escapeHtml(nickOf(u.phone) || u.username)}
+        <span class="pf-tag ${lv.cls === 'gold' ? 'gold' : ''}">${lv.t}</span>
+        <span style="flex:1"></span>
+        <button class="op-btn" data-action="open-dm-profile" data-phone="${u.phone}">查看主页</button>
+      </h3>
+      <div class="kv">
+        <div class="cell"><b>${st.ses.length}</b><span>排班场次</span></div>
+        <div class="cell"><b>${st.bks.length}</b><span>带本场次</span></div>
+        <div class="cell"><b>${st.players}</b><span>服务玩家</span></div>
+        <div class="cell"><b>${st.rs.length ? st.avg.toFixed(1) : '—'}</b><span>平均评分</span></div>
+        <div class="cell"><b>${st.rs.length ? Math.round(st.goodRate*100)+'%' : '—'}</b><span>好评率</span></div>
+        <div class="cell"><b>${st.assigned}</b><span>客户指定</span></div>
+        <div class="cell"><b>¥${st.revenue}</b><span>产生流水</span></div>
+        <div class="cell"><b>¥${st.income}</b><span>预估分成</span></div>
+      </div>
+      <div class="car-sub" style="margin:10px 0 4px">近 6 个月带本量</div>
+      <div class="bars" style="height:90px">
+        ${st.months.map(m=>`<div class="bar" title="${m.label} ${m.n} 场"><em>${m.n || ''}</em>
+          <i style="height:${Math.max(4, Math.round(m.n/maxN*100))}%"></i><span>${m.label}</span></div>`).join('')}
+      </div>
+      ${st.topTags.length ? `<div class="pf-tags" style="margin-top:10px">
+        ${st.topTags.map(t=>`<span class="pf-tag">擅长：${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+/* DM 端：自己的成长档案 */
+function renderDmGrowth(){
+  const box = $('#dm-growth'); if(!box) return;
+  const p = state.user ? state.user.phone : '';
+  const st = dmStatsOf(p);
+  const lv = dmLevel(st);
+  const maxN = Math.max(1, ...st.months.map(m=>m.n));
+  const recent = st.bks.slice().sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,10);
+  box.innerHTML = `
+    <div class="adm-panel">
+      <h3>${lv.t} <span class="car-sub" style="margin:0">· 数据由排班、带本与玩家评价自动生成</span></h3>
+      <div class="kv">
+        <div class="cell"><b>${st.ses.length}</b><span>排班场次</span></div>
+        <div class="cell"><b>${st.bks.length}</b><span>带本场次</span></div>
+        <div class="cell"><b>${st.players}</b><span>服务玩家</span></div>
+        <div class="cell"><b>${st.rs.length ? st.avg.toFixed(1) : '—'}</b><span>平均评分</span></div>
+        <div class="cell"><b>${st.rs.length ? Math.round(st.goodRate*100)+'%' : '—'}</b><span>好评率</span></div>
+        <div class="cell"><b>${st.assigned}</b><span>被客户指定</span></div>
+        <div class="cell"><b>¥${st.revenue}</b><span>产生流水</span></div>
+        <div class="cell"><b>¥${st.income}</b><span>预估分成（${Math.round(DM_RATE*100)}%）</span></div>
+      </div>
+    </div>
+    <div class="adm-panel">
+      <h3>近 6 个月带本量</h3>
+      <div class="bars" style="height:110px">
+        ${st.months.map(m=>`<div class="bar" title="${m.label} ${m.n} 场"><em>${m.n || ''}</em>
+          <i style="height:${Math.max(4, Math.round(m.n/maxN*100))}%"></i><span>${m.label}</span></div>`).join('')}
+      </div>
+    </div>
+    ${st.topTags.length ? `<div class="adm-panel"><h3>擅长类型</h3>
+      <div class="pf-tags">${st.topTags.map(t=>`<span class="pf-tag">${escapeHtml(t)}</span>`).join('')}</div></div>` : ''}
+    <div class="adm-panel">
+      <h3>带本记录（最近 10 场）</h3>
+      ${recent.length ? recent.map(b=>{
+        const rs = getReviews().find(r => r.bid === b.id && r.dmPhone === p);
+        return `<div class="rv-item"><div class="top">
+          <b>《${escapeHtml(b.title)}》</b>
+          <span class="badge">${b.dmMode==='assign'?'👤 客户指定':'🎲 门店安排'}</span>
+          <span class="stars">${b.players} 人 · ¥${b.price*b.players}</span>
+          <span class="time">${b.day} ${b.time}${rs ? ' · ⭐'+rs.rating : ''}</span></div></div>`;
+      }).join('') : '<p class="car-sub">还没有带本记录</p>'}
+    </div>`;
+}
 /* 83：DM 带本记录与分成 */
 function renderDmStats(){
   const box = $('#dm-stats'); if(!box) return;
@@ -5212,11 +5417,31 @@ function renderDmToday(){
   const ts = midnight();
   const list = getSessions().filter(s => s.ts === ts && s.dm === p && s.status !== 'cancelled');
   const box = $('#dm-today-list'); if(!box) return;
-  if(!list.length){
-    box.innerHTML = emptyBox('🎟️','今天没有你的场次');
+  /* 除排班场次外，也把「指定我为 DM」的预约列出来（自由定档的场次） */
+  const myKey = new Set(list.map(s => s.sid + '|' + s.ts + '|' + s.time));
+  const extra = state.bookings.filter(b => b.ts === ts && b.status !== 'cancelled'
+    && b.dmPhone === p && !myKey.has(b.sid + '|' + b.ts + '|' + b.time));
+  if(!list.length && !extra.length){
+    box.innerHTML = emptyBox('🎟️','今天没有安排给你的场次');
     return;
   }
-  box.innerHTML = list.map(s=>{
+  const extraHtml = extra.length ? extra.map(b => {
+      const sc = SCRIPTS.find(x => x.id === b.sid);
+      const roles = (sc && sc.roles) ? sc.roles : [];
+      const acc = lsAccounts().find(u => u.phone === b.phone);
+      return `<div class="adm-panel">
+        <h3>${b.time} 《${escapeHtml(b.title)}》 <span class="badge">${b.dmMode==='assign'?'👤 客户指定':'🎲 门店安排'}</span></h3>
+        <div class="rv-item"><div class="top"><b>${escapeHtml((acc && acc.username) || maskPhone(b.phone))}</b>
+          <span class="stars">${b.players} 人</span>
+          <span class="time">${b.role ? '角色：'+escapeHtml(b.role) : '未分配角色'}</span></div>
+          ${roles.length ? `<div style="margin-top:8px"><select data-action="dm-assign" data-id="${b.id}"
+            style="background:var(--card2);border-radius:8px;padding:6px 10px;font-size:13px">
+            <option value="">分配角色…</option>
+            ${roles.map(r=>`<option value="${escapeHtml(r.name)}" ${b.role===r.name?'selected':''}>${escapeHtml(r.name)}</option>`).join('')}
+          </select></div>` : ''}
+        </div></div>`;
+    }).join('') : '';
+  box.innerHTML = extraHtml + list.map(s=>{
     const sc = SCRIPTS.find(x => x.id === s.sid);
     const bks = state.bookings.filter(b => b.sessionId === s.id && b.status !== 'cancelled');
     const roles = (sc && sc.roles) ? sc.roles : [];
@@ -5282,7 +5507,7 @@ function emptyBox(icon, text){
 const ADM_TAB_PERM = {
   dash:['super','admin'], bookings:['super','admin'], orders:['super','admin'], scripts:['super','admin'],
   reviews:['super','admin'], users:['super','admin'], customers:['super','admin'],
-  msgs:['super','admin'], notice:['super','admin'], community:['super','admin'], venue:['super','admin'],
+  msgs:['super','admin'], notice:['super','admin'], community:['super','admin'], dmfiles:['super','admin'], venue:['super','admin'],
   /* 操作日志与数据备份：管理员同样可用；清空数据、删除账号、改权限等破坏性操作仍仅超级管理员 */
   logs:['super','admin'], backup:['super','admin']
 };
@@ -5593,6 +5818,15 @@ function runMigrations(){
 /* ================= 事件委托 ================= */
 const ACTIONS = {
   'go-login':    ()=>navigate('login'),
+  'go-profile':  ()=>{ navigate('profile'); renderProfileEditor(); },
+  'back-me':     ()=>{ navigate('me'); renderProfileEditor(); },
+  'avatar-pick': ()=>{ const f = $('#avatar-file'); if(f) f.click(); },
+  'avatar-clear':()=>{
+    saveProfile({ avatar:'🎭' });
+    state.avatarDraft = '';
+    renderProfileEditor(); refreshMyDisplay();
+    toast('已恢复默认头像');
+  },
   'go-register': ()=>navigate('register'),
   'go-forgot':   ()=>navigate('forgot'),
   'go-welcome':  ()=>navigate(''),
@@ -5644,7 +5878,9 @@ const ACTIONS = {
   'set-mode':    el=>{ state.mode = el.dataset.m; state.pick = null; renderMode(); },
   'pick-new':    ()=>{ state.pick = {type:'new'}; renderMode(); },
   'pick-car':    el=>{ state.pick = {type:'join', carId: el.dataset.id}; renderMode(); },
-  'pick-dm':     el=>{ state.pickDm = el.value; renderMode(); },
+  'dm-choice':   el=>{ state.dmChoice = el.dataset.m; if(state.dmChoice !== 'assign') state.pickDm = ''; renderMode(); },
+  'dm-pick':     el=>{ state.pickDm = el.dataset.phone; renderMode(); toast('已选择 DM：' + (nickOf(state.pickDm) || '该主持人')); },
+  'dm-info':     el=>openDmProfile(el.dataset.phone),
   /* 提交 */
   'try-book':    tryBook,
   'step-n':      el=>stepN(+el.dataset.d),
@@ -5721,6 +5957,25 @@ const ACTIONS = {
   'pay-order':   el=>payOrder(el.dataset.id),
   'refund-order':el=>refundOrder(el.dataset.id),
   'order-filter':el=>{ state.orderFilter = el.dataset.f; renderAdmOrders(); },
+  /* 管理员给「随机 DM」的预约指派主持人 */
+  'adm-assign-dm': el=>{
+    const b = state.bookings.find(x => x.id === +el.dataset.id);
+    const phone = el.value;
+    if(!b || !phone) return;
+    const u = lsAccounts().find(x => x.phone === phone);
+    if(!u) return;
+    b.dmPhone = phone;
+    b.dmName  = nickOf(phone) || u.username;
+    if(!b.dmMode) b.dmMode = 'random';
+    saveBookings();
+    pushNotice(phone, '排班通知 📅',
+      `门店安排你主持《${b.title}》${b.day} ${b.time}（${b.players} 人），请提前准备。`);
+    if(b.phone) pushNotice(b.phone, '已为你安排 DM ✅',
+      `《${b.title}》${b.day} ${b.time} 的主持人为 ${b.dmName}，期待你的体验～`);
+    logAct(`指派 DM：${b.dmName} → 《${b.title}》${b.day} ${b.time}`);
+    renderAdmBookings();
+    toast(`✅ 已指派 DM：${b.dmName}`);
+  },
   'adm-pay':     el=>{
     const pays = getPays();                                    // 只读一次，改的就是要保存的那份
     const p = pays.find(x => x.id === +el.dataset.id); if(!p) return;
@@ -5743,13 +5998,13 @@ const ACTIONS = {
   'car-save-reserved': el=>carSaveReserved(el.dataset.id),
   'car-to-private': el=>carToPrivate(el.dataset.id),
   /* 个人资料 */
-  'pick-avatar': el=>{ state.pickAvatar = el.dataset.a;
+  'pick-avatar': el=>{ state.avatarDraft = el.dataset.a; state.pickAvatar = el.dataset.a;
     document.querySelectorAll('[data-action="pick-avatar"]').forEach(b=>b.classList.toggle('on', b===el)); },
   'save-profile': ()=>saveProfile({
     nick:   $('#pf-nick').value.trim(),
     age:    parseInt($('#pf-age').value, 10) || null,
     gender: $('#pf-gender').value,
-    avatar: state.pickAvatar || myProfile().avatar || '🎭'
+    avatar: state.avatarDraft || state.pickAvatar || myProfile().avatar || '🎭'
   }),
   /* 房间与场次 */
   'room-add':    roomAdd,
@@ -6022,6 +6277,18 @@ try{
   $('#dm-cust-search').addEventListener('input', e=>{ state.dmCustKw = e.target.value; renderDmCredit(); });
   /* 注册：用户名实时查重提示 + 手机号 / 密码即时校验 */
   $('#reg-name').addEventListener('input', onRegNameInput);
+  /* 头像照片上传（压缩到 240px） */
+  document.addEventListener('change', e=>{
+    if(e.target.id !== 'avatar-file') return;
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if(!f) return;
+    compressImage(f, 240, dataURL=>{
+      state.avatarDraft = dataURL; state.pickAvatar = '';
+      renderProfileEditor();
+      toast('🖼️ 照片已就绪，点「保存资料」生效');
+    });
+  });
   ['reg-phone','reg-pwd','reg-pwd2'].forEach(id=>{
     const el = $('#'+id); if(el) el.addEventListener('input', onRegInput);
   });
