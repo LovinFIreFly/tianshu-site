@@ -866,7 +866,8 @@ async function checkCaptcha(env, id, answer) {
     /* 31/33/34：写权限分级 —— 业务数据（预约/订单/账号/日志/通知/剧本/场次）仅员工可写；
        内容类（留言/评价/社区/车队聊天/收藏）必须登录，且署名以令牌为准 */
     const meW = await readToken(request.headers.get('x-auth'), env.APP_KEY || '');
-    const NEED_STAFF_WRITE = ['bookings', 'pays', 'users', 'logs', 'notices', 'sessions', 'rooms',
+    /* users 不在这里：客户可以改自己的资料，但下面的净化逻辑会强制「只能改自己 + 受保护字段还原」 */
+    const NEED_STAFF_WRITE = ['bookings', 'pays', 'logs', 'notices', 'sessions', 'rooms',
       'scripts', 'settings', 'taglib', 'badwords', 'dmleave', 'coupons', 'wants', 'waitlist', 'settles'];
     if (NEED_STAFF_WRITE.includes(key) && !staff) return json({ error: '该数据仅员工可写（客户请使用对应接口）' }, 403);
     if (!PUBLIC_WRITE.includes(key) && !staff) return json({ error: '该数据需要管理员权限' }, 403);
@@ -942,7 +943,9 @@ async function checkCaptcha(env, id, answer) {
     if (!ALLOWED_APPEND.includes(key)) return json({ error: 'append not allowed' }, 400);
     /* 31/33/34：与 PUT 同一套写权限规则 */
     const meA = await readToken(request.headers.get('x-auth'), env.APP_KEY || '');
-    const NEED_STAFF_APPEND = ['bookings', 'pays', 'users'];   // 日志允许任意登录用户追加（署名由令牌强制）
+    /* users 不在这里：登录用户可追加自己那条（下面的净化逻辑保证不改他人、不动受保护字段）
+       日志允许任意登录用户追加，署名由令牌强制 */
+    const NEED_STAFF_APPEND = ['bookings', 'pays'];
     if (NEED_STAFF_APPEND.includes(key) && !staff) return json({ error: '该数据仅员工可写（客户请使用对应接口）' }, 403);
     if (STAFF_ONLY.includes(key) && !staff) return json({ error: '需要管理员权限' }, 403);
     if (!staff && !meA) return json({ error: '请先登录后再操作' }, 403);
