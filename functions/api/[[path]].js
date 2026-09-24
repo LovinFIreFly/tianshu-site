@@ -478,7 +478,7 @@ export async function onRequest(context) {
   }
 
   /* ---------- POST /api/verify 校验令牌（刷新页面时恢复登录态） ---------- */
-  if (parts[0] === 'verify') {
+  if (parts[0] === 'verify' || parts[0] === 'me') {      // /api/me 与 /api/verify 等价（小程序端用 /api/me）
     if (!token) return json({ ok: false, error: '令牌无效或已过期' }, 401);
     const cur = await readFile(env, 'users');
     const users = Array.isArray(cur.data) ? cur.data : [];

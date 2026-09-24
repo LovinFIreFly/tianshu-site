@@ -2407,6 +2407,7 @@ async function cloudSync(force){
   if(Array.isArray(pays))     lsSet('ts_pays', mergeById('pays', pays, getPays()));
   /* 剧本库：云端为准（管理端编辑后的版本） */
   if(Array.isArray(scripts) && scripts.length){ SCRIPTS = scripts; lsSet('ts_scripts', scripts); refreshFrontScripts(); }
+  else if(isAdm && SCRIPTS.length){ cloudPut('scripts', SCRIPTS); }   // 首次登录：把本地剧本库推到云端（小程序/其他设备才读得到）
   /* 标签库 / 敏感词：云端有值就用云端 */
   if(Array.isArray(taglib) && taglib.length) lsSet('ts_taglib', taglib);
   if(Array.isArray(badwords) && badwords.length) lsSet('ts_badwords', badwords);
