@@ -20,13 +20,39 @@
   <p class="sub">建完在下面填角色、简介、上架状态（角色填了才能在网页上让客人选）</p>
 </div>
 
+<div class="panel mt">
+  <h3>批量导入 / 导出</h3>
+  <div class="row" style="gap:10px;align-items:flex-end">
+    <a class="btn" href="{{ url_for('admin.scripts_export') }}">导出 CSV</a>
+    <form class="form-inline" method="post" action="{{ url_for('admin.scripts_import') }}" enctype="multipart/form-data">
+      <div class="field" style="margin:0"><input type="file" name="csv" accept=".csv"></div>
+      <button class="btn btn-primary" type="submit">导入 CSV</button>
+    </form>
+  </div>
+  <p class="sub mt">
+    导出后用 Excel 打开就是一张表（id 留空 = 新建；tags 用 / 分隔；roles 用逗号分隔），改完原样导回来即可。
+  </p>
+</div>
+
 {% for s in rows %}
 <div class="panel mt">
+  <div class="between">
+    <b>{{ s.emoji or '🎭' }} {{ s.title }}</b>
+    <span class="sub">#{{ s.id }} · 已开 {{ s.plays or 0 }} 场</span>
+  </div>
+
+  <div class="row mt" style="gap:12px;align-items:center">
+    {% if s.img %}<img class="thumb" src="{{ s.img }}" alt="">{% endif %}
+    <form class="form-inline" method="post" action="{{ url_for('admin.script_img', sid=s.id) }}"
+          enctype="multipart/form-data">
+      <div class="field" style="margin:0"><label>{{ '换封面' if s.img else '传封面图' }}</label>
+        <input type="file" name="cover" accept="image/png,image/jpeg,image/webp"></div>
+      <button class="btn btn-sm" type="submit">上传</button>
+    </form>
+    <span class="sub">建议 4:3、压到 300KB 以内（传完前台立刻见效）</span>
+  </div>
+
   <form method="post" action="{{ url_for('admin.script_save', sid=s.id) }}">
-    <div class="between">
-      <b>{{ s.emoji or '🎭' }} {{ s.title }}</b>
-      <span class="sub">#{{ s.id }} · 已开 {{ s.plays or 0 }} 场</span>
-    </div>
 
     <div class="row mt" style="gap:12px;align-items:flex-end">
       <div class="field" style="flex:1 1 160px"><label>名字</label><input name="title" value="{{ s.title }}"></div>
@@ -47,10 +73,10 @@
     <div class="field"><label>简介</label>
       <textarea name="desc" rows="2">{{ s.desc or '' }}</textarea></div>
 
-    <button class="btn btn-primary" type="submit">保存这个本</button>
-    <a class="btn" href="{{ url_for('public.script_detail', sid=s.id) }}" target="_blank">看前台效果</a>
-  </form>
-</div>
+      <button class="btn btn-primary" type="submit">保存这个本</button>
+      <a class="btn" href="{{ url_for('public.script_detail', sid=s.id) }}" target="_blank">看前台效果</a>
+    </form>
+  </div>
 {% endfor %}
 
 {% if not rows %}

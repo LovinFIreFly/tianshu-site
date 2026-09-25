@@ -5,11 +5,12 @@
 一条铁律：所有判断都在服务端。表单里传过来的数字只当"意向"，
 最后算出来多少以这里为准（以前有人改前端把 288 的本订成 1 块钱）。
 """
+import os
 import secrets
 import time
 
 from tianshu.db import db
-from config import WEEK
+from config import IMG_DIR, MAX_IMG_BYTES, WEEK
 
 # ---------------------------------------------------------------- 小工具
 def now_ms():
@@ -286,6 +287,48 @@ def dm_settlement(month=None):
     return {'month': month, 'rows': sorted(rows, key=lambda x: -x['total'])}
 
 
+def save_upload(file_storage, sub='misc'):
+    """存上传的图片（封面 / 头像）
+
+    返回 (网址, 错误)。网址长这样：/img/cover/cover-1a2b3c.png
+    图片落在 data/img/<sub>/ 下，跟数据一起备份、一起搬走，不会丢。
+    """
+    if not file_storage or not file_storage.filename:
+        return None, '没选文件'
+    ext = file_storage.filename.rsplit('.', 1)[-1].lower() if '.' in file_storage.filename else ''
+    if ext == 'jpeg':
+        ext = 'jpg'
+    if ext not in ('png', 'jpg', 'webp', 'gif'):
+        return None, '只收 png / jpg / webp / gif'
+    raw = file_storage.read()
+    if not raw:
+        return None, '文件是空的'
+    if len(raw) > MAX_IMG_BYTES:
+        return None, '图太大了（限 %dKB，先压缩一下再传）' % (MAX_IMG_BYTES // 1024)
+    folder = os.path.join(IMG_DIR, sub)
+    os.makedirs(folder, exist_ok=True)
+    name = '%s-%s.%s' % (sub, secrets.token_hex(6), ext)
+    with open(os.path.join(folder, name), 'wb') as f:
+        f.write(raw)
+    return '/img/%s/%s' % (sub, name), ''
+
+
+def adjust_balance(phone, delta, note='', by='系统'):
+    """动会员余额并记流水（充值、抵扣定金、退款都走它，账才不乱）"""
+    users = db.rows('users')
+    me = next((u for u in users if str(u.get('phone')) == str(phone)), None)
+    if not me:
+        return None, None
+    before = int(me.get('balance') or 0)
+    after = max(0, before + int(delta))
+    me['balance'] = after
+    logs = me.get('walletLogs') or []
+    logs.insert(0, {'id': now_ms(), 'delta': after - before, 'note': note, 'by': by, 'at': now_ms()})
+    me['walletLogs'] = logs[:100]
+    db.write('users', users)
+    return before, after
+
+
 def my_messages(user, limit=20):
     """我给店家留的言（含店家回复）"""
     phone = str(user.get('phone'))
@@ -374,6 +417,11 @@ def create_booking(user, form):
     if coupon:
         deposit = max(0, deposit - int(coupon.get('amount') or 0))
 
+    # ⑤ 会员余额抵扣：充过钱的客人可以直接用余额顶定金（顶完剩下的才需要付现）
+    used = 0
+    if str(form.get('use_balance') or '') in ('1', 'on', 'true') and int(user.get('balance') or 0) > 0:
+        used = min(int(user.get('balance') or 0), deposit)
+
     bid = now_ms() + secrets.randbelow(90)
     booking = {'id': bid, 'phone': user.get('phone'), 'username': user.get('username'),
                'sid': sc.get('id'), 'title': sc.get('title'), 'emoji': sc.get('emoji') or '🎭',
@@ -383,14 +431,18 @@ def create_booking(user, form):
                'carCap': hi, 'carMin': min(lo, players), 'carTags': [], 'reserved': 0,
                'sessionId': session_id, 'dmPhone': clean(form.get('dmPhone'), 20), 'role': role,
                'verifyCode': '%06d' % secrets.randbelow(1000000),      # 到店报这个码核销
-               'deposit': deposit, 'createdAt': now_ms()}
+               'deposit': deposit, 'balanceUsed': used, 'createdAt': now_ms()}
     order = {'id': bid + 1, 'bid': bid, 'phone': user.get('phone'), 'username': user.get('username'),
              'title': sc.get('title'), 'day': booking['day'], 'ts': ts, 'time': tm, 'players': players,
-             'amount': amount, 'deposit': deposit, 'status': 'unpaid', 'createdAt': now_ms(),
+             'amount': amount, 'deposit': deposit, 'balanceUsed': used, 'payable': deposit - used,
+             'status': 'unpaid', 'createdAt': now_ms(),
              'couponId': coupon.get('id') if coupon else 0, 'paidAt': 0, 'refundAt': 0}
 
     db.update('bookings', lambda rows: rows + [booking])
     db.update('pays', lambda rows: rows + [order])
+    if used:
+        adjust_balance(user.get('phone'), -used, '抵扣《%s》%s 的定金' % (sc.get('title'), booking['day']),
+                       user.get('username'))
     if coupon:
         db.update('coupons', lambda rows: [dict(c, used=True, usedAt=now_ms()) if str(c.get('id')) == cid else c
                                            for c in rows])
@@ -433,6 +485,9 @@ def order_action(user, order_id, action, is_staff=False):
         order.update(status='refunded' if free else 'closed', refundAt=now_ms(),
                      refundAmount=order.get('deposit') if free else 0)
         db.write('pays', pays)
+        if int(order.get('balanceUsed') or 0) > 0:          # 用余额抵的那部分，退回余额
+            adjust_balance(order.get('phone'), int(order['balanceUsed']),
+                           '《%s》取消，退回抵扣的余额' % order.get('title'), '系统')
         if booking:
             booking.update(status='cancelled', cancelAt=now_ms(), cancelBy='staff' if is_staff else 'user')
             db.write('bookings', bookings)

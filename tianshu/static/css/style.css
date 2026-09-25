@@ -46,7 +46,12 @@ h3{font-size:15px;margin-bottom:8px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;transition:.2s}
 .card:hover{border-color:rgba(139,92,246,.5);transform:translateY(-2px)}
 .panel{background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px}
-.juben .cover{font-size:44px;text-align:center;padding:14px 0 4px}
+.juben .cover{font-size:44px;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--card)}
+.juben .cover img{width:100%;height:100%;object-fit:cover;display:block}
+.avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px}
+.thumb{width:56px;height:56px;border-radius:10px;object-fit:cover;border:1px solid var(--line)}
+.detail-cover{width:100%;max-width:240px;border-radius:14px;border:1px solid var(--line);display:block}
+@media(max-width:640px){.juben .cover{font-size:34px}}
 .juben h3{font-size:16px;margin:0}
 .meta{color:var(--text2);font-size:12px;margin:4px 0 10px}
 .price{color:var(--accent);font-weight:700}

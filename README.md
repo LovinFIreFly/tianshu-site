@@ -59,6 +59,19 @@ python app.py --stats         # 看数据统计
 python app.py --backup        # 把 data 打包成 zip（改数据前先跑）
 ```
 
+**把老数据搬过来**（线上那份 json → 本地 `data/`）：
+
+```bash
+# 从 GitHub 仓库下载 ZIP 解压后：
+python tools/import_cloud.py --dir "C:\Users\你\Downloads\tianshu-data-main"
+# 或者设置 Token 直接拉（仓库是私有的）
+set GITHUB_TOKEN=ghp_xxx && python tools/import_cloud.py --remote
+```
+
+导入前会自动把现有 `data/` 备份成 `data_备份-时间戳/`，导坏了能回滚。账号密码照旧能用（老密码哈希也认）。
+
+**想直接上线给人用**：双击 `启动上线版.bat`（本地起服务 + Cloudflare 隧道，见下面「部署」）。
+
 ## 目录结构
 
 ```
@@ -77,8 +90,11 @@ python app.py --backup        # 把 data 打包成 zip（改数据前先跑）
 │   │   └── admin.py          后台：核销、预约、客户、剧本、订单、设置、日志
 │   ├── templates/            页面模板（Jinja2，一个页面一个文件）
 │   └── static/               样式表 + 少量脚本
-├── tools/smoke_test.py       自检脚本（28 项，改完代码跑一下）
-├── data/                     运行后生成：账号、预约、订单……（已 gitignore）
+├── tools/                    给自己的小工具
+│   ├── smoke_test.py         自检（48+ 项，改完代码跑一下）
+│   ├── import_cloud.py       老数据搬家（把线上那份 json 导进 data/）
+│   └── make_bats.py          重新生成启动用的 .bat（必须是 CRLF+GBK，别手写）
+├── data/                     运行后生成：账号、预约、订单、上传的图……（已 gitignore）
 └── legacy/                   老版本存档（原来的单文件 HTML 前端，留个念想）
 ```
 
@@ -121,12 +137,52 @@ python tools/smoke_test.py     # 另一个窗口跑自检
 ## 路线图
 
 - [x] 客户预约闭环（选本 → 下单 → 定金 → 核销码 → 退款）
-- [x] 拼车大厅 + 候补
-- [x] 后台：核销 / 客户信用分 / 拉黑 / 充值 / 发券 / 剧本管理 / 日结
-- [ ] DM 结算自动算分成（现在 `dmRate` 还只写在设置里）
-- [ ] 评价与追评、社区、店客留言（老版本有，迁移中）
-- [ ] 房间/场次排期可视化（防撞房）
+- [x] 拼车大厅 + 候补 + 一键上车
+- [x] 后台：核销 / 客户信用分 / 拉黑 / 充值 / 发券 / 日结 / 操作日志
+- [x] 排期管理（防撞房、周视图、锁场、取消通知）+ 一键约场
+- [x] 玩家评价（打分 + 门店回复 + 隐藏）
+- [x] 店客留言（可回复、会推送）
+- [x] 玩家社区（发帖 / 点赞 / 删帖）
+- [x] DM 结算（按比例分成 / 每场固定场费，两种口径可切）
+- [x] 图片上传（剧本封面、头像）
+- [x] 会员余额抵扣定金（退单退回余额）
+- [x] 剧本 CSV 批量导入导出（Excel 改完导回来）
+- [x] 老数据搬家脚本 + 备份工具 + 一键上线脚本
 - [ ] 手机端 PWA（加到桌面像 App）
+- [ ] 评价追评 / 图片评价
+- [ ] 多门店（分店数据隔离）
+
+## 部署（让它上线，别人也能访问）
+
+三种办法，从省事到正规：
+
+### 1. Cloudflare 隧道（推荐，免费，不用服务器）
+
+家里/店里那台电脑开着就能对外服务 —— 已经在用 Cloudflare 的话最顺：
+
+```powershell
+winget install --id Cloudflare.cloudflared -e     # 装隧道程序（一次就够）
+```
+
+然后**双击 `启动上线版.bat`**：它会起本地服务，再挂一条隧道，
+窗口里会出现一个 `https://xxxx.trycloudflare.com` 的网址，发给朋友就能用。
+（这个临时网址每次重启都变；想固定用自己域名，去 Cloudflare Zero Trust 建一条 Named Tunnel 绑 `lovinfirefly.cn`。）
+
+注意：电脑要一直开着、别睡眠；隧道一开公网就能访问，后台密码别外传。
+
+### 2. Railway / Render（有免费档，24 小时在线）
+
+把仓库连上去，启动命令填 `python app.py --no-browser`，
+监听端口读环境变量（现在写死 8000，改 `config.py` 可以从环境变量取）。
+免费档会休眠，被访问时唤醒来着就要等几秒。
+
+### 3. 云服务器（最稳，一年几十到几百块）
+
+买台小机器（1核1G 够了），装 Python，`git clone` 下来跑
+`nohup python app.py --no-browser &`，前面挂 Nginx + HTTPS。
+数据就在 `data/` 里，定时 `python app.py --backup` 再同步走就行。
+
+> 不管哪种：**数据都在 `data/`**，整个文件夹拷走就是完整备份。
 
 ## License
 

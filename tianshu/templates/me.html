@@ -21,6 +21,7 @@
         </div>
         <div class="sub mt">{{ b.players }} 人 · 总价 ¥{{ b.amount or 0 }} · 定金 ¥{{ b.deposit or 0 }}
           {% if o %} · 订单：{{ {'unpaid':'待付定金','paid':'已付定金','refunded':'已退款','closed':'已关闭'}.get(o.status, o.status) }}{% endif %}
+          {% if o and o.balanceUsed %} · 余额抵了 ¥{{ o.balanceUsed }}{% if o.payable %}（还需付 ¥{{ o.payable }}）{% endif %}{% endif %}
         </div>
 
         {% if b.status != 'cancelled' %}
@@ -77,7 +78,35 @@
         <b style="color:{{ 'var(--ok)' if (me.credit or 100) >= 90 else ('var(--warn)' if (me.credit or 100) >= 60 else 'var(--danger)') }}">
           {{ me.credit or 100 }}</b></div>
       <div class="between"><span>余额</span><b>¥{{ me.balance or 0 }}</b></div>
+      {% if me.walletLogs %}
+      <div class="sub mt">余额流水：
+        {% for l in me.walletLogs[:4] %}
+          <span class="pill">{{ '+' if l.delta > 0 }}{{ l.delta }} · {{ l.note or '调整' }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
       <p class="sub mt">信用分扣了会收到通知，按时到店开本可以慢慢恢复。</p>
+
+      <details class="mt">
+        <summary class="sub" style="cursor:pointer">改资料 / 传头像</summary>
+        <form class="mt" method="post" action="{{ url_for('user.profile_save') }}" enctype="multipart/form-data">
+          <div class="field"><label>昵称</label>
+            <input name="nick" maxlength="16" value="{{ me.profile.nick or '' }}"></div>
+          <div class="row" style="gap:8px">
+            <div class="field" style="flex:1"><label>性别（拼车时别人能看到）</label>
+              <select name="gender">
+                <option value="">不说</option>
+                <option value="男" {{ 'selected' if me.profile.gender == '男' }}>男</option>
+                <option value="女" {{ 'selected' if me.profile.gender == '女' }}>女</option>
+              </select></div>
+            <div class="field" style="max-width:96px"><label>年龄</label>
+              <input name="age" type="number" min="0" max="99" value="{{ me.profile.age or '' }}"></div>
+          </div>
+          <div class="field"><label>头像（png/jpg/webp，≤700KB）</label>
+            <input type="file" name="avatar" accept="image/png,image/jpeg,image/webp"></div>
+          <button class="btn btn-sm btn-primary" type="submit">保存资料</button>
+        </form>
+      </details>
     </div>
 
     <div class="panel">

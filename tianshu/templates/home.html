@@ -23,7 +23,7 @@
 <div class="grid">
   {% for s in scripts %}
   <a class="card juben" href="{{ url_for('public.script_detail', sid=s.id) }}">
-    <div class="cover">{{ s.emoji or '🎭' }}</div>
+    <div class="cover">{% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}">{% else %}{{ s.emoji or '🎭' }}{% endif %}</div>
     <h3>{{ s.title }}</h3>
     <div class="meta">{{ s.players or '—' }} · {{ s.dur or '时长待定' }} · 难度 {{ s.diff or 3 }}/5</div>
     <div class="foot-row">

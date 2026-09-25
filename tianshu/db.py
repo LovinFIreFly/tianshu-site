@@ -21,6 +21,7 @@
 import json
 import os
 import threading
+import time
 
 from config import DATA_DIR
 
@@ -46,13 +47,31 @@ class Store:
                 return default
 
     def write(self, key, obj):
+        """写盘。Windows 上偶发"拒绝访问"——杀毒软件、OneDrive 同步、别的进程正在读，
+          都可能在这一瞬间锁住文件。所以重试几次，实在不行就直接写目标文件（少一点原子性，别让功能挂掉）。
+          （这个坑是跑自检时踩出来的：接口直接 500）"""
         os.makedirs(DATA_DIR, exist_ok=True)
         p, tmp = self.path(key), self.path(key) + '.tmp'
+        data = json.dumps(obj, ensure_ascii=False, indent=1)
         with self._lock:
-            with open(tmp, 'w', encoding='utf-8') as f:
-                json.dump(obj, f, ensure_ascii=False, indent=1)
-            os.replace(tmp, p)
-        return obj
+            for attempt in range(4):
+                try:
+                    with open(tmp, 'w', encoding='utf-8') as f:
+                        f.write(data)
+                    os.replace(tmp, p)
+                    return obj
+                except PermissionError:
+                    time.sleep(0.08 * (attempt + 1))
+                except OSError as e:
+                    if attempt == 3:
+                        print('[数据] 写 %s.json 出错：%s' % (key, e))
+                        break
+            try:
+                with open(p, 'w', encoding='utf-8') as f:
+                    f.write(data)
+            except Exception as e:
+                print('[数据] %s.json 兜底写入也失败了：%s' % (key, e))
+            return obj
 
     def rows(self, key):
         """数组型数据；不存在就给空列表，省得每处都判 None"""

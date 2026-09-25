@@ -4,6 +4,8 @@
 
 （这几个页面是客人第一眼看到的，改样式主要改 templates/ 里对应的 html）
 """
+import os
+
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from tianshu import business
@@ -117,6 +119,16 @@ def car():
     return render_template('car.html', cars=business.car_pool(u.get('phone') if u else ''),
                            mine=business.my_cars(u.get('phone')) if u else set(),
                            tags=business.get_settings()['carTags'])
+
+
+@bp.get('/img/<sub>/<name>')
+def upload_img(sub, name):
+    """读上传的图片（封面 / 头像）。只让读 data/img/ 里这两类，别的一律不给"""
+    from flask import abort, send_from_directory
+    from config import IMG_DIR
+    if sub not in ('cover', 'avatar', 'role') or '/' in name or '..' in name:
+        abort(404)
+    return send_from_directory(os.path.join(IMG_DIR, sub), name)
 
 
 @bp.get('/comm')

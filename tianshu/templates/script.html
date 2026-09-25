@@ -5,7 +5,8 @@
   <div>
     <div class="panel">
       <div class="row" style="align-items:flex-start;gap:16px">
-        <div style="font-size:56px;line-height:1">{{ sc.emoji or '🎭' }}</div>
+        {% if sc.img %}<img class="detail-cover" src="{{ sc.img }}" alt="{{ sc.title }}" style="max-width:180px">
+        {% else %}<div style="font-size:56px;line-height:1">{{ sc.emoji or '🎭' }}</div>{% endif %}
         <div style="flex:1;min-width:200px">
           <h1>{{ sc.title }}
             {% if rating %}<span class="badge ok">★ {{ rating }}</span>{% endif %}
@@ -103,6 +104,13 @@
             <option value="0">不用</option>
             {% for c in coupons %}<option value="{{ c.id }}">减 ¥{{ c.amount }}{% if c.minAmount %}（满 {{ c.minAmount }} 可用）{% endif %}</option>{% endfor %}
           </select></div>
+        {% endif %}
+
+        {% if me and (me.balance or 0) > 0 %}
+        <div class="field" style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" name="use_balance" value="1" checked style="width:auto">
+          <span class="sub">用余额 ¥{{ me.balance }} 抵定金（能抵多少抵多少，剩下的到店付）</span>
+        </div>
         {% endif %}
 
         {% if me %}

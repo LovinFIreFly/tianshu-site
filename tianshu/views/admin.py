@@ -206,6 +206,106 @@ def script_new():
     return redirect(url_for('admin.scripts'))
 
 
+@bp.get('/scripts/export')
+@staff_required
+def scripts_export():
+    """导出剧本库成 CSV —— Excel 能直接打开，改完再导回来"""
+    import csv
+    import io
+
+    from flask import Response
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(['id', 'title', 'emoji', 'tags', 'players', 'dur', 'diff', 'price', 'type',
+                'onSale', 'allowRolePick', 'roles', 'desc'])
+    for s in db.rows('scripts'):
+        w.writerow([s.get('id'), s.get('title'), s.get('emoji'), '/'.join(s.get('tags') or []),
+                    s.get('players'), s.get('dur'), s.get('diff'), s.get('price'), s.get('type'),
+                    1 if s.get('onSale') is not False else 0,
+                    1 if s.get('allowRolePick') else 0,
+                    ','.join(r.get('name') for r in (s.get('roles') or [])), s.get('desc')])
+    data = '\ufeff' + buf.getvalue()          # 前面这个 BOM 是给 Excel 看的，不然中文乱码
+    return Response(data, mimetype='text/csv; charset=utf-8',
+                    headers={'Content-Disposition': 'attachment; filename=scripts.csv'})
+
+
+@bp.post('/scripts/import')
+@staff_required
+def scripts_import():
+    """导入 CSV：填了 id 就更新那条，id 空着就当新本加进来
+
+    一次录 20 个本不用一个个建；tags 用 / 或 , 分隔，roles 用逗号分隔。
+    """
+    import csv
+    import io
+
+    f = request.files.get('csv')
+    if not f or not f.filename:
+        flash('先选一个 CSV 文件（可以先用「导出」下一个当模板）', 'warn')
+        return redirect(url_for('admin.scripts'))
+    text = f.read().decode('utf-8-sig', 'replace')
+    rows = db.rows('scripts')
+    by_id = {str(s.get('id')): s for s in rows}
+    next_id = max([int(s.get('id') or 0) for s in rows] or [0]) + 1
+    added = updated = skipped = 0
+    for raw in csv.DictReader(io.StringIO(text)):
+        title = (raw.get('title') or '').strip()
+        if not title:
+            skipped += 1
+            continue
+        sid = (raw.get('id') or '').strip()
+        rec = by_id.get(sid) if sid else None
+        tags_raw = (raw.get('tags') or '').replace('，', '/').replace(',', '/')
+        item = {
+            'title': title, 'emoji': (raw.get('emoji') or '🎭').strip(),
+            'tags': [t.strip() for t in tags_raw.split('/') if t.strip()],
+            'players': (raw.get('players') or '6人').strip(),
+            'dur': (raw.get('dur') or '约4小时').strip(),
+            'diff': int(raw['diff']) if str(raw.get('diff') or '').strip().isdigit() else 3,
+            'price': int(float(raw.get('price') or 128)),
+            'type': (raw.get('type') or '盒装').strip(),
+            'onSale': str(raw.get('onSale') or '1').strip() not in ('0', '否', 'false', 'False'),
+            'allowRolePick': str(raw.get('allowRolePick') or '0').strip() in ('1', '是', 'true', 'True'),
+            'roles': [{'name': n.strip(), 'img': ''} for n in (raw.get('roles') or '').replace('，', ',').split(',')
+                      if n.strip()],
+            'desc': (raw.get('desc') or '').strip(),
+        }
+        if rec:
+            rec.update(item)
+            updated += 1
+        else:
+            item['id'] = next_id
+            next_id += 1
+            rows.append(item)
+            added += 1
+    db.write('scripts', rows)
+    business.audit(current_user().get('username'), role(),
+                   '导入剧本 CSV：新增 %d、更新 %d' % (added, updated))
+    flash('导入完成：新增 %d 个、更新 %d 个%s'
+          % (added, updated, ('、跳过 %d 行（没填名字）' % skipped) if skipped else ''), 'ok')
+    return redirect(url_for('admin.scripts'))
+
+
+@bp.post('/scripts/<int:sid>/img')
+@staff_required
+def script_img(sid):
+    """传剧本封面（建议 4:3，压到 300KB 以内，打开快）"""
+    rows = db.rows('scripts')
+    hit = next((s for s in rows if s.get('id') == sid), None)
+    if not hit:
+        flash('没这个剧本', 'warn')
+        return redirect(url_for('admin.scripts'))
+    url, err = business.save_upload(request.files.get('cover'), 'cover')
+    if not url:
+        flash('封面没传上：%s' % err, 'warn')
+    else:
+        hit['img'] = url
+        db.write('scripts', rows)
+        business.audit(current_user().get('username'), role(), '换了《%s》的封面' % hit.get('title'))
+        flash('封面换好了（前台立刻能看到）', 'ok')
+    return redirect(url_for('admin.scripts'))
+
+
 @bp.post('/scripts/<int:sid>/save')
 @staff_required
 def script_save(sid):

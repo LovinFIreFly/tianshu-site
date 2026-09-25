@@ -23,7 +23,8 @@
   </nav>
   <div class="row" style="gap:8px">
     {% if me %}
-      <span class="who">{{ me.profile.nick or me.username }}</span>
+      {% set av = me.profile.avatar or '' %}
+      <span class="who">{% if av.startswith('/img/') %}<img class="avatar" src="{{ av }}" alt="">{% endif %}{{ me.profile.nick or me.username }}</span>
       <a class="btn btn-sm" href="{{ url_for('user.logout') }}">退出</a>
     {% else %}
       <a class="btn btn-sm" href="{{ url_for('user.register') }}">注册</a>

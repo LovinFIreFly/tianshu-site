@@ -33,7 +33,8 @@ fails = []
 
 
 def check(name, ok, extra=''):
-    print(('  ✓ ' if ok else '  ✗ ') + name + (('  ' + str(extra)) if extra else ''))
+    # 用 [OK]/[!!] 而不是对勾符号：中文控制台（GBK）打不出 ✓，会显示成问号，看着闹心
+    print(('  [OK] ' if ok else '  [!!] ') + name + (('  ' + str(extra)) if extra else ''))
     if not ok:
         fails.append(name)
 
@@ -65,6 +66,23 @@ class Client:
         req = urllib.request.Request(BASE + path, data=body, method='POST')
         try:
             with self.op.open(req, timeout=15) as r:
+                return r.status, r.read().decode('utf-8', 'replace')
+        except urllib.error.HTTPError as e:
+            return e.code, e.read().decode('utf-8', 'replace')
+
+    def post_file(self, path, field, filename, content, extra=None):
+        """带文件的表单（传封面 / 头像 / CSV 用）—— 手搓一个 multipart，不引第三方库"""
+        bd = '----smoke%s' % time.strftime('%H%M%S')
+        parts = []
+        for k, v in (extra or {}).items():
+            parts.append('--%s\r\nContent-Disposition: form-data; name="%s"\r\n\r\n%s\r\n' % (bd, k, v))
+        parts.append('--%s\r\nContent-Disposition: form-data; name="%s"; filename="%s"\r\n'
+                     'Content-Type: application/octet-stream\r\n\r\n' % (bd, field, filename))
+        body = ''.join(parts).encode('utf-8') + content + ('\r\n--%s--\r\n' % bd).encode('utf-8')
+        req = urllib.request.Request(BASE + path, data=body, method='POST',
+                                     headers={'Content-Type': 'multipart/form-data; boundary=%s' % bd})
+        try:
+            with self.op.open(req, timeout=20) as r:
                 return r.status, r.read().decode('utf-8', 'replace')
         except urllib.error.HTTPError as e:
             return e.code, e.read().decode('utf-8', 'replace')
@@ -253,10 +271,75 @@ s, html = admin.get('/admin/dm?month=%s' % month)
 check('切成「每场固定场费」后结算跟着变', s == 200 and '200' in html)
 admin.post('/admin/settings', {'dmPayMode': 'rate'})       # 改回按比例，别把设置留乱
 
+print('⑪ 图片 / 会员余额 / CSV 导入导出')
+# 传头像（一个最小的 PNG）
+png = bytes.fromhex('89504e470d0a1a0a0000000d494844520000000100000001080600000'
+                    '01f15c4890000000a49444154789c6360000002000100ffff03000006000557bfabd40000000049454e44ae426082')
+s, html = cus4.post_file('/profile', 'avatar', 'a.png', png, {'nick': '自检头像君'})
+u_me = next((x for x in jread('users') if x.get('phone') == '13800000000'), {})
+av = (u_me.get('profile') or {}).get('avatar') or ''
+check('能上传头像', av.startswith('/img/avatar/'), av)
+s, html = guest.get(av if av.startswith('/img/') else '/')
+check('头像能读出来', s == 200)
+
+# 传剧本封面
+s, html = admin.post_file('/admin/scripts/%s/img' % sc['id'], 'cover', 'c.png', png)
+sc2 = next((x for x in jread('scripts') if x.get('id') == sc['id']), {})
+check('能给剧本传封面', str(sc2.get('img') or '').startswith('/img/cover/'), sc2.get('img'))
+s, html = guest.get('/scripts/%s' % sc['id'])
+check('封面出现在剧本页', '/img/cover/' in html)
+
+# 会员余额：先充值，再用余额抵定金
+admin.post('/admin/users/13800000000/recharge', {'amount': '300', 'note': '自检充值'})
+u_me = next((x for x in jread('users') if x.get('phone') == '13800000000'), {})
+check('充值到账', (u_me.get('balance') or 0) >= 300, '余额 ¥%s' % u_me.get('balance'))
+before_bal = int(u_me.get('balance') or 0)
+cus4.post('/book', {'sid': sc['id'], 'ts': ts_in(6), 'time': '13:00', 'players': 2,
+                    'mode': '包车', 'use_balance': '1'})
+bk4 = next((b for b in jread('bookings') if b.get('ts') == ts_in(6) and b.get('status') == 'booked'), None)
+u_me = next((x for x in jread('users') if x.get('phone') == '13800000000'), {})
+after_bal = int(u_me.get('balance') or 0)
+o4 = next((x for x in jread('pays') if x.get('bid') == (bk4 or {}).get('id')), {})
+check('下单自动用余额抵了定金', (bk4 or {}).get('balanceUsed', 0) > 0 and after_bal < before_bal,
+      '抵了 ¥%s，余额 %s→%s' % ((bk4 or {}).get('balanceUsed'), before_bal, after_bal))
+check('订单记了「余额抵了多少、还需付多少」', 'balanceUsed' in o4 and 'payable' in o4,
+      'payable=¥%s' % o4.get('payable'))
+
+# 退掉这单 → 抵掉的余额退回来
+cus4.post('/order/%s/pay' % o4.get('id'), {})
+cus4.post('/order/%s/refund' % o4.get('id'), {})
+u_me = next((x for x in jread('users') if x.get('phone') == '13800000000'), {})
+check('退单把余额退回来了', int(u_me.get('balance') or 0) == before_bal,
+      '余额 %s（应回到 %s）' % (u_me.get('balance'), before_bal))
+
+# CSV 导出 / 导入
+s, csv_text = admin.get('/admin/scripts/export')
+check('导出剧本 CSV', s == 200 and 'title' in csv_text and sc['title'] in csv_text)
+# 注意 roles 里有逗号，CSV 里必须用引号包起来，不然会被拆成两列（我第一次就写错了）
+head = 'id,title,emoji,tags,players,dur,diff,price,type,onSale,allowRolePick,roles,desc\n'
+row_new = ',CSV导入本,📦,机制/硬核,6人,约5小时,4,168,盒装,1,1,"甲,乙",自检导入\n'
+admin.post_file('/admin/scripts/import', 'csv', 'scripts.csv', ('\ufeff' + head + row_new).encode('utf-8'))
+imp = next((x for x in jread('scripts') if x.get('title') == 'CSV导入本'), None)
+check('CSV 能导入新剧本', bool(imp),
+      '角色 %s 个 / 单价 %s' % (len((imp or {}).get('roles') or []), (imp or {}).get('price')))
+check('导入的标签和角色都解析对了',
+      (imp or {}).get('tags') == ['机制', '硬核']
+      and [r.get('name') for r in (imp or {}).get('roles') or []] == ['甲', '乙'])
+# 带上 id 再导一次 → 应该是「更新那一本」，不是新建
+row_upd = '%s,CSV导入本,📦,机制/硬核,6人,约5小时,4,188,盒装,1,1,"甲,乙",改过价\n' % (imp or {}).get('id')
+admin.post_file('/admin/scripts/import', 'csv', 'scripts.csv', ('\ufeff' + head + row_upd).encode('utf-8'))
+same = [x for x in jread('scripts') if x.get('title') == 'CSV导入本']
+check('带 id 重导是更新而不是新建', len(same) == 1 and int(same[0].get('price')) == 188,
+      '库里 %d 条，价格 %s' % (len(same), same[0].get('price') if same else '?'))
+
+total = sum(1 for line in open(os.path.join(ROOT, 'tools', 'smoke_test.py'), encoding='utf-8')
+            if "check('" in line)
 print('')
 print('=' * 46)
 if fails:
-    print('有 %d 项没过：%s' % (len(fails), '、'.join(fails)))
+    print('跑了 %d 项，有 %d 项没过：' % (total, len(fails)))
+    for name in fails:
+        print('  [!!] %s' % name)
 else:
-    print('全部检查通过 ✓')
+    print('全部 %d 项检查通过 [OK]' % total)
 sys.exit(1 if fails else 0)

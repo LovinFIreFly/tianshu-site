@@ -141,6 +141,38 @@ def me():
                            msgs=business.my_messages(u))
 
 
+@bp.post('/profile')
+@login_required
+def profile_save():
+    """改资料：昵称 / 性别 / 年龄 + 传头像。拼车时别人看到的就是这些"""
+    u = current_user()
+    f = request.form
+    users = db.rows('users')
+    hit = next((x for x in users if str(x.get('phone')) == str(u.get('phone'))), None)
+    if not hit:
+        flash('账号不见了？', 'warn')
+        return redirect(url_for('user.me'))
+    prof = hit.get('profile') or {}
+    if f.get('nick') is not None:
+        prof['nick'] = business.clean(f.get('nick'), 16)
+    if f.get('gender') in ('男', '女', ''):
+        prof['gender'] = f.get('gender')
+    if f.get('age'):
+        try:
+            prof['age'] = max(0, min(99, int(f.get('age'))))
+        except ValueError:
+            pass
+    url, err = business.save_upload(request.files.get('avatar'), 'avatar')
+    if url:
+        prof['avatar'] = url
+    elif err and request.files.get('avatar') and request.files['avatar'].filename:
+        flash('头像没传上：%s' % err, 'warn')
+    hit['profile'] = prof
+    db.write('users', users)
+    flash('资料存好了', 'ok')
+    return redirect(url_for('user.me'))
+
+
 @bp.post('/msg')
 @login_required
 def msg_create():
