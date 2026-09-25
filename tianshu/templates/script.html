@@ -55,7 +55,11 @@
         <b>{{ r.username or '玩家' }}</b>
         <span class="sub">{% for i in range(r.rating or 5) %}★{% endfor %} · {{ day_label(r.createdAt) }}</span>
       </div>
-      <p style="color:var(--text2)">{{ r.text }}</p>
+      <p style="color:var(--text2)">{{ r.text or '（只打了分）' }}</p>
+      {% if r.reply %}
+      <p class="sub" style="border-left:2px solid var(--primary);padding-left:8px;margin-top:4px">
+        门店回复：{{ r.reply }}</p>
+      {% endif %}
     </div>
     {% endfor %}
     {% endif %}
@@ -114,12 +118,31 @@
     <div class="panel">
       <h3>店里已排的场次</h3>
       {% for s in sessions %}
-        <div class="between" style="padding:6px 0">
-          <span>{{ day_label(s.ts) }} {{ s.time }}</span>
-          <span class="pill">{{ s.roomId or '待定' }}</span>
+        {% set left = (s.cap or 99) - join.get(s.id|string, 0) %}
+        <div style="border-top:1px solid var(--line);padding:8px 0">
+          <div class="between">
+            <b>{{ day_label(s.ts) }} {{ s.time }}</b>
+            <span class="pill">{{ s.roomId or '房间待定' }}{% if s.dmName %} · DM {{ s.dmName }}{% endif %}</span>
+          </div>
+          <div class="between mt" style="gap:8px">
+            <span class="sub">已报 {{ join.get(s.id|string, 0) }}/{{ s.cap or '—' }}
+              {% if left > 0 %}<span class="badge ok">剩 {{ left }} 位</span>
+              {% else %}<span class="badge bad">满了</span>{% endif %}</span>
+            {% if me and left > 0 %}
+            <form method="post" action="{{ url_for('user.book') }}">
+              <input type="hidden" name="sid" value="{{ sc.id }}">
+              <input type="hidden" name="ts" value="{{ s.ts }}">
+              <input type="hidden" name="time" value="{{ s.time }}">
+              <input type="hidden" name="players" value="{{ lo }}">
+              <input type="hidden" name="mode" value="拼车">
+              <button class="btn btn-sm btn-primary" type="submit">约这一场</button>
+            </form>
+            {% elif not me %}
+            <a class="btn btn-sm" href="{{ url_for('user.login', next=request.path) }}">登录后约</a>
+            {% endif %}
+          </div>
         </div>
       {% endfor %}
-      <p class="sub">想约上面这些时段，直接在左边选同样的日期和时间就行</p>
     </div>
     {% endif %}
   </div>

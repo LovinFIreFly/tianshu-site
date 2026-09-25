@@ -204,14 +204,89 @@ def stats():
             'hot': sorted(by_script.items(), key=lambda kv: -kv[1]['plays'])[:6]}
 
 
-def today_sessions():
-    """今天的场次（首页／后台概览用）"""
-    t0 = int(time.mktime(time.strptime(time.strftime('%Y-%m-%d'), '%Y-%m-%d'))) * 1000
-    rows = [s for s in db.rows('sessions') if s.get('ts') == t0 and s.get('status') != 'cancelled']
+def midnight(ts=None):
+    """某一天的 0 点（毫秒）—— 算"今天"都用它，别在各处重复写一遍"""
+    base = time.localtime((ts or now_ms()) / 1000)
+    return int(time.mktime(time.strptime(time.strftime('%Y-%m-%d', base), '%Y-%m-%d'))) * 1000
+
+
+def sessions_of(ts):
+    """某天的场次，带上已报人数和余位"""
+    rows = [s for s in db.rows('sessions') if s.get('ts') == ts and s.get('status') != 'cancelled']
     for s in rows:
         s['joined'] = sum((b.get('players') or 1) for b in db.rows('bookings')
                           if b.get('sessionId') == s.get('id') and b.get('status') != 'cancelled')
+        s['left'] = max(0, (s.get('cap') or 99) - s['joined'])
     return sorted(rows, key=lambda x: str(x.get('time')))
+
+
+def today_sessions():
+    """今天的场次（首页和后台概览都用它）"""
+    return sessions_of(midnight())
+
+
+def room_busy(room_id, ts, tm, skip_id=None):
+    """这个房间这个时段是不是排了别的场次（防撞房）。忙就返回那一场，闲就是 None"""
+    if not room_id:
+        return None
+    for s in db.rows('sessions'):
+        if str(s.get('id')) == str(skip_id):
+            continue
+        if (str(s.get('roomId')) == str(room_id) and s.get('ts') == ts
+                and str(s.get('time')) == str(tm) and s.get('status') != 'cancelled'):
+            return s
+    return None
+
+
+def dm_settlement(month=None):
+    """DM 结算：这个月每个 DM 该拿多少
+
+    算法（跟店里聊过的口径）：
+      分成 = 他带的那些场次的营业额 × dmRate
+      另外，客人"指定"了他，那部分加价（dmFee × 人数）也归他
+    场次没排 DM 又不带指定加价的，就不参与结算（那是店里自己开的场）
+    """
+    st = get_settings()
+    month = month or time.strftime('%Y-%m')
+    ses_map = {s.get('id'): s for s in db.rows('sessions')}
+    settles = db.rows('settles')
+    acc = {}
+    for b in db.rows('bookings'):
+        if b.get('status') == 'cancelled':
+            continue
+        if time.strftime('%Y-%m', time.localtime((b.get('ts') or 0) / 1000)) != month:
+            continue
+        ses = ses_map.get(b.get('sessionId'))
+        dm_phone = str((ses or {}).get('dm') or b.get('dmPhone') or '')
+        if not dm_phone:
+            continue
+        a = acc.setdefault(dm_phone, {'dmPhone': dm_phone, 'sessions': set(), 'players': 0,
+                                      'income': 0, 'share': 0.0, 'fee': 0})
+        a['sessions'].add(b.get('sessionId') or ('b%s' % b.get('id')))
+        a['players'] += int(b.get('players') or 0)
+        a['income'] += int(b.get('amount') or 0)
+        if b.get('dmPhone'):                     # 客人点名要的 DM，加价归他
+            a['fee'] += int(st['dmFee']) * int(b.get('players') or 0)
+    users = {str(u.get('phone')): u for u in db.rows('users')}
+    rows = []
+    for phone, a in acc.items():
+        a['share'] = round(a['income'] * float(st['dmRate']))
+        a['total'] = a['share'] + a['fee']
+        a['count'] = len(a.pop('sessions'))
+        a['dmName'] = users.get(phone, {}).get('username') or phone
+        a['settled'] = any(str(x.get('dmPhone')) == phone and x.get('month') == month and x.get('settled')
+                           for x in settles)
+        rows.append(a)
+    return {'month': month, 'rows': sorted(rows, key=lambda x: -x['total'])}
+
+
+def reviews_of(sid=None, only_visible=True):
+    rows = db.rows('reviews')
+    if sid is not None:
+        rows = [r for r in rows if str(r.get('sid')) == str(sid)]
+    if only_visible:
+        rows = [r for r in rows if not r.get('hidden')]
+    return sorted(rows, key=lambda x: -(x.get('createdAt') or 0))
 
 
 # ---------------------------------------------------------------- 下单 ★

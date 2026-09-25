@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% block title %}排期 · {{ settings.shopName }}{% endblock %}
+{% block body %}
+<div class="between">
+  <h1>排期</h1>
+  {% include 'admin/_nav.html' %}
+</div>
+
+<div class="panel between">
+  <a class="btn btn-sm" href="{{ url_for('admin.sessions', ts=prev) }}">← 前一天</a>
+  <b style="font-size:17px">{{ day }}</b>
+  <a class="btn btn-sm" href="{{ url_for('admin.sessions', ts=nxt) }}">后一天 →</a>
+</div>
+
+<div class="panel">
+  <h3>排一场</h3>
+  <form class="form-inline" method="post" action="{{ url_for('admin.session_new') }}">
+    <input type="hidden" name="ts" value="{{ ts }}">
+    <div class="field" style="flex:2 1 150px"><label>剧本</label>
+      <select name="sid">{% for s in scripts %}<option value="{{ s.id }}">{{ s.title }}</option>{% endfor %}</select></div>
+    <div class="field" style="flex:0 0 110px"><label>时间</label>
+      <select name="time">{% for t in ['13:00','15:30','19:00','20:30','22:00'] %}<option>{{ t }}</option>{% endfor %}</select></div>
+    <div class="field" style="flex:0 0 130px"><label>房间</label>
+      <select name="roomId">{% for r in rooms %}<option value="{{ r.name }}">{{ r.name }}</option>{% endfor %}</select></div>
+    <div class="field" style="flex:0 0 120px"><label>DM</label>
+      <select name="dm"><option value="">待定</option>
+        {% for d in dms %}<option value="{{ d.phone }}">{{ d.username }}</option>{% endfor %}</select></div>
+    <div class="field" style="flex:0 0 90px"><label>人数上限</label><input name="cap" type="number" value="6"></div>
+    <button class="btn btn-accent" type="submit">排上</button>
+  </form>
+  {% if not scripts %}<p class="sub mt">还没有剧本 —— 先去「剧本」页加一个，再回来排期</p>{% endif %}
+  {% if not rooms %}<p class="sub mt">还没有房间 —— 在下面的「房间」里加一个</p>{% endif %}
+</div>
+
+<div class="scroll panel">
+  <table>
+    <tr><th>时间</th><th>剧本</th><th>房间</th><th>DM</th><th>报名</th><th>状态</th><th>操作</th></tr>
+    {% for s in rows %}
+    <tr>
+      <td><b>{{ s.time }}</b></td>
+      <td>{{ s.title }}</td>
+      <td>{{ s.roomId or '—' }}</td>
+      <td>{{ s.dmName or '待定' }}</td>
+      <td>{{ s.joined }}/{{ s.cap or '—' }}
+        {% if s.left %}<span class="badge ok">剩 {{ s.left }}</span>{% else %}<span class="badge bad">满</span>{% endif %}</td>
+      <td>
+        {% if s.status == 'locked' %}<span class="badge warn">锁场</span>
+        {% elif s.status == 'done' %}<span class="badge">已完成</span>
+        {% else %}<span class="badge ok">开放</span>{% endif %}
+        {% if s.statusReason %}<div class="sub">{{ s.statusReason }}</div>{% endif %}
+      </td>
+      <td>
+        {% for st, label in [('locked','锁场'), ('open','开放'), ('done','完成'), ('cancelled','取消')] %}
+          {% if s.status != st %}
+          <form method="post" action="{{ url_for('admin.session_status', sid=s.id) }}" style="display:inline">
+            <input type="hidden" name="status" value="{{ st }}">
+            {% if st == 'cancelled' %}<input type="hidden" name="reason" value="门店原因">{% endif %}
+            <button class="btn btn-sm {{ 'btn-danger' if st == 'cancelled' }}"
+                    type="submit" {% if st == 'cancelled' %}onclick="return confirm('取消这场？已报名的客人会收到通知')"{% endif %}>
+              {{ label }}</button>
+          </form>
+          {% endif %}
+        {% endfor %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="empty">这天还没排场次</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="panel">
+  <h3>房间</h3>
+  <form class="form-inline" method="post" action="{{ url_for('admin.room_new') }}">
+    <div class="field" style="flex:1 1 120px"><label>房间名</label><input name="name" placeholder="C房"></div>
+    <div class="field" style="flex:0 0 90px"><label>能坐几人</label><input name="cap" type="number" value="6"></div>
+    <div class="field" style="flex:2 1 160px"><label>配置</label><input name="dev" placeholder="投影 / 音响 / 换装间"></div>
+    <button class="btn" type="submit">加房间</button>
+  </form>
+  <div class="row mt" style="gap:8px">
+    {% for r in rooms %}
+      <span class="pill">{{ r.name }} · {{ r.cap }}人{% if r.dev %} · {{ r.dev }}{% endif %}</span>
+      <form method="post" action="{{ url_for('admin.room_del', rid=r.id) }}" style="display:inline">
+        <button class="btn btn-sm btn-danger" type="submit" onclick="return confirm('删掉这个房间？')">×</button>
+      </form>
+    {% else %}<span class="sub">还没有房间</span>{% endfor %}
+  </div>
+</div>
+{% endblock %}

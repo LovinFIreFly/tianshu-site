@@ -1,0 +1,12 @@
+{# 后台各页共用的导航条，加新页面记得来这里加一个 #}
+<div class="row" style="gap:6px">
+  <a class="btn btn-sm" href="{{ url_for('admin.dashboard') }}">概览</a>
+  <a class="btn btn-sm" href="{{ url_for('admin.sessions') }}">排期</a>
+  <a class="btn btn-sm" href="{{ url_for('admin.bookings') }}">预约</a>
+  <a class="btn btn-sm" href="{{ url_for('admin.users') }}">客户</a>
+  <a class="btn btn-sm" href="{{ url_for('admin.reviews') }}">评价</a>
+  <a class="btn btn-sm" href="{{ url_for('admin.scripts') }}">剧本</a>
+  <a class="btn btn-sm" href="{{ url_for('admin.orders') }}">订单</a>
+  <a class="btn btn-sm" href="{{ url_for('admin.dm_page') }}">DM 结算</a>
+  <a class="btn btn-sm" href="{{ url_for('admin.logs') }}">日志</a>
+</div>

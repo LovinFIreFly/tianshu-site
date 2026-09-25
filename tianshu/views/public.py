@@ -80,8 +80,13 @@ def script_detail(sid):
         ts = int(_t.mktime(_t.strptime(_t.strftime('%Y-%m-%d', d), '%Y-%m-%d'))) * 1000
         days.append({'ts': ts, 'label': '今天' if i == 0 else ('明天' if i == 1 else business.day_label(ts))})
 
-    # 这个本已排的场次（选了就带出时间）
+    # 这个本已排的场次（客人可以直接约某一场）
     ses = [s for s in db.rows('sessions') if str(s.get('sid')) == str(sid) and s.get('status') == 'open']
+    joined = {}
+    for b in db.rows('bookings'):
+        if b.get('sessionId') and b.get('status') != 'cancelled':
+            k = str(b['sessionId'])
+            joined[k] = joined.get(k, 0) + (b.get('players') or 1)
 
     # 我的券
     coupons = []
@@ -101,7 +106,7 @@ def script_detail(sid):
 
     return render_template('script.html', sc=sc, days=days, sessions=ses, coupons=coupons,
                            lo=lo, hi=hi, dm_fee=st['dmFee'], reviews=reviews, dms=dms,
-                           taken=taken_roles, favs=my_fav_ids(u),
+                           taken=taken_roles, favs=my_fav_ids(u), join=joined,
                            rating=business.stats()['byScript'].get(str(sid), {}).get('rating'))
 
 

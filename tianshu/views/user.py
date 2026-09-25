@@ -136,7 +136,36 @@ def me():
             fav_ids = {str(x) for x in r.get('sids') or []}
     return render_template('me.html', u=u, bookings=bookings, orders=orders,
                            coupons=coupons, notices=business.my_notices(u, 20),
-                           order_of=order_of, scripts=db.rows('scripts'), fav_ids=fav_ids)
+                           order_of=order_of, scripts=db.rows('scripts'), fav_ids=fav_ids,
+                           reviewed={r.get('bid') for r in db.rows('reviews')})
+
+
+@bp.post('/review/<int:bid>')
+@login_required
+def review(bid):
+    """写评价：得到店开本之后（status 变成 arrived/done），一条预约只能评一次"""
+    u = current_user()
+    bk = next((b for b in db.rows('bookings') if b.get('id') == bid
+               and str(b.get('phone')) == str(u.get('phone'))), None)
+    if not bk:
+        flash('没找到这条预约', 'warn')
+    elif bk.get('status') not in ('arrived', 'done'):
+        flash('到店开本之后再来评价哈', 'warn')
+    elif any(r.get('bid') == bid for r in db.rows('reviews')):
+        flash('这条已经评过了', 'warn')
+    else:
+        anon = request.form.get('anonymous') == '1'
+        db.update('reviews', lambda rows: rows + [{
+            'id': business.now_ms(), 'sid': bk.get('sid'), 'bid': bid,
+            'dmPhone': bk.get('dmPhone') or '',
+            'rating': max(1, min(5, int(request.form.get('rating') or 5))),
+            'text': business.clean(request.form.get('text'), 800),
+            'username': '匿名玩家' if anon else u.get('username'), 'anonymous': anon,
+            'dims': {}, 'reply': '', 'likes': [], 'hidden': False, 'createdAt': business.now_ms()}])
+        business.notify(u.get('phone'), '评价已提交，谢谢！',
+                        '《%s》的评价收到了，欢迎下次再来' % bk.get('title'), 'review')
+        flash('评价收到了，谢谢！', 'ok')
+    return redirect(url_for('user.me'))
 
 
 @bp.post('/book')

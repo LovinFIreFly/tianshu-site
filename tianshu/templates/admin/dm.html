@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}DM 结算 · {{ settings.shopName }}{% endblock %}
+{% block body %}
+<div class="between">
+  <div>
+    <h1>DM 结算</h1>
+    <p class="sub">分成 = 他带的场次营业额 × {{ (settings.dmRate * 100)|round(1) }}%
+      ＋ 客人点名加价（¥{{ settings.dmFee|int }}/人）。比例在「概览 → 门店设置」里改</p>
+  </div>
+  {% include 'admin/_nav.html' %}
+</div>
+
+<form class="form-inline" method="get" action="{{ url_for('admin.dm_page') }}">
+  <div class="field" style="max-width:160px"><label>月份</label>
+    <input name="month" value="{{ data.month }}" placeholder="2026-09"></div>
+  <button class="btn btn-primary" type="submit">查这个月</button>
+</form>
+
+<div class="scroll panel mt">
+  <table>
+    <tr><th>DM</th><th>场次</th><th>服务人次</th><th>营业额</th><th>分成</th><th>指定加价</th><th>合计</th><th>状态</th></tr>
+    {% for r in data.rows %}
+    <tr>
+      <td><b>{{ r.dmName }}</b><div class="sub">{{ r.dmPhone }}</div></td>
+      <td>{{ r.count }}</td>
+      <td>{{ r.players }}</td>
+      <td>¥{{ r.income }}</td>
+      <td>¥{{ r.share }}</td>
+      <td>¥{{ r.fee }}</td>
+      <td class="price">¥{{ r.total }}</td>
+      <td>
+        {% if r.settled %}<span class="badge ok">已结</span>{% else %}<span class="badge warn">未结</span>{% endif %}
+        <form method="post" action="{{ url_for('admin.dm_settle') }}" style="display:inline">
+          <input type="hidden" name="month" value="{{ data.month }}">
+          <input type="hidden" name="dmPhone" value="{{ r.dmPhone }}">
+          {% if r.settled %}<input type="hidden" name="undo" value="1">{% endif %}
+          <button class="btn btn-sm" type="submit">{{ '撤销' if r.settled else '标记已结' }}</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="empty">
+      这个月还没有可结算的场次。<br>
+      <span class="sub">结算口径：场次在「排期」里指定了 DM，或者客人下单时点名了 DM</span>
+    </td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="panel">
+  <h3>没在表里的 DM</h3>
+  <div class="row" style="gap:8px">
+    {% for d in dms %}<span class="pill">{{ d.username }}{% if d.phone in data.rows|map(attribute='dmPhone')|list %} ✓{% endif %}</span>
+    {% else %}<span class="sub">没有 DM 账号（在「客户」里把某人的角色改成 DM 就能排他的场）</span>{% endfor %}
+  </div>
+</div>
+{% endblock %}

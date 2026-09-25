@@ -279,3 +279,173 @@ def settings():
 @staff_required
 def logs():
     return render_template('admin/logs.html', rows=db.rows('logs')[:200])
+
+
+# ---------------------------------------------------------------- 排期（每天真正要用的）
+@bp.get('/sessions')
+@staff_required
+def sessions():
+    """一天的排期：新排一场、锁场、取消；同一房间同一时段排两场会被拦下来"""
+    try:
+        ts = int(request.args.get('ts') or business.midnight())
+    except ValueError:
+        ts = business.midnight()
+    dms = [u for u in db.rows('users') if business.role_of(u) == 'dm']
+    return render_template('admin/sessions.html', rows=business.sessions_of(ts), ts=ts,
+                           prev=ts - 86400000, nxt=ts + 86400000, day=business.day_label(ts),
+                           rooms=db.rows('rooms'), dms=dms,
+                           scripts=[s for s in db.rows('scripts') if s.get('onSale') is not False])
+
+
+@bp.post('/sessions/new')
+@staff_required
+def session_new():
+    f = request.form
+    ts = int(f.get('ts') or business.midnight())
+    tm = str(f.get('time') or '19:00')
+    room = business.clean(f.get('roomId'), 20)
+    busy = business.room_busy(room, ts, tm)
+    if busy:
+        flash('撞房了：%s %s 的「%s」已经排了《%s》，换个房间或时间'
+              % (business.day_label(ts), tm, room, busy.get('title')), 'warn')
+        return redirect(url_for('admin.sessions', ts=ts))
+    sc = db.one('scripts', id=f.get('sid'))
+    dm_phone = business.clean(f.get('dm'), 20)
+    dm = db.one('users', phone=dm_phone) if dm_phone else None
+    rows = db.rows('sessions')
+    rows.append({'id': max([int(x.get('id') or 0) for x in rows] or [0]) + 1,
+                 'sid': (sc or {}).get('id'), 'title': (sc or {}).get('title') or '临时场',
+                 'ts': ts, 'time': tm, 'roomId': room, 'cap': int(f.get('cap') or 6),
+                 'dm': dm_phone, 'dmName': (dm or {}).get('username') or '',
+                 'status': 'open', 'createdAt': business.now_ms()})
+    db.write('sessions', rows)
+    business.audit(current_user().get('username'), role(),
+                   '排期：%s %s《%s》%s' % (business.day_label(ts), tm, rows[-1]['title'], room))
+    flash('排好了：%s %s《%s》' % (business.day_label(ts), tm, rows[-1]['title']), 'ok')
+    return redirect(url_for('admin.sessions', ts=ts))
+
+
+@bp.post('/sessions/<int:sid>/status')
+@staff_required
+def session_status(sid):
+    """改一场的状态：开放 / 锁场 / 取消 / 完成。取消会通知已报名的客人"""
+    rows = db.rows('sessions')
+    hit = next((s for s in rows if s.get('id') == sid), None)
+    if not hit:
+        flash('没这场', 'warn')
+        return redirect(url_for('admin.sessions'))
+    st = request.form.get('status') or 'open'
+    if st == 'open':
+        busy = business.room_busy(hit.get('roomId'), hit.get('ts'), hit.get('time'), skip_id=sid)
+        if busy:
+            flash('这间房那个时段已经排了《%s》，没法恢复开放' % busy.get('title'), 'warn')
+            return redirect(url_for('admin.sessions', ts=hit.get('ts')))
+    hit['status'] = st
+    if request.form.get('reason'):
+        hit['statusReason'] = business.clean(request.form.get('reason'), 60)
+    db.write('sessions', rows)
+    if st == 'cancelled':
+        for b in db.rows('bookings'):
+            if b.get('sessionId') == sid and b.get('status') == 'booked':
+                business.notify(b.get('phone'), '场次变动',
+                                '《%s》%s %s 这场被取消了（%s），想换时间跟我们说'
+                                % (hit.get('title'), business.day_label(hit.get('ts')), hit.get('time'),
+                                   hit.get('statusReason') or '门店原因'), 'session')
+    business.audit(current_user().get('username'), role(),
+                   '场次《%s》%s %s → %s' % (hit.get('title'), business.day_label(hit.get('ts')), hit.get('time'), st))
+    flash('状态改成：%s' % st, 'ok')
+    return redirect(url_for('admin.sessions', ts=hit.get('ts')))
+
+
+@bp.post('/rooms/new')
+@staff_required
+def room_new():
+    name = business.clean(request.form.get('name'), 20)
+    if not name:
+        flash('房间要有名字', 'warn')
+    else:
+        rows = db.rows('rooms')
+        rows.append({'id': max([int(x.get('id') or 0) for x in rows] or [0]) + 1, 'name': name,
+                     'cap': int(request.form.get('cap') or 6), 'dev': business.clean(request.form.get('dev'), 40)})
+        db.write('rooms', rows)
+        flash('加了房间：%s' % name, 'ok')
+    return redirect(url_for('admin.sessions'))
+
+
+@bp.post('/rooms/<int:rid>/del')
+@staff_required
+def room_del(rid):
+    db.write('rooms', [r for r in db.rows('rooms') if r.get('id') != rid])
+    flash('房间删了（已排的场次不受影响，但那些场次会显示空房间）', 'ok')
+    return redirect(url_for('admin.sessions'))
+
+
+# ---------------------------------------------------------------- 评价
+@bp.get('/reviews')
+@staff_required
+def reviews():
+    return render_template('admin/reviews.html', rows=business.reviews_of(only_visible=False))
+
+
+@bp.post('/reviews/<int:rid>/reply')
+@staff_required
+def review_reply(rid):
+    """门店回复：客人会收到通知（差评好好回，别删）"""
+    text = business.clean(request.form.get('text'), 300)
+    rows = db.rows('reviews')
+    hit = next((r for r in rows if r.get('id') == rid), None)
+    if not hit:
+        flash('没这条评价', 'warn')
+    else:
+        hit['reply'] = text
+        hit['repliedBy'] = current_user().get('username')
+        hit['repliedAt'] = business.now_ms()
+        db.write('reviews', rows)
+        bk = next((b for b in db.rows('bookings') if b.get('id') == hit.get('bid')), None)
+        if bk:
+            business.notify(bk.get('phone'), '门店回复了你的评价',
+                            '《%s》那条评价，店家说：%s' % (bk.get('title'), text), 'review')
+        flash('回复已发出', 'ok')
+    return redirect(url_for('admin.reviews'))
+
+
+@bp.post('/reviews/<int:rid>/hide')
+@staff_required
+def review_hide(rid):
+    rows = db.rows('reviews')
+    for r in rows:
+        if r.get('id') == rid:
+            r['hidden'] = not r.get('hidden')
+    db.write('reviews', rows)
+    flash('已切换显示状态（隐藏的只有员工看得见）', 'ok')
+    return redirect(url_for('admin.reviews'))
+
+
+# ---------------------------------------------------------------- DM 结算
+@bp.get('/dm')
+@staff_required
+def dm_page():
+    """DM 结算：这个月每个 DM 分成多少（分成 = 营业额 × 比例，指定加价另算）"""
+    month = request.args.get('month') or __import__('time').strftime('%Y-%m')
+    return render_template('admin/dm.html', data=business.dm_settlement(month),
+                           dms=[u for u in db.rows('users') if business.role_of(u) == 'dm'])
+
+
+@bp.post('/dm/settle')
+@staff_required
+def dm_settle():
+    """标记某人这个月已结清（只记标记，不碰钱）"""
+    month = request.form.get('month')
+    phone = request.form.get('dmPhone')
+    rows = db.rows('settles')
+    hit = next((x for x in rows if x.get('month') == month and str(x.get('dmPhone')) == str(phone)), None)
+    if hit:
+        hit['settled'] = request.form.get('undo') != '1'
+        hit['settledAt'] = business.now_ms()
+        hit['settledBy'] = current_user().get('username')
+    else:
+        rows.append({'id': business.now_ms(), 'month': month, 'dmPhone': phone, 'settled': True,
+                     'settledAt': business.now_ms(), 'settledBy': current_user().get('username')})
+    db.write('settles', rows)
+    flash('已标记 %s 的 %s 月结算' % (phone, month), 'ok')
+    return redirect(url_for('admin.dm_page', month=month))

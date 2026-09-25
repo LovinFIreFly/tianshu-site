@@ -29,6 +29,22 @@
         </div>
         {% endif %}
 
+        {% if b.status in ('arrived', 'done') and b.id not in reviewed %}
+        <form class="row mt" method="post" action="{{ url_for('user.review', bid=b.id) }}"
+              style="gap:8px;align-items:flex-end;border-top:1px solid var(--line);padding-top:8px">
+          <div class="field" style="max-width:110px;margin:0"><label>打几分</label>
+            <select name="rating">
+              <option value="5">★★★★★</option><option value="4">★★★★</option>
+              <option value="3">★★★</option><option value="2">★★</option><option value="1">★</option>
+            </select></div>
+          <div class="field" style="flex:1 1 200px;margin:0"><label>说两句（可留空只打分）</label>
+            <input name="text" placeholder="剧情 / DM / 房间 都可以聊"></div>
+          <label class="sub" style="display:flex;gap:4px;align-items:center">
+            <input type="checkbox" name="anonymous" value="1" style="width:auto"> 匿名</label>
+          <button class="btn btn-sm btn-accent" type="submit">提交评价</button>
+        </form>
+        {% endif %}
+
         <div class="row mt" style="gap:8px">
           {% if o and o.status == 'unpaid' %}
           <form method="post" action="{{ url_for('user.order_act', oid=o.id, action='pay') }}">

@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}评价管理 · {{ settings.shopName }}{% endblock %}
+{% block body %}
+<div class="between">
+  <div>
+    <h1>玩家评价</h1>
+    <p class="sub">客人到店开本后能在「我的」里评价；差评也别删，好好回一句比删了强</p>
+  </div>
+  {% include 'admin/_nav.html' %}
+</div>
+
+{% for r in rows %}
+<div class="panel">
+  <div class="between">
+    <div>
+      <b>{{ r.username or '玩家' }}</b>
+      {% if r.anonymous %}<span class="pill">匿名</span>{% endif %}
+      <span class="badge {{ 'ok' if (r.rating or 0) >= 4 else 'warn' }}">
+        {% for i in range(r.rating or 5) %}★{% endfor %}</span>
+      {% if r.hidden %}<span class="badge bad">已隐藏</span>{% endif %}
+    </div>
+    <span class="sub">{{ day_label(r.createdAt) }}{% if r.repliedBy %} · 已由 {{ r.repliedBy }} 回复{% endif %}</span>
+  </div>
+  <p style="color:var(--text2)">{{ r.text or '（没写字，只打了分）' }}</p>
+
+  {% if r.reply %}
+  <div class="panel" style="margin:8px 0 0;background:var(--card)">
+    <span class="sub">门店回复：</span>{{ r.reply }}
+  </div>
+  {% endif %}
+
+  <div class="row mt" style="gap:8px;align-items:flex-end">
+    <form class="form-inline" method="post" action="{{ url_for('admin.review_reply', rid=r.id) }}" style="flex:1">
+      <div class="field" style="flex:1 1 240px"><label>回复（客人会收到通知）</label>
+        <input name="text" value="{{ r.reply or '' }}" placeholder="谢谢支持～下次来给你留好位置"></div>
+      <button class="btn btn-sm btn-primary" type="submit">回复</button>
+    </form>
+    <form method="post" action="{{ url_for('admin.review_hide', rid=r.id) }}">
+      <button class="btn btn-sm" type="submit">{{ '恢复显示' if r.hidden else '隐藏' }}</button>
+    </form>
+  </div>
+</div>
+{% else %}
+<div class="panel empty">还没有评价（客人到店开本之后可以在「我的」里评）</div>
+{% endfor %}
+{% endblock %}

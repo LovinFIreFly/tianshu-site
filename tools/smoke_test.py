@@ -180,6 +180,48 @@ for path in ('/admin/orders', '/admin/logs', '/admin/scripts', '/admin/bookings?
     s, html = admin.get(path)
     check('后台页 %s' % path, s == 200)
 
+print('⑨ 排期 / 防撞房 / 评价 / DM 结算')
+day5 = ts_in(5)
+admin.post('/admin/sessions/new', {'ts': day5, 'time': '19:00', 'sid': sc['id'],
+                                   'roomId': 'A房', 'dm': '12345678901', 'cap': 6})
+ses = next((x for x in jread('sessions') if x.get('ts') == day5 and x.get('time') == '19:00'), None)
+check('排了一场', bool(ses), 'DM=%s 房间=%s' % ((ses or {}).get('dmName'), (ses or {}).get('roomId')))
+admin.post('/admin/sessions/new', {'ts': day5, 'time': '19:00', 'sid': sc['id'], 'roomId': 'A房', 'cap': 6})
+same = [x for x in jread('sessions') if x.get('ts') == day5 and x.get('time') == '19:00'
+        and x.get('roomId') == 'A房']
+check('同一房间同一时段排不了第二场（防撞房）', len(same) == 1, '这间房有 %d 场' % len(same))
+s, html = admin.get('/admin/sessions')
+check('排期页能打开', s == 200 and '排一场' in html)
+
+cus4 = Client()
+cus4.post('/login', {'account': '调试debug', 'password': '123123'})
+cus4.post('/book', {'sid': sc['id'], 'ts': day5, 'time': '19:00', 'players': 3, 'mode': '包车'})
+bk3 = next((b for b in jread('bookings') if b.get('ts') == day5 and b.get('status') == 'booked'), None)
+check('客人约上了店里排好的场次', bk3 and bk3.get('sessionId') == (ses or {}).get('id'),
+      '绑定场次=%s' % ((bk3 or {}).get('sessionId')))
+s, html = cus4.get('/scripts/%s' % sc['id'])
+check('详情页能直接「约这一场」', '约这一场' in html)
+
+admin.post('/admin/verify', {'code': (bk3 or {}).get('verifyCode')})
+cus4.post('/review/%s' % (bk3 or {}).get('id'), {'rating': '5', 'text': '自检评价：DM 讲得很好'})
+rv = next((r for r in jread('reviews') if r.get('bid') == (bk3 or {}).get('id')), None)
+check('客人能写评价', bool(rv), (rv or {}).get('username'))
+s, html = guest.get('/scripts/%s' % sc['id'])
+check('评价显示在剧本页', '自检评价' in html)
+admin.post('/admin/reviews/%s/reply' % (rv or {}).get('id'), {'text': '谢谢，欢迎再来～'})
+rv2 = next((r for r in jread('reviews') if r.get('id') == (rv or {}).get('id')), {})
+check('门店回复存上了', rv2.get('reply') == '谢谢，欢迎再来～')
+s, html = guest.get('/scripts/%s' % sc['id'])
+check('回复也显示出来了', '欢迎再来' in html)
+
+month = time.strftime('%Y-%m', time.localtime(day5 / 1000))
+s, html = admin.get('/admin/dm?month=%s' % month)
+check('DM 结算页能打开', s == 200 and '分成' in html)
+check('结算里算上了这个 DM 和这场', 'dm测试' in html and str((ses or {}).get('dmName')) in html, month)
+admin.post('/admin/dm/settle', {'month': month, 'dmPhone': '12345678901'})
+st = next((x for x in jread('settles') if x.get('month') == month), None)
+check('能标记「已结」', bool(st and st.get('settled')))
+
 print('')
 print('=' * 46)
 if fails:
