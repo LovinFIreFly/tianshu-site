@@ -137,7 +137,26 @@ def me():
     return render_template('me.html', u=u, bookings=bookings, orders=orders,
                            coupons=coupons, notices=business.my_notices(u, 20),
                            order_of=order_of, scripts=db.rows('scripts'), fav_ids=fav_ids,
-                           reviewed={r.get('bid') for r in db.rows('reviews')})
+                           reviewed={r.get('bid') for r in db.rows('reviews')},
+                           msgs=business.my_messages(u))
+
+
+@bp.post('/msg')
+@login_required
+def msg_create():
+    """给店家留言：晚了没车、想改时间、对 DM 有要求…… 都能说（店家看到会回）"""
+    text = business.clean(request.form.get('text'), 500)
+    if not text:
+        flash('写点内容再发', 'warn')
+    else:
+        u = current_user()
+        db.update('messages', lambda rows: rows + [{
+            'id': business.now_ms(), 'phone': u.get('phone'), 'username': u.get('username'),
+            'cat': business.clean(request.form.get('cat'), 10) or '💡 建议', 'text': text,
+            'status': 'pending', 'reply': '', 'createdAt': business.now_ms()}])
+        business.audit(u.get('username'), business.role_of(u), '给门店留言')
+        flash('留言发出去了，店家看到会回你', 'ok')
+    return redirect(url_for('user.me'))
 
 
 @bp.post('/review/<int:bid>')

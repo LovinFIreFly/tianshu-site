@@ -222,6 +222,37 @@ admin.post('/admin/dm/settle', {'month': month, 'dmPhone': '12345678901'})
 st = next((x for x in jread('settles') if x.get('month') == month), None)
 check('能标记「已结」', bool(st and st.get('settled')))
 
+print('⑩ 留言 / 社区 / 周视图 / 结算口径')
+cus4.post('/msg', {'cat': '⏰ 改时间', 'text': '自检留言：下周想改成 20:00 的场'})
+msg = next((m for m in jread('messages') if '自检留言' in str(m.get('text'))), None)
+check('客人能留言', bool(msg), (msg or {}).get('status'))
+s, html = admin.get('/admin/messages')
+check('后台能看到待回复留言', s == 200 and '自检留言' in html)
+admin.post('/admin/messages/%s/reply' % (msg or {}).get('id'), {'text': '好的，给你留着'})
+msg2 = next((m for m in jread('messages') if m.get('id') == (msg or {}).get('id')), {})
+check('门店回复留言', msg2.get('status') == 'replied' and msg2.get('reply'))
+s, html = cus4.get('/me')
+check('客人「我的」里能看到店家回复', '好的，给你留着' in html)
+
+cus4.post('/post', {'type': 'ask', 'title': '自检帖', 'text': '周六有没有人拼《自检本》'})
+post = next((p for p in jread('posts') if p.get('title') == '自检帖'), None)
+check('社区能发帖', bool(post), (post or {}).get('username'))
+s, html = guest.get('/comm')
+check('社区页能看到帖子', s == 200 and '自检帖' in html)
+cus4.post('/post/%s/like' % (post or {}).get('id'), {})
+post2 = next((p for p in jread('posts') if p.get('id') == (post or {}).get('id')), {})
+check('点赞记上了', len(post2.get('likes') or []) == 1)
+admin.post('/admin/post/%s/del' % (post or {}).get('id'), {})
+check('员工能删帖', not any(p.get('id') == (post or {}).get('id') for p in jread('posts')))
+
+s, html = admin.get('/admin/sessions?view=week')
+check('排期周视图能打开', s == 200 and '看这一周' in html)
+
+admin.post('/admin/settings', {'dmPayMode': 'fixed', 'dmFixedPay': '200'})
+s, html = admin.get('/admin/dm?month=%s' % month)
+check('切成「每场固定场费」后结算跟着变', s == 200 and '200' in html)
+admin.post('/admin/settings', {'dmPayMode': 'rate'})       # 改回按比例，别把设置留乱
+
 print('')
 print('=' * 46)
 if fails:

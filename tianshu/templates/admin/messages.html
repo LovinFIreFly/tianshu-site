@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}店客留言 · {{ settings.shopName }}{% endblock %}
+{% block body %}
+<div class="between">
+  <div>
+    <h1>店客留言</h1>
+    <p class="sub">客人留的言，回一句比不回强得多（回复会推到他手机上）</p>
+  </div>
+  {% include 'admin/_nav.html' %}
+</div>
+
+<div class="row mt" style="gap:6px">
+  <a class="pill" href="{{ url_for('admin.messages', status='pending') }}"
+     style="{{ 'color:var(--accent)' if status == 'pending' }}">待回复 {{ counts.pending }}</a>
+  <a class="pill" href="{{ url_for('admin.messages', status='replied') }}"
+     style="{{ 'color:var(--accent)' if status == 'replied' }}">已回复 {{ counts.replied }}</a>
+  <a class="pill" href="{{ url_for('admin.messages', status='all') }}"
+     style="{{ 'color:var(--accent)' if status == 'all' }}">全部</a>
+</div>
+
+{% for m in rows %}
+<div class="panel mt">
+  <div class="between">
+    <div>
+      <b>{{ m.username or '客人' }}</b>
+      <span class="pill">{{ m.cat or '留言' }}</span>
+      <span class="sub">{{ m.phone[:3] }}****{{ m.phone[-4:] }}</span>
+    </div>
+    <span class="sub">{{ day_label(m.createdAt) }}{% if m.repliedBy %} · 由 {{ m.repliedBy }} 回{% endif %}</span>
+  </div>
+  <p style="color:var(--text2)">{{ m.text }}</p>
+
+  {% if m.reply %}
+  <div class="panel" style="margin:8px 0 0;background:var(--card)">
+    <span class="sub">已回复：</span>{{ m.reply }}
+  </div>
+  {% endif %}
+
+  <form class="row mt" method="post" action="{{ url_for('admin.message_reply', mid=m.id) }}"
+        style="gap:8px;align-items:flex-end">
+    <div class="field" style="flex:1 1 240px;margin:0"><label>回复</label>
+      <input name="text" value="{{ m.reply or '' }}" placeholder="收到，给你留个位置～"></div>
+    <button class="btn btn-sm btn-primary" type="submit">{{ '改一下' if m.reply else '回复' }}</button>
+  </form>
+</div>
+{% else %}
+<div class="panel empty">这个筛选下没有留言</div>
+{% endfor %}
+{% endblock %}

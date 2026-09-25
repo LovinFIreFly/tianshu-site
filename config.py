@@ -30,7 +30,9 @@ SETTINGS_DEFAULT = {
     "depositRatio": 0.30,      # 定金比例
     "freeCancelHours": 24,     # 开场前 N 小时内取消算临期
     "lateCancelPenalty": 2,    # 临期取消扣的信用分
-    "dmRate": 0.10,            # DM 分成比例（TODO 还没接上，先在结算里手填）
+    "dmRate": 0.10,            # DM 分成比例（dmPayMode = 'rate' 时生效）
+    "dmPayMode": "rate",       # DM 怎么拿钱：rate=按营业额分成 / fixed=每场固定场费
+    "dmFixedPay": 150,         # dmPayMode = 'fixed' 时，每场给多少
     "reviewsEnabled": True,    # 是否展示评分
     "carTags": ["不跳车", "准时到场", "新手友好", "硬核玩家"],
 }

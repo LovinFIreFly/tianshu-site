@@ -111,6 +111,37 @@
     </div>
 
     <div class="panel">
+      <h3>给店家留言</h3>
+      <form method="post" action="{{ url_for('user.msg_create') }}">
+        <div class="field"><label>想说点什么</label>
+          <textarea name="text" rows="2" placeholder="想改时间 / 问价 / 对 DM 有要求…"></textarea></div>
+        <div class="row" style="gap:8px;align-items:flex-end">
+          <div class="field" style="max-width:130px;margin:0"><label>类型</label>
+            <select name="cat">
+              <option>💡 建议</option><option>⏰ 改时间</option>
+              <option>💰 问价</option><option>🙋 找人</option><option>😤 投诉</option>
+            </select></div>
+          <button class="btn btn-sm btn-primary" type="submit">发出去</button>
+        </div>
+      </form>
+
+      {% if msgs %}
+      <div class="mt" style="border-top:1px solid var(--line);padding-top:8px">
+        {% for m in msgs %}
+        <div style="padding:6px 0">
+          <div class="between">
+            <span class="sub">{{ m.cat }} · {{ day_label(m.createdAt) }}</span>
+            <span class="badge {{ 'ok' if m.reply else 'warn' }}">{{ '店家已回' if m.reply else '等回复' }}</span>
+          </div>
+          <p class="sub">{{ m.text }}</p>
+          {% if m.reply %}<p style="color:var(--primary2)">店家：{{ m.reply }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="panel">
       <h3>我的心愿单</h3>
       {% set want = scripts|selectattr('id')|list %}
       {% set hit = [] %}

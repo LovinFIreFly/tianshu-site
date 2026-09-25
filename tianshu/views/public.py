@@ -119,6 +119,48 @@ def car():
                            tags=business.get_settings()['carTags'])
 
 
+@bp.get('/comm')
+def comm():
+    """玩家社区：约不到人、想吐槽本子、想晒战报，都来这儿发（前台不主动推，玩家自己点进来）"""
+    u = current_user()
+    return render_template('comm.html', posts=business.community_posts(60, str((u or {}).get('phone') or '')))
+
+
+@bp.post('/post')
+def post_create():
+    u = current_user()
+    if not u:
+        flash('登录之后才能发帖', 'warn')
+        return redirect(url_for('user.login', next='/comm'))
+    text = business.clean(request.form.get('text'), 1000)
+    if not text:
+        flash('写点内容再发', 'warn')
+    else:
+        db.update('posts', lambda rows: [{
+            'id': business.now_ms(), 'type': request.form.get('type') or 'diary',
+            'title': business.clean(request.form.get('title'), 40), 'text': text, 'imgs': [],
+            'username': (u.get('profile') or {}).get('nick') or u.get('username'),
+            'phone': u.get('phone'), 'at': business.now_ms(), 'likes': []}] + rows, 500)
+        flash('发出去了', 'ok')
+    return redirect(url_for('public.comm'))
+
+
+@bp.post('/post/<int:pid>/like')
+def post_like(pid):
+    u = current_user()
+    if not u:
+        flash('登录之后才能点赞', 'warn')
+        return redirect(url_for('user.login', next='/comm'))
+    phone = str(u.get('phone'))
+    rows = db.rows('posts')
+    for p in rows:
+        if p.get('id') == pid:
+            likes = [str(x) for x in p.get('likes') or []]
+            p['likes'] = [x for x in likes if x != phone] if phone in likes else likes + [phone]
+    db.write('posts', rows)
+    return redirect(url_for('public.comm'))
+
+
 @bp.post('/fav/<int:sid>')
 def fav(sid):
     """收藏（想玩）—— 没登录就先去登录"""

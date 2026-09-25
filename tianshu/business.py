@@ -261,16 +261,22 @@ def dm_settlement(month=None):
         if not dm_phone:
             continue
         a = acc.setdefault(dm_phone, {'dmPhone': dm_phone, 'sessions': set(), 'players': 0,
-                                      'income': 0, 'share': 0.0, 'fee': 0})
+                                      'income': 0, 'share': 0.0, 'fee': 0, 'count_tmp': 0})
+        if (b.get('sessionId') or ('b%s' % b.get('id'))) not in a['sessions']:
+            a['count_tmp'] += 1                  # 一个场次算一场（同一场多人不重复计场）
         a['sessions'].add(b.get('sessionId') or ('b%s' % b.get('id')))
         a['players'] += int(b.get('players') or 0)
         a['income'] += int(b.get('amount') or 0)
         if b.get('dmPhone'):                     # 客人点名要的 DM，加价归他
             a['fee'] += int(st['dmFee']) * int(b.get('players') or 0)
     users = {str(u.get('phone')): u for u in db.rows('users')}
+    mode = st.get('dmPayMode') or 'rate'
     rows = []
     for phone, a in acc.items():
-        a['share'] = round(a['income'] * float(st['dmRate']))
+        if mode == 'fixed':                      # 店里按场给固定场费（一场多少钱写死在设置里）
+            a['share'] = int(st.get('dmFixedPay') or 0) * a['count_tmp']
+        else:                                    # 按营业额分成
+            a['share'] = round(a['income'] * float(st['dmRate']))
         a['total'] = a['share'] + a['fee']
         a['count'] = len(a.pop('sessions'))
         a['dmName'] = users.get(phone, {}).get('username') or phone
@@ -278,6 +284,23 @@ def dm_settlement(month=None):
                            for x in settles)
         rows.append(a)
     return {'month': month, 'rows': sorted(rows, key=lambda x: -x['total'])}
+
+
+def my_messages(user, limit=20):
+    """我给店家留的言（含店家回复）"""
+    phone = str(user.get('phone'))
+    return sorted([m for m in db.rows('messages') if str(m.get('phone')) == phone],
+                  key=lambda x: -(x.get('createdAt') or 0))[:limit]
+
+
+def community_posts(limit=60, me_phone=''):
+    """社区帖子，顺便标出"我点过赞没"（模板里好显示）"""
+    rows = sorted(db.rows('posts'), key=lambda x: -(x.get('at') or 0))[:limit]
+    for p in rows:
+        likes = [str(x) for x in p.get('likes') or []]
+        p['likeCount'] = len(likes)
+        p['liked'] = bool(me_phone) and me_phone in likes
+    return rows
 
 
 def reviews_of(sid=None, only_visible=True):

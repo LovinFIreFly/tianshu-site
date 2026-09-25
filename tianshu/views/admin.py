@@ -261,7 +261,9 @@ def settings():
     for k in ('shopName', 'notice'):
         if f.get(k) is not None:
             rows[k] = business.clean(f.get(k), 80)
-    for k in ('dmFee', 'depositRatio', 'freeCancelHours', 'lateCancelPenalty', 'dmRate'):
+    if f.get('dmPayMode') in ('rate', 'fixed'):
+        rows['dmPayMode'] = f.get('dmPayMode')
+    for k in ('dmFee', 'depositRatio', 'freeCancelHours', 'lateCancelPenalty', 'dmRate', 'dmFixedPay'):
         if f.get(k):
             try:
                 rows[k] = float(f.get(k))
@@ -291,9 +293,18 @@ def sessions():
     except ValueError:
         ts = business.midnight()
     dms = [u for u in db.rows('users') if business.role_of(u) == 'dm']
-    return render_template('admin/sessions.html', rows=business.sessions_of(ts), ts=ts,
+    view = request.args.get('view') or 'day'
+    week = []
+    if view == 'week':                       # 周视图：一眼看整周，撞没撞房立刻看出来
+        import time as _t
+        wd = _t.localtime(ts / 1000).tm_wday                 # 0 = 周一
+        monday = ts - wd * 86400000
+        for i in range(7):
+            d = monday + i * 86400000
+            week.append({'ts': d, 'day': business.day_label(d), 'rows': business.sessions_of(d)})
+    return render_template('admin/sessions.html', rows=business.sessions_of(ts), ts=ts, view=view,
                            prev=ts - 86400000, nxt=ts + 86400000, day=business.day_label(ts),
-                           rooms=db.rows('rooms'), dms=dms,
+                           week=week, rooms=db.rows('rooms'), dms=dms,
                            scripts=[s for s in db.rows('scripts') if s.get('onSale') is not False])
 
 
@@ -419,6 +430,48 @@ def review_hide(rid):
     db.write('reviews', rows)
     flash('已切换显示状态（隐藏的只有员工看得见）', 'ok')
     return redirect(url_for('admin.reviews'))
+
+
+# ---------------------------------------------------------------- 店客留言 / 社区
+@bp.get('/messages')
+@staff_required
+def messages():
+    """客人留的言（没回的排前面）—— 晚到没车、想换时间、问价，基本都从这儿来"""
+    rows = sorted(db.rows('messages'), key=lambda x: -(x.get('createdAt') or 0))
+    status = request.args.get('status') or 'pending'
+    if status != 'all':
+        rows = [m for m in rows if (m.get('status') or 'pending') == status]
+    return render_template('admin/messages.html', rows=rows, status=status,
+                           counts={k: len([m for m in db.rows('messages') if (m.get('status') or 'pending') == k])
+                                   for k in ('pending', 'replied')})
+
+
+@bp.post('/messages/<int:mid>/reply')
+@staff_required
+def message_reply(mid):
+    text = business.clean(request.form.get('text'), 300)
+    rows = db.rows('messages')
+    hit = next((m for m in rows if m.get('id') == mid), None)
+    if not hit:
+        flash('没这条留言', 'warn')
+    else:
+        hit.update(status='replied', reply=text, repliedBy=current_user().get('username'),
+                   repliedAt=business.now_ms())
+        db.write('messages', rows)
+        business.notify(hit.get('phone'), '店家回复了你的留言',
+                        '你问「%s」，店家回：%s' % (hit.get('text', '')[:18], text), 'msg')
+        flash('回复已发出', 'ok')
+    return redirect(url_for('admin.messages'))
+
+
+@bp.post('/post/<int:pid>/del')
+@staff_required
+def post_del(pid):
+    """删帖（广告、剧透不标注之类的）"""
+    db.write('posts', [p for p in db.rows('posts') if p.get('id') != pid])
+    business.audit(current_user().get('username'), role(), '删了社区帖 #%s' % pid)
+    flash('帖子删了', 'ok')
+    return redirect(url_for('public.comm'))
 
 
 # ---------------------------------------------------------------- DM 结算

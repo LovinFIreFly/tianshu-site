@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}玩家社区 · {{ settings.shopName }}{% endblock %}
+{% block body %}
+<div class="between">
+  <div>
+    <h1>玩家社区</h1>
+    <p class="sub">约人、晒战报、聊本子都行 —— 别剧透不标注就行（会被删）</p>
+  </div>
+</div>
+
+{% if me %}
+<div class="panel">
+  <form method="post" action="{{ url_for('public.post_create') }}">
+    <div class="row" style="gap:10px">
+      <div class="field" style="flex:0 0 130px"><label>类型</label>
+        <select name="type">
+          <option value="diary">📔 战报</option>
+          <option value="ask">❓ 求组队</option>
+          <option value="chat">💬 闲聊</option>
+        </select></div>
+      <div class="field" style="flex:1 1 200px"><label>标题（可留空）</label>
+        <input name="title" placeholder="一句话标题"></div>
+    </div>
+    <div class="field"><label>内容</label>
+      <textarea name="text" rows="3" placeholder="想说什么？求拼车的话把时间本子写清楚"></textarea></div>
+    <button class="btn btn-primary" type="submit">发出去</button>
+  </form>
+</div>
+{% else %}
+<div class="panel between">
+  <span class="sub">登录之后就能发帖、点赞</span>
+  <a class="btn btn-sm btn-primary" href="{{ url_for('user.login', next='/comm') }}">去登录</a>
+</div>
+{% endif %}
+
+{% for p in posts %}
+<div class="panel">
+  <div class="between">
+    <div>
+      <b>{{ p.title or ('📔 战报' if p.type == 'diary' else ('❓ 求组队' if p.type == 'ask' else '💬 闲聊')) }}</b>
+      <span class="pill">{{ p.username or '玩家' }}</span>
+    </div>
+    <span class="sub">{{ day_label(p.at) }}</span>
+  </div>
+  <p style="color:var(--text2);white-space:pre-wrap">{{ p.text }}</p>
+  <div class="row mt" style="gap:8px">
+    <form method="post" action="{{ url_for('public.post_like', pid=p.id) }}">
+      <button class="btn btn-sm" type="submit">{{ '❤' if p.liked else '♡' }} {{ p.likeCount }}</button>
+    </form>
+    {% if my_role in ('admin', 'super') %}
+    <form method="post" action="{{ url_for('admin.post_del', pid=p.id) }}"
+          onsubmit="return confirm('删掉这条帖子？')">
+      <button class="btn btn-sm btn-danger" type="submit">删除</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% else %}
+<div class="panel empty">还没人发帖，你可以来发第一条</div>
+{% endfor %}
+{% endblock %}

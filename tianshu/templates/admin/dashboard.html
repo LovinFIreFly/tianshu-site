@@ -77,7 +77,13 @@
         <div class="field"><label>免费取消时限（小时）</label><input name="freeCancelHours" value="{{ settings.freeCancelHours }}"></div>
         <div class="field"><label>临期取消扣分</label><input name="lateCancelPenalty" value="{{ settings.lateCancelPenalty }}"></div>
         <div class="field"><label>指定 DM 加价（元/人）</label><input name="dmFee" value="{{ settings.dmFee }}"></div>
-        <div class="field"><label>DM 分成比例（暂未自动结算）</label><input name="dmRate" value="{{ settings.dmRate }}"></div>
+        <div class="field"><label>DM 怎么结算</label>
+          <select name="dmPayMode">
+            <option value="rate" {{ 'selected' if settings.dmPayMode != 'fixed' }}>按营业额分成</option>
+            <option value="fixed" {{ 'selected' if settings.dmPayMode == 'fixed' }}>每场固定场费</option>
+          </select></div>
+        <div class="field"><label>分成比例（按比例时用，0.1 = 10%）</label><input name="dmRate" value="{{ settings.dmRate }}"></div>
+        <div class="field"><label>每场场费（按固定时用，元）</label><input name="dmFixedPay" value="{{ settings.dmFixedPay }}"></div>
         <div class="field"><label>车队标签（逗号分隔）</label><input name="carTags" value="{{ settings.carTags|join(',') }}"></div>
         <button class="btn btn-primary btn-block" type="submit">保存设置</button>
       </form>
