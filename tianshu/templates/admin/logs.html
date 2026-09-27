@@ -3,8 +3,8 @@
 {% block body %}
 <div class="between">
   <h1>操作日志</h1>
-  <a class="btn btn-sm" href="{{ url_for('admin.dashboard') }}">← 回后台</a>
 </div>
+{% include 'admin/_nav.html' %}
 <p class="sub">谁在什么时候动过什么，出问题先翻这里（只留最近 500 条）</p>
 
 <div class="scroll panel mt">

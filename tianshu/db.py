@@ -27,9 +27,14 @@ from config import DATA_DIR
 
 
 class Store:
-    """json 读写：写的时候先落临时文件再改名，断电/崩了也不会写坏原数据"""
+    """json 读写：写的时候先落临时文件再改名，断电/崩了也不会写坏原数据
+
+    读带按文件修改时间的缓存：一个页面要读十几份数据，没这层缓存每次请求
+    都要来回开十几个文件 —— 这就是之前"每进一个页面都很慢"的主因之一。
+    """
 
     _lock = threading.RLock()          # 多人同时点的时候别互相覆盖
+    _cache = {}                        # {路径: (修改时间, 内容)} 文件没变就直接用
 
     def path(self, key):
         return os.path.join(DATA_DIR, key + '.json')
@@ -37,14 +42,24 @@ class Store:
     def read(self, key, default=None):
         p = self.path(key)
         if not os.path.exists(p):
+            self._cache.pop(p, None)
             return default
+        try:
+            mtime = os.path.getmtime(p)
+        except OSError:
+            return default
+        hit = self._cache.get(p)
+        if hit and hit[0] == mtime:
+            return hit[1]              # 文件没被外部改过，直接用上一次的内容
         with self._lock:
             try:
                 with open(p, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    data = json.load(f)
             except Exception as e:                       # 文件被改坏了也先让站活着
                 print('[数据] 读 %s.json 出错：%s' % (key, e))
                 return default
+            self._cache[p] = (mtime, data)
+            return data
 
     def write(self, key, obj):
         """写盘。Windows 上偶发"拒绝访问"——杀毒软件、OneDrive 同步、别的进程正在读，
@@ -59,6 +74,10 @@ class Store:
                     with open(tmp, 'w', encoding='utf-8') as f:
                         f.write(data)
                     os.replace(tmp, p)
+                    try:                             # 写完顺手刷新缓存，下次读就不用再开文件
+                        self._cache[p] = (os.path.getmtime(p), obj)
+                    except OSError:
+                        pass
                     return obj
                 except PermissionError:
                     time.sleep(0.08 * (attempt + 1))

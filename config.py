@@ -18,6 +18,7 @@ OPEN_BROWSER = True            # 启动后自动开浏览器
 LAN_MODE = False               # 手机访问开关：要测手机端再开（同一 WiFi 下的设备都能进）
 SESSION_DAYS = 7               # 登录保持多少天
 MAX_IMG_BYTES = 700 * 1024     # 上传图片上限
+TEMPLATES_AUTO_RELOAD = False  # 页面速度优化：平时关掉（改模板后重启生效）；开发时用 python app.py --dev
 
 # 通用验证码：本地没接短信服务商，靠它让改密码/换绑/注销这些流程能走通。
 # 真要放线上对外服务，这里必须换成真发短信（删掉这行也不影响程序，只是验证码只能靠窗口里那个）

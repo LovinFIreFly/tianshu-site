@@ -135,6 +135,8 @@ def banner(port, lan=''):
 
 
 def main():
+    if '--dev' in sys.argv:                       # 开发模式：改模板刷新就见效（会慢一点）
+        config.TEMPLATES_AUTO_RELOAD = True
     for arg, attr in (('--lan', 'LAN_MODE'), ('--no-browser', None)):
         if arg in sys.argv and attr:
             setattr(config, attr, True)

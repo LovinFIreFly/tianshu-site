@@ -20,7 +20,11 @@ bp = Blueprint('dm', __name__, url_prefix='/dm')
 @bp.get('/')
 @dm_required
 def index():
-    """今日概览：我带哪几场、谁来了、本月分成多少"""
+    """DM 工作台总入口：今日 / 我的客人 / 学本资料 都在这一个网址里切（?tab=xxx）"""
+    tab = (request.args.get('tab') or 'today').strip()
+    fn = _TAB_FUNCS.get(tab)
+    if fn is not None:
+        return fn()
     u = current_user()
     phone = str(u.get('phone'))
     today = business.today_sessions()
@@ -86,3 +90,7 @@ def practice_new():
     business.audit(u.get('username'), role(), '提交了练本申请')
     flash('练本申请提交啦，等门店安排', 'ok')
     return redirect(url_for('dm.guides'))
+
+
+# 标签总表（放末尾因为它要引用上面的函数；index() 里是运行时才查，顺序无所谓）
+_TAB_FUNCS = {'credit': credit, 'guides': guides}

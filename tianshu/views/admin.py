@@ -21,7 +21,16 @@ bp = Blueprint('admin', __name__, url_prefix='/admin')
 @bp.get('/')
 @staff_required
 def dashboard():
-    """概览：今天几场、多少人、收了多少钱、有没有待核销的"""
+    """后台总入口。所有标签都在这一个网址里切（/admin?tab=xxx）
+
+    早先每个功能各占一个网址（/admin/bookings、/admin/users…），点一下整页跳一次，
+    又碎又慢；老版 index.html 是一个页面里切面板的，这里改回那个思路。
+    旧的网址我没删，直接输进去照样能打开（当书签用），只是导航里不再产生新网址。
+    """
+    tab = (request.args.get('tab') or 'dash').strip()
+    fn = _TAB_FUNCS.get(tab)
+    if fn is not None:
+        return fn()                      # 转到对应标签的视图函数（它们自己会读 query 参数）
     bookings = db.rows('bookings')
     st = business.stats()
     today0 = business.day_label(business.now_ms())
@@ -801,3 +810,15 @@ def dm_settle():
     db.write('settles', rows)
     flash('已标记 %s 的 %s 月结算' % (phone, month), 'ok')
     return redirect(url_for('admin.dm_page', month=month))
+
+
+# ---------------------------------------------------------------- 后台标签总表
+# 一个网址里切所有面板：/admin?tab=bookings 这样。
+# 以后加新功能：先照抄一个视图函数，再来这里补一行，最后去 _nav.html 加个标签。
+# （放在文件末尾是因为它要引用上面所有函数；dashboard() 里是运行时才查这张表，所以顺序没问题）
+_TAB_FUNCS = {
+    'sessions': sessions, 'bookings': bookings, 'users': users, 'reviews': reviews,
+    'messages': messages, 'scripts': scripts, 'orders': orders, 'guides': guides_page,
+    'notice': notice_page, 'dm': dm_page, 'backup': backup_page, 'reports': reports_page,
+    'logs': logs,
+}

@@ -256,7 +256,7 @@ check('后台能看到待回复留言', s == 200 and '自检留言' in html)
 admin.post('/admin/messages/%s/reply' % (msg or {}).get('id'), {'text': '好的，给你留着'})
 msg2 = next((m for m in jread('messages') if m.get('id') == (msg or {}).get('id')), {})
 check('门店回复留言', msg2.get('status') == 'replied' and msg2.get('reply'))
-s, html = cus4.get('/me')
+s, html = cus4.get('/me?tab=notices')          # 「我的」改成标签页后，留言在"消息与留言"这一栏
 check('客人「我的」里能看到店家回复', '好的，给你留着' in html)
 
 cus4.post('/post', {'type': 'ask', 'title': '自检帖', 'text': '周六有没有人拼《自检本》'})

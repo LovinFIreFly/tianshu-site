@@ -6,12 +6,8 @@
     <h1>DM 工作台</h1>
     <p class="sub">{{ today }} · 你好，{{ me.profile.nick or me.username }}</p>
   </div>
-  <div class="row" style="gap:6px">
-    <a class="btn btn-sm" href="{{ url_for('dm.credit') }}">我的客人</a>
-    <a class="btn btn-sm" href="{{ url_for('dm.guides') }}">学本资料</a>
-    <a class="btn btn-sm" href="{{ url_for('admin.dm_page') }}">我的结算</a>
-  </div>
 </div>
+{% include 'dm/_nav.html' %}
 
 <div class="panel mt">
   <h3>到店核销（客人报 6 位码）</h3>
