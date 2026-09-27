@@ -1,88 +1,123 @@
-{# 面板：scripts（由 tools/_split_panels.py 从 scripts.html 拆出来，别单独改这里的骨架） #}
+{# 面板：scripts —— 剧本管理
+   以前这一页把「加新本 + 导入导出 + 每本的封面/人数/角色/简介/保存」全摊在面上，
+   第一次来的人不知道该从哪动手。现在按「傻瓜式」重排：
+     面上只留最常改的（名字 / 单价 / 上架 / 选角 / 保存），其余全折进「可选」里；
+     导入导出这类一次性的活儿收到最底下的「高级」。
+   功能一个没少，只是不挡路。 #}
 <div class="between">
   <div>
     <h1>剧本</h1>
-    <p class="sub">改价、上下架、填角色、开关「可提前选角」—— 客人能不能在网页上挑角色，就看那个开关</p>
+    <p class="sub">加本子只要三步：① 下面第一行填个名字点「建一个」 ② 在卡片里改价格 ③ 点「保存」</p>
   </div>
 </div>
 
-<div class="panel mt">
-  <h3>加一个新剧本</h3>
+<div class="adm-panel mt">
+  <h3>加一个剧本</h3>
   <form class="form-inline" method="post" action="{{ url_for('admin.script_new') }}">
-    <div class="field" style="flex:2 1 180px"><label>名字</label><input name="title" required placeholder="例：云使"></div>
-    <div class="field" style="flex:0 0 90px"><label>表情</label><input name="emoji" placeholder="☁️" maxlength="2"></div>
-    <div class="field" style="flex:0 0 110px"><label>单价(元)</label><input name="price" type="number" value="128"></div>
+    <div class="field" style="flex:2 1 200px;margin:0"><label>剧本名（必填）</label>
+      <input name="title" required placeholder="例：云使"></div>
+    <div class="field" style="flex:0 0 108px;margin:0"><label>单价(元)</label>
+      <input name="price" type="number" value="128"></div>
+    <div class="field" style="flex:0 0 92px;margin:0"><label>表情</label>
+      <input name="emoji" placeholder="☁️" maxlength="2"></div>
     <button class="btn btn-accent" type="submit">建一个</button>
   </form>
-  <p class="sub">建完在下面填角色、简介、上架状态（角色填了才能在网页上让客人选）</p>
+  <p class="sub mt">建完在下面那张卡里继续改 —— 人数、角色、简介都能以后再填，不影响先上架。</p>
 </div>
-
-<div class="panel mt">
-  <h3>批量导入 / 导出</h3>
-  <div class="row" style="gap:10px;align-items:flex-end">
-    <a class="btn" href="{{ url_for('admin.scripts_export') }}">导出 CSV</a>
-    <form class="form-inline" method="post" action="{{ url_for('admin.scripts_import') }}" enctype="multipart/form-data">
-      <div class="field" style="margin:0"><input type="file" name="csv" accept=".csv"></div>
-      <button class="btn btn-primary" type="submit">导入 CSV</button>
-    </form>
-  </div>
-  <p class="sub mt">
-    导出后用 Excel 打开就是一张表（id 留空 = 新建；tags 用 / 分隔；roles 用逗号分隔），改完原样导回来即可。
-  </p>
-</div>
-
-{% for s in rows %}
-<div class="panel mt">
-  <div class="between">
-    <b>{{ s.emoji or '🎭' }} {{ s.title }}</b>
-    <span class="sub">#{{ s.id }} · 已开 {{ s.plays or 0 }} 场</span>
-  </div>
-
-  <div class="row mt" style="gap:12px;align-items:center">
-    {% if s.img %}<img class="thumb" src="{{ s.img }}" alt="">{% endif %}
-    <form class="form-inline" method="post" action="{{ url_for('admin.script_img', sid=s.id) }}"
-          enctype="multipart/form-data">
-      <div class="field" style="margin:0"><label>{{ '换封面' if s.img else '传封面图' }}</label>
-        <input type="file" name="cover" accept="image/png,image/jpeg,image/webp"></div>
-      <button class="btn btn-sm" type="submit">上传</button>
-    </form>
-    <span class="sub">建议 4:3、压到 300KB 以内（传完前台立刻见效）</span>
-  </div>
-
-  <form method="post" action="{{ url_for('admin.script_save', sid=s.id) }}">
-
-    <div class="row mt" style="gap:12px;align-items:flex-end">
-      <div class="field" style="flex:1 1 160px"><label>名字</label><input name="title" value="{{ s.title }}"></div>
-      <div class="field" style="flex:0 0 100px"><label>单价(元)</label><input name="price" type="number" value="{{ s.price|int }}"></div>
-      <div class="field" style="flex:0 0 120px"><label>人数</label><input name="players" value="{{ s.players or '' }}"></div>
-      <div class="field" style="flex:0 0 110px"><label>上架</label>
-        <select name="onSale"><option value="1" {{ 'selected' if s.onSale != False }}>上架中</option>
-          <option value="0" {{ 'selected' if s.onSale == False }}>已下架</option></select></div>
-      <div class="field" style="flex:0 0 140px"><label>可提前选角</label>
-        <select name="allowRolePick">
-          <option value="1" {{ 'selected' if s.allowRolePick }}>开（客人能选）</option>
-          <option value="0" {{ 'selected' if not s.allowRolePick }}>关（到店分配）</option>
-        </select></div>
-    </div>
-
-    <div class="field mt"><label>角色（逗号分隔，顺序就是列表顺序）</label>
-      <input name="roles" value="{{ (s.roles or [])|map(attribute='name')|join(', ') }}" placeholder="例：沈池, 阿澈, 江雪"></div>
-    <div class="field"><label>简介</label>
-      <textarea name="desc" rows="2">{{ s.desc or '' }}</textarea></div>
-
-      <button class="btn btn-primary" type="submit">保存这个本</button>
-      <a class="btn" href="{{ url_for('public.script_detail', sid=s.id) }}" target="_blank">看前台效果</a>
-    </form>
-  </div>
-{% endfor %}
 
 {% if not rows %}
 <div class="panel empty">
-  剧本库是空的。默认没有内置剧本（每个店的本子都不一样），
-  你可以直接编辑 <b>data/scripts.json</b> 加几个，格式照抄：
-  <pre style="text-align:left;overflow-x:auto;margin-top:8px">[{"id":1,"title":"云使","emoji":"☁️","tags":["情感"],"players":"6人","price":128,
-  "desc":"简介…","onSale":true,"allowRolePick":true,
-  "roles":[{"name":"沈池"},{"name":"阿澈"}]}]</pre>
-  存盘后刷新本页即可。
+  <div class="e">📚</div>
+  <p>剧本库还是空的。在上面填个名字点「建一个」，几秒钟的事。</p>
 </div>
 {% endif %}
+
+{% for s in rows %}
+<div class="adm-panel">
+  <div class="between">
+    <b style="font-size:16px">{{ s.emoji or '🎭' }} {{ s.title }}</b>
+    <span class="sub">
+      {% if s.onSale is not false %}<span class="badge done">上架中</span>{% else %}<span class="badge">已下架</span>{% endif %}
+      {% if s.allowRolePick %}<span class="badge new">可提前选角</span>{% endif %}
+      已开 {{ s.plays or 0 }} 场
+    </span>
+  </div>
+
+  {# —— 面上就这四样 + 保存，页面上的「主要动作」一目了然 —— #}
+  <form method="post" action="{{ url_for('admin.script_save', sid=s.id) }}">
+    <div class="row mt" style="gap:12px;align-items:flex-end">
+      <div class="field" style="flex:1 1 170px;margin:0"><label>剧本名</label>
+        <input name="title" value="{{ s.title }}"></div>
+      <div class="field" style="flex:0 0 108px;margin:0"><label>单价(元)</label>
+        <input name="price" type="number" value="{{ s.price|int }}"></div>
+      <div class="field" style="flex:0 0 132px;margin:0"><label>上架状态</label>
+        <select name="onSale">
+          <option value="1" {{ 'selected' if s.onSale != False }}>上架（能约）</option>
+          <option value="0" {{ 'selected' if s.onSale == False }}>下架（约不了）</option>
+        </select></div>
+      <div class="field" style="flex:0 0 150px;margin:0"><label>客人能否提前选角</label>
+        <select name="allowRolePick">
+          <option value="1" {{ 'selected' if s.allowRolePick }}>能选</option>
+          <option value="0" {{ 'selected' if not s.allowRolePick }}>到店再分</option>
+        </select></div>
+      <button class="btn btn-primary" type="submit">保存</button>
+      <a class="btn btn-ghost" href="{{ url_for('public.script_detail', sid=s.id) }}" target="_blank">看前台</a>
+    </div>
+
+    {# —— 进阶项折起来，想看再点，不点也不影响上面那行 —— #}
+    <details class="spoiler mt">
+      <summary>可选：人数 / 角色 / 简介（点开填，填完记得回上面点「保存」）</summary>
+      <div class="row mt" style="gap:12px">
+        <div class="field" style="flex:0 0 150px;margin:0"><label>人数</label>
+          <input name="players" value="{{ s.players or '' }}" placeholder="例：6人 / 4-6人"></div>
+      </div>
+      <div class="field mt"><label>角色（用逗号隔开，顺序就是客人看到的顺序）</label>
+        <input name="roles" value="{{ (s.roles or [])|map(attribute='name')|join(', ') }}"
+               placeholder="例：沈池, 阿澈, 江雪">
+        <span class="sub">填了角色 + 上面「能选」，客人才能在网页上挑角色</span></div>
+      <div class="field"><label>简介（客人点开剧本时看到的一段话）</label>
+        <textarea name="desc" rows="3">{{ s.desc or '' }}</textarea></div>
+    </details>
+  </form>
+
+  <details class="spoiler">
+    <summary>换封面图（可选）</summary>
+    <form class="row mt" style="gap:12px;align-items:center" method="post"
+          action="{{ url_for('admin.script_img', sid=s.id) }}" enctype="multipart/form-data">
+      {% if s.img %}<img class="up-prev" src="{{ s.img }}" alt="">{% else %}<span class="up-ph">🎭</span>{% endif %}
+      <div style="flex:1 1 240px">
+        <input type="file" name="cover" accept="image/png,image/jpeg,image/webp">
+        <p class="sub" style="margin-top:4px">建议 4:3、300KB 以内，传完前台立刻生效</p>
+      </div>
+      <button class="btn btn-sm" type="submit">上传</button>
+    </form>
+  </details>
+</div>
+{% endfor %}
+
+{# —— 批量活儿收在最底下，平时不用看 —— #}
+<details class="spoiler">
+  <summary>高级：批量导入 / 导出（本子多的时候用 Excel 一次性改）</summary>
+  <div class="adm-panel mt">
+    <div class="row" style="gap:12px;align-items:flex-end">
+      <a class="btn" href="{{ url_for('admin.scripts_export') }}">导出 CSV</a>
+      <form class="form-inline" method="post" action="{{ url_for('admin.scripts_import') }}"
+            enctype="multipart/form-data">
+        <div style="flex:1 1 240px"><input type="file" name="csv" accept=".csv"></div>
+        <button class="btn btn-primary" type="submit">导入 CSV</button>
+      </form>
+    </div>
+    <p class="sub mt">
+      导出后用 Excel 打开就是一张表：<b>id 留空 = 新建一本</b>，tags 用 / 隔开，roles 用逗号隔开。
+      改完原样导回来就行（同名会覆盖）。
+    </p>
+
+    <details class="spoiler mt">
+      <summary>实在导不进来？也可以直接改 data/scripts.json（这块我留着，怕哪天用得上）</summary>
+      <pre style="text-align:left;overflow-x:auto;font-size:12px">[{"id":1,"title":"云使","emoji":"☁️","tags":["情感"],"players":"6人","price":128,
+  "desc":"简介…","onSale":true,"allowRolePick":true,
+  "roles":[{"name":"沈池"},{"name":"阿澈"}]}]</pre>
+      <p class="sub">存盘后刷新本页即可。</p>
+    </details>
+  </div>
+</details>

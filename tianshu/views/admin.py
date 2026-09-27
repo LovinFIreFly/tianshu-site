@@ -115,7 +115,9 @@ def users():
             continue
         mine = [b for b in bookings if str(b.get('phone')) == str(u.get('phone')) and b.get('status') != 'cancelled']
         rows.append({'u': u, 'visits': len(mine), 'spent': sum(int(b.get('amount') or 0) for b in mine),
-                     'last': max([b.get('createdAt') or 0 for b in mine] or [0])})
+                     'last': max([b.get('createdAt') or 0 for b in mine] or [0]),
+                     # 最近 3 次预约：点开客户档案时顺手给他看，不用再翻预约页
+                     'recent': sorted(mine, key=lambda b: -(b.get('ts') or 0))[:3]})
     rows.sort(key=lambda x: -x['visits'])
     return render_template('admin/panel_users.html', rows=rows, q=kw)
 
