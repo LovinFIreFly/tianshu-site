@@ -525,14 +525,16 @@ tbody tr:last-child td{border-bottom:0}
 .menu .mi.on span{color:var(--vermilion)}
 
 /* ============================ 15. 弹窗 ============================ */
-.mask{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;
-  padding:var(--sp-5);background:rgba(20,19,18,.78);
-  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+/* 遮罩自己滚（align-items:flex-start + .modal{margin:auto}）：
+   长弹窗在小屏上从顶部开始、整页滚，不会出现"弹窗比屏幕高、下半截看不到"那种被挡住的感觉 */
+.mask{position:fixed;inset:0;z-index:100;display:none;align-items:flex-start;justify-content:center;
+  padding:var(--sp-7) var(--sp-5);overflow-y:auto;-webkit-overflow-scrolling:touch;
+  background:rgba(20,19,18,.78);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .mask.show{display:flex;animation:fadeIn var(--t) var(--ease) both}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 /* 弹窗是一整块纸面：里面不再套小白框（套了就总像"有东西被挡住"），
    分区只用细线，见下面的 .modal .adm-panel 覆盖。 */
-.modal{position:relative;width:920px;max-width:100%;max-height:86vh;overflow-y:auto;
+.modal{position:relative;margin:auto;width:920px;max-width:100%;
   background:var(--paper-3);border:1px solid var(--rule-strong);box-shadow:var(--sh-3);
   animation:fadeIn var(--t) var(--ease) both}
 .modal.small{width:440px}
@@ -541,11 +543,23 @@ tbody tr:last-child td{border-bottom:0}
   border-radius:0;box-shadow:none;padding:var(--sp-5) 0;margin:0}
 .modal .adm-panel:first-of-type{border-top:0;padding-top:var(--sp-3)}
 .modal .kv{margin:var(--sp-5) 0 0}
-.m-head{position:sticky;top:0;z-index:5;display:flex;justify-content:flex-end;
-  padding:var(--sp-4) var(--sp-4) 0;pointer-events:none}
-.m-close{pointer-events:auto;width:34px;height:34px;border:1px solid var(--rule-strong);
-  background:var(--paper-3);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--ink-3)}
-.m-close:hover{color:var(--ink);border-color:var(--ink-4)}
+/* 弹窗的头：左边是谁、右边 ✕ —— ✕ 不再浮在内容上（以前它压着右上角那张信用分胶囊） */
+.modal .m-head{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--sp-4);
+  padding:var(--sp-6) var(--sp-6) var(--sp-4);border-bottom:1px solid var(--rule)}
+.modal .m-head h2{margin:var(--sp-2) 0 0;font-size:28px;line-height:1.1}
+.modal .m-body{padding:var(--sp-5) var(--sp-6) var(--sp-6)}
+.m-close{width:36px;height:36px;flex:none;border:1px solid var(--rule-strong);background:transparent;
+  display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--ink-3)}
+.m-close:hover{color:var(--ink);border-color:var(--ink-4);background:var(--paper-2)}
+
+/* 支付定金页（pay_deposit.html） */
+.pay-wrap{max-width:520px;margin:0 auto}
+.pay-card{text-align:center;padding:var(--sp-8) var(--sp-7)}
+.pay-amount{font-family:var(--serif);font-size:52px;font-weight:700;line-height:1;margin:var(--sp-3) 0 var(--sp-2)}
+.pay-wx{display:flex;align-items:center;gap:var(--sp-4);text-align:left;margin:var(--sp-6) 0;
+  border:1px dashed var(--rule-strong);background:var(--paper-2);padding:var(--sp-4) var(--sp-5)}
+.pay-wx .ico{font-size:24px;line-height:1}
+.pay-wx b{font-size:17px;letter-spacing:.02em}
 
 /* ============================ 16. 提示 / 消息 ============================ */
 .flash-wrap{max-width:var(--container);margin:0 auto;padding:0 var(--sp-7)}

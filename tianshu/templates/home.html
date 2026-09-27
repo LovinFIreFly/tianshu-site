@@ -22,11 +22,12 @@
       <a class="btn btn-ghost" href="{{ url_for('public.car') }}">看看谁在拼车</a>
     </div>
 
+    {# 对外不露营业额：第四格换成累计场次（到目前一共开过多少场） #}
     <div class="stats">
       <div><b>{{ stat.plays }}</b><span>累计开本</span></div>
       <div><b>{{ scripts|length }}</b><span>在架剧本</span></div>
       <div><b>{{ sessions|length }}</b><span>今日场次</span></div>
-      <div><b>{{ stat.income }}</b><span>已收定金</span></div>
+      <div><b>{{ done_sessions }}</b><span>累计场次</span></div>
     </div>
   </div>
 </section>

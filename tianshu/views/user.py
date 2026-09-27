@@ -370,6 +370,24 @@ def order_act(oid, action):
     return redirect(url_for('user.me'))
 
 
+@bp.get('/me/pay/<int:oid>')
+@login_required
+def pay_deposit(oid):
+    """支付定金那一页：上面是小客服微信，下面一颗「我已完成支付」。
+
+    为什么不做在线支付：本地版没有支付通道，店里收定金的实际做法就是加小客服微信转账。
+    点「完成」只是把单子标成"待小客服确认"（claimed）—— 核销码要等管理员在「订单」页
+    点「确认支付定金」之后才给客人看，这样码不会在钱没到之前就流出去。
+    """
+    u = current_user()
+    o = next((x for x in db.rows('pays') if str(x.get('id')) == str(oid)
+              and str(x.get('phone')) == str(u.get('phone'))), None)
+    if not o:
+        flash('没找到这一单（可能已经取消了）', 'warn')
+        return redirect(url_for('user.me'))
+    return render_template('pay_deposit.html', o=o)
+
+
 @bp.get('/notice')
 @login_required
 def notice_center():

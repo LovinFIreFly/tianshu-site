@@ -17,7 +17,9 @@
       <span>{{ name }}</span></button>
     {% endfor %}
     <div class="sp"></div>
-    <a class="navi" href="{{ url_for('admin.dashboard') + '#dm' }}"><span>→</span><span>我这个月能拿多少</span></a>
+    {# 以前指向 admin 的 DM 结算页 —— 但 DM 不是员工，点进去直接 403「这块只有员工能进」。
+       改成跳自己工作台的结算块（今日面板底部那块，锚点 #my-pay）。 #}
+    <a class="navi" href="{{ url_for('dm.index') }}#my-pay"><span>→</span><span>我这个月能拿多少</span></a>
     <a class="navi" href="{{ url_for('public.home') }}"><span>←</span><span>回到网站</span></a>
   </aside>
 

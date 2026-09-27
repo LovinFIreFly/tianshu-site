@@ -62,9 +62,11 @@
   </table>
 </div>
 
-{% if my_row %}
-<div class="panel mt">
-  <h3>{{ month }} 我的结算（预估）</h3>
+{# 结算块：侧栏「我这个月能拿多少」跳到这儿（#my-pay）。
+   没有场次时也留着这块，只换一句话 —— 不然点了链接像是什么都没发生 #}
+<div class="panel mt" id="my-pay">
+  <h3>{{ month }} 我的结算（预估）· 我这个月能拿到多少</h3>
+  {% if my_row %}
   <div class="row" style="gap:16px">
     <span>场次 <b>{{ my_row.count }}</b></span>
     <span>人次 <b>{{ my_row.players }}</b></span>
@@ -73,7 +75,10 @@
     <span>指定加价 <b>¥{{ my_row.fee }}</b></span>
     <span class="price">合计 ¥{{ my_row.total }}</span>
   </div>
+  {% else %}
+  <p class="sub">这个月还没有排到你名下的场次，所以暂时没有结算数据。
+    排期由门店在「排期」页指定 DM；客人下单时点名你，也会算进来。</p>
+  {% endif %}
   <p class="sub mt">口径：{% if settings.dmPayMode == 'fixed' %}每场固定场费{% else %}营业额 × {{ (settings.dmRate*100)|round(1) }}%{% endif %}
-    ＋ 客人点名加价。最终以「DM 结算」页标记为准</p>
+    ＋ 客人点名加价。最终以门店「DM 结算」页标记为准（那份是店里看的，你这边是同一套数字）</p>
 </div>
-{% endif %}

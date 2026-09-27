@@ -75,17 +75,17 @@ def main():
     print('目标：%s\n' % BASE)
     adm = login('FireFly', '123123')
 
-    print('=== 后台 /admin：14 个面板装在一页里 ===')
+    print('=== 后台 /admin：15 个面板装在一页里 ===')
     s, html, ms = get(adm, '/admin')
     panes = re.findall(r'class="tabpane[^"]*"\s+data-tab="([a-z]+)"', html)
     check('/admin 能打开', s == 200, '%dms  %dKB' % (ms, len(html) / 1024))
-    check('装了 14 个面板', len(panes) == 14, '实际 %d 个：%s' % (len(panes), '、'.join(panes)))
+    check('装了 15 个面板', len(panes) == 15, '实际 %d 个：%s' % (len(panes), '、'.join(panes)))
     check('标签是按钮不是链接（不留子网址）', 'data-tabs="admin"' in html and
           not re.search(r'<a[^>]+href="\?tab=', html))
     check('页面里有切换脚本', '/static/js/tabs.js' in html)
     check('默认只亮第一个面板', html.count('class="tabpane on"') == 1)
     # 各面板的标题得真的在页里（别只是空壳 div）——注意空库时页面本来就小，不能按体积判断
-    for text in ('预约管理', '操作日志', '用户', '结算'):
+    for text in ('预约管理', '操作日志', '用户', '结算', 'DM 成长档案'):
         check('面板内容在页里：%s' % text, text in html)
 
     print('\n=== 老网址还能用（302 转到 /admin#标签）===')

@@ -126,6 +126,38 @@ def notify(phone, title, text, kind='system'):
     db.write('notices', rows[:500])
 
 
+def notify_staff(title, text, kind='system'):
+    """给所有管理员 / 超管各发一条站内通知
+    （"客人说定金付了"这种得有人去确认，所以别只发给客人自己）"""
+    for u in db.rows('users'):
+        if role_of(u) in ('admin', 'super'):
+            notify(u.get('phone'), title, text, kind)
+
+
+def parse_day(s):
+    """日历控件交上来的 '2026-09-30' → 当天 0 点的毫秒。填不成日期就返回 0"""
+    try:
+        import time as _t
+        return int(_t.mktime(_t.strptime(str(s).strip(), '%Y-%m-%d')) * 1000)
+    except Exception:
+        return 0
+
+
+def iso_day(offset=0):
+    """今天 +offset 天的 'YYYY-MM-DD'（日历控件的 min / max / 默认值都用它）"""
+    import time as _t
+    return _t.strftime('%Y-%m-%d', _t.localtime((midnight() + offset * 86400000) / 1000))
+
+
+def car_deposit(st=None):
+    """拼车定金：一口价（默认 50，后台设置里能改）"""
+    st = st or get_settings()
+    try:
+        return int(st.get('carDeposit') or 50)
+    except Exception:
+        return 50
+
+
 def audit(who, role_name, text):
     """操作日志：谁在什么时候干了什么。后台「日志」页能看到"""
     rows = db.rows('logs')
@@ -668,26 +700,50 @@ def create_booking(user, form):
     if sc.get('onSale') is False:
         return False, '该剧本已下架', None
 
-    ts = int(form.get('ts') or 0)
+    # 日期两种交法都认：日历控件给的是 '2026-09-30'（ts_day），场次按钮给的是毫秒（ts）
+    ts = int(form.get('ts') or 0) or parse_day(form.get('ts_day'))
     tm = str(form.get('time') or '19:00')
     if not ts:
         return False, '请选择日期', None
+    if ts < midnight():
+        return False, '日期不能选今天以前的', None
     lo, hi = player_range(sc)
     players = max(1, min(hi, int(form.get('players') or lo)))
     mode = '包车' if form.get('mode') == '包车' else '拼车'
     bookings = db.rows('bookings')
 
-    # ① 已排场次的话，先看还有没有位子（防超卖）
-    ses = next((x for x in db.rows('sessions') if str(x.get('sid')) == str(sc.get('id'))
-                and x.get('ts') == ts and x.get('time') == tm and x.get('status') == 'open'), None)
-    session_id = 0
-    if ses:
-        used = sum((b.get('players') or 1) for b in bookings
-                   if b.get('sessionId') == ses.get('id') and b.get('status') != 'cancelled')
-        left = (ses.get('cap') or 99) - used
-        if left < players:
-            return False, '该场次只剩 %d 个位置了，改下人数或换个时段' % max(0, left), None
-        session_id = ses.get('id')
+    # 拼车有两种走法：自己单开一辆车（car=new）／上别人已经在等人那辆车（car=join）。
+    # 上车的话日期、时间都跟着那辆车走 —— 客人不用也不能另挑。
+    join_car = None
+    if mode == '拼车' and str(form.get('car') or 'new') == 'join':
+        cid = str(form.get('carId') or '')
+        join_car = next((b for b in bookings if str(b.get('id')) == cid and b.get('carNew') is True
+                         and str(b.get('sid')) == str(sc.get('id')) and b.get('status') == 'booked'
+                         and (b.get('ts') or 0) >= midnight()), None)
+        if not join_car:
+            return False, '这辆车已经没了 —— 换一辆，或者自己单开一辆', None
+        ts, tm = join_car.get('ts'), join_car.get('time')
+        mates = [b for b in bookings if not b.get('carNew') and b.get('carOwner') == join_car.get('username')
+                 and b.get('sid') == join_car.get('sid') and b.get('ts') == ts and b.get('time') == tm
+                 and b.get('status') != 'cancelled']
+        joined = (join_car.get('players') or 1) + sum(int(b.get('players') or 1) for b in mates)
+        room = (join_car.get('carCap') or 8) - joined - (join_car.get('reserved') or 0)
+        if room < players:
+            return False, '这辆车只剩 %d 个位子了，改下人数' % max(0, room), None
+
+    # ① 已排场次的话，先看还有没有位子（防超卖）。上车不用查：位子由车的容量管
+    ses = None
+    session_id = join_car.get('sessionId') if join_car else 0
+    if not join_car:
+        ses = next((x for x in db.rows('sessions') if str(x.get('sid')) == str(sc.get('id'))
+                    and x.get('ts') == ts and x.get('time') == tm and x.get('status') == 'open'), None)
+        if ses:
+            used = sum((b.get('players') or 1) for b in bookings
+                       if b.get('sessionId') == ses.get('id') and b.get('status') != 'cancelled')
+            left = (ses.get('cap') or 99) - used
+            if left < players:
+                return False, '该场次只剩 %d 个位置了，改下人数或换个时段' % max(0, left), None
+            session_id = ses.get('id')
 
     # ② 线上选角：得后台给这个本开了"可提前选角"才行，且同一角色只能一人
     role = ''
@@ -712,10 +768,13 @@ def create_booking(user, form):
         if not coupon:
             return False, '这张券用不了（可能过期或已用过）', None
 
-    # ④ 算钱。定金四舍五入取整，别给客人报 229.6 这种数字
-    price = float(sc.get('price') or 0) + (float(st['dmFee']) if form.get('dmPhone') else 0)
+    # ④ 算钱。拼车定金统一一口价（默认 50），包车按比例；都取整，别给客人报 229.6 这种数字
+    if join_car:
+        price = float(join_car.get('price') or sc.get('price') or 0)     # 上车跟着车价，不另算指定 DM 加价
+    else:
+        price = float(sc.get('price') or 0) + (float(st['dmFee']) if form.get('dmPhone') else 0)
     amount = round(price * players)
-    deposit = round(amount * float(st['depositRatio']))
+    deposit = car_deposit(st) if mode == '拼车' else round(amount * float(st['depositRatio']))
     if coupon:
         deposit = max(0, deposit - int(coupon.get('amount') or 0))
 
@@ -729,16 +788,22 @@ def create_booking(user, form):
                'sid': sc.get('id'), 'title': sc.get('title'), 'emoji': sc.get('emoji') or '🎭',
                'day': day_label(ts), 'ts': ts, 'time': tm, 'players': players,
                'price': price, 'amount': amount, 'status': 'booked', 'mode': mode,
-               'carNew': mode == '拼车', 'carOwner': user.get('username') if mode == '拼车' else None,
-               'carCap': hi, 'carMin': min(lo, players), 'carTags': [], 'reserved': 0,
-               'sessionId': session_id, 'dmPhone': clean(form.get('dmPhone'), 20), 'role': role,
-               'verifyCode': '%06d' % secrets.randbelow(1000000),      # 到店报这个码核销
+               'carNew': (mode == '拼车' and not join_car),
+               'carOwner': (join_car.get('username') if join_car
+                            else (user.get('username') if mode == '拼车' else None)),
+               'carCap': (join_car.get('carCap') if join_car else hi),
+               'carMin': (join_car.get('carMin') if join_car else min(lo, players)),
+               'carTags': [], 'reserved': 0, 'sessionId': session_id,
+               'dmPhone': (join_car.get('dmPhone') if join_car else clean(form.get('dmPhone'), 20)),
+               'role': role,
+               # 到店报这个码核销。**付定金并经小客服确认之前，客人自己看不到它**
+               'verifyCode': '%06d' % secrets.randbelow(1000000),
                'deposit': deposit, 'balanceUsed': used, 'createdAt': now_ms()}
     order = {'id': bid + 1, 'bid': bid, 'phone': user.get('phone'), 'username': user.get('username'),
              'title': sc.get('title'), 'day': booking['day'], 'ts': ts, 'time': tm, 'players': players,
              'amount': amount, 'deposit': deposit, 'balanceUsed': used, 'payable': deposit - used,
              'status': 'unpaid', 'createdAt': now_ms(),
-             'couponId': coupon.get('id') if coupon else 0, 'paidAt': 0, 'refundAt': 0}
+             'couponId': coupon.get('id') if coupon else 0, 'paidAt': 0, 'refundAt': 0, 'claimedAt': 0}
 
     db.update('bookings', lambda rows: rows + [booking])
     db.update('pays', lambda rows: rows + [order])
@@ -748,11 +813,18 @@ def create_booking(user, form):
     if coupon:
         db.update('coupons', lambda rows: [dict(c, used=True, usedAt=now_ms()) if str(c.get('id')) == cid else c
                                            for c in rows])
+    if join_car:
+        notify(join_car.get('phone'), '有人上你的车了',
+               '%s 上了《%s》%s %s 这辆车，付定金的事店里会跟他确认。'
+               % (user.get('username'), sc.get('title'), booking['day'], tm), 'car')
+    # 通知里**不写核销码**：得等定金确认了才给客人看，不然等于白送一个码
     notify(user.get('phone'), '预约成功，等付定金',
-           '《%s》%s %s 先给你留着位置了，定金 ¥%d，到店报核销码 %s。'
-           % (sc.get('title'), booking['day'], tm, deposit, booking['verifyCode']), 'booking')
-    audit(user.get('username'), role_of(user), '预约《%s》%s %s' % (sc.get('title'), booking['day'], tm))
-    return True, '预约成功！定金 ¥%d，到店报核销码 %s' % (deposit, booking['verifyCode']), booking
+           '《%s》%s %s 先给你留着位子了，定金 ¥%d。付完定金、小客服确认到账后，'
+           '核销码才会出现在「我的预约」里。'
+           % (sc.get('title'), booking['day'], tm, deposit), 'booking')
+    audit(user.get('username'), role_of(user),
+          '%s《%s》%s %s' % ('上车' if join_car else '预约', sc.get('title'), booking['day'], tm))
+    return True, '预约成功！定金 ¥%d —— 付完等小客服确认，核销码就会显示' % deposit, booking
 
 
 # ---------------------------------------------------------------- 订单 ★
@@ -767,18 +839,38 @@ def order_action(user, order_id, action, is_staff=False):
         return False, '这不是你的订单'
     booking = next((b for b in bookings if b.get('id') == order.get('bid')), None)
 
-    if action == 'pay':
+    # 客人点完「我已支付定金」→ claimed（待小客服确认）。
+    # 这一步只是"他自己说付了"，钱还没认；核销码这时候仍然不给看，等 cash 到账被确认。
+    if action == 'claim':
         if order.get('status') != 'unpaid':
-            return False, '这个订单现在付不了'
-        order.update(status='paid', paidAt=now_ms(), tradeNo='LOCAL%d' % now_ms())
+            return False, '这一单不用再提交了'
+        order.update(status='claimed', claimedAt=now_ms())
         db.write('pays', pays)
-        notify(order.get('phone'), '定金已付 ✅',
-               '《%s》%s %s 的定金 ¥%d 收到了，到时候见～' % (order.get('title'), order.get('day'),
-                                                          order.get('time'), order.get('deposit')), 'pay')
-        return True, '定金已记录（本地版没有真实支付，先按已付处理）'
+        notify(order.get('phone'), '定金已提交，等小客服确认',
+               '《%s》%s %s 的定金 ¥%d，等小客服确认到账后，核销码就会显示出来。'
+               % (order.get('title'), order.get('day'), order.get('time'), order.get('deposit')), 'pay')
+        notify_staff('有客人说付了定金，去确认一下',
+                     '%s《%s》的定金 ¥%s 待确认 —— 去「订单」页点「确认支付定金」，'
+                     '确认完客人才看得到核销码。'
+                     % (order.get('username'), order.get('title'), order.get('deposit')), 'pay')
+        return True, '已提交，等小客服确认到账（确认后核销码才显示）'
+
+    # 确认收到定金：管理员 / 前台在「订单」页点；客人自己点的话只允许从 unpaid 走
+    if action == 'pay':
+        if order.get('status') not in ('unpaid', 'claimed'):
+            return False, '这个订单现在付不了'
+        if not is_staff and order.get('status') == 'claimed':
+            return False, '这单已经提交过了，等店里确认'
+        order.update(status='paid', paidAt=now_ms(),
+                     tradeNo=('STAFF%d' if is_staff else 'LOCAL%d') % now_ms())
+        db.write('pays', pays)
+        notify(order.get('phone'), '定金已确认 ✅',
+               '《%s》%s %s 的定金 ¥%d 收到了 —— 核销码已经出现在「我的预约」里，到店报给 DM 就行。'
+               % (order.get('title'), order.get('day'), order.get('time'), order.get('deposit')), 'pay')
+        return True, '已确认收到定金 —— 客人那边现在能看到核销码了'
 
     if action == 'refund':
-        if order.get('status') not in ('paid', 'unpaid'):
+        if order.get('status') not in ('paid', 'unpaid', 'claimed'):
             return False, '这一单退不了'
         hours = ((booking.get('ts') or 0) - now_ms()) / 3600000 if booking else 999
         free = hours >= float(st['freeCancelHours'])          # 距开场还够不够免费取消的时限
@@ -828,15 +920,30 @@ def car_action(user, car_id, action, form=None):
         joined = (ob.get('players') or 1) + sum((b.get('players') or 1) for b in mates())
         if (ob.get('carCap') or 8) - joined - (ob.get('reserved') or 0) < 1:
             return False, '车位满了，要不先排个候补？'
-        bookings.append({'id': now_ms(), 'phone': phone, 'username': name, 'sid': ob.get('sid'),
+        dep = car_deposit()
+        jid, joi = now_ms(), now_ms() + 1 + secrets.randbelow(90)
+        bookings.append({'id': jid, 'phone': phone, 'username': name, 'sid': ob.get('sid'),
                          'title': ob.get('title'), 'emoji': ob.get('emoji'), 'day': ob.get('day'),
                          'ts': ob.get('ts'), 'time': ob.get('time'), 'players': 1, 'price': ob.get('price'),
-                         'amount': ob.get('price'), 'deposit': 0, 'status': 'booked', 'mode': '拼车',
+                         'amount': ob.get('price'), 'deposit': dep, 'status': 'booked', 'mode': '拼车',
                          'carNew': False, 'carOwner': ob.get('username'), 'sessionId': ob.get('sessionId') or 0,
-                         'dmPhone': '', 'role': '', 'verifyCode': '', 'createdAt': now_ms()})
+                         'dmPhone': '', 'role': '',
+                         # 上车的人也要有自己的核销码（同样：定金确认后才给他看）
+                         'verifyCode': '%06d' % secrets.randbelow(1000000), 'createdAt': now_ms()})
         db.write('bookings', bookings)
+        # 上车同样要交押位定金（统一一口价），走跟正常预约一样的「提交 → 小客服确认 → 出核销码」
+        db.update('pays', lambda rows: rows + [{
+            'id': joi, 'bid': jid, 'phone': phone, 'username': name, 'title': ob.get('title'),
+            'day': ob.get('day'), 'ts': ob.get('ts'), 'time': ob.get('time'), 'players': 1,
+            'amount': ob.get('price') or 0, 'deposit': dep, 'balanceUsed': 0, 'payable': dep,
+            'status': 'unpaid', 'createdAt': now_ms(), 'couponId': 0, 'paidAt': 0, 'refundAt': 0,
+            'claimedAt': 0}])
         notify(ob.get('phone'), '有人上你的车了',
                '%s 加入了《%s》%s %s 这车。' % (name, ob.get('title'), ob.get('day'), ob.get('time')), 'car')
+        notify(phone, '上车了，还差定金',
+               '《%s》%s %s 你上了 %s 的车，定金 ¥%d。回「我的预约」点支付定金，'
+               '小客服确认到账后核销码才会显示。'
+               % (ob.get('title'), ob.get('day'), ob.get('time'), ob.get('username'), dep), 'car')
         if joined + 1 >= (ob.get('carMin') or 4):            # 够最低人数就通知全车"成局"
             for x in [ob] + mates():
                 if x.get('phone'):

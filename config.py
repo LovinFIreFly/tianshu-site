@@ -32,7 +32,9 @@ SETTINGS_DEFAULT = {
     "shopName": "甜薯剧本杀",
     "notice": "周末场次紧张，建议提前两天订位",
     "dmFee": 20,               # 指定 DM 的加价（元/人）
-    "depositRatio": 0.30,      # 定金比例
+    "depositRatio": 0.30,      # 定金比例（包车用这个算）
+    "carDeposit": 50,          # 拼车定金：一口价（元），跟人数无关
+    "serviceWechat": "tianshu-kefu",   # 小客服微信号（客人付定金那页显示，记得改成真的）
     "freeCancelHours": 24,     # 开场前 N 小时内取消算临期
     "lateCancelPenalty": 2,    # 临期取消扣的信用分
     "dmRate": 0.10,            # DM 分成比例（dmPayMode = 'rate' 时生效）

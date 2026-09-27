@@ -5,10 +5,17 @@
 
 <div class="row mt" style="gap:6px" data-filter="status">
   <button type="button" class="pill on" data-show="all">全部</button>
+  <button type="button" class="pill" data-show="claimed">待客服确认</button>
   <button type="button" class="pill" data-show="unpaid">待付定金</button>
   <button type="button" class="pill" data-show="paid">已付定金</button>
   <button type="button" class="pill" data-show="refunded">已退款</button>
 </div>
+
+{# 流程：客人点「支付定金」→ 加小客服微信付款 → 点「我已完成支付」（状态变 待客服确认）
+   → 你在下面点「确认支付定金」→ 状态变已付，客人的核销码才显示出来。
+   所以「待客服确认」这类单子是要处理的活儿，别当它已付。 #}
+<p class="sub mt">「待客服确认」是客人在支付页点过「我已完成支付」的单子 —— 钱到账了再点
+  <b>确认支付定金</b>，点完客人才能在「我的预约」里看到核销码。</p>
 
 <h2>每天收了多少钱（按场次日期）</h2>
 <div class="scroll panel">
@@ -25,7 +32,7 @@
 <h2>订单明细</h2>
 <div class="scroll panel">
   <table>
-    <tr><th>#</th><th>客户</th><th>剧本</th><th>日期</th><th>总价</th><th>定金</th><th>状态</th></tr>
+    <tr><th>#</th><th>客户</th><th>剧本</th><th>日期</th><th>总价</th><th>定金</th><th>状态</th><th>操作</th></tr>
     {% for o in rows %}
     <tr data-status="{{ o.status }}">
       <td class="sub">{{ o.id }}</td>
@@ -36,14 +43,22 @@
       <td class="price">¥{{ o.deposit or 0 }}</td>
       <td>
         {% if o.status == 'paid' %}<span class="badge ok">已付</span>
-        {% elif o.status == 'unpaid' %}<span class="badge warn">待付</span>
+        {% elif o.status == 'claimed' %}<span class="badge warn">待客服确认</span>
+        {% elif o.status == 'unpaid' %}<span class="badge">待付</span>
         {% elif o.status == 'refunded' %}<span class="badge bad">已退</span>
         {% else %}<span class="badge">{{ o.status }}</span>{% endif %}
       </td>
+      <td>
+        {% if o.status in ('unpaid', 'claimed') %}
+        <form method="post" action="{{ url_for('admin.order_confirm', oid=o.id) }}" style="display:inline">
+          <button class="btn btn-sm {{ 'btn-primary' if o.status == 'claimed' else '' }}" type="submit">
+            确认支付定金</button></form>
+        {% else %}<span class="sub">—</span>{% endif %}
+      </td>
     </tr>
     {% else %}
-    <tr><td colspan="7" class="empty">没有订单</td></tr>
+    <tr><td colspan="8" class="empty">没有订单</td></tr>
     {% endfor %}
-    <tr class="no-hit" hidden><td colspan="7" class="empty">这个筛选下没有订单</td></tr>
+    <tr class="no-hit" hidden><td colspan="8" class="empty">这个筛选下没有订单</td></tr>
   </table>
 </div>

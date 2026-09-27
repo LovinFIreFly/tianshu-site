@@ -401,6 +401,58 @@ def orders():
                            by_day=sorted(by_day.items(), key=lambda kv: kv[0], reverse=True)[:14])
 
 
+@staff_required
+def growth():
+    """DM 成长档案：每个 DM 的账号、段位、擅长本、带本情况、客人反馈、这个月能拿多少
+
+    DM 自己在工作台里看到的是自己那一份；这里是给店里看的全局视图 ——
+    谁在成长、谁该多排场、谁的反馈需要聊一聊，一屏看完。
+    """
+    month = request.args.get('month') or __import__('time').strftime('%Y-%m')
+    settle = {r['dmPhone']: r for r in business.dm_settlement(month)['rows']}
+    reviews = [r for r in db.rows('reviews') if not r.get('hidden')]
+    scripts = {str(s.get('id')): s for s in db.rows('scripts')}
+    sessions, bookings = db.rows('sessions'), db.rows('bookings')
+    rows = []
+    for u in db.rows('users'):
+        if business.role_of(u) != 'dm':
+            continue
+        phone = str(u.get('phone'))
+        g = business.dm_growth(phone)
+        my_ses = {s.get('id') for s in sessions if str(s.get('dm')) == phone}
+        cnt = {}
+        for b in bookings:
+            if b.get('status') == 'cancelled':
+                continue
+            if b.get('sessionId') in my_ses or str(b.get('dmPhone')) == phone:
+                cnt[str(b.get('sid'))] = cnt.get(str(b.get('sid')), 0) + 1
+        rows.append({
+            'u': u, 'phone': phone, 'g': g, 'mon': settle.get(phone) or {},
+            'nick': (u.get('profile') or {}).get('nick') or u.get('username'),
+            # 擅长本 = 他带得最多的三个本
+            'best': [{'title': (scripts.get(k) or {}).get('title') or '（已下架）', 'n': n}
+                     for k, n in sorted(cnt.items(), key=lambda kv: -kv[1])[:3]],
+            # 客人反馈 = 点名给他的那些评价，最近的在前
+            'fb': sorted([r for r in reviews if str(r.get('dmPhone')) == phone],
+                         key=lambda r: -(r.get('createdAt') or 0))[:3],
+        })
+    rows.sort(key=lambda x: (-x['g']['done'], -x['g']['rating']))
+    return render_template('admin/panel_growth.html', rows=rows, month=month,
+                           tiers=business.DM_TIERS, dm_count=len(rows))
+
+
+@bp.post('/orders/<int:oid>/confirm')
+@staff_required
+def order_confirm(oid):
+    """确认收到定金（客人在「支付定金」页点完提交之后，由店里确认）
+
+    点完这一步，客人的「我的预约」里才会出现核销码 —— 所以钱到账了再来点。
+    """
+    ok, msg = business.order_action(current_user(), oid, 'pay', is_staff=True)
+    flash(msg, 'ok' if ok else 'warn')
+    return redirect(url_for('admin.dashboard') + '#orders')
+
+
 @bp.post('/settings')
 @staff_required
 def settings():
@@ -410,9 +462,13 @@ def settings():
     for k in ('shopName', 'notice'):
         if f.get(k) is not None:
             rows[k] = business.clean(f.get(k), 80)
+    # 小客服微信号：客人点「支付定金」那页上显示的就是它
+    if f.get('serviceWechat') is not None:
+        rows['serviceWechat'] = business.clean(f.get('serviceWechat'), 40)
     if f.get('dmPayMode') in ('rate', 'fixed'):
         rows['dmPayMode'] = f.get('dmPayMode')
-    for k in ('dmFee', 'depositRatio', 'freeCancelHours', 'lateCancelPenalty', 'dmRate', 'dmFixedPay'):
+    for k in ('dmFee', 'depositRatio', 'freeCancelHours', 'lateCancelPenalty', 'dmRate', 'dmFixedPay',
+              'carDeposit'):
         if f.get(k):
             try:
                 rows[k] = float(f.get(k))
@@ -842,7 +898,8 @@ def dm_settle():
 # 以后加新功能：先照抄一个视图函数，再来这里补一行，最后去 _nav.html 加个标签。
 # （放在文件末尾是因为它要引用上面所有函数；dashboard() 里是运行时才查这张表，所以顺序没问题）
 _TAB_FUNCS = {
-    'dash': dash_panel, 'sessions': sessions, 'bookings': bookings, 'users': users, 'reviews': reviews,
+    'dash': dash_panel, 'sessions': sessions, 'bookings': bookings, 'users': users,
+    'growth': growth, 'reviews': reviews,
     'messages': messages, 'scripts': scripts, 'orders': orders, 'guides': guides_page,
     'notice': notice_page, 'dm': dm_page, 'backup': backup_page, 'reports': reports_page,
     'logs': logs,

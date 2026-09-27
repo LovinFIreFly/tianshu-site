@@ -98,6 +98,11 @@ def ts_in(days):
     return int(time.mktime(time.strptime(time.strftime('%Y-%m-%d', t), '%Y-%m-%d'))) * 1000
 
 
+def iso_of(ms):
+    """毫秒 → 'YYYY-MM-DD'（页面上的日历控件交上来的就是这个格式）"""
+    return time.strftime('%Y-%m-%d', time.localtime(ms / 1000))
+
+
 print('① 公开页面')
 guest = Client()
 s, html = guest.get('/')
@@ -146,13 +151,17 @@ cus.post('/login', {'account': '调试debug', 'password': '123123'})
 s, html = cus.get('/scripts/%s' % sc['id'])
 check('能打开详情页', s == 200 and '预约这一本' in html)
 day = ts_in(3)
-s, _ = cus.post('/book', {'sid': sc['id'], 'ts': day, 'time': '19:00', 'players': 4,
+check('预约表单改用日历控件了', 'type="date"' in html and 'name="ts_day"' in html)
+check('拼车下面有「自己单开一辆 / 加入已有的车」两个选项',
+      '自己单开一辆车' in html and '加入已有的车' in html)
+# 日期现在由日历控件交上来（ts_day='2026-09-30'），页面上不再是一长条下拉
+s, _ = cus.post('/book', {'sid': sc['id'], 'ts_day': iso_of(day), 'time': '19:00', 'players': 4,
                           'mode': '拼车', 'role': '阿甲'})
 bk = next((b for b in jread('bookings') if b.get('sid') == sc['id'] and b.get('ts') == day
            and b.get('status') == 'booked'), None)
-check('下单成功', bool(bk), (bk or {}).get('verifyCode'))
-check('定金 = 总价 × 30%', bk and bk.get('deposit') == round(int(bk.get('amount') or 0) * 0.3),
-      '%s × 30%% = %s' % ((bk or {}).get('amount'), (bk or {}).get('deposit')))
+check('下单成功（日期是日历交的 ts_day）', bool(bk), (bk or {}).get('verifyCode'))
+check('拼车定金统一 ¥50（跟人数、总价都无关）',
+      bk and int(bk.get('deposit') or 0) == 50, '定金 ¥%s' % (bk or {}).get('deposit'))
 check('核销码是 6 位', bk and len(str(bk.get('verifyCode'))) == 6)
 check('选角记上了', bk and bk.get('role') == '阿甲')
 # 同一个角色第二个人不能选
@@ -164,8 +173,23 @@ cus2.post('/book', {'sid': sc['id'], 'ts': day, 'time': '19:00', 'players': 2, '
 dup = [b for b in jread('bookings') if b.get('role') == '阿甲' and b.get('ts') == day
        and b.get('status') == 'booked']
 check('同一角色不会被两个人选走', len(dup) == 1, '有 %d 条' % len(dup))
+
+# 拼车「加入已有的车」：上别人那辆车，日期时间跟着车主走，定金同样一口价 50
+cus2.post('/book', {'sid': sc['id'], 'ts_day': iso_of(day), 'time': '09:00', 'players': 1,
+                    'mode': '拼车', 'car': 'join', 'carId': bk.get('id')})
+jb = next((b for b in jread('bookings') if b.get('phone') == '13900001111'
+           and b.get('carOwner') == bk.get('username') and not b.get('carNew')), None)
+check('能上别人已经开着的车（自己不用另开一辆）', bool(jb), '车主=%s' % (jb or {}).get('carOwner'))
+check('上车的时间跟着车主走（我填的 09:00 不算）',
+      jb and jb.get('time') == '19:00' and jb.get('ts') == day,
+      '%s %s' % ((jb or {}).get('day'), (jb or {}).get('time')))
+check('上车的人也有自己的核销码', jb and len(str(jb.get('verifyCode'))) == 6)
+jo = next((x for x in jread('pays') if x.get('bid') == (jb or {}).get('id')), None)
+check('上车也要交定金 ¥50', jo and int(jo.get('deposit') or 0) == 50, '定金 ¥%s' % (jo or {}).get('deposit'))
+
 s, html = cus.get('/me')
-check('「我的」能看到预约和核销码', s == 200 and str(bk.get('verifyCode')) in html)
+check('没付定金时，客人自己看不到核销码', str(bk.get('verifyCode')) not in html)
+check('页面上写着要等小客服确认', '未付定金' in html and '小客服' in html)
 
 print('④ 拼车大厅（要在核销之前测，核销后这车就不在池子里了）')
 s, html = guest.get('/car')
@@ -176,6 +200,13 @@ s, _ = cus3.post('/car/%s/join' % bk.get('id'), {})
 joined = [b for b in jread('bookings') if b.get('carOwner') == bk.get('username')
           and b.get('sid') == sc['id'] and b.get('status') == 'booked']
 check('别人能上车', len(joined) >= 1, '车里 %d 人（含车主）' % (len(joined) + 1))
+# 从大厅上车也走同一套定金规矩（一口价 + 客服确认 + 核销码后出）
+hall_bk = next((b for b in jread('bookings') if b.get('phone') == '13900001111'
+                and b.get('carOwner') == bk.get('username') and b.get('time') == '19:00'), None)
+hall_o = next((x for x in jread('pays') if x.get('bid') == (hall_bk or {}).get('id')), None)
+check('大厅上车也生成待付定金单（¥50）',
+      hall_o and int(hall_o.get('deposit') or 0) == 50 and hall_o.get('status') == 'unpaid',
+      '定金 ¥%s' % (hall_o or {}).get('deposit'))
 
 print('⑤ 员工：到店核销')
 s, html = admin.post('/admin/verify', {'code': bk.get('verifyCode')})
@@ -186,18 +217,36 @@ check('乱输码会提示查不到', '查不到' in html or '无效' in html or 
 s, html = guest.get('/car')
 check('核销后这车就从拼车池里撤了', title not in html)
 
-print('⑥ 定金与退款规则')
+print('⑥ 定金流程：支付页 → 待客服确认 → 管理员确认 → 客人才看到核销码')
 o = next((x for x in jread('pays') if x.get('bid') == bk.get('id')), None)
 check('下单自动生成了待付订单', o and o.get('status') == 'unpaid', (o or {}).get('status'))
-s, _ = cus.post('/order/%s/pay' % o['id'], {})
+s, html = cus.get('/me/pay/%s' % o['id'])
+check('支付定金页能打开，上面是加小客服微信', s == 200 and '小客服' in html and '我已完成支付' in html)
+s, _ = cus.post('/order/%s/claim' % o['id'], {})          # 点「我已完成支付」= 只是提交
 o = next((x for x in jread('pays') if x.get('id') == o['id']), {})
-check('付定金', o.get('status') == 'paid')
-# 再来一单（3 天后，够免费取消）然后退掉
+check('点完成 → 变成「待小客服确认」', o.get('status') == 'claimed', '状态=%s' % o.get('status'))
+s, html = cus.get('/me')
+check('待确认时客人还是看不到核销码', str(bk.get('verifyCode')) not in html)
+check('页面上显示「待小客服确认」', '待小客服确认' in html)
+s, html = admin.get('/admin/orders')
+check('后台订单页能看到这单要确认', '确认支付定金' in html and '待客服确认' in html)
+s, _ = admin.post('/admin/orders/%s/confirm' % o['id'], {})   # 管理员确认到账
+o = next((x for x in jread('pays') if x.get('id') == o['id']), {})
+check('管理员点「确认支付定金」', o.get('status') == 'paid', '状态=%s' % o.get('status'))
+s, html = cus.get('/me')
+check('确认之后客人才看得到核销码', s == 200 and str(bk.get('verifyCode')) in html)
+s, html = admin.get('/admin/bookings?status=all')
+check('管理员/后台一直能看到核销码', str(bk.get('verifyCode')) in html)
+
+# 包车还是按比例算定金（一口价只给拼车）
 cus.post('/book', {'sid': sc['id'], 'ts': ts_in(4), 'time': '20:00', 'players': 2, 'mode': '包车'})
 bk2 = next((b for b in jread('bookings') if b.get('sid') == sc['id'] and b.get('ts') == ts_in(4)
             and b.get('status') == 'booked'), None)
+check('包车定金仍按比例（总价 × 30%）',
+      bk2 and int(bk2.get('deposit') or 0) == round(int(bk2.get('amount') or 0) * 0.3),
+      '%s × 30%% = %s' % ((bk2 or {}).get('amount'), (bk2 or {}).get('deposit')))
 o2 = next((x for x in jread('pays') if x.get('bid') == (bk2 or {}).get('id')), None)
-cus.post('/order/%s/pay' % (o2 or {}).get('id'), {})
+cus.post('/order/%s/pay' % (o2 or {}).get('id'), {})       # 前台现金收的，可以直接标已付
 s, html = cus.post('/order/%s/refund' % (o2 or {}).get('id'), {})
 o2 = next((x for x in jread('pays') if x.get('id') == (o2 or {}).get('id')), {})
 check('提前 4 天取消 → 全额退定金', o2.get('status') == 'refunded', '状态=%s' % o2.get('status'))
@@ -479,14 +528,25 @@ dmcli = Client()
 dmcli.post('/login', {'account': 'dm测试', 'password': '123123'})
 s, html = dmcli.get('/dm')
 check('DM 工作台能打开', s == 200)
-check('三块面板都在同一页', all(('data-tab="%s"' % k) in html for k in ('today', 'credit', 'guides')))
+check('六块面板都在同一页', all(('data-tab="%s"' % k) in html
+                              for k in ('msgs', 'today', 'credit', 'sched', 'growth', 'guides')))
 check('DM 页不留子网址', 'href="?tab=' not in html and 'href="/dm/credit"' not in html)
+# 「我这个月能拿多少」以前指向 admin 的结算页，DM 不是员工 → 点进去 403
+check('DM 工作台不再有指向后台的链接（以前点「我这个月能拿到多少」会 403）',
+      'href="/admin' not in html)
+check('「我这个月能拿多少」跳到自己的结算块', '#my-pay' in html and '我的结算' in html)
 s, html = dmcli.get('/me')
 check('「我的」五个面板都渲染了', all(('data-tab="%s"' % k) in html
                                      for k in ('bookings', 'orders', 'coupons', 'notices', 'profile')))
 # 练本申请
 dmcli.post('/dm/practices', {'sid': sc['id'], 'note': '自检练本'})
 check('DM 能提练本申请', any('自检练本' in str(p.get('note')) for p in jread('practices')))
+# DM 成长档案（后台新面板）：段位 / 擅长本 / 反馈都要有
+s, html = admin.get('/admin/growth')
+check('后台有「DM 成长档案」面板', s == 200 and 'DM 成长档案' in html)
+check('档案里有段位和擅长本', '见习 DM' in html and '擅长本' in html)
+check('档案里有带本情况和反馈', '累计带本' in html and '客人反馈' in html)
+
 s, html = admin.get('/admin/guides')
 check('后台能看到练本申请', s == 200 and '自检练本' in html)
 

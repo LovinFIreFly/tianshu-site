@@ -111,7 +111,9 @@
       <form method="post" action="{{ url_for('user.book') }}">
         <input type="hidden" name="sid" value="{{ sc.id }}">
         <div class="field"><label>日期</label>
-          <select name="ts">{% for d in days %}<option value="{{ d.ts }}">{{ d.label }}</option>{% endfor %}</select></div>
+          {# 日历控件（原生 date）：点一下就能翻日历，不用在一长条下拉里找 #}
+          <input name="ts_day" type="date" value="{{ day_min }}" min="{{ day_min }}" max="{{ day_max }}" required>
+          <span class="sub">今天起 30 天内随便挑，点右边小日历能翻月</span></div>
         {# 开场时间自己填：点右边的小钟能选，也能直接打字（例 19:30） #}
         <div class="field"><label>开场时间（自己填）</label>
           <input name="time" type="time" value="{{ request.form.get('time') or '19:00' }}" required>
@@ -119,7 +121,30 @@
         <div class="field"><label>人数（{{ lo }}-{{ hi }} 人）</label>
           <input name="players" type="number" min="{{ lo }}" max="{{ hi }}" value="{{ lo }}"></div>
         <div class="field"><label>玩法</label>
-          <select name="mode"><option value="拼车">拼车（跟别人凑一车）</option><option value="包车">包车（自己人一车）</option></select></div>
+          <select name="mode" id="mode-sel">
+            <option value="拼车">拼车（跟别人凑一车）· 定金 ¥{{ car_deposit|int }}</option>
+            <option value="包车">包车（自己人一车）</option>
+          </select></div>
+
+        {# 拼车还要选一次：自己单开一辆车，还是上别人那辆已经在等人的车 #}
+        <div class="field" id="car-mode-box"><label>拼车怎么拼</label>
+          <select name="car" id="car-sel">
+            <option value="new">自己单开一辆车（我来组队）</option>
+            <option value="join"{{ ' disabled' if not open_cars }}>加入已有的车（现在 {{ open_cars|length }} 辆有位）</option>
+          </select>
+          <span class="sub">拼车定金统一 ¥{{ car_deposit|int }}，先付定金占住位子；
+            付完等小客服确认到账，核销码才会出现</span></div>
+
+        <div class="field" id="car-pick-box" style="display:none"><label>挑一辆车</label>
+          <select name="carId">
+            {% for c in open_cars %}
+            <option value="{{ c.id }}">{{ c.day }} {{ c.time }} · 车主 {{ c.owner }} · 已 {{ c.joined }}/{{ c.cap }} 人 · 还差 {{ c.need }} 人</option>
+            {% else %}
+            <option value="">现在还没有别人开着的车 —— 自己开一辆吧</option>
+            {% endfor %}
+          </select>
+          <span class="sub">上别人的车，日期和时间跟着那辆车走（上面选的日期会自动以车主那辆为准）</span></div>
+
 
         {% if dms %}
         <div class="field"><label>指定 DM（每人 +¥{{ dm_fee|int }}）</label>
@@ -158,7 +183,8 @@
 
         {% if me %}
           <button class="btn btn-accent btn-block" type="submit">提交预约</button>
-          <p class="sub mt">定金 = 总价 × {{ (settings.depositRatio * 100)|int }}%，到店报核销码。</p>
+          <p class="sub mt">拼车定金统一 ¥{{ car_deposit|int }}；包车定金 = 总价 × {{ (settings.depositRatio * 100)|int }}%。
+    付完定金、小客服确认到账后，核销码才会显示（在那之前只有店里的管理员和 DM 看得到）。</p>
         {% else %}
           <a class="btn btn-primary btn-block" href="{{ url_for('user.login', next=request.path) }}">登录后预约</a>
         {% endif %}
@@ -198,4 +224,23 @@
     {% endif %}
   </div>
 </div>
+
+{# 玩法切换：只有拼车才出现「怎么拼」；选了「加入已有的车」才出现挑车那一栏 #}
+<script>
+(function () {
+  var mode = document.getElementById('mode-sel');
+  var car = document.getElementById('car-sel');
+  var boxMode = document.getElementById('car-mode-box');
+  var boxPick = document.getElementById('car-pick-box');
+  if (!mode || !car || !boxMode || !boxPick) return;
+  function sync() {
+    var carpool = mode.value === '拼车';
+    boxMode.style.display = carpool ? '' : 'none';
+    boxPick.style.display = (carpool && car.value === 'join') ? '' : 'none';
+  }
+  mode.addEventListener('change', sync);
+  car.addEventListener('change', sync);
+  sync();
+})();
+</script>
 {% endblock %}

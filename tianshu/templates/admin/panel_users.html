@@ -55,17 +55,19 @@
 {# ---------------- 点开后弹出来的档案 ---------------- #}
 <div class="mask" id="cust-mask">
   <div class="modal mid">
-    <div class="m-head"><button class="m-close" type="button" id="cust-close" aria-label="关闭">✕</button></div>
-    <div style="padding:0 30px 30px">
-
-      <div class="between" style="align-items:flex-start">
-        <div>
-          <span class="kicker" id="c-role">普通用户</span>
-          <h2 id="c-name" style="margin:var(--sp-2) 0 0">—</h2>
-          <p class="sub" id="c-sub" style="margin:var(--sp-2) 0 0">—</p>
-        </div>
-        <span class="credit-pill mid" id="c-pill">信用 —</span>
+    {# 头一条：左边是谁 + 信用分，右边 ✕ —— ✕ 不再浮在内容上面（以前它正好压着信用分那颗胶囊） #}
+    <div class="m-head">
+      <div>
+        <span class="kicker" id="c-role">普通用户</span>
+        <h2 id="c-name">—</h2>
+        <p class="sub" id="c-sub" style="margin:var(--sp-2) 0 0">—</p>
       </div>
+      <div style="display:flex;align-items:center;gap:var(--sp-3);flex:none">
+        <span class="credit-pill mid" id="c-pill">信用 —</span>
+        <button class="m-close" type="button" id="cust-close" aria-label="关闭">✕</button>
+      </div>
+    </div>
+    <div class="m-body">
 
       <div class="credit-bar"><i id="c-bar" style="width:0"></i></div>
 
@@ -157,6 +159,10 @@
   var CHIP = { user: '普通用户', dm: 'DM', admin: '管理员' };
   function byId(id) { return document.getElementById(id); }
   function open(c) {
+    // 把弹窗挪到 <body> 底下再打开：这样它一定相对视口居中，
+    // 不受标签面板里任何动画/位移/裁剪的影响（"弹窗被挡住"那类问题的万能解）
+    if (mask.parentNode !== document.body) { document.body.appendChild(mask); }
+
     var url = function (k) { return U[k].replace('__P__', encodeURIComponent(c.phone)); };
     byId('c-role').textContent = c.roleName;
     byId('c-name').textContent = c.name;

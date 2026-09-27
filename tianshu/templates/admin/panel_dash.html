@@ -70,7 +70,10 @@
       <form method="post" action="{{ url_for('admin.settings') }}">
         <div class="field"><label>店名</label><input name="shopName" value="{{ settings.shopName }}"></div>
         <div class="field"><label>首页公告</label><input name="notice" value="{{ settings.notice }}"></div>
-        <div class="field"><label>定金比例（0.3 = 30%）</label><input name="depositRatio" value="{{ settings.depositRatio }}"></div>
+        <div class="field"><label>定金比例（0.3 = 30%，包车用）</label><input name="depositRatio" value="{{ settings.depositRatio }}"></div>
+        <div class="field"><label>拼车定金（元，一口价）</label><input name="carDeposit" value="{{ settings.carDeposit }}"></div>
+        <div class="field"><label>小客服微信号（客人付定金那页显示）</label>
+          <input name="serviceWechat" value="{{ settings.serviceWechat }}" placeholder="改成你们真的客服微信"></div>
         <div class="field"><label>免费取消时限（小时）</label><input name="freeCancelHours" value="{{ settings.freeCancelHours }}"></div>
         <div class="field"><label>临期取消扣分</label><input name="lateCancelPenalty" value="{{ settings.lateCancelPenalty }}"></div>
         <div class="field"><label>指定 DM 加价（元/人）</label><input name="dmFee" value="{{ settings.dmFee }}"></div>

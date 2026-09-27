@@ -1,0 +1,95 @@
+{# 面板：growth —— DM 成长档案（给店里看的全局视图）
+   一个 DM 一张卡：账号 + 段位 + 带本情况 + 擅长本 + 客人反馈 + 这个月能拿多少 + 离下一段还差多少 #}
+<div class="between">
+  <div>
+    <h1>DM 成长档案</h1>
+    <p class="sub">{{ month }} · {{ dm_count }} 位 DM —— 段位、擅长本、带本情况、客人反馈、这个月能拿多少都在这一屏</p>
+  </div>
+</div>
+
+{% if not rows %}
+<div class="panel empty">
+  <div class="e">还没有 DM 账号</div>
+  <p>去「用户」里点开某个人，把角色改成 DM —— 改完这里就有他的档案了</p>
+</div>
+{% endif %}
+
+{# 段位阶梯：让"能力"这件事一目了然（带本量 + 好评达标才升） #}
+<div class="panel mt">
+  <h3>段位怎么升（带本量到了、好评也够，才给晋）</h3>
+  <div class="row" style="gap:var(--sp-4);flex-wrap:wrap">
+    {% for t in tiers %}
+    <span class="sub">{{ t.icon }} {{ t.name }}
+      <b>{{ t.need }}</b> 场{% if t.rate %} · 评分 ≥ {{ t.rate }}{% endif %}</span>
+    {% endfor %}
+  </div>
+</div>
+
+{% for r in rows %}
+<div class="panel mt">
+  <div class="between" style="align-items:flex-start">
+    <div>
+      <span class="kicker">{{ r.g.tier.icon }} {{ r.g.tier.name }}</span>
+      <h2 style="margin:var(--sp-2) 0 0">{{ r.nick }}</h2>
+      <p class="sub" style="margin:var(--sp-2) 0 0">
+        {{ r.u.username }} · {{ r.phone[:3] }}****{{ r.phone[-4:] }}
+        {% if r.u.dmProfile and r.u.dmProfile.canOpen is false %}<span class="badge bad">暂停接单</span>{% endif %}
+        {% if r.g.topTags %}<span class="badge">{{ r.g.topTags|join(' · ') }}</span>{% endif %}
+      </p>
+    </div>
+    <div style="text-align:right;flex:none">
+      <div class="price" style="font-size:24px">¥{{ r.mon.total or 0 }}</div>
+      <div class="sub">{{ month }} 预估分成{% if r.mon.settled %} · 已结算{% endif %}</div>
+    </div>
+  </div>
+
+  <div class="kv mt">
+    <div class="cell"><b>{{ r.g.done }}</b><span>累计带本(场)</span></div>
+    <div class="cell"><b>{{ r.g.sessions }}</b><span>排给他的场次</span></div>
+    <div class="cell"><b>{{ r.g.players }}</b><span>服务人次</span></div>
+    <div class="cell"><b>{{ r.g.rating or '—' }}</b><span>平均评分</span></div>
+    <div class="cell"><b>{{ r.g.goodRate }}%</b><span>好评率(4★以上)</span></div>
+    <div class="cell"><b>{{ r.g.assigned }}</b><span>被客人点名</span></div>
+  </div>
+
+  {# 晋升进度：离下一段还差几场（要同时满足评分，所以两样都写出来） #}
+  <p class="sub mt">
+    {% if r.g.next %}
+      离 {{ r.g.next.icon }} {{ r.g.next.name }} 还差 <b>{{ r.g.toNext }}</b> 场
+      {%- if r.g.next.rate %}，届时平均评分要到 {{ r.g.next.rate }}（现在 {{ r.g.rating or '—' }}）{% endif %}
+    {% else %}已经是最高段位 —— 店里最稳的台柱子{% endif %}
+  </p>
+
+  <div class="two mt">
+    <div>
+      <h3>擅长本</h3>
+      {% for b in r.best %}
+      <div class="between" style="padding:4px 0;border-bottom:1px solid var(--rule)">
+        <span>{{ b.title }}</span><span class="sub">带过 {{ b.n }} 场</span></div>
+      {% else %}
+      <p class="sub">还没带过本 —— 先在「排期」里给他排一场</p>
+      {% endfor %}
+    </div>
+    <div>
+      <h3>客人反馈</h3>
+      {% for f in r.fb %}
+      <div style="padding:5px 0;border-bottom:1px solid var(--rule)">
+        <div class="between">
+          <span class="sub">{{ '匿名玩家' if f.anonymous else (f.username or '玩家') }}
+            {% if f.dm %} · 对 DM {{ f.dm }} 分{% endif %}</span>
+          <span class="sub">★ {{ f.rating }} · {{ day_label(f.createdAt) }}</span>
+        </div>
+        {% if f.text %}<div class="sub" style="color:var(--ink-2)">{{ f.text }}</div>{% endif %}
+      </div>
+      {% else %}
+      <p class="sub">还没有收到点名评价</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="row mt" style="gap:8px">
+    <a class="btn btn-sm" href="{{ url_for('public.dm_page', phone=r.phone) }}" target="_blank">看他的公开主页 →</a>
+    <a class="btn btn-sm" href="{{ url_for('admin.dashboard') }}#dm">去 DM 结算</a>
+  </div>
+</div>
+{% endfor %}

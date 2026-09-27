@@ -77,8 +77,11 @@ def home():
         feat = [s for s in scripts if s.get('onSale') is not False][:4]
     st = business.stats()
     rating = {k: v.get('rating') for k, v in st['byScript'].items()}
+    # 累计场次：到今天为止一共排了多少场（含今天的）—— 首页对外不露营业额，就露这个
+    day_end = business.midnight() + 86400000
+    done_sessions = len([s for s in db.rows('sessions') if (s.get('ts') or 0) < day_end])
     return render_template('home.html', scripts=feat, stat=st, rating=rating,
-                           banners=business.banners(),
+                           banners=business.banners(), done_sessions=done_sessions,
                            sessions=business.today_sessions(), cars=business.car_pool()[:3])
 
 
@@ -160,9 +163,15 @@ def script_detail(sid):
     dms = [{'phone': d.get('phone'), 'name': (d.get('profile') or {}).get('nick') or d.get('username')}
            for d in dms if business.role_of(d) == 'dm' and (d.get('dmProfile') or {}).get('canOpen', True)]
 
+    # 拼车：「加入已有的车」那个下拉里列出来的车（别人开的、还没满、还没过日期）
+    open_cars = [c for c in business.car_pool() if str(c.get('sid')) == str(sid) and not c.get('full')]
+
     return render_template('script.html', sc=sc, days=days, sessions=ses, coupons=coupons,
                            lo=lo, hi=hi, dm_fee=st['dmFee'], reviews=reviews, dms=dms,
                            taken=taken_roles, favs=my_fav_ids(u), join=joined,
+                           open_cars=open_cars, car_deposit=business.car_deposit(st),
+                           # 日历控件的可选范围：今天 ~ 30 天后（别再让客人翻无意义的月份）
+                           day_min=business.iso_day(0), day_max=business.iso_day(30),
                            rating=business.stats()['byScript'].get(str(sid), {}).get('rating'))
 
 
