@@ -85,7 +85,7 @@ def main():
     check('页面里有切换脚本', '/static/js/tabs.js' in html)
     check('默认只亮第一个面板', html.count('class="tabpane on"') == 1)
     # 各面板的标题得真的在页里（别只是空壳 div）——注意空库时页面本来就小，不能按体积判断
-    for text in ('预约管理', '操作日志', '客户', '结算'):
+    for text in ('预约管理', '操作日志', '用户', '结算'):
         check('面板内容在页里：%s' % text, text in html)
 
     print('\n=== 老网址还能用（302 转到 /admin#标签）===')

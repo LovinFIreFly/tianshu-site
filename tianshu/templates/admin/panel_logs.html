@@ -11,7 +11,7 @@
     <tr>
       <td class="sub">{{ day_label(l.at) }}</td>
       <td>{{ l.by }}</td>
-      <td><span class="pill">{{ {'super':'超管','admin':'管理员','dm':'DM','user':'客户'}.get(l.role, l.role) }}</span></td>
+      <td><span class="pill">{{ {'super':'超管','admin':'管理员','dm':'DM','user':'用户'}.get(l.role, l.role) }}</span></td>
       <td>{{ l.text }}</td>
     </tr>
     {% else %}

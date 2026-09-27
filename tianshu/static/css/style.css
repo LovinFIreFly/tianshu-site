@@ -521,26 +521,31 @@ tbody tr:last-child td{border-bottom:0}
 
 /* ============================ 15. 弹窗 ============================ */
 .mask{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;
-  padding:var(--sp-5);background:rgba(20,19,18,.6)}
+  padding:var(--sp-5);background:rgba(20,19,18,.78);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .mask.show{display:flex;animation:fadeIn var(--t) var(--ease) both}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-.modal{position:relative;width:920px;max-width:100%;max-height:88vh;overflow-y:auto;
-  background:var(--paper);border:1px solid var(--rule-strong);box-shadow:var(--sh-3);
-  animation:pop var(--t-slow) var(--ease) both}
+/* 弹窗是一整块纸面：里面不再套小白框（套了就总像"有东西被挡住"），
+   分区只用细线，见下面的 .modal .adm-panel 覆盖。 */
+.modal{position:relative;width:920px;max-width:100%;max-height:86vh;overflow-y:auto;
+  background:var(--paper-3);border:1px solid var(--rule-strong);box-shadow:var(--sh-3);
+  animation:fadeIn var(--t) var(--ease) both}
 .modal.small{width:440px}
-.modal.mid{width:560px}
-@keyframes pop{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+.modal.mid{width:580px}
+.modal .adm-panel{background:transparent;border:0;border-top:1px solid var(--rule);
+  border-radius:0;box-shadow:none;padding:var(--sp-5) 0;margin:0}
+.modal .adm-panel:first-of-type{border-top:0;padding-top:var(--sp-3)}
+.modal .kv{margin:var(--sp-5) 0 0}
 .m-head{position:sticky;top:0;z-index:5;display:flex;justify-content:flex-end;
   padding:var(--sp-4) var(--sp-4) 0;pointer-events:none}
 .m-close{pointer-events:auto;width:34px;height:34px;border:1px solid var(--rule-strong);
-  display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--ink-3)}
+  background:var(--paper-3);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--ink-3)}
 .m-close:hover{color:var(--ink);border-color:var(--ink-4)}
-.modal .adm-panel{background:var(--paper-3);box-shadow:none}
 
 /* ============================ 16. 提示 / 消息 ============================ */
 .flash-wrap{max-width:var(--container);margin:0 auto;padding:0 var(--sp-7)}
 .flash{padding:var(--sp-3) var(--sp-5);font-size:var(--fs-sm);margin-bottom:var(--sp-2);
-  background:var(--paper-3);border-left:3px solid var(--ink);animation:pop var(--t-slow) var(--ease) both}
+  background:var(--paper-3);border-left:3px solid var(--ink);animation:fadeIn var(--t) var(--ease) both}
 .flash.ok{border-left-color:var(--ok);color:var(--ok)}
 .flash.warn{border-left-color:var(--bad);color:var(--bad)}
 .msg-item{padding:var(--sp-5) 0;border-bottom:1px solid var(--rule)}
@@ -568,9 +573,11 @@ tbody tr:last-child td{border-bottom:0}
 .tabbar a.on,.tabbar button.on{color:var(--ink);font-weight:600;border-bottom-color:var(--vermilion)}
 .tabbar .sep{flex:1}
 .tabpane{display:none}
-.tabpane.on{display:block;animation:fadeUp var(--t-slow) var(--ease) both}
+/* 注意：这里只能动 opacity，别加 transform/translate ——
+   面板里可能有 position:fixed 的弹窗，祖先一旦有 transform，
+   弹窗就会"相对面板"定位（被挤到侧栏右边、遮罩盖不满屏），看起来像有东西被挡住。 */
+.tabpane.on{display:block;animation:fadeIn var(--t) var(--ease) both}
 .tabpane.on > :first-child{margin-top:0}
-@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 details.spoiler{border-top:1px solid var(--rule);margin-top:var(--sp-5);padding-top:var(--sp-4)}
 details.spoiler > summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:var(--sp-2);
   font-size:var(--fs-sm);color:var(--ink-3);transition:color var(--t) var(--ease)}

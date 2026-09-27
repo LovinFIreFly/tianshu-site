@@ -51,6 +51,6 @@
   <h3>没在表里的 DM</h3>
   <div class="row" style="gap:8px">
     {% for d in dms %}<span class="pill">{{ d.username }}{% if d.phone in data.rows|map(attribute='dmPhone')|list %} ✓{% endif %}</span>
-    {% else %}<span class="sub">没有 DM 账号（在「客户」里把某人的角色改成 DM 就能排他的场）</span>{% endfor %}
+    {% else %}<span class="sub">没有 DM 账号 —— 去「用户」里点开某个人，把角色改成 DM，就能把场次排给他</span>{% endfor %}
   </div>
 </div>

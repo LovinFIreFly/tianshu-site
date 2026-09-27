@@ -66,6 +66,49 @@ def role_of(u):
     return 'super' if (u.get('super') is True or u.get('role') == 'super') else (u.get('role') or 'user')
 
 
+# ---------------------------------------------------------------- 角色管理
+ROLE_NAMES = {'user': '普通用户', 'dm': 'DM', 'admin': '管理员', 'super': '超级管理员'}
+ROLE_RANK = {'user': 0, 'dm': 1, 'admin': 2, 'super': 3}
+
+
+def set_role(phone, new_role, by_user):
+    """改一个人的角色（普通用户 / DM / 管理员）。
+
+    三条护栏，都是防"手一抖把店弄瘫"：
+      ① 不能改自己的角色 —— 不然管理员一点就把自己变回普通用户，后台当场进不去
+      ② 超级管理员（初始那个账号）不可改 —— 它是最后的保险
+      ③ 只有超管能调整"已经是管理员"的人 —— 避免两个管理员互相降权
+    """
+    me = by_user or {}
+    new_role = str(new_role or '').strip()
+    if new_role not in ('user', 'dm', 'admin'):
+        return False, '只能设成 普通用户 / DM / 管理员'
+    users = db.rows('users')
+    hit = next((x for x in users if str(x.get('phone')) == str(phone)), None)
+    if not hit:
+        return False, '没这个人'
+    old = role_of(hit)
+    if str(hit.get('phone')) == str(me.get('phone')):
+        return False, '不能改自己的角色（想改让另一个管理员来）'
+    if old == 'super' or hit.get('super') is True:
+        return False, '超级管理员不能改'
+    if old == 'admin' and role_of(me) != 'super':
+        return False, '只有超级管理员能调整管理员'
+    if old == new_role:
+        return False, '他本来就是%s' % ROLE_NAMES.get(new_role, new_role)
+    for x in users:
+        if str(x.get('phone')) == str(phone):
+            x['role'] = new_role
+            x['super'] = False                      # 明确不是超管，免得 role 和 super 打架
+    db.write('users', users)
+    audit(me.get('username'), role_of(me), '把 %s 的角色从 %s 改成 %s'
+          % (hit.get('username'), ROLE_NAMES.get(old, old), ROLE_NAMES.get(new_role, new_role)))
+    msg = '%s 现在是%s' % (hit.get('username'), ROLE_NAMES.get(new_role, new_role))
+    if new_role == 'dm':
+        msg += '（他登进去会看到 DM 工作台；记得去「排期」把场次排给他）'
+    return True, msg
+
+
 def public_profile(u):
     """给外人看的资料：昵称/头像/性别/年龄段，没手机号"""
     p = u.get('profile') or {}

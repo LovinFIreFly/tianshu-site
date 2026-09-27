@@ -104,22 +104,40 @@ def cancel_booking(bid):
 
 @staff_required
 def users():
-    """客户档案：信用分、消费、是否拉黑（点开能改）"""
+    """用户档案：**所有人**都在这儿（普通用户 / DM / 管理员），
+    点开一个人能改信用分、充值、拉黑、改角色。
+
+    早先这里只列普通客户（role=='user'），员工在名单外，想改谁的角色得进数据库。
+    现在全列出来，顶部可按角色筛。
+    """
     kw = (request.args.get('q') or '').strip()
+    role_filter = (request.args.get('role') or '').strip()
+    me = current_user()
     bookings = db.rows('bookings')
     rows = []
+    counts = {'user': 0, 'dm': 0, 'admin': 0, 'super': 0}
     for u in db.rows('users'):
-        if business.role_of(u) != 'user':
-            continue                      # 员工账号不在客户名单里
+        r = business.role_of(u)
+        counts[r] = counts.get(r, 0) + 1
+        if role_filter and r != role_filter:
+            continue
         if kw and kw not in str(u.get('username')) and kw not in str(u.get('phone')):
             continue
         mine = [b for b in bookings if str(b.get('phone')) == str(u.get('phone')) and b.get('status') != 'cancelled']
-        rows.append({'u': u, 'visits': len(mine), 'spent': sum(int(b.get('amount') or 0) for b in mine),
+        # 能不能改他的角色（跟 business.set_role 里的护栏保持一致，前端才好禁用）
+        can_edit = (r != 'super' and u.get('super') is not True
+                    and str(u.get('phone')) != str(me.get('phone'))
+                    and (r != 'admin' or business.role_of(me) == 'super'))
+        rows.append({'u': u, 'role': r, 'roleName': business.ROLE_NAMES.get(r, r),
+                     'canEditRole': can_edit,
+                     'visits': len(mine), 'spent': sum(int(b.get('amount') or 0) for b in mine),
                      'last': max([b.get('createdAt') or 0 for b in mine] or [0]),
-                     # 最近 3 次预约：点开客户档案时顺手给他看，不用再翻预约页
+                     # 最近 3 次预约：点开用户档案时顺手给他看，不用再翻预约页
                      'recent': sorted(mine, key=lambda b: -(b.get('ts') or 0))[:3]})
-    rows.sort(key=lambda x: -x['visits'])
-    return render_template('admin/panel_users.html', rows=rows, q=kw)
+    # 员工排前面（要改角色通常先找他们），同类里按来店次数
+    rows.sort(key=lambda x: (-business.ROLE_RANK.get(x['role'], 0), -x['visits']))
+    return render_template('admin/panel_users.html', rows=rows, q=kw,
+                           role_filter=role_filter, counts=counts, me=me)
 
 
 @bp.post('/users/<phone>/credit')
@@ -130,6 +148,15 @@ def set_credit(phone):
     before, after = business.adjust_credit(phone, delta, reason, current_user().get('username'))
     flash('信用分 %s → %s（原因：%s）' % (before, after, reason) if before is not None else '没这个账号',
           'ok' if before is not None else 'warn')
+    return redirect(url_for('admin.dashboard') + '#users')
+
+
+@bp.post('/users/<phone>/role')
+@staff_required
+def user_role(phone):
+    """改角色：普通用户 / DM / 管理员（护栏都在 business.set_role 里，这里只管跳回来）"""
+    ok, msg = business.set_role(phone, request.form.get('role'), current_user())
+    flash(msg, 'ok' if ok else 'warn')
     return redirect(url_for('admin.dashboard') + '#users')
 
 

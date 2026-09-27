@@ -1,17 +1,25 @@
-{# 面板：users —— 客户列表
-   以前每张卡片上塞满「信用分/原因/调整/充值/拉黑」一排控件，看着就头大。
-   现在一屏都是干净卡片（老版 .cust-card 的样子），点谁就弹谁的档案，操作都在弹窗里。 #}
+{# 面板：users —— 用户列表（以前叫「客户」，只列普通客户；现在所有人都在这儿）
+   一屏是干净卡片，点谁弹谁的档案：信用分 / 充值 / 拉黑 / **改角色** 都在弹窗里做。 #}
 <div class="between">
   <div>
-    <h1>客户</h1>
-    <p class="sub">点任意一张卡片看他的档案 —— 改信用分、充值、拉黑都在弹窗里点，不用翻来翻去</p>
+    <h1>用户</h1>
+    <p class="sub">所有人都在这里 —— 普通用户、DM、管理员。点卡片看档案，改信用分、充值、拉黑、改角色都在弹窗里</p>
   </div>
 </div>
 
 <form class="form-inline mt" method="get">
-  <div class="field" style="flex:1 1 240px"><input name="q" value="{{ q }}" placeholder="搜昵称 / 手机号"></div>
+  <div class="field" style="flex:1 1 220px;margin:0"><input name="q" value="{{ q }}" placeholder="搜昵称 / 手机号"></div>
+  {% if role_filter %}<input type="hidden" name="role" value="{{ role_filter }}">{% endif %}
   <button class="btn btn-primary" type="submit">搜索</button>
 </form>
+
+{# 按角色筛（就地切换也行，但这里身份是列表的"条件"，走一次请求最省事） #}
+<nav class="chips mt">
+  <a class="pill {{ 'on' if not role_filter }}" href="{{ url_for('admin.dashboard') }}#users">全部（{{ counts.values()|sum }}）</a>
+  <a class="pill {{ 'on' if role_filter == 'user' }}" href="{{ url_for('admin.dashboard', role='user') }}#users">普通用户（{{ counts.user }}）</a>
+  <a class="pill {{ 'on' if role_filter == 'dm' }}" href="{{ url_for('admin.dashboard', role='dm') }}#users">DM（{{ counts.dm }}）</a>
+  <a class="pill {{ 'on' if role_filter == 'admin' }}" href="{{ url_for('admin.dashboard', role='admin') }}#users">管理员（{{ counts.admin }}）</a>
+</nav>
 
 {% if rows %}
 <div class="cust-grid mt">
@@ -22,6 +30,7 @@
   <button type="button" class="cust-card" title="点开看档案"
           data-cust='{{ {
             'name': nick, 'phone': u.phone, 'credit': cr,
+            'role': r.role, 'roleName': r.roleName, 'canEditRole': r.canEditRole,
             'visits': r.visits, 'spent': r.spent, 'balance': u.balance or 0,
             'banned': (u.banned or False), 'banReason': u.banReason or '',
             'logs': (u.creditLogs or [])[:6],
@@ -32,15 +41,18 @@
       <b>{{ nick }}{% if u.banned %}<span class="badge bad" style="margin-left:6px">已拉黑</span>{% endif %}</b>
       <small>{{ u.phone[:3] }}****{{ u.phone[-4:] }} · 来过 {{ r.visits }} 次 · 消费 ¥{{ r.spent }}</small>
     </span>
-    <span class="credit-pill {{ 'good' if cr >= 90 else ('bad' if cr < 60 else 'mid') }}">{{ cr }}</span>
+    <span style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex:none">
+      <span class="badge {{ '' if r.role == 'user' else ('new' if r.role == 'dm' else 'done') }}">{{ r.roleName }}</span>
+      <span class="credit-pill {{ 'good' if cr >= 90 else ('bad' if cr < 60 else 'mid') }}">{{ cr }}</span>
+    </span>
   </button>
   {% endfor %}
 </div>
 {% else %}
-<div class="panel empty"><div class="e">🔍</div><p>没有匹配的客户</p></div>
+<div class="panel empty"><div class="e">没有这个人</div><p>换个昵称或手机号试试</p></div>
 {% endif %}
 
-{# ---------------- 点开客户后弹出来的档案（老版 .mask + .modal 那套） ---------------- #}
+{# ---------------- 点开后弹出来的档案 ---------------- #}
 <div class="mask" id="cust-mask">
   <div class="modal mid">
     <div class="m-head"><button class="m-close" type="button" id="cust-close" aria-label="关闭">✕</button></div>
@@ -48,8 +60,9 @@
 
       <div class="between" style="align-items:flex-start">
         <div>
-          <h2 id="c-name" style="margin:0">—</h2>
-          <p class="sub" id="c-sub" style="margin:4px 0 0">—</p>
+          <span class="kicker" id="c-role">普通用户</span>
+          <h2 id="c-name" style="margin:var(--sp-2) 0 0">—</h2>
+          <p class="sub" id="c-sub" style="margin:var(--sp-2) 0 0">—</p>
         </div>
         <span class="credit-pill mid" id="c-pill">信用 —</span>
       </div>
@@ -63,7 +76,7 @@
         <div class="cell"><b id="c-balance">—</b><span>余额(元)</span></div>
       </div>
 
-      <div class="adm-panel" style="margin-bottom:14px">
+      <div class="adm-panel">
         <h3>① 调信用分（点一下就好）</h3>
         <div class="row" style="gap:6px;margin-bottom:10px">
           <button type="button" class="chip-sm minus" data-delta="-10">−10 跳车 / 迟到</button>
@@ -80,7 +93,7 @@
         </form>
       </div>
 
-      <div class="adm-panel" style="margin-bottom:14px">
+      <div class="adm-panel">
         <h3>② 会员充值</h3>
         <form id="f-money" method="post" class="form-inline">
           <div class="field" style="flex:0 0 118px;margin:0"><label>充多少(元)</label>
@@ -91,14 +104,34 @@
         </form>
       </div>
 
-      <div class="adm-panel" style="margin-bottom:14px">
-        <h3>③ 限制 / 恢复</h3>
+      <div class="adm-panel">
+        <h3>③ 角色 / 权限</h3>
+        <form id="f-role" method="post">
+          <div class="row" style="gap:6px;margin-bottom:10px">
+            <button type="button" class="chip-sm" data-role="user">普通用户</button>
+            <button type="button" class="chip-sm" data-role="dm">DM（能进工作台）</button>
+            <button type="button" class="chip-sm" data-role="admin">管理员（能进后台）</button>
+          </div>
+          <input type="hidden" name="role" id="f-role-val" value="user">
+          <div class="row" style="gap:var(--sp-4);align-items:center">
+            <button class="btn btn-sm btn-primary" type="submit" id="f-role-btn">保存角色</button>
+            <span class="sub" id="c-role-tip"></span>
+          </div>
+        </form>
+        <p class="sub" style="margin-top:var(--sp-3)">
+          DM 能进 DM 工作台；管理员能进后台（14 个面板全都能看）。<br>
+          超级管理员的角色改不了；想调管理员，得由超级管理员来操作。
+        </p>
+      </div>
+
+      <div class="adm-panel">
+        <h3>④ 限制 / 恢复</h3>
         <form id="f-ban" method="post">
           <div class="field" style="margin-bottom:10px"><label>拉黑原因（要拉黑时才填）</label>
             <input name="reason" id="f-banreason" placeholder="例：恶意占座"></div>
           <div class="row" style="gap:8px">
             <button class="btn btn-sm btn-danger" type="submit" id="f-banbtn">拉黑这个账号</button>
-            <a class="btn btn-sm" id="f-detail" href="#" target="_blank">看完整档案 →</a>
+            <a class="btn btn-sm btn-ghost" id="f-detail" href="#" target="_blank">看完整档案 →</a>
           </div>
           <p class="sub mt" id="c-ban-tip"></p>
         </form>
@@ -118,11 +151,14 @@
     credit:  "{{ url_for('admin.set_credit', phone='__P__') }}",
     money:   "{{ url_for('admin.recharge', phone='__P__') }}",
     ban:     "{{ url_for('admin.ban', phone='__P__') }}",
+    role:    "{{ url_for('admin.user_role', phone='__P__') }}",
     detail:  "{{ url_for('admin.user_detail', phone='__P__') }}"
   };
+  var CHIP = { user: '普通用户', dm: 'DM', admin: '管理员' };
   function byId(id) { return document.getElementById(id); }
   function open(c) {
     var url = function (k) { return U[k].replace('__P__', encodeURIComponent(c.phone)); };
+    byId('c-role').textContent = c.roleName;
     byId('c-name').textContent = c.name;
     byId('c-sub').textContent = c.phone.slice(0, 3) + '****' + c.phone.slice(-4)
       + '（' + (c.recent && c.recent.length ? '最近约过：' + c.recent.join('、') : '还没约过本') + '）';
@@ -136,16 +172,25 @@
     pill.className = 'credit-pill ' + (c.credit >= 90 ? 'good' : (c.credit < 60 ? 'bad' : 'mid'));
     var bar = byId('c-bar');
     bar.style.width = Math.max(0, Math.min(100, c.credit)) + '%';
-    bar.style.background = c.credit >= 90 ? 'var(--ok)' : (c.credit < 60 ? 'var(--full)' : 'var(--accent)');
+    bar.style.background = c.credit >= 90 ? 'var(--ok)' : (c.credit < 60 ? 'var(--bad)' : 'var(--accent)');
 
     byId('f-credit').action = url('credit');
     byId('f-money').action = url('money');
     byId('f-ban').action = url('ban');
+    byId('f-role').action = url('role');
     byId('f-detail').href = url('detail');
 
-    // 已拉黑的人，按钮改成「恢复」，原因框也换成解释
+    // 角色区：亮起他现在那颗；不能改的时候说明原因，别让他点了才被拒
+    setRole(c.role);
+    var btns = mask.querySelectorAll('[data-role]');
+    for (var i = 0; i < btns.length; i++) btns[i].disabled = !c.canEditRole;
+    byId('f-role-btn').disabled = !c.canEditRole;
+    byId('c-role-tip').textContent = c.canEditRole ? ''
+      : (c.role === 'super' ? '超级管理员不可改' : '这是你自己的账号 / 或只有超管能调整管理员');
+
+    // 已拉黑的人，按钮改成「恢复」
     byId('f-banbtn').textContent = c.banned ? '恢复这个账号' : '拉黑这个账号';
-    byId('f-banbtn').className = 'btn btn-sm ' + (c.banned ? '' : 'btn-danger');
+    byId('f-banbtn').className = 'btn btn-sm ' + (c.banned ? 'btn-ghost' : 'btn-danger');
     byId('f-banreason').value = c.banned ? '' : '违反门店规矩';
     byId('c-ban-tip').textContent = c.banned
       ? '现在被限制：' + (c.banReason || '（没写原因）') + '。点上面那颗按钮就恢复。'
@@ -161,8 +206,7 @@
         var row = document.createElement('div');
         row.className = 'log-row';
         row.innerHTML = '<span class="d ' + (l.delta > 0 ? 'plus' : 'minus') + '">'
-          + (l.delta > 0 ? '+' : '') + l.delta + '</span>'
-          + '<span></span>';
+          + (l.delta > 0 ? '+' : '') + l.delta + '</span><span></span>';
         row.lastElementChild.textContent = (l.reason || '门店调整') + ' · ' + (l.by || '系统');
         box.appendChild(row);
       });
@@ -170,9 +214,23 @@
     }
     mask.classList.add('show');
   }
+  function setRole(role) {
+    byId('f-role-val').value = role;
+    var btns = mask.querySelectorAll('[data-role]');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('on', btns[i].getAttribute('data-role') === role);
+    }
+  }
   Array.prototype.forEach.call(document.querySelectorAll('.cust-card'), function (btn) {
     btn.addEventListener('click', function () {
       try { open(JSON.parse(btn.getAttribute('data-cust'))); } catch (e) { /* 数据坏了就忽略 */ }
+    });
+  });
+  Array.prototype.forEach.call(mask.querySelectorAll('[data-role]'), function (b) {
+    b.addEventListener('click', function () {
+      if (b.disabled) return;
+      setRole(b.getAttribute('data-role'));
+      byId('c-role-tip').textContent = '点「保存角色」才生效 → ' + CHIP[b.getAttribute('data-role')];
     });
   });
   byId('cust-close').addEventListener('click', function () { mask.classList.remove('show'); });
