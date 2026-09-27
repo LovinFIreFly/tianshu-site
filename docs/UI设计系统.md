@@ -97,6 +97,7 @@ Airbnb 是把「浏览 → 详情 → 选时间 → 下单」这条链路打磨�
 |---|---|
 | 换主色（比如改成青色） | 改 `:root` 的 `--primary` / `--primary-600` / `--primary-100` / `--primary-rgb` 四个值（`-rgb` 是给半透明用的，必须同步） |
 | **弹窗位置错乱 / 像被挡住** | 先查祖先有没有 `transform`（动画、hover 位移、`translateY`）—— 有的话里面 `position:fixed` 的弹窗会改成"相对那个祖先"定位。面板入场动画（`.tabpane.on`）只准动 `opacity`，这条踩过一次 |
+| **深浅色切换后某块变浅 / 字看不见** | 深色模式下 `--paper` 与 `--ink` 是**对调**的。凡是「整幅墨色」的块（首屏 `.hero`、`.band.ink`、我的资料卡 `.profile`）都要用不跟主题翻的 `--stage` / `--stage-ink` / `--stage-hair`；里面的说明文字本来就是写死的浅色，一翻就成"浅底浅字" |
 | 改欢迎页文案 | `templates/welcome.html`（进站第一屏）。要不要给某人看欢迎页的开关在 `views/public.py` 的 `home()`：游客 + 没逛过 → 欢迎页 |
 | 卡片更圆 / 更方 | 改 `--r-lg`（卡片）、`--r`（输入框）、`--r-pill`（控件） |
 | 页面更"松" / 更"紧" | 改 `--sp-*` 刻度，或 `.wrap` 的 padding |

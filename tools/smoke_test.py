@@ -490,6 +490,21 @@ check('离线外壳能下载', s == 200)
 s, css = guest.get('/static/css/style.css')
 check('样式含手机安全区适配', 'safe-area-inset' in css)
 check('样式含右上角心形收藏', 'fav-btn' in css)
+
+# 深浅色切换：墨色舞台（首屏/墨色区/我的资料卡）不许跟着主题翻 ——
+# 一翻就成"浅底 + 浅字"（说明文字是写死的浅色），首屏那几行字会直接看不见
+check('墨色舞台有独立令牌（不跟主题翻）', '--stage:#141312' in css and '--stage-ink:#F4F1EA' in css)
+for sel in ('.hero{background:var(--stage)', '.band.ink{background:var(--stage)',
+            '.profile{background:var(--stage)'):
+    check('墨色块用 stage 而不是 --ink：%s' % sel.split('{')[0], sel in css)
+check('搜索胶囊在暗底上是浅底深字',
+      'background:var(--stage-ink)' in css and 'color:var(--stage)' in css)
+check('暗底上的次要按钮用舞台字色（不然就是暗底暗字）',
+      '.band.ink .btn-ghost,.hero .btn-ghost{color:var(--stage-ink)' in css)
+# 深色模式下拿到的页面确实带上了 data-theme（说明主题真的切过去了）
+s, html = guest.get('/theme')
+s, html = guest.get('/')
+check('主题切换接口能用', s == 200)
 s, html = guest.get('/scripts')
 check('剧本卡片上有那颗心', 'fav-btn' in html)
 s, html = cus4.get('/')          # 心形只在登录后显示

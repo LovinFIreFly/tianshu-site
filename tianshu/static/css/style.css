@@ -29,6 +29,12 @@
   --ink-2:#26231F;      /* 墨（浅一档） */
   --ink-3:#4A453E;      /* 次级文字（暖灰，不用纯灰） */
   --ink-4:#78726A;      /* 更弱的说明文字 */
+  /* 墨色舞台：首屏 / 墨色区 / 我的资料卡 —— 不分深浅色，永远是暗的。
+     这几块里的说明文字是写死的浅色（rgba(244,241,234,…)），所以底色也不能跟着主题翻，
+     不然深色模式下会变成"浅底 + 浅字"，字直接看不见。 */
+  --stage:#141312;
+  --stage-ink:#F4F1EA;
+  --stage-hair:rgba(244,241,234,.18);   /* 舞台上的细分隔线 */
   --rule:rgba(20,19,18,.13);          /* 细线：暖黑 13% */
   --rule-strong:rgba(20,19,18,.26);
   --vermilion:#C8321E;  /* 朱红：唯一强调色（印章/票根红） */
@@ -161,7 +167,7 @@ hr,.rule{border:0;border-top:1px solid var(--rule);margin:var(--sp-8) 0}
 .band{padding:var(--sp-10) 0}
 .band > .wrap{padding-top:0;padding-bottom:0}
 .band.alt{background:var(--paper-2)}
-.band.ink{background:var(--ink);color:var(--paper)}
+.band.ink{background:var(--stage);color:var(--stage-ink)}
 .band.ink .sub,.band.ink .lead,.band.ink .meta{color:rgba(244,241,234,.72)}
 .band.ink .kicker,.band.ink .label{color:rgba(244,241,234,.5)}
 .band.ink .lnk{color:var(--vermilion)}
@@ -225,8 +231,10 @@ hr,.rule{border:0;border-top:1px solid var(--rule);margin:var(--sp-8) 0}
 .btn-primary:hover{background:var(--vermilion-600);border-color:var(--vermilion-600)}
 .btn-ghost{background:transparent;color:var(--ink)}
 .btn-ghost:hover{background:var(--paper-2)}
-.band.ink .btn-ghost{color:var(--paper);border-color:rgba(244,241,234,.35)}
-.band.ink .btn-ghost:hover{background:rgba(244,241,234,.1)}
+/* 暗底上的次要按钮：底色是墨色舞台，字必须跟着舞台走（以前写的是 --paper，
+   深浅色一翻就变成"暗底暗字"，首屏那颗「看看谁在拼车」直接看不见） */
+.band.ink .btn-ghost,.hero .btn-ghost{color:var(--stage-ink);border-color:rgba(244,241,234,.35)}
+.band.ink .btn-ghost:hover,.hero .btn-ghost:hover{background:rgba(244,241,234,.1)}
 .btn-cta{background:var(--vermilion);border-color:var(--vermilion);color:#fff;height:52px;
   padding:0 var(--sp-7);font-size:16px;border-radius:var(--r-pill);box-shadow:0 3px 0 var(--lip)}
 .btn-cta:hover{background:var(--vermilion-600)}
@@ -359,20 +367,21 @@ tbody tr:last-child td{border-bottom:0}
 
 /* ============================ 11. 首页 ============================ */
 /* 一屏一件事：整幅墨色区 + 衬线大标题 + 一句导语 + 一颗朱红 CTA（Nike 的做法） */
-.hero{background:var(--ink);color:var(--paper);padding:var(--sp-11) var(--sp-7) var(--sp-10);text-align:center}
+.hero{background:var(--stage);color:var(--stage-ink);padding:var(--sp-11) var(--sp-7) var(--sp-10);text-align:center}
 .hero .kicker{color:rgba(244,241,234,.5);margin-bottom:var(--sp-5)}
 .hero h1{font-size:var(--fs-display);line-height:var(--lh-display);letter-spacing:var(--track-display);
   max-width:16ch;margin:0 auto;font-weight:700}
 .hero .slogan{color:rgba(244,241,234,.72);font-size:var(--fs-lead);margin:var(--sp-5) auto var(--sp-8);
   max-width:34ch}
 .hero .btns{display:flex;gap:var(--sp-4);justify-content:center;flex-wrap:wrap}
+/* 搜索胶囊在墨色舞台上，所以它是"浅底深字"：用 stage 令牌，不跟主题翻 */
 .search-pill{display:flex;align-items:center;gap:var(--sp-3);width:min(560px,100%);margin:0 auto var(--sp-7);
-  padding:5px 5px 5px var(--sp-5);background:var(--paper);border-radius:var(--r-pill)}
-.search-pill .ico{font-size:15px;color:var(--ink-4)}
-.search-pill input{flex:1;min-width:0;height:44px;font-size:15px;color:var(--ink)}
+  padding:5px 5px 5px var(--sp-5);background:var(--stage-ink);border-radius:var(--r-pill)}
+.search-pill .ico{font-size:15px;color:#78726A}
+.search-pill input{flex:1;min-width:0;height:44px;font-size:15px;color:var(--stage)}
 .search-pill .btn{height:44px;flex:none}
 .hero .stats{display:flex;gap:0;justify-content:center;flex-wrap:wrap;margin-top:var(--sp-9);
-  border-top:1px solid rgba(244,241,234,.18);max-width:720px;margin-left:auto;margin-right:auto}
+  border-top:1px solid var(--stage-hair);max-width:720px;margin-left:auto;margin-right:auto}
 .hero .stats div{flex:1 1 120px;padding:var(--sp-5) var(--sp-3) 0;text-align:center}
 .hero .stats b{display:block;font-family:var(--serif);font-size:30px;font-weight:700;line-height:1.2}
 .hero .stats span{font-size:var(--fs-xs);letter-spacing:.08em;color:rgba(244,241,234,.55)}
@@ -503,7 +512,7 @@ tbody tr:last-child td{border-bottom:0}
 
 /* ============================ 14. 我的 ============================ */
 .me-wrap{display:grid;grid-template-columns:286px 1fr;gap:var(--sp-9);align-items:start}
-.profile{background:var(--ink);color:var(--paper);padding:var(--sp-7) var(--sp-5);text-align:center}
+.profile{background:var(--stage);color:var(--stage-ink);padding:var(--sp-7) var(--sp-5);text-align:center}
 .profile .avatar{width:74px;height:74px;margin:0 auto var(--sp-4);display:flex;align-items:center;
   justify-content:center;font-family:var(--serif);font-size:30px;font-weight:700;overflow:hidden;
   background:var(--vermilion);color:#fff;border-radius:50%}
@@ -512,7 +521,7 @@ tbody tr:last-child td{border-bottom:0}
   letter-spacing:.04em}
 .p-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(244,241,234,.2);
   margin-top:var(--sp-6)}
-.p-stats .cell{background:var(--ink);padding:var(--sp-4) var(--sp-2)}
+.p-stats .cell{background:var(--stage);padding:var(--sp-4) var(--sp-2)}
 .p-stats b{font-family:var(--serif);font-size:21px;display:block}
 .p-stats span{font-size:11px;letter-spacing:.06em;color:rgba(244,241,234,.55)}
 .menu{margin-top:var(--sp-5);border-top:1px solid var(--rule)}
@@ -673,7 +682,7 @@ details.spoiler[open] > summary{color:var(--ink);margin-bottom:var(--sp-5)}
   .masthead .links{padding:0 var(--sp-4);gap:var(--sp-5)}
   .hero{padding:var(--sp-9) var(--sp-4) var(--sp-8)}
   .hero .stats{border-top:0}
-  .hero .stats div{border-top:1px solid rgba(244,241,234,.18);padding-top:var(--sp-4)}
+  .hero .stats div{border-top:1px solid var(--stage-hair);padding-top:var(--sp-4)}
   .banner{height:220px}
   .banner .slide{padding:0 var(--sp-4)}
   .banner .slide .t{font-size:24px}
