@@ -130,5 +130,47 @@ def profile_save():
     return redirect(url_for('dm.index') + '#growth')
 
 
+@dm_required
+def msgs():
+    """我的消息（老版 dm-msgs）：门店发给我的通知 + 我场次客人留的言。
+
+    通知里会有：排班变动、场次取消、练本申请处理结果、被点名等等。
+    客人留言 DM 只能看，回复还是门店来 —— 免得口径不一致。
+    """
+    u = current_user()
+    phone = str(u.get('phone'))
+    notices = [dict(n, to=None) for n in db.rows('notices')
+               if not n.get('to') or phone in [str(p) for p in (n.get('to') or [])]]
+    notices.sort(key=lambda x: -(x.get('at') or 0))
+    unread = len([n for n in notices if phone not in [str(p) for p in (n.get('readBy') or [])]])
+    mine = {str(x.get('phone')) for x in business.dm_customers_of(phone)}
+    guest = sorted([m for m in db.rows('messages')
+                    if str(m.get('phone')) in mine and (m.get('status') or 'pending') == 'pending'],
+                   key=lambda x: -(x.get('createdAt') or 0))[:10]
+    return render_template('dm/panel_msgs.html', rows=notices[:40], unread=unread, guest=guest)
+
+
+@dm_required
+def sched():
+    """我的档期（老版 dm-sched）：从今天起排在我名下的场次，按时间排。
+
+    这里只看"还没开场"的；带完的场次在「今日场次」和「我的成长」里看。
+    """
+    u = current_user()
+    phone = str(u.get('phone'))
+    t0 = business.midnight()
+    bookings = db.rows('bookings')
+    out = []
+    for s in db.rows('sessions'):
+        if str(s.get('dm')) != phone or (s.get('ts') or 0) < t0 or s.get('status') == 'cancelled':
+            continue
+        joined = sum((b.get('players') or 1) for b in bookings
+                     if b.get('sessionId') == s.get('id') and b.get('status') != 'cancelled')
+        out.append(dict(s, joined=joined))
+    out.sort(key=lambda x: ((x.get('ts') or 0), str(x.get('time'))))
+    return render_template('dm/panel_sched.html', rows=out)
+
+
 # 标签总表（放末尾因为它要引用上面的函数；index() 里是运行时才查，顺序无所谓）
-_TAB_FUNCS = {'today': today_panel, 'credit': credit, 'growth': growth, 'guides': guides}
+_TAB_FUNCS = {'msgs': msgs, 'today': today_panel, 'credit': credit,
+              'sched': sched, 'growth': growth, 'guides': guides}

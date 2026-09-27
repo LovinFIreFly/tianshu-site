@@ -1,0 +1,37 @@
+{# DM 档期：从今天起排在我名下的场次（老版 dm-sched） #}
+<div class="between">
+  <div>
+    <h1>我的档期</h1>
+    <p class="sub">从今天起排在你名下的场次，按时间排；带完的场次在「今日场次」里</p>
+  </div>
+</div>
+
+{% if rows %}
+{% set ns = namespace(day='') %}
+{% for s in rows %}
+{% set label = day_label(s.ts) %}
+{% if label != ns.day %}
+{% set ns.day = label %}
+<div class="act" style="margin-top:{% if loop.first %}var(--sp-6){% else %}var(--sp-8){% endif %}">
+  <b>{{ '%02d' % loop.index }}</b>
+  <h2>{{ label }}</h2>
+  <span class="sub">{{ s.time }} 起</span>
+</div>
+{% endif %}
+
+<div class="between" style="padding:var(--sp-4) 0;border-bottom:1px solid var(--rule)">
+  <div style="display:flex;align-items:baseline;gap:var(--sp-5);flex-wrap:wrap">
+    <b class="serif" style="font-size:22px;min-width:64px">{{ s.time }}</b>
+    <span class="serif" style="font-size:19px;font-weight:700">{{ s.title }}</span>
+    <span class="sub">{{ s.roomId or '房间待定' }} · 已报 {{ s.joined }}/{{ s.cap or '—' }} 人
+      {% if s.status == 'locked' %} · <span class="badge warn">锁场</span>{% endif %}</span>
+  </div>
+  <a class="btn btn-sm btn-ghost" href="{{ url_for('public.script_detail', sid=s.sid) }}">看看这一本</a>
+</div>
+{% endfor %}
+{% else %}
+<div class="panel empty">
+  <div class="e">还没排班</div>
+  <p>门店给你排了场次就会出现在这儿 —— 想主动接本，去「学本资料」下面提练本申请</p>
+</div>
+{% endif %}

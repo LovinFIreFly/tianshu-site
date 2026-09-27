@@ -1,0 +1,51 @@
+{# DM 消息：门店通知 + 我场次客人的留言（老版 dm-msgs） #}
+<div class="between">
+  <div>
+    <h1>我的消息</h1>
+    <p class="sub">排班变动、场次取消、练本申请处理结果都会发到这儿；客人留言 DM 先看着，回复由门店统一来</p>
+  </div>
+  {% if unread %}
+  <form method="post" action="{{ url_for('user.notice_read') }}">
+    <button class="btn btn-sm btn-ghost" type="submit">全部标为已读（{{ unread }} 条未读）</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="act" style="margin-top:var(--sp-6)">
+  <b>01</b>
+  <h2>门店通知</h2>
+  <span class="sub">{{ rows|length }} 条</span>
+</div>
+
+{% for n in rows %}
+<div class="notice-item {{ 'un' }}">
+  <div class="between">
+    <span class="t">{{ n.title }}</span>
+    <span class="tm">{{ day_label(n.at) }}</span>
+  </div>
+  <p>{{ n.text }}</p>
+</div>
+{% else %}
+<div class="panel empty">
+  <div class="e">暂时没有通知</div>
+  <p>门店排班、场次变动、练本结果都会发到这儿</p>
+</div>
+{% endfor %}
+
+{% if guest %}
+<div class="act" style="margin-top:var(--sp-8)">
+  <b>02</b>
+  <h2>我场次客人的留言</h2>
+  <span class="sub">只显示还没被门店回复的</span>
+</div>
+{% for m in guest %}
+<div class="msg-item">
+  <div class="top">
+    <span class="who">{{ m.username or '客人' }}</span>
+    <span>{{ m.cat or '留言' }}</span>
+    <span class="time">{{ day_label(m.createdAt) }}</span>
+  </div>
+  <p>{{ m.text }}</p>
+</div>
+{% endfor %}
+{% endif %}

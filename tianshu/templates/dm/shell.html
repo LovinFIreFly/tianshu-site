@@ -4,7 +4,9 @@
 {% block body %}
 
 {# DM 工作台：和老版后台一个长相（左侧栏 + 右侧内容），切换仍是前端切，网址一直是 /dm #}
-{% set NAVI = [('today', '今日场次'), ('credit', '我的客人'), ('growth', '我的成长'), ('guides', '学本资料')] %}
+{# 六栏，跟老版 DM 端对齐：#}
+{% set NAVI = [('msgs', '我的消息'), ('today', '今日场次'), ('credit', '我的客人'),
+               ('sched', '我的档期'), ('growth', '我的成长'), ('guides', '学本资料')] %}
 
 <div class="adm">
   <aside class="adm-side" data-tabs="dm">
