@@ -85,6 +85,9 @@
         <div class="field"><label>分成比例（按比例时用，0.1 = 10%）</label><input name="dmRate" value="{{ settings.dmRate }}"></div>
         <div class="field"><label>每场场费（按固定时用，元）</label><input name="dmFixedPay" value="{{ settings.dmFixedPay }}"></div>
         <div class="field"><label>车队标签（逗号分隔）</label><input name="carTags" value="{{ settings.carTags|join(',') }}"></div>
+        <div class="field"><label>首页轮播（一行一条：表情|标题|一句话|剧本id）</label>
+          <textarea name="banners" rows="4">{% for b in (settings.banners or []) %}{{ b.emoji or '🎭' }}|{{ b.title or '' }}|{{ b.text or '' }}|{{ b.sid or 0 }}
+{% endfor %}</textarea></div>
         <button class="btn btn-primary btn-block" type="submit">保存设置</button>
       </form>
     </div>

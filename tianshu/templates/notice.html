@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}消息中心 · {{ settings.shopName }}{% endblock %}
+{% block body %}
+<div class="between">
+  <div>
+    <h1>消息中心</h1>
+    <p class="sub">共 {{ rows|length }} 条{% if unread %} · <span class="badge new">{{ unread }} 条未读</span>{% endif %}</p>
+  </div>
+  <div class="row" style="gap:8px">
+    {% if unread %}
+    <form method="post" action="{{ url_for('user.notice_read') }}">
+      <button class="btn btn-sm" type="submit">全部标为已读</button>
+    </form>
+    {% endif %}
+    <a class="btn btn-sm" href="{{ url_for('user.me') }}">← 回我的</a>
+  </div>
+</div>
+
+{% for n in rows %}
+<div class="panel mt">
+  <div class="between">
+    <div>
+      <b>{{ n.title }}</b>
+      {% if n.kind %}<span class="pill">{{ n.kind }}</span>{% endif %}
+      {% if (me.phone|string) not in (n.readBy or []) %}<span class="badge new">未读</span>{% endif %}
+    </div>
+    <span class="sub">{{ day_label(n.at) }}</span>
+  </div>
+  <p style="color:var(--text2)">{{ n.text }}</p>
+</div>
+{% else %}
+<div class="panel empty">还没有消息。预约成功、退款、门店回复、信用分变动都会发到这里</div>
+{% endfor %}
+{% endblock %}

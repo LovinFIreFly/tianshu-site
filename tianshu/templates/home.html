@@ -2,6 +2,19 @@
 {% block title %}{{ settings.shopName }} · 首页{% endblock %}
 {% block body %}
 
+{# 老版首页顶部的轮播 banner；内容在后台「门店设置」里改 #}
+{% if banners %}
+<div class="banner">
+  {% for b in banners %}
+  <div class="slide">
+    <div class="emo">{{ b.emoji or '🎭' }}</div>
+    <div class="t">{{ b.title }}</div>
+    <div class="d">{{ b.text }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 <section class="hero">
   <h1>{{ settings.shopName }}</h1>
   <p>沉浸式剧本体验 · 一场好戏，从这儿开始</p>

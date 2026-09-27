@@ -15,6 +15,22 @@ from tianshu.security import current_user
 bp = Blueprint('public', __name__)
 
 
+@bp.get('/welcome')
+def welcome():
+    """欢迎页（老版 page-welcome）：没进店之前的落地页，🍠 + 店名 + 两个按钮"""
+    return render_template('welcome.html')
+
+
+@bp.get('/theme')
+def toggle_theme():
+    """切换深/浅色（老版那个 🌙 按钮）。主题记在 cookie 里，换台电脑会回到默认深色"""
+    from flask import make_response, request as _req, redirect
+    cur = _req.cookies.get('theme') or 'dark'
+    resp = make_response(redirect(_req.referrer or url_for('public.home')))
+    resp.set_cookie('theme', 'light' if cur != 'light' else 'dark', max_age=365 * 86400)
+    return resp
+
+
 @bp.get('/')
 def home():
     scripts = db.rows('scripts')
@@ -25,6 +41,7 @@ def home():
     st = business.stats()
     rating = {k: v.get('rating') for k, v in st['byScript'].items()}
     return render_template('home.html', scripts=feat, stat=st, rating=rating,
+                           banners=business.banners(),
                            sessions=business.today_sessions(), cars=business.car_pool()[:3])
 
 

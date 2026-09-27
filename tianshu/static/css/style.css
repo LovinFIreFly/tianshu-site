@@ -94,6 +94,59 @@ th{color:var(--text2);font-size:12px;font-weight:600}
 tbody tr:hover{background:rgba(255,255,255,.03)}
 .scroll{overflow-x:auto}
 
+/* ---------- 浅色主题（老版那个 🌙 按钮切换的就是它） ---------- */
+html[data-theme="light"]{
+  --bg:#f6f5fb; --bg2:#ffffff; --card:#ffffff; --line:#e3def2;
+  --text:#221f3a; --text2:#6b6790; --primary:#7c3aed; --primary2:#6d28d9; --accent:#ea580c;
+}
+html[data-theme="light"] .nav{background:rgba(255,255,255,.92)}
+html[data-theme="light"] .juben .cover,
+html[data-theme="light"] .login-card .field{background:#f4f2fb}
+html[data-theme="light"] .code-big{color:#c2410c}
+html[data-theme="light"] .flash{background:rgba(124,58,237,.08)}
+html[data-theme="light"] .flash.ok{background:rgba(5,150,105,.10)}
+html[data-theme="light"] .flash.warn{background:rgba(220,38,38,.08)}
+.theme-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;
+  border-radius:50%;border:1px solid var(--line);background:transparent;cursor:pointer;font-size:15px}
+.theme-btn:hover{background:rgba(255,255,255,.08)}
+html[data-theme="light"] .theme-btn:hover{background:rgba(0,0,0,.06)}
+
+/* ---------- 铃铛（老版右上角那个消息图标） ---------- */
+.bell{position:relative;display:inline-flex;align-items:center;justify-content:center;
+  width:34px;height:34px;border-radius:50%;border:1px solid var(--line);font-size:15px}
+.bell:hover{background:rgba(255,255,255,.08)}
+.bell .dot{position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;padding:0 4px;
+  border-radius:99px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;
+  display:none;align-items:center;justify-content:center}
+.bell.new .dot{display:flex}
+
+/* ---------- 首页轮播（老版 banner-item） ---------- */
+.banner{position:relative;height:220px;border-radius:20px;overflow:hidden;border:1px solid var(--line);
+  background:linear-gradient(120deg,rgba(109,40,217,.35),rgba(251,146,60,.25));margin-bottom:18px}
+.banner .slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;padding:0 28px;opacity:0;animation:slideFade 15s infinite}
+.banner .slide:nth-child(1){animation-delay:0s}
+.banner .slide:nth-child(2){animation-delay:5s}
+.banner .slide:nth-child(3){animation-delay:10s}
+.banner .slide .emo{font-size:46px}
+.banner .slide .t{font-size:24px;font-weight:800;margin-top:6px;letter-spacing:1px}
+.banner .slide .d{color:var(--text2);font-size:13px;margin-top:4px}
+@keyframes slideFade{0%,6%{opacity:0}10%,30%{opacity:1}36%,100%{opacity:0}}
+@media(max-width:640px){.banner{height:180px}.banner .slide .t{font-size:19px}.banner .slide .emo{font-size:36px}}
+
+/* ---------- 欢迎页（老版 page-welcome） ---------- */
+.welcome{min-height:calc(100vh - 64px);display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;padding:40px 20px;
+  background:radial-gradient(60% 60% at 50% 0%,rgba(109,40,217,.28),transparent 70%);margin:-22px -18px 0}
+.welcome .logo{font-size:76px;animation:float 3s ease-in-out infinite}
+.welcome h1{font-size:42px;letter-spacing:6px;font-weight:800;margin-top:10px;
+  background:linear-gradient(90deg,#c4b5fd,#fdba74);-webkit-background-clip:text;background-clip:text;color:transparent}
+.welcome .slogan{color:var(--text2);margin:12px 0 36px;letter-spacing:2px}
+.welcome .btns{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+.welcome .btns .btn{width:200px;height:52px;font-size:16px}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@media(max-width:640px){.welcome h1{font-size:30px;letter-spacing:3px}.welcome .logo{font-size:60px}}
+
 /* ---------- 登录 / 注册 / 找回密码（老版那套居中卡片，原样搬过来的） ---------- */
 .auth-page{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 64px);
   background:radial-gradient(50% 50% at 50% 0%,rgba(109,40,217,.25),transparent 70%);padding:40px 20px;

@@ -374,6 +374,14 @@ def order_act(oid, action):
     return redirect(url_for('user.me'))
 
 
+@bp.get('/notice')
+@login_required
+def notice_center():
+    """消息中心（顶栏那个 🔔 点进来就是这儿）"""
+    u = current_user()
+    return render_template('notice.html', rows=business.my_notices(u, 100))
+
+
 @bp.post('/notice/read')
 @login_required
 def notice_read():

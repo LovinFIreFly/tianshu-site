@@ -294,6 +294,28 @@ def dm_settlement(month=None):
     return {'month': month, 'rows': sorted(rows, key=lambda x: -x['total'])}
 
 
+def banners():
+    """首页轮播（后台设置里能改）。老版是写死在页面里的，新版放到设置里方便改"""
+    return get_settings().get('banners') or []
+
+
+def parse_banners(text):
+    """把后台文本框里的轮播内容解析成列表，一行一条：表情|标题|一句话|剧本id"""
+    out = []
+    for line in str(text or '').splitlines():
+        parts = [p.strip() for p in line.split('|')]
+        if not parts or not parts[0]:
+            continue
+        try:
+            sid = int(parts[3]) if len(parts) > 3 and str(parts[3]).strip().isdigit() else 0
+        except ValueError:
+            sid = 0
+        out.append({'emoji': parts[0] if parts[0] else '🎭',
+                    'title': parts[1] if len(parts) > 1 and parts[1] else '',
+                    'text': parts[2] if len(parts) > 2 and parts[2] else '', 'sid': sid})
+    return out[:5]
+
+
 def save_upload(file_storage, sub='misc'):
     """存上传的图片（封面 / 头像）
 

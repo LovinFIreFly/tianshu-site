@@ -371,6 +371,8 @@ def settings():
                 pass
     rows['carTags'] = [t.strip() for t in (f.get('carTags') or '').replace('，', ',').split(',') if t.strip()][:6] \
         if f.get('carTags') is not None else rows.get('carTags', [])
+    if f.get('banners') is not None:              # 首页轮播，一行一条
+        rows['banners'] = business.parse_banners(f.get('banners'))
     db.write('settings', rows)
     business.audit(current_user().get('username'), role(), '改了门店设置')
     flash('设置已保存（立刻生效）', 'ok')
