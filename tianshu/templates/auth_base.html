@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#00ff9d">
+  <meta name="theme-color" content="#f4f1ea">
   <title>{% block title %}{{ settings.shopName }}{% endblock %}</title>
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
   <link rel="icon" href="{{ url_for('static', filename='icon.svg') }}" type="image/svg+xml">
@@ -22,11 +22,13 @@
   {% endwith %}
 
   <div class="auth-stage">
+    {% block top %}
     <div class="auth-top">
-      <a class="auth-home" href="{{ url_for('public.home') }}">‹ 门店首页</a>
+      <a class="auth-home" href="{{ url_for('public.home', browse=1) }}">‹ 门店首页</a>
       <a class="theme-btn" href="{{ url_for('public.toggle_theme') }}" title="切换深浅色" aria-label="切换深浅色">
         {% if theme == 'light' %}🌙{% else %}☀️{% endif %}</a>
     </div>
+    {% endblock %}
 
     {% block card %}{% endblock %}
 

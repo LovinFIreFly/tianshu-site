@@ -6,7 +6,7 @@
 """
 import os
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from tianshu import business
 from tianshu.db import db
@@ -15,10 +15,33 @@ from tianshu.security import current_user
 bp = Blueprint('public', __name__)
 
 
+@bp.before_app_request
+def _mark_entered():
+    """游客一旦开始逛站内页面（剧本库 / 拼车 / 剧本详情…），欢迎页就不该再挡路。
+
+    只对游客生效、只认 GET 的页面请求，而且 / 自己不算 ——
+    否则一进站就被标记上，欢迎页永远也出不来了。
+    """
+    if request.method != 'GET' or current_user() or session.get('entered'):
+        return
+    ep = request.endpoint or ''
+    if ep.startswith('public.') and ep not in ('public.home', 'public.welcome'):
+        session['entered'] = True
+
+
+def _welcome_ctx():
+    """欢迎页底部那行小字：上架几部本、今天几场"""
+    on_sale = [s for s in db.rows('scripts') if s.get('onSale') is not False]
+    return {'meta': {'scripts': len(on_sale), 'today': len(business.today_sessions())}}
+
+
 @bp.get('/welcome')
 def welcome():
-    """欢迎页（老版 page-welcome）：没进店之前的落地页，🍠 + 店名 + 两个按钮"""
-    return render_template('welcome.html')
+    """欢迎页（老版 page-welcome）：进站第一屏，🍠 + 店名 + 登录/注册两个按钮。
+
+    正常从 / 进来就会看到它；这个网址单独留着，方便直接发给别人看。
+    """
+    return render_template('welcome.html', **_welcome_ctx())
 
 
 @bp.get('/theme')
@@ -37,9 +60,16 @@ def toggle_theme():
 
 @bp.get('/')
 def home():
-    """进站第一眼：没登录就直接看到登录界面（不用再自己点登录）"""
-    if not current_user():
-        return redirect(url_for('user.login'))
+    """进站第一眼。
+
+    没登录的人先看到**欢迎页**（老版就是 page-welcome → page-login 两步走，
+    不是一进来就是登录表单）：点「登 录」才去登录页，想先看看的走「先随便逛逛」。
+    登录之后这页就不再出现，/ 直接是门店首页。
+    """
+    if not current_user() and not (request.args.get('browse') or session.get('entered')):
+        return render_template('welcome.html', **_welcome_ctx())
+    if request.args.get('browse'):
+        session['entered'] = True
     scripts = db.rows('scripts')
     # 首页先推"上架 + 标了热门/上新"的，没有就按价格从低到高摆几个
     feat = [s for s in scripts if s.get('onSale') is not False and (s.get('hot') or s.get('isNew'))][:4]

@@ -84,7 +84,8 @@ Airbnb 是把「浏览 → 详情 → 选时间 → 下单」这条链路打磨�
 | **胶囊** `.pill` / `.chip` | 34px 高、100px 圆角；选中态是"深色底白字"（不是变色） |
 | **剧本卡** `.juben` | 上图（4:3）+ 下文的房源卡形态；价格珊瑚粗体；CTA 是浅珊瑚药丸 |
 | **后台侧栏** `.adm-side .navi` | 42px 圆角行；选中态浅珊瑚底 + 珊瑚字；手机端变顶部横滑胶囊条 |
-| **弹窗** `.mask` / `.modal` | 遮罩半透明 + 3px 模糊；`.modal.mid` 560px，`.small` 440px |
+| **弹窗** `.mask` / `.modal` | 遮罩 78% 深 + 6px 模糊；`.modal.mid` 580px，`.small` 440px。**弹窗内部是一整块纸面**：分区只用细线（`.modal .adm-panel` 去掉底色/边框），套小白框会显得"有东西被挡在后面" |
+| **欢迎页** `.welcome-card` | 进站第一屏（`welcome.html`）：88px 深色方块 logo + 56px 标题 + 一句 slogan + 登录/注册两颗按钮。`.auth-stage` 已居中，别再加外边距 |
 | **折叠** `details.spoiler` | 虚线分隔 + ▸ 旋转；进阶项默认收起（"傻瓜式"的关键） |
 | **提示** `.flash` | 页顶一条，按语义上色（ok 绿 / warn 红 / 默认蓝） |
 
@@ -95,6 +96,8 @@ Airbnb 是把「浏览 → 详情 → 选时间 → 下单」这条链路打磨�
 | 想改什么 | 怎么做 |
 |---|---|
 | 换主色（比如改成青色） | 改 `:root` 的 `--primary` / `--primary-600` / `--primary-100` / `--primary-rgb` 四个值（`-rgb` 是给半透明用的，必须同步） |
+| **弹窗位置错乱 / 像被挡住** | 先查祖先有没有 `transform`（动画、hover 位移、`translateY`）—— 有的话里面 `position:fixed` 的弹窗会改成"相对那个祖先"定位。面板入场动画（`.tabpane.on`）只准动 `opacity`，这条踩过一次 |
+| 改欢迎页文案 | `templates/welcome.html`（进站第一屏）。要不要给某人看欢迎页的开关在 `views/public.py` 的 `home()`：游客 + 没逛过 → 欢迎页 |
 | 卡片更圆 / 更方 | 改 `--r-lg`（卡片）、`--r`（输入框）、`--r-pill`（控件） |
 | 页面更"松" / 更"紧" | 改 `--sp-*` 刻度，或 `.wrap` 的 padding |
 | 后台默认展开某个面板 | `templates/admin/index.html` 里把 `'on' if loop.first` 挪到那一项 |

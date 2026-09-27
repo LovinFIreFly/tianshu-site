@@ -422,12 +422,17 @@ tbody tr:last-child td{border-bottom:0}
 .auth-card .field .ico{display:none}
 .auth-card .foot-line{text-align:center;font-size:var(--fs-sm);color:var(--ink-3);margin-top:var(--sp-6)}
 .auth-foot{color:var(--ink-4);font-size:var(--fs-xs);padding:var(--sp-6);text-align:center}
+/* 欢迎页（进站第一屏，welcome.html） */
 .welcome-card{width:560px;max-width:100%;text-align:center}
 .welcome-card .logo{width:88px;height:88px;margin:0 auto var(--sp-6);display:flex;align-items:center;
   justify-content:center;font-size:40px;background:var(--ink);color:var(--paper)}
 .welcome-card h1{font-size:56px;line-height:1.02;letter-spacing:var(--track-display)}
 .welcome-card .slogan{color:var(--ink-3);font-size:var(--fs-lead);margin:var(--sp-5) 0 var(--sp-8)}
 .welcome-card .btns{display:flex;gap:var(--sp-4);justify-content:center;flex-wrap:wrap}
+.welcome-card .btns .btn{height:52px;padding:0 var(--sp-7);font-size:15px;min-width:152px}
+.welcome-card .more{margin:var(--sp-5) 0 0;font-size:var(--fs-sm)}
+.welcome-card .meta{margin:var(--sp-6) 0 0;padding-top:var(--sp-5);border-top:1px solid var(--rule);
+  color:var(--ink-4);font-size:var(--fs-xs)}
 
 /* ============================ 13. 后台 / DM ============================ */
 /* 左栏做成"目录索引"：细线分隔、朱红左边条标当前项（不是圆角高亮块） */
@@ -635,6 +640,8 @@ details.spoiler[open] > summary{color:var(--ink);margin-bottom:var(--sp-5)}
   .auth-stage{align-items:flex-start;justify-content:flex-start;
     padding:var(--sp-5) var(--sp-4) calc(76px + env(safe-area-inset-bottom))}
   .auth-top,.auth-card{width:100%}
+  .welcome-card h1{font-size:38px}
+  .welcome-card .btns .btn{width:100%;min-width:0}
   .field > input,.field > select,.field > textarea,.auth-card .field > input{font-size:16px}
 }
 @media (max-width:744px){

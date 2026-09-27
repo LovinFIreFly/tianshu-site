@@ -101,7 +101,17 @@ def ts_in(days):
 print('① 公开页面')
 guest = Client()
 s, html = guest.get('/')
-check('进站先看到登录界面（不再要点登录）', s == 200 and '账号登录' in html)
+check('进站先看到欢迎页（不是登录表单）',
+      s == 200 and '沉浸式剧本体验' in html and '账号登录' not in html)
+s, html = guest.get('/?browse=1')
+# 用页面特征判断（空库时首页的引导卡里也会出现"账号登录"字样，别拿它当判据）
+check('点「先随便逛逛」能进门店首页',
+      s == 200 and '沉浸式剧本体验' not in html and '拼车' in html)
+g2 = Client()                    # 另一个"没点过逛逛、但已经逛过剧本库"的游客
+g2.get('/scripts')
+s, html = g2.get('/')
+check('已经在站里逛的人，回首页不会再被欢迎页挡住',
+      s == 200 and '沉浸式剧本体验' not in html)
 for path, want in (('/scripts', '剧本库'), ('/car', '拼车'), ('/login', '登录'), ('/register', '注册')):
     s, html = guest.get(path)
     check('打开 %s' % path, s == 200 and want in html, 'HTTP %s' % s)

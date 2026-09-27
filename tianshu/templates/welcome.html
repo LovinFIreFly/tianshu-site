@@ -1,15 +1,29 @@
+{# 进站第一屏（欢迎页）—— 对应老版 legacy/index.html 里的 page-welcome。
+   没登录的人打开 / 先看到这一页：点「登 录」才进登录页；想先看看的可以走「先随便逛逛」。
+   登录之后这页就不再出现（/ 直接是门店首页）。 #}
 {% extends 'auth_base.html' %}
-{% block title %}{{ settings.shopName }} · 欢迎{% endblock %}
+{% block title %}{{ settings.shopName }}{% endblock %}
+
+{% block top %}
+<div class="auth-top">
+  <span class="auth-home" style="opacity:.45;cursor:default">桌面演示版</span>
+  <a class="theme-btn" href="{{ url_for('public.toggle_theme') }}" title="切换深浅色" aria-label="切换深浅色">
+    {% if theme == 'light' %}🌙{% else %}☀️{% endif %}</a>
+</div>
+{% endblock %}
+
 {% block card %}
-<div class="auth-card welcome-card">
-  <div class="logo" aria-hidden="true">🍠</div>
+<div class="welcome-card">
+  <span class="logo" aria-hidden="true">🍠</span>
   <h1>{{ settings.shopName }}</h1>
-  <p class="slogan">沉浸式剧本体验 · 一场好戏，从甜薯开始</p>
+  <p class="slogan">沉浸式剧本体验 · 一场好戏从甜薯开始</p>
+
   <div class="btns">
     <a class="btn btn-primary" href="{{ url_for('user.login') }}">登 录</a>
-    <a class="btn" href="{{ url_for('public.home') }}">先逛逛</a>
+    <a class="btn" href="{{ url_for('user.register') }}">注册新账号</a>
   </div>
-  <p class="sub" style="margin-top:26px">还没有账号？
-    <a class="lnk" href="{{ url_for('user.register') }}">注册一下，新客有券 →</a></p>
+
+  <p class="more"><a class="lnk" href="{{ url_for('public.home', browse=1) }}">先随便逛逛 →</a></p>
+  <p class="meta">已上架 {{ meta.scripts }} 部剧本 · 今天 {{ meta.today }} 场 · 数据都在本地</p>
 </div>
 {% endblock %}
