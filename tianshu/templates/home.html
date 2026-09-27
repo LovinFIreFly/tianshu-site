@@ -35,22 +35,27 @@
 {% if scripts %}
 <div class="grid">
   {% for s in scripts %}
-  <a class="card juben" href="{{ url_for('public.script_detail', sid=s.id) }}">
+  <div class="juben">
+    <a href="{{ url_for('public.script_detail', sid=s.id) }}">
+      <div class="cover">
+        {% if s.img %}<img class="cover-img" src="{{ s.img }}" alt="{{ s.title }}">{% else %}{{ s.emoji or '🎭' }}{% endif %}
+        {% if s.isNew %}<span class="flag" style="background:linear-gradient(135deg,#fb923c,#f97316)">上新</span>{% endif %}
+        {% if rating.get(s.id|string) %}<span class="score">★ {{ rating[s.id|string] }}</span>{% endif %}
+      </div>
+      <div class="body">
+        <h4>{{ s.title }}</h4>
+        <div class="meta">{{ s.players or '—' }} · {{ s.dur or '时长待定' }} · 难度 {{ s.diff or 3 }}/5</div>
+        <div class="foot">
+          <span class="price">¥{{ s.price|int }}<small>/人</small></span>
+          <span class="book">看看</span>
+        </div>
+      </div>
+    </a>
     {% if me %}<form method="post" action="{{ url_for('public.fav', sid=s.id) }}">
       <button class="fav-btn {{ 'on' if s.id|string in favs }}" type="submit" aria-label="收藏">
         {{ '❤' if s.id|string in favs else '♡' }}</button>
     </form>{% endif %}
-    <div class="cover">{% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}">{% else %}{{ s.emoji or '🎭' }}{% endif %}</div>
-    <h3>{{ s.title }}</h3>
-    <div class="meta">{{ s.players or '—' }} · {{ s.dur or '时长待定' }} · 难度 {{ s.diff or 3 }}/5</div>
-    <div class="foot-row">
-      <span class="price">¥{{ s.price|int }}<span class="sub">/人</span></span>
-      <span>
-        {% for t in (s.tags or [])[:2] %}<span class="badge">{{ t }}</span>{% endfor %}
-        {% if rating.get(s.id|string) %}<span class="badge ok">★ {{ rating[s.id|string] }}</span>{% endif %}
-      </span>
-    </div>
-  </a>
+  </div>
   {% endfor %}
 </div>
 {% else %}

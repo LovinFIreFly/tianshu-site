@@ -92,6 +92,8 @@ def register():
         invite = (f.get('invite') or '').strip().upper()
         if not re.match(r'^1\d{10}$', phone):
             flash('手机号要 11 位', 'warn')
+        elif not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+            flash('要填个邮箱，验证码发到邮箱里（手机号只当账号用）', 'warn')
         elif len(pw) < 6:
             flash('密码至少 6 位', 'warn')
         elif pw != pw2:
@@ -104,7 +106,7 @@ def register():
             flash('这个手机号注册过了，直接登录', 'warn')
         elif db.one('users', username=name):
             flash('名字被占了，换一个', 'warn')
-        elif not business.use_code(phone, 'register', code):
+        elif not business.use_code(email, 'register', code):
             flash('验证码不对（本地测试可以直接填 1234）', 'warn')
         else:
             my_invite = 'TS' + secrets.token_hex(3).upper()
@@ -140,10 +142,14 @@ def forgot():
         code = (request.form.get('code') or '').strip()
         pw = request.form.get('password') or ''
         pw2 = request.form.get('password2') or ''
+        email_ = (request.form.get('email') or '').strip().lower()
         u = db.one('users', phone=phone)
         if not u:
             flash('这个手机号还没注册过', 'warn')
-        elif not business.use_code(phone, 'reset', code):
+        elif not email_ or email_ != str(u.get('email') or '').strip().lower():
+            # 邮箱必须和注册时留的一致，不然验证码发不到本人手里（也就没有验证的意义）
+            flash('邮箱和注册时填的不一样 —— 验证码只发注册邮箱，忘了请联系门店', 'warn')
+        elif not business.use_code(email_, 'reset', code):
             flash('验证码不对（本地自己测试可以直接填 1234）', 'warn')
         elif len(pw) < 6:
             flash('新密码至少 6 位', 'warn')
@@ -163,14 +169,14 @@ def forgot():
 
 @bp.post('/code/send')
 def code_send():
-    """要一个验证码 —— 本地版不真发短信，验证码打在跑服务的那个黑窗口里
-    （另外 1234 这个通用码一直能用，方便自己测）"""
-    phone = (request.form.get('phone') or '').strip()
+    """要一个验证码 —— 只认邮箱（咱们没有短信通道，手机号收不到码）。
+    本地版不真发邮件，验证码打在跑服务的那个黑窗口里（通用码 1234 也一直能用）。"""
+    email = (request.form.get('email') or '').strip()
     purpose = request.form.get('purpose') or 'reset'
-    if not phone:
-        flash('先填手机号', 'warn')
+    if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+        flash('先填个有效的邮箱，验证码是发到邮箱的', 'warn')
     else:
-        business.send_code(phone, purpose)
+        business.send_code(email, purpose)
         flash('验证码已生成：去看运行服务的那个黑窗口（或直接填 1234）', 'ok')
     return redirect(request.referrer or url_for('user.me'))
 
@@ -184,18 +190,8 @@ def account_pwd():
     return redirect(url_for('user.me'))
 
 
-@bp.post('/account/phone')
-@login_required
-def account_phone():
-    newp = (request.form.get('phone') or '').strip()
-    if not business.use_code(newp, 'bind', request.form.get('code')):
-        flash('验证码不对（本地测试填 1234）', 'warn')
-        return redirect(url_for('user.me'))
-    ok, msg = business.change_phone(current_user(), newp)
-    flash(msg, 'ok' if ok else 'warn')
-    if ok:
-        session['phone'] = str(newp)          # 会话跟着换，不然当场被踢下线
-    return redirect(url_for('user.me'))
+# 换绑手机号的路由删了（2026-09）：只有邮箱验证码，没法确认新号是本人的。
+# 前端的入口也一起删了，留着这个注释是怕以后有人翻旧代码找不到。
 
 
 @bp.post('/account/delete')

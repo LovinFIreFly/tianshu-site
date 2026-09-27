@@ -148,7 +148,8 @@ check('选角记上了', bk and bk.get('role') == '阿甲')
 # 同一个角色第二个人不能选
 cus2 = Client()
 cus2.post('/register', {'phone': '13900001111', 'username': '自检小号', 'password': '123456',
-                        'password2': '123456', 'code': '1234', 'agree': '1'})
+                        'password2': '123456', 'code': '1234', 'agree': '1',
+                        'email': 'check2@example.com'})       # 验证码只发邮箱，注册必须留邮箱
 cus2.post('/book', {'sid': sc['id'], 'ts': day, 'time': '19:00', 'players': 2, 'mode': '拼车', 'role': '阿甲'})
 dup = [b for b in jread('bookings') if b.get('role') == '阿甲' and b.get('ts') == day
        and b.get('status') == 'booked']
@@ -346,18 +347,20 @@ s, html = guest.get('/forgot')
 check('找回密码页能打开', s == 200 and '重置密码' in html and 'auth-card' in html)
 cus5 = Client()
 cus5.post('/register', {'phone': '13900002222', 'username': '账号安全号', 'password': '123456',
-                        'password2': '123456', 'code': '1234', 'agree': '1'})
+                        'password2': '123456', 'code': '1234', 'agree': '1',
+                        'email': 'check5@example.com'})
 cus5.post('/account/pwd', {'old': '123456', 'password': '654321'})
 u5 = next((x for x in jread('users') if x.get('phone') == '13900002222'), {})
 check('改密码后旧密码失效、新密码能登',
       u5.get('password', '').startswith('pbkdf2$') and cus5.post('/login', {'account': '13900002222', 'password': '654321'}))
-cus5.post('/account/phone', {'phone': '13900003333', 'code': '1234'})
-u5b = next((x for x in jread('users') if x.get('phone') == '13900003333'), None)
-check('换绑手机号成功（旧号已不存在）', bool(u5b) and not any(x.get('phone') == '13900002222' for x in jread('users')))
+# 换绑手机号删掉了（只有邮箱验证码，没法确认新号是本人的）—— 顺手确认入口真的没了
+check('换绑手机号入口已删除', '换绑手机号' not in cus5.get('/me')[1])
+check('换绑手机号的接口也删了', cus5.post('/account/phone', {'phone': '13900003333', 'code': '1234'})[0] in (404, 405))
+check('验证码只发邮箱（只填手机号会被拦）', '邮箱' in cus5.post('/code/send', {'phone': '13900002222'})[1])
 
 # 改期
 cus5.post('/book', {'sid': sc['id'], 'ts': ts_in(2), 'time': '13:00', 'players': 2, 'mode': '包车'})
-bk5 = next((b for b in jread('bookings') if b.get('phone') == '13900003333' and b.get('status') == 'booked'), None)
+bk5 = next((b for b in jread('bookings') if b.get('phone') == '13900002222' and b.get('status') == 'booked'), None)
 new_ts = ts_in(8)
 cus5.post('/booking/%s/reschedule' % (bk5 or {}).get('id'), {'ts': new_ts, 'time': '20:30'})
 bk5b = next((b for b in jread('bookings') if b.get('id') == (bk5 or {}).get('id')), {})
@@ -396,8 +399,8 @@ rv_now = next((r for r in jread('reviews') if r.get('id') == (rv_dim or {}).get(
 check('评价能点赞', len(rv_now.get('likes') or []) >= 1)
 
 # 注销（留到最后，因为会删号）
-cus5.post('/account/delete', {'confirm': '13900003333'})
-check('注销账号（连带数据删除）', not any(x.get('phone') == '13900003333' for x in jread('users')))
+cus5.post('/account/delete', {'confirm': '13900002222'})
+check('注销账号（连带数据删除）', not any(x.get('phone') == '13900002222' for x in jread('users')))
 
 me_ok = True
 print('⑬ PWA / 心形收藏 / 举报 / 追评 / 关注 / DM与后台新页')

@@ -61,8 +61,10 @@
   }
 
   function boot() {
-    each(document.querySelectorAll('.tabbar[data-tabs]'), function (bar) {
-      var root = bar.parentNode;                            // 标签栏和面板是兄弟节点
+    /* [data-tabs] 可能是顶部的胶囊标签条（.tabbar），也可能是后台左侧栏（.adm-side）——
+       两种都走同一套逻辑，所以面板统一从整个文档里找。 */
+    each(document.querySelectorAll('[data-tabs]'), function (bar) {
+      var root = document;
       var saved = null;
       try { saved = sessionStorage.getItem('tabs:' + bar.getAttribute('data-tabs')); } catch (e) { }
       var hash = (location.hash || '').slice(1);            // 老书签 /admin#bookings 还能用

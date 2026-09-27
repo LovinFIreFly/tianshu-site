@@ -410,29 +410,32 @@ def save_upload(file_storage, sub='misc'):
     return '/img/%s/%s' % (sub, name), ''
 
 
-# ---------------------------------------------------------------- 验证码
-def send_code(phone, purpose):
-    """发验证码。本地版不真发短信 —— 验证码会打在服务那个黑窗口里，
+# ---------------------------------------------------------------- 验证码（只走邮箱）
+# 咱们没有短信通道，验证码一律发到邮箱：注册、找回密码都是往邮箱发。
+# 手机号只当账号用（登录名），别拿它收码 —— 发不出去的。
+def send_code(email, purpose):
+    """发验证码。本地版不真发邮件 —— 验证码打在服务那个黑窗口里，
     另外通用码 1234 一直能用（方便自己测试）"""
     code = '%06d' % secrets.randbelow(1000000)
     rows = [c for c in db.rows('codes') if (c.get('exp') or 0) > now_ms()]      # 先清掉过期的
-    rows.append({'id': now_ms(), 'target': str(phone), 'purpose': purpose, 'code': code,
+    rows.append({'id': now_ms(), 'target': str(email).strip().lower(), 'purpose': purpose, 'code': code,
                  'exp': now_ms() + 300000, 'used': False})
     db.write('codes', rows[-50:])
-    print('[验证码] %s（%s）：%s    也可以直接用 %s' % (phone, purpose, code, DEMO_CODE))
+    print('[邮箱验证码] %s（%s）：%s    也可以直接用 %s' % (email, purpose, code, DEMO_CODE))
     return code
 
 
-def use_code(phone, purpose, code):
-    """校验并核销验证码（一次性）"""
+def use_code(email, purpose, code):
+    """校验并核销验证码（一次性）。邮箱统一小写比较，用户大小写乱输也能过"""
     code = str(code or '').strip()
     if not code:
         return False
     if code == DEMO_CODE:
         return True
+    target = str(email or '').strip().lower()
     rows = db.rows('codes')
     for c in rows:
-        if (str(c.get('target')) == str(phone) and c.get('purpose') == purpose
+        if (str(c.get('target')) == target and c.get('purpose') == purpose
                 and str(c.get('code')) == code and not c.get('used') and (c.get('exp') or 0) > now_ms()):
             c['used'] = True
             db.write('codes', rows)
@@ -456,38 +459,11 @@ def change_password(user, old_pw, new_pw):
     return True, '密码改好了，下次用新密码登录'
 
 
-def change_phone(user, new_phone):
-    """换绑手机号，并把名下的预约/订单/留言/券/收藏一起迁过去（不然数据就断了）"""
-    import re
-    old = str(user.get('phone'))
-    if not re.match(r'^1\d{10}$', str(new_phone or '')):
-        return False, '手机号要 11 位'
-    users = db.rows('users')
-    if any(str(x.get('phone')) == str(new_phone) for x in users):
-        return False, '这个号已经被别的账号用了'
-    for x in users:
-        if str(x.get('phone')) == old:
-            x['oldPhone'] = old
-            x['phone'] = str(new_phone)
-    db.write('users', users)
-    for key, field in (('bookings', 'phone'), ('pays', 'phone'), ('messages', 'phone'),
-                       ('coupons', 'phone'), ('favs', 'phone'), ('notices', 'to')):
-        rows = db.rows(key)
-        changed = False
-        for x in rows:
-            if field not in x:
-                continue
-            if isinstance(x[field], list):
-                if old in [str(v) for v in x[field]]:
-                    x[field] = [str(new_phone) if str(v) == old else v for v in x[field]]
-                    changed = True
-            elif str(x[field]) == old:
-                x[field] = str(new_phone)
-                changed = True
-        if changed:
-            db.write(key, rows)
-    audit(user.get('username'), role_of(user), '换绑手机号 %s → %s' % (old, new_phone))
-    return True, '换绑完成，以后用新手机号登录'
+# 换绑手机号的功能删了（2026-09）。
+# 原因：要换绑就得先证明新号是你的，可咱们只有邮箱验证码、没有短信通道；
+# 光靠"填个号码"就把名下预约订单全迁过去，等于谁都能把账号抢走。
+# 真要做的话，得先加短信服务商，或者改成"换邮箱"。
+# 老代码在 git 历史里（搜 change_phone），需要时能翻出来。
 
 
 def delete_account(user):

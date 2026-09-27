@@ -2,19 +2,28 @@
 {% block title %}DM 工作台 · {{ settings.shopName }}{% endblock %}
 {% block body %}
 
-{# DM 工作台：三块内容都在这一页，点标签前端切，网址一直是 /dm #}
-{% set TABS = [('today', '今日场次'), ('credit', '我的客人'), ('guides', '学本资料')] %}
+{# DM 工作台：和老版后台一个长相（左侧栏 + 右侧内容），切换仍是前端切，网址一直是 /dm #}
+{% set NAVI = [
+  ('today', '📅', '今日场次'), ('credit', '👥', '我的客人'), ('guides', '📖', '学本资料')
+] %}
 
-<nav class="tabbar" data-tabs="dm">
-  {% for key, name in TABS %}
-  <button type="button" data-tab="{{ key }}" class="{{ 'on' if loop.first }}">{{ name }}</button>
-  {% endfor %}
-  <span class="sep"></span>
-  <a href="{{ url_for('admin.dashboard') + '#dm' }}" class="sub">我这个月能拿多少 →</a>
-</nav>
+<div class="adm">
+  <aside class="adm-side" data-tabs="dm">
+    <div class="brand"><span class="ic">🎭</span><span>DM 工作台</span></div>
+    {% for key, ico, name in NAVI %}
+    <button type="button" class="navi {{ 'on' if loop.first }}" data-tab="{{ key }}">
+      <span>{{ ico }}</span><span>{{ name }}</span></button>
+    {% endfor %}
+    <div class="sp"></div>
+    <a class="navi" href="{{ url_for('admin.dashboard') + '#dm' }}"><span>💰</span><span>我这个月能拿多少</span></a>
+    <a class="navi" href="{{ url_for('public.home') }}"><span>🏠</span><span>回到网站</span></a>
+  </aside>
 
-{% for key, name in TABS %}
-<div class="tabpane {{ 'on' if loop.first }}" data-tab="{{ key }}">{{ panels.get(key, '')|safe }}</div>
-{% endfor %}
+  <main class="adm-main">
+    {% for key, ico, name in NAVI %}
+    <div class="tabpane {{ 'on' if loop.first }}" data-tab="{{ key }}">{{ panels.get(key, '')|safe }}</div>
+    {% endfor %}
+  </main>
+</div>
 
 {% endblock %}
