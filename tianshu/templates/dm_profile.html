@@ -7,10 +7,15 @@
 
 <div class="two" style="margin-top:var(--sp-6)">
   <div>
+    {% set pf = u.dmProfile or {} %}
+    {# 形象照：DM 自己在工作台「我的成长」里传的，没有就不摆位置 #}
+    {% if pf.photo %}
+    <img class="dm-portrait" src="{{ pf.photo }}" alt="{{ nickname }} 的形象照">
+    {% endif %}
+
     <span class="kicker">主持人 / Game Master</span>
     <h1 style="font-size:44px;margin:var(--sp-3) 0">{{ nickname }}</h1>
 
-    {% set pf = u.dmProfile or {} %}
     {% if pf.style %}<p class="lead">{{ pf.style }}</p>{% endif %}
 
     <div class="row" style="margin-top:var(--sp-5)">

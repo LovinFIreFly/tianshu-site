@@ -36,6 +36,31 @@
     return hit;
   }
 
+  function scrollToId(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { el.scrollIntoView(); }
+  }
+
+  /* 网址上的 #锚点 → 「该显示哪个面板 + 滚到哪儿」
+     —— #users 这种本身就是标签名，直接切；
+     —— #my-pay 这种是某个面板"里面"的块（结算块在「今日场次」标签里），
+        得先查出它在哪个面板、把那个面板切出来，再滚过去。
+        不这么做的话：目标在隐藏面板里，点了既不切标签也滚不动 = 看着像没反应。 */
+  function resolveHash(bar, root, hash) {
+    if (!hash) return false;
+    if (activate(bar, root, hash, false)) {          // ① 锚点就是标签名
+      scrollToId(hash);
+      return true;
+    }
+    var el = document.getElementById(hash);          // ② 锚点是面板里的某个块
+    var pane = el && el.closest ? el.closest('.tabpane') : null;
+    if (!pane) return false;
+    activate(bar, root, pane.getAttribute('data-tab'), bar.getAttribute('data-tabs'));
+    scrollToId(hash);
+    return true;
+  }
+
   /* 就地筛选：把同面板里 data-status 不等于 val 的藏起来（'all' = 全显） */
   function applyFilter(chipBar, val) {
     var box = chipBar.closest('.tabpane') || document;
@@ -69,7 +94,7 @@
       try { saved = sessionStorage.getItem('tabs:' + bar.getAttribute('data-tabs')); } catch (e) { }
       var hash = (location.hash || '').slice(1);            // 老书签 /admin#bookings 还能用
       var first = bar.querySelector('[data-tab]');
-      activate(bar, root, hash, false) ||
+      resolveHash(bar, root, hash) ||
         activate(bar, root, saved, false) ||
         activate(bar, root, first ? first.getAttribute('data-tab') : '', false);
 
@@ -81,6 +106,12 @@
           history.replaceState(null, '', location.pathname + location.search);
         }
         window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      // 同页里点 <a href="/dm#my-pay"> 这类锚点链接只会改 hash、不会重新加载，
+      // 所以得自己接一下：不然点在已经在同一页的链接上，什么都不会发生。
+      window.addEventListener('hashchange', function () {
+        resolveHash(bar, root, (location.hash || '').slice(1));
       });
     });
     each(document.querySelectorAll('[data-filter]'), bindFilter);

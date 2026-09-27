@@ -28,14 +28,19 @@
 {% for r in rows %}
 <div class="panel mt">
   <div class="between" style="align-items:flex-start">
-    <div>
-      <span class="kicker">{{ r.g.tier.icon }} {{ r.g.tier.name }}</span>
-      <h2 style="margin:var(--sp-2) 0 0">{{ r.nick }}</h2>
-      <p class="sub" style="margin:var(--sp-2) 0 0">
-        {{ r.u.username }} · {{ r.phone[:3] }}****{{ r.phone[-4:] }}
-        {% if r.u.dmProfile and r.u.dmProfile.canOpen is false %}<span class="badge bad">暂停接单</span>{% endif %}
-        {% if r.g.topTags %}<span class="badge">{{ r.g.topTags|join(' · ') }}</span>{% endif %}
-      </p>
+    <div style="display:flex;gap:var(--sp-4);align-items:flex-start">
+      {% if r.u.dmProfile and r.u.dmProfile.photo %}
+      <img class="dm-photo" src="{{ r.u.dmProfile.photo }}" alt="" style="width:64px;height:64px">
+      {% endif %}
+      <div>
+        <span class="kicker">{{ r.g.tier.icon }} {{ r.g.tier.name }}</span>
+        <h2 style="margin:var(--sp-2) 0 0">{{ r.nick }}</h2>
+        <p class="sub" style="margin:var(--sp-2) 0 0">
+          {{ r.u.username }} · {{ r.phone[:3] }}****{{ r.phone[-4:] }}
+          {% if r.u.dmProfile and r.u.dmProfile.canOpen is false %}<span class="badge bad">暂停接单</span>{% endif %}
+          {% if r.g.topTags %}<span class="badge">{{ r.g.topTags|join(' · ') }}</span>{% endif %}
+        </p>
+      </div>
     </div>
     <div style="text-align:right;flex:none">
       <div class="price" style="font-size:24px">¥{{ r.mon.total or 0 }}</div>

@@ -571,6 +571,33 @@ check('DM 页不留子网址', 'href="?tab=' not in html and 'href="/dm/credit"'
 check('DM 工作台不再有指向后台的链接（以前点「我这个月能拿到多少」会 403）',
       'href="/admin' not in html)
 check('「我这个月能拿多少」跳到自己的结算块', '#my-pay' in html and '我的结算' in html)
+check('结算块有锚点 id（链接才滚得到）', 'id="my-pay"' in html)
+# 锚点必须能定位到"面板里面的块"：结算块在「今日场次」面板里，
+# 以前的 JS 只认标签名（#my-pay 找不到 → 回退第一个标签 = 点了没反应）
+s, tabs_js = guest.get('/static/js/tabs.js')
+check('锚点能先切面板再滚动（不再只认标签名）',
+      'resolveHash' in tabs_js and "closest('.tabpane')" in tabs_js)
+check('同页锚点链接接上了 hashchange', "addEventListener('hashchange'" in tabs_js)
+
+# DM 形象照：自己上传，客人打开公开主页能看到
+check('DM 工作台有上传形象照的入口', 'name="photo"' in html and 'multipart/form-data' in html)
+dmcli.post_file('/dm/profile', 'photo', 'me.png', png,
+                {'style': '情感本一把好手', 'bio': '自检用简介', 'canOpen': '1'})
+dm_u = next((x for x in jread('users') if x.get('phone') == '12345678901'), {})
+dm_photo = ((dm_u.get('dmProfile') or {}).get('photo')) or ''
+check('DM 能上传形象照', dm_photo.startswith('/img/dm/'), dm_photo)
+s, _ = guest.get(dm_photo if dm_photo.startswith('/img/') else '/')
+check('形象照能读出来', s == 200)
+s, html_pub = guest.getq('/dm/12345678901')
+check('公开主页上有形象照', s == 200 and dm_photo in html_pub)
+check('公开主页上还有风格与简介', '情感本一把好手' in html_pub and '自检用简介' in html_pub)
+s, html_g = admin.get('/admin/growth')
+check('后台 DM 档案里也带上这张照片', dm_photo in html_g)
+# 勾「删掉这张照片」就撤下来（不带文件提交，跟浏览器行为一致）
+dmcli.post('/dm/profile', {'del_photo': '1', 'style': '情感本一把好手', 'canOpen': '1'})
+dm_u2 = next((x for x in jread('users') if x.get('phone') == '12345678901'), {})
+check('能删掉形象照', not ((dm_u2.get('dmProfile') or {}).get('photo')))
+check('只有 /img/dm/ 这类能读（其它子目录不给）', guest.get('/img/secret/x.png')[0] == 404)
 s, html = dmcli.get('/me')
 check('「我的」五个面板都渲染了', all(('data-tab="%s"' % k) in html
                                      for k in ('bookings', 'orders', 'coupons', 'notices', 'profile')))

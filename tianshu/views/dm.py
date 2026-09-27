@@ -113,20 +113,35 @@ def growth():
 @bp.post('/profile')
 @dm_required
 def profile_save():
-    """DM 自己编辑公开主页：风格 / 简介 / 接不接客人点名"""
+    """DM 自己编辑公开主页：形象照 / 风格 / 简介 / 接不接客人点名
+
+    形象照存在 data/img/dm/ 下（跟数据一起备份、搬家不丢），
+    客人打开你的公开主页就能看到；想换再传一张，勾「删掉」就撤下来。
+    """
     u = current_user()
     f = request.form
     users = db.rows('users')
+    flash_photo = ''
     for x in users:
         if str(x.get('phone')) == str(u.get('phone')):
             pf = x.get('dmProfile') or {}
             pf['style'] = business.clean(f.get('style'), 20)
             pf['bio'] = business.clean(f.get('bio'), 200)
             pf['canOpen'] = f.get('canOpen') == '1'
+            if f.get('del_photo') == '1':
+                pf['photo'] = ''
+            url, err = business.save_upload(request.files.get('photo'), 'dm')
+            if url:
+                pf['photo'] = url
+            elif err and request.files.get('photo') and request.files['photo'].filename:
+                flash('形象照没传上：%s' % err, 'warn')
             x['dmProfile'] = pf
+            if pf.get('photo'):
+                flash_photo = ' 形象照也换好了。'
     db.write('users', users)
-    business.audit(u.get('username'), role(), '更新了自己的 DM 主页')
-    flash('主页更新好了 —— 客人在剧本页点你的名字就能看到', 'ok')
+    business.audit(u.get('username'), role(), '更新了自己的 DM 主页%s'
+                   % ('（含形象照）' if flash_photo else ''))
+    flash('主页更新好了 —— 客人在剧本页点你的名字就能看到。%s' % flash_photo, 'ok')
     return redirect(url_for('dm.index') + '#growth')
 
 

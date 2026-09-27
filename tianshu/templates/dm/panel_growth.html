@@ -31,24 +31,39 @@
   <div class="cell"><b>¥{{ st.revenue }}</b><span>产生流水</span></div>
 </div>
 
+{# 公开主页：形象照 + 风格 + 简介。带 enctype，不然图片传不上来 #}
+{% set pf = u.dmProfile or {} %}
 <div class="adm-panel">
   <h3>我的公开主页</h3>
-  <form method="post" action="{{ url_for('dm.profile_save') }}">
+  <form method="post" action="{{ url_for('dm.profile_save') }}" enctype="multipart/form-data">
+    {% if pf.photo %}
+    <div class="dm-photo-row">
+      <img class="dm-photo" src="{{ pf.photo }}" alt="我的形象照">
+      <div>
+        <p class="sub">这张就是客人打开你主页时看到的形象照。</p>
+        <label class="sub" style="display:flex;gap:6px;align-items:center;margin-top:6px">
+          <input type="checkbox" name="del_photo" value="1" style="width:auto"> 删掉这张照片</label>
+      </div>
+    </div>
+    {% endif %}
     <div class="form-grid">
       <div class="field"><label>一句话风格（客人挑 DM 时看这句）</label>
-        <input name="style" maxlength="20" value="{{ (u.dmProfile or {}).get('style') or '' }}"
+        <input name="style" maxlength="20" value="{{ pf.get('style') or '' }}"
                placeholder="例：情感本一把好手"></div>
       <div class="field"><label>接不接客人点名</label>
         <select name="canOpen">
-          <option value="1" {{ 'selected' if (u.dmProfile or {}).get('canOpen', True) }}>可以（显示在剧本页的「指定 DM」里）</option>
-          <option value="0" {{ 'selected' if not (u.dmProfile or {}).get('canOpen', True) }}>先不接（只按门店排班带本）</option>
+          <option value="1" {{ 'selected' if pf.get('canOpen', True) }}>可以（显示在剧本页的「指定 DM」里）</option>
+          <option value="0" {{ 'selected' if not pf.get('canOpen', True) }}>先不接（只按门店排班带本）</option>
         </select></div>
       <div class="field full"><label>自我介绍（最多 200 字）</label>
-        <textarea name="bio" rows="3" maxlength="200">{{ (u.dmProfile or {}).get('bio') or '' }}</textarea></div>
+        <textarea name="bio" rows="3" maxlength="200">{{ pf.get('bio') or '' }}</textarea></div>
+      <div class="field full"><label>形象照（png / jpg / webp / gif，≤700KB）</label>
+        <input type="file" name="photo" accept="image/png,image/jpeg,image/webp,image/gif">
+        <span class="sub">竖图最合适（3:4）。上传后客人打开你的主页就能看到，想换再传一张</span></div>
     </div>
     <button class="btn btn-primary" type="submit">保存主页</button>
   </form>
-  <p class="sub mt">客人在剧本页点你的名字就能看到这段介绍。段位、评分、带本量是系统算的，不用自己填。</p>
+  <p class="sub mt">客人在剧本页点你的名字就能看到这段介绍和照片。段位、评分、带本量是系统算的，不用自己填。</p>
 </div>
 
 {% if st.topTags %}
