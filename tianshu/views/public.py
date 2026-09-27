@@ -33,6 +33,9 @@ def toggle_theme():
 
 @bp.get('/')
 def home():
+    """进站第一眼：没登录就直接看到登录界面（不用再自己点登录）"""
+    if not current_user():
+        return redirect(url_for('user.login'))
     scripts = db.rows('scripts')
     # 首页先推"上架 + 标了热门/上新"的，没有就按价格从低到高摆几个
     feat = [s for s in scripts if s.get('onSale') is not False and (s.get('hot') or s.get('isNew'))][:4]

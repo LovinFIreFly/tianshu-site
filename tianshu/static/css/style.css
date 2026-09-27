@@ -56,8 +56,9 @@
   /* —— 阴影与发光 —— */
   --shadow-1:0 2px 10px rgba(0,0,0,.5);
   --shadow-2:0 12px 30px rgba(0,0,0,.6);
-  --glow:0 0 0 1px rgba(0,255,157,.35), 0 0 22px rgba(0,255,157,.16);
-  --glow-strong:0 0 0 1px rgba(0,255,157,.6), 0 0 30px rgba(0,255,157,.3);
+  /* 发光要克制：默认不给，hover/聚焦才给，而且只给一圈 */
+  --glow:0 0 0 1px rgba(0,255,157,.3), 0 0 14px rgba(0,255,157,.1);
+  --glow-strong:0 0 0 1px rgba(0,255,157,.55), 0 0 24px rgba(0,255,157,.22);
 
   /* —— 动效 —— */
   --ease:cubic-bezier(.22,.61,.36,1);
@@ -72,13 +73,24 @@ html{-webkit-text-size-adjust:100%}
 body{font-family:var(--font);background:var(--bg);color:var(--text);
      font-size:var(--fs-body);line-height:var(--lh-body);-webkit-font-smoothing:antialiased;
      min-height:100vh;
-     /* 科技感的底：一层淡淡的网格 + 顶部荧光绿的辉光 */
+     /* 科技感的底：极淡的网格 + 顶部一点冷光（Linear 那种"克制的高亮"） */
      background-image:
-       linear-gradient(rgba(0,255,157,.035) 1px,transparent 1px),
-       linear-gradient(90deg,rgba(0,255,157,.035) 1px,transparent 1px),
-       radial-gradient(80% 50% at 50% -10%,rgba(0,255,157,.10),transparent 70%);
+       linear-gradient(rgba(0,255,157,.016) 1px,transparent 1px),
+       linear-gradient(90deg,rgba(0,255,157,.016) 1px,transparent 1px),
+       radial-gradient(70% 45% at 50% -8%,rgba(0,255,157,.055),transparent 70%);
      background-size:44px 44px,44px 44px,100% 100%;
      background-attachment:fixed}
+/* 微噪点：去掉纯色的"塑料感"（Linear/Vercel 都会铺一层） */
+body::after{content:'';position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E")}
+::selection{background:rgba(0,255,157,.25);color:var(--text)}
+/* 浏览器自动填充会把输入框刷成大白块 —— 压回主题色（截图里那个问题） */
+input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus{
+  -webkit-text-fill-color:var(--text);
+  -webkit-box-shadow:0 0 0 1000px #0b1219 inset;
+  caret-color:var(--text);
+  border-radius:var(--radius);
+  transition:background-color 99999s ease-out 0s}
 a{color:inherit;text-decoration:none}
 img{max-width:100%;display:block}
 button{font:inherit;color:inherit;cursor:pointer}
@@ -124,7 +136,7 @@ h3{font-size:var(--fs-h3);font-weight:var(--fw-h3);line-height:var(--lh-h3);marg
      background:rgba(8,12,17,.88);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:60;
      backdrop-filter:blur(10px)}
 .nav::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(0,255,157,.55),transparent)}
+  background:linear-gradient(90deg,transparent,rgba(0,255,157,.3),transparent)}
 .nav .brand{display:flex;align-items:center;gap:var(--sp-2);font-weight:800;letter-spacing:1px;white-space:nowrap}
 .nav .brand .logo{font-size:20px}
 .nav .links{display:flex;gap:var(--sp-1);flex:1;overflow-x:auto;scrollbar-width:none}
@@ -148,7 +160,7 @@ h3{font-size:var(--fs-h3);font-weight:var(--fw-h3);line-height:var(--lh-h3);marg
 .card,.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);padding:var(--sp-4);
   transition:transform var(--t) var(--ease),box-shadow var(--t) var(--ease),border-color var(--t) var(--ease),background var(--t) var(--ease)}
 .panel{margin-bottom:var(--sp-4);box-shadow:var(--shadow-1)}
-.card:hover{transform:translateY(-3px);background:var(--card-hover);border-color:rgba(0,255,157,.45);box-shadow:var(--shadow-2)}
+.card:hover{transform:translateY(-2px);background:var(--card-hover);border-color:rgba(0,255,157,.28);box-shadow:var(--shadow-2)}
 .juben{position:relative;overflow:hidden;cursor:pointer}
 .juben .cover{aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;font-size:46px;
   background:linear-gradient(160deg,rgba(0,255,157,.06),transparent);overflow:hidden}
@@ -167,12 +179,12 @@ h3{font-size:var(--fs-h3);font-weight:var(--fw-h3);line-height:var(--lh-h3);marg
 
 /* ============================ 6. 徽章 / 药丸 ============================ */
 .badge,.pill{display:inline-block;font-size:var(--fs-xs);padding:2px var(--sp-2);border-radius:var(--radius-pill);
-  white-space:nowrap;line-height:1.8}
-.badge{background:rgba(0,255,157,.12);color:var(--primary);border:1px solid rgba(0,255,157,.3);margin-right:var(--sp-1)}
-.badge.new{background:rgba(255,194,71,.14);color:var(--accent);border-color:rgba(255,194,71,.35)}
-.badge.ok{background:rgba(34,197,94,.14);color:var(--ok);border-color:rgba(34,197,94,.3)}
-.badge.warn{background:rgba(251,191,36,.14);color:var(--warn);border-color:rgba(251,191,36,.3)}
-.badge.bad{background:rgba(255,84,112,.14);color:var(--danger);border-color:rgba(255,84,112,.32)}
+  white-space:nowrap;line-height:1.8;opacity:.92}
+.badge{background:rgba(0,255,157,.08);color:var(--primary-100);border:1px solid rgba(0,255,157,.18);margin-right:var(--sp-1)}
+.badge.new{background:rgba(255,194,71,.1);color:var(--accent);border-color:rgba(255,194,71,.22)}
+.badge.ok{background:rgba(34,197,94,.1);color:var(--ok);border-color:rgba(34,197,94,.2)}
+.badge.warn{background:rgba(251,191,36,.1);color:var(--warn);border-color:rgba(251,191,36,.2)}
+.badge.bad{background:rgba(255,84,112,.1);color:var(--danger);border-color:rgba(255,84,112,.22)}
 .pill{border:1px solid var(--line);color:var(--text-2);font-family:var(--font-mono);font-size:var(--fs-xs)}
 .lnk{color:var(--primary)}
 .lnk:hover{text-decoration:underline}
@@ -183,7 +195,7 @@ h3{font-size:var(--fs-h3);font-weight:var(--fw-h3);line-height:var(--lh-h3);marg
   letter-spacing:.3px;transition:all var(--t) var(--ease)}
 .btn:hover{background:rgba(0,255,157,.1);border-color:rgba(0,255,157,.45);transform:translateY(-1px)}
 .btn:active{transform:translateY(0) scale(.98)}
-.btn-primary{background:var(--primary);border-color:var(--primary);color:#04120c;box-shadow:0 0 18px rgba(0,255,157,.25)}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#04120c}
 .btn-primary:hover{background:var(--primary-600);border-color:var(--primary-600);box-shadow:var(--glow)}
 .btn-accent{background:var(--accent);border-color:var(--accent);color:#1a1204}
 .btn-accent:hover{filter:brightness(1.1);background:var(--accent);border-color:var(--accent);
@@ -222,7 +234,7 @@ tbody tr:hover{background:rgba(0,255,157,.05)}
 /* ============================ 11. 页面零件 ============================ */
 .hero{position:relative;border:1px solid var(--line);border-radius:var(--radius-xl);overflow:hidden;
   padding:var(--sp-7) var(--sp-5);text-align:center;margin-bottom:var(--sp-5);
-  background:radial-gradient(70% 100% at 50% 0%,rgba(0,255,157,.14),transparent 72%)}
+  background:radial-gradient(70% 100% at 50% 0%,rgba(0,255,157,.07),transparent 72%)}
 .hero h1{font-size:36px;letter-spacing:5px;
   background:linear-gradient(90deg,#7dffcb,#ffffff);-webkit-background-clip:text;background-clip:text;color:transparent}
 .hero p{color:var(--text-2);margin-top:var(--sp-2)}
@@ -236,7 +248,7 @@ tbody tr:hover{background:rgba(0,255,157,.05)}
 }
 /* 首页轮播 */
 .banner{position:relative;height:230px;border-radius:var(--radius-xl);overflow:hidden;border:1px solid var(--line);
-  background:linear-gradient(120deg,rgba(0,255,157,.18),rgba(255,194,71,.14));margin-bottom:var(--sp-5)}
+  background:linear-gradient(120deg,rgba(0,255,157,.09),rgba(255,194,71,.07));margin-bottom:var(--sp-5)}
 .banner .slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
   text-align:center;padding:0 var(--sp-5);opacity:0;animation:slideFade 15s var(--ease) infinite}
 .banner .slide:nth-child(1){animation-delay:0s}

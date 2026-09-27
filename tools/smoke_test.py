@@ -100,7 +100,9 @@ def ts_in(days):
 
 print('① 公开页面')
 guest = Client()
-for path, want in (('/', '剧本'), ('/scripts', '剧本库'), ('/car', '拼车'), ('/login', '登录'), ('/register', '注册')):
+s, html = guest.get('/')
+check('进站先看到登录界面（不再要点登录）', s == 200 and '账号登录' in html)
+for path, want in (('/scripts', '剧本库'), ('/car', '拼车'), ('/login', '登录'), ('/register', '注册')):
     s, html = guest.get(path)
     check('打开 %s' % path, s == 200 and want in html, 'HTTP %s' % s)
 s, html = guest.get('/me')
