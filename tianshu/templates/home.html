@@ -2,109 +2,156 @@
 {% block title %}{{ settings.shopName }} · 首页{% endblock %}
 {% block body %}
 
-{# 老版首页顶部的轮播 banner；内容在后台「门店设置」里改 #}
-{% if banners %}
-<div class="banner">
-  {% for b in banners %}
-  <div class="slide">
-    <div class="emo">{{ b.emoji or '🎭' }}</div>
-    <div class="t">{{ b.title }}</div>
-    <div class="d">{{ b.text }}</div>
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-
-{# 首屏照 Airbnb 的做法：不放传统大 banner，直接给"找本子"这个最高频的动作 #}
+{# ============ 第一屏：整幅墨色，只有一件事 —— 让你开始挑本（Nike 的"一屏一件事"）============ #}
 <section class="hero">
-  <h1>{{ settings.shopName }}</h1>
-  <p class="slogan">沉浸式剧本体验 · 一场好戏，从这儿开始</p>
+  <div class="wrap" style="padding-top:0;padding-bottom:0">
+    <p class="kicker">剧本 · 场地 · DM</p>
+    <h1>{{ settings.shopName }}</h1>
+    <p class="slogan">今晚换一个人活一次。挑本、开团、到店，剩下的交给我们。</p>
 
-  <form class="search-pill" method="get" action="{{ url_for('public.scripts') }}" role="search">
-    <span class="ico" aria-hidden="true">🔍</span>
-    <input name="q" placeholder="想玩什么本？搜名字 / 类型 / 人数" aria-label="搜剧本">
-    <button class="btn btn-primary" type="submit">找本子</button>
-  </form>
+    <form class="search-pill" method="get" action="{{ url_for('public.scripts') }}" role="search">
+      <span class="ico" aria-hidden="true">⌕</span>
+      <input name="q" placeholder="搜剧本名 / 类型 / 人数" aria-label="搜剧本">
+      <button class="btn btn-primary" type="submit">找本子</button>
+    </form>
 
-  <div class="btns">
-    <a class="btn btn-cta" href="{{ url_for('public.scripts') }}">挑个本子</a>
-    <a class="btn btn-ghost" href="{{ url_for('public.car') }}">看看谁在拼车</a>
-  </div>
+    <div class="btns">
+      <a class="btn btn-cta" href="{{ url_for('public.scripts') }}">挑个本子</a>
+      <a class="btn btn-ghost" href="{{ url_for('public.car') }}">看看谁在拼车</a>
+    </div>
 
-  {% if settings.notice %}<p class="sub" style="margin-top:var(--sp-5)">📣 {{ settings.notice }}</p>{% endif %}
-
-  <div class="stats">
-    <div><b>{{ stat.plays }}</b><span>累计开本</span></div>
-    <div><b>{{ scripts|length }}</b><span>在架剧本</span></div>
-    <div><b>{{ sessions|length }}</b><span>今日场次</span></div>
-    <div><b>{{ stat.income }}</b><span>已收定金(元)</span></div>
+    <div class="stats">
+      <div><b>{{ stat.plays }}</b><span>累计开本</span></div>
+      <div><b>{{ scripts|length }}</b><span>在架剧本</span></div>
+      <div><b>{{ sessions|length }}</b><span>今日场次</span></div>
+      <div><b>{{ stat.income }}</b><span>已收定金</span></div>
+    </div>
   </div>
 </section>
 
-<h2>🔥 热门本子</h2>
-{% if scripts %}
-<div class="grid">
-  {% for s in scripts %}
-  <div class="juben">
-    <a href="{{ url_for('public.script_detail', sid=s.id) }}">
-      <div class="cover">
-        {% if s.img %}<img class="cover-img" src="{{ s.img }}" alt="{{ s.title }}">{% else %}{{ s.emoji or '🎭' }}{% endif %}
-        {% if s.isNew %}<span class="flag" style="background:linear-gradient(135deg,#fb923c,#f97316)">上新</span>{% endif %}
-        {% if rating.get(s.id|string) %}<span class="score">★ {{ rating[s.id|string] }}</span>{% endif %}
+{# ============ 轮播（有内容才显示；放在首屏下面，不抢主视觉）============ #}
+{% if banners %}
+<section class="band">
+  <div class="wrap">
+    <div class="banner">
+      {% for b in banners %}
+      <div class="slide">
+        <div class="emo">{{ b.emoji or '🎭' }}</div>
+        <div class="t">{{ b.title }}</div>
+        <div class="d">{{ b.text }}</div>
       </div>
-      <div class="body">
-        <h4>{{ s.title }}</h4>
-        <div class="meta">{{ s.players or '—' }} · {{ s.dur or '时长待定' }} · 难度 {{ s.diff or 3 }}/5</div>
-        <div class="foot">
-          <span class="price">¥{{ s.price|int }}<small>/人</small></span>
-          <span class="book">看看</span>
-        </div>
-      </div>
-    </a>
-    {% if me %}<form method="post" action="{{ url_for('public.fav', sid=s.id) }}">
-      <button class="fav-btn {{ 'on' if s.id|string in favs }}" type="submit" aria-label="收藏">
-        {{ '❤' if s.id|string in favs else '♡' }}</button>
-    </form>{% endif %}
+      {% endfor %}
+    </div>
   </div>
-  {% endfor %}
-</div>
-{% else %}
-<div class="panel empty">剧本库还是空的 —— 用管理员账号登录，去「管理后台 → 剧本」加几个本子</div>
+</section>
 {% endif %}
 
-<div class="two mt">
-  <div>
-    <h2>📅 今天的场次</h2>
+{# ============ 01 本子上新：戏单式海报网格（编号是 CSS 计数器自动出的）============ #}
+<section class="band alt">
+  <div class="wrap">
+    <div class="act">
+      <b>01</b>
+      <h2>本子上新</h2>
+      <a class="sub lnk" href="{{ url_for('public.scripts') }}">全部剧本 →</a>
+    </div>
+
+    {% if scripts %}
+    <div class="grid">
+      {% for s in scripts %}
+      <div class="juben">
+        <a href="{{ url_for('public.script_detail', sid=s.id) }}">
+          <div class="cover">
+            {% if s.img %}<img class="cover-img" src="{{ s.img }}" alt="{{ s.title }}">{% else %}{{ s.emoji or '🎭' }}{% endif %}
+            {% if s.isNew %}<span class="flag">上新</span>{% endif %}
+            {% if rating.get(s.id|string) %}<span class="score">★ {{ rating[s.id|string] }}</span>{% endif %}
+          </div>
+          <div class="body">
+            <h4>{{ s.title }}</h4>
+            <div class="meta">{{ s.players or '人数待定' }} · {{ s.dur or '时长待定' }} · 难度 {{ s.diff or 3 }}/5</div>
+            <div class="foot">
+              <span class="price">¥{{ s.price|int }}<small> / 人</small></span>
+              <span class="book">看这一本 →</span>
+            </div>
+          </div>
+        </a>
+        {% if me %}<form method="post" action="{{ url_for('public.fav', sid=s.id) }}">
+          <button class="fav-btn {{ 'on' if s.id|string in favs }}" type="submit" aria-label="收藏">
+            {{ '❤' if s.id|string in favs else '♡' }}</button>
+        </form>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="panel empty">
+      <div class="e">戏单空着</div>
+      <p>剧本库还没有本子 —— 用管理员账号登录，去「管理后台 → 剧本」加几个</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+{# ============ 02 今天的场次：墨色区 + 戏单式列表（时间用衬线大字，一眼扫完）============ #}
+<section class="band ink">
+  <div class="wrap">
+    <div class="act" style="border-top-color:rgba(244,241,234,.2)">
+      <b>02</b>
+      <h2>今天这几场</h2>
+      <span class="sub">按开演时间排</span>
+    </div>
+
     {% if sessions %}
       {% for s in sessions %}
-      <div class="panel between">
-        <div>
-          <b>{{ s.time }}</b> · {{ s.title }} <span class="pill">{{ s.roomId or '房间待定' }}</span>
-          <div class="sub">DM {{ s.dmName or '待安排' }} · 已报 {{ s.joined }}/{{ s.cap or '—' }} 人</div>
+      <div class="between" style="padding:var(--sp-4) 0;border-bottom:1px solid rgba(244,241,234,.14)">
+        <div style="display:flex;align-items:baseline;gap:var(--sp-5);flex-wrap:wrap">
+          <b class="serif" style="font-size:26px;color:var(--vermilion)">{{ s.time }}</b>
+          <span class="serif" style="font-size:20px">{{ s.title }}</span>
+          <span class="sub">{{ s.roomId or '房间待定' }} · DM {{ s.dmName or '待安排' }} · 已报 {{ s.joined }}/{{ s.cap or '—' }} 人</span>
         </div>
-        <a class="btn btn-sm" href="{{ url_for('public.script_detail', sid=s.sid) }}">去看看</a>
+        <a class="btn btn-sm btn-ghost" href="{{ url_for('public.script_detail', sid=s.sid) }}">去看看</a>
       </div>
       {% endfor %}
     {% else %}
-      <div class="panel empty">今天还没排场次，想玩就直接去剧本页挑时间</div>
+      <p class="lead">今天还没排场次。想玩的话，直接去剧本页挑个时间，我们给你开一场。</p>
+      <div style="margin-top:var(--sp-6)"><a class="btn btn-cta" href="{{ url_for('public.scripts') }}">去挑本子</a></div>
     {% endif %}
   </div>
-  <div>
-    <h2>🚗 正在拼的车</h2>
+</section>
+
+{# ============ 03 拼车：列表用细线分隔，不用卡片 ============ #}
+<section class="band">
+  <div class="wrap">
+    <div class="act">
+      <b>03</b>
+      <h2>有人在等搭子</h2>
+      <a class="sub lnk" href="{{ url_for('public.car') }}">拼车大厅 →</a>
+    </div>
+
     {% if cars %}
       {% for c in cars %}
-      <div class="panel">
-        <div class="between">
-          <b>{{ c.emoji }} {{ c.title }}</b><span class="pill">还差 {{ c.need }} 人</span>
+      <div class="between" style="padding:var(--sp-4) 0;border-bottom:1px solid var(--rule)">
+        <div style="display:flex;align-items:baseline;gap:var(--sp-4);flex-wrap:wrap">
+          <span class="serif" style="font-size:19px;font-weight:700">{{ c.title }}</span>
+          <span class="sub">{{ c.day }} {{ c.time }} · 车主 {{ c.owner }} · {{ c.joined }}/{{ c.cap }} 人</span>
         </div>
-        <div class="sub">{{ c.day }} {{ c.time }} · 车主 {{ c.owner }} · {{ c.joined }}/{{ c.cap }}</div>
+        <span class="badge {{ 'bad' if c.full else 'ok' }}">{{ '已满' if c.full else '还差 %s 人' % c.need }}</span>
       </div>
       {% endfor %}
-      <a class="btn btn-block" href="{{ url_for('public.car') }}">去拼车大厅看全部</a>
+      <div style="margin-top:var(--sp-6)"><a class="btn btn-ghost btn-block" href="{{ url_for('public.car') }}">去拼车大厅看全部</a></div>
     {% else %}
-      <div class="panel empty">还没人开车，你可以开第一辆</div>
+      <p class="lead">还没人开车。你可以开第一辆 —— 挑好本子和时间，等人来。</p>
+      <div style="margin-top:var(--sp-6)"><a class="btn btn-cta" href="{{ url_for('public.scripts') }}">我来开一车</a></div>
     {% endif %}
   </div>
-</div>
+</section>
+
+{# ============ 收尾：一句引文（编辑式收口，比"行动号召横幅"耐看）============ #}
+<section class="band alt">
+  <div class="wrap">
+    <blockquote class="quote">
+      好本子只演一次，好搭子只凑一回。
+      <footer>—— 甜薯门店</footer>
+    </blockquote>
+  </div>
+</section>
 
 {% endblock %}

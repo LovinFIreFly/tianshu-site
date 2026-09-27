@@ -3,24 +3,23 @@
 {% block body %}
 
 {# DM 工作台：和老版后台一个长相（左侧栏 + 右侧内容），切换仍是前端切，网址一直是 /dm #}
-{% set NAVI = [
-  ('today', '📅', '今日场次'), ('credit', '👥', '我的客人'), ('guides', '📖', '学本资料')
-] %}
+{% set NAVI = [('today', '今日场次'), ('credit', '我的客人'), ('guides', '学本资料')] %}
 
 <div class="adm">
   <aside class="adm-side" data-tabs="dm">
-    <div class="brand"><span class="ic">🎭</span><span>DM 工作台</span></div>
-    {% for key, ico, name in NAVI %}
+    <div class="brand"><span>DM 工作台</span></div>
+    {% for key, name in NAVI %}
     <button type="button" class="navi {{ 'on' if loop.first }}" data-tab="{{ key }}">
-      <span>{{ ico }}</span><span>{{ name }}</span></button>
+      <span class="mono" style="font-size:11px;color:var(--ink-4)">{{ '%02d' % loop.index }}</span>
+      <span>{{ name }}</span></button>
     {% endfor %}
     <div class="sp"></div>
-    <a class="navi" href="{{ url_for('admin.dashboard') + '#dm' }}"><span>💰</span><span>我这个月能拿多少</span></a>
-    <a class="navi" href="{{ url_for('public.home') }}"><span>🏠</span><span>回到网站</span></a>
+    <a class="navi" href="{{ url_for('admin.dashboard') + '#dm' }}"><span>→</span><span>我这个月能拿多少</span></a>
+    <a class="navi" href="{{ url_for('public.home') }}"><span>←</span><span>回到网站</span></a>
   </aside>
 
   <main class="adm-main">
-    {% for key, ico, name in NAVI %}
+    {% for key, name in NAVI %}
     <div class="tabpane {{ 'on' if loop.first }}" data-tab="{{ key }}">{{ panels.get(key, '')|safe }}</div>
     {% endfor %}
   </main>
