@@ -7,7 +7,8 @@
 <div class="me-wrap">
   <aside>
     <div class="profile">
-      <div class="avatar">{% if av.startswith('/img/') %}<img src="{{ av }}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">{% else %}{{ av or '🎭' }}{% endif %}</div>
+      {# 没有头像图就用昵称第一个字（衬线大字）—— 别塞 emoji，跟朱红/墨色这套配色打架 #}
+      <div class="avatar">{% if av.startswith('/img/') %}<img src="{{ av }}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">{% else %}{{ (me.profile.nick or me.username)[0] }}{% endif %}</div>
       <h3>{{ me.profile.nick or me.username }}</h3>
       <p>{{ me.phone[:3] }}****{{ me.phone[-4:] }}{% if me.invite %} · 邀请码 {{ me.invite }}{% endif %}</p>
       <div class="p-stats">
@@ -62,9 +63,8 @@
             style="gap:8px;align-items:flex-end">
         <div class="field" style="flex:1 1 130px;margin:0"><label>新日期</label>
           <select name="ts">{% for d in days %}<option value="{{ d.ts }}">{{ d.label }}</option>{% endfor %}</select></div>
-        <div class="field" style="flex:0 0 110px;margin:0"><label>时间</label>
-          <select name="time">{% for tm in ['13:00','15:30','19:00','20:30','22:00'] %}
-            <option value="{{ tm }}" {{ 'selected' if b.time == tm }}>{{ tm }}</option>{% endfor %}</select></div>
+        <div class="field" style="flex:0 0 130px;margin:0"><label>时间（自己填）</label>
+          <input name="time" type="time" value="{{ b.time }}" required></div>
         <button class="btn btn-sm" type="submit">改期</button>
       </form>
     </details>

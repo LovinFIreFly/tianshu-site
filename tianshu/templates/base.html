@@ -74,7 +74,9 @@
   {% endif %}
 {% endwith %}
 
-<main class="wrap">{% block body %}{% endblock %}</main>
+{# 一般页面用 .wrap（1200px 居中 + 留白）；首页那种要"整幅色块出血"的页面
+   可以把 main_class 覆盖成空，自己用 <div class="wrap"> 控制每一段的内容宽度。 #}
+<main class="{% block main_class %}wrap{% endblock %}">{% block body %}{% endblock %}</main>
 
 <footer class="foot">
   {{ settings.shopName }} · 纯 Python 版（Flask 服务端渲染）· {{ year }} · 数据都在 data/ 里

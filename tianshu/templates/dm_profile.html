@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %}{{ nickname }} · 主持人主页{% endblock %}
+{% block body %}
+
+{# DM 公开主页：做成一张"演职员表"——左边头像与段位，右边硬数据与带过的本 #}
+<a class="sub lnk" href="{{ url_for('public.scripts') }}">← 回剧本库</a>
+
+<div class="two" style="margin-top:var(--sp-6)">
+  <div>
+    <span class="kicker">主持人 / Game Master</span>
+    <h1 style="font-size:44px;margin:var(--sp-3) 0">{{ nickname }}</h1>
+
+    {% set pf = u.dmProfile or {} %}
+    {% if pf.style %}<p class="lead">{{ pf.style }}</p>{% endif %}
+
+    <div class="row" style="margin-top:var(--sp-5)">
+      <span class="badge">{{ st.tier.icon }} {{ st.tier.name }}</span>
+      {% if st.rating %}<span class="badge ok">★ {{ st.rating }}（{{ st.ratingCount }} 条评价）</span>{% endif %}
+      {% if st.assigned %}<span class="badge new">被点名 {{ st.assigned }} 次</span>{% endif %}
+    </div>
+
+    {% if pf.bio %}
+    <div class="quote" style="font-size:19px;margin-top:var(--sp-7)">{{ pf.bio }}</div>
+    {% endif %}
+
+    <div class="kv" style="margin-top:var(--sp-7)">
+      <div class="cell"><b>{{ st.done }}</b><span>带本量</span></div>
+      <div class="cell"><b>{{ st.rating or '—' }}</b><span>平均评分</span></div>
+      <div class="cell"><b>{{ st.goodRate }}%</b><span>好评率</span></div>
+      <div class="cell"><b>{{ st.players }}</b><span>接待人次</span></div>
+    </div>
+
+    {% if st.topTags %}
+    <div style="margin-top:var(--sp-6)">
+      <span class="kicker">擅长的类型</span>
+      <div class="chips" style="margin-top:var(--sp-3)">
+        {% for t in st.topTags %}<span class="badge">{{ t }}</span>{% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if titles %}
+    <div style="margin-top:var(--sp-6)">
+      <span class="kicker">带过的本</span>
+      <p class="sub" style="margin-top:var(--sp-3)">{{ titles|join(' · ') }}</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <aside>
+    {% if reviews %}
+    <span class="kicker">最近的评价</span>
+    {% for r in reviews %}
+    <div class="msg-item">
+      <div class="top">
+        <span class="who">{{ r.username or '玩家' }}</span>
+        <span class="stars">{{ '★' * (r.rating or 0) }}</span>
+        <span class="time">{{ day_label(r.createdAt) }}</span>
+      </div>
+      {% if r.text %}<p>{{ r.text }}</p>{% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="panel empty">
+      <div class="e">还没有评价</div>
+      <p>玩过他的本，可以在「我的 → 预约」里给一句评价</p>
+    </div>
+    {% endif %}
+
+    <div style="margin-top:var(--sp-6)">
+      <a class="btn btn-cta btn-block" href="{{ url_for('public.scripts') }}">找个本，约他开场</a>
+    </div>
+  </aside>
+</div>
+
+{% endblock %}

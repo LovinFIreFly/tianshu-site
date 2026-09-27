@@ -1,0 +1,59 @@
+{# DM 成长：段位 + 硬数据 + 公开主页编辑（老版 DM 工作台的 stats / me 两块） #}
+<div class="between">
+  <div>
+    <h1>我的成长</h1>
+    <p class="sub">数据来自真实的排班与评价 —— 带本量到位、好评率达标才会升段位</p>
+  </div>
+</div>
+
+<div class="panel" style="display:flex;gap:var(--sp-6);align-items:center;flex-wrap:wrap">
+  <div style="font-size:42px;line-height:1">{{ st.tier.icon }}</div>
+  <div style="flex:1;min-width:220px">
+    <span class="kicker">当前段位</span>
+    <div class="serif" style="font-size:28px;font-weight:700">{{ st.tier.name }}</div>
+    <p class="sub" style="margin-top:4px">
+      {% if st.next %}再带 {{ st.toNext }} 场、且平均评分不低于 {{ st.next.rate }}，就能升到{{ st.next.name }}
+      {% else %}已经是最高段位，稳住好评率就行{% endif %}
+    </p>
+  </div>
+  <div style="min-width:190px">
+    <div class="credit-bar" style="margin-top:0"><i style="width:{{ [st.done, 100]|min }}%"></i></div>
+    <p class="sub">已带 {{ st.done }} 场</p>
+  </div>
+</div>
+
+<div class="kv">
+  <div class="cell"><b>{{ st.done }}</b><span>带本量</span></div>
+  <div class="cell"><b>{{ st.rating or '—' }}</b><span>平均评分</span></div>
+  <div class="cell"><b>{{ st.goodRate }}%</b><span>好评率</span></div>
+  <div class="cell"><b>{{ st.assigned }}</b><span>客人指定</span></div>
+  <div class="cell"><b>{{ st.players }}</b><span>接待人次</span></div>
+  <div class="cell"><b>¥{{ st.revenue }}</b><span>产生流水</span></div>
+</div>
+
+<div class="adm-panel">
+  <h3>我的公开主页</h3>
+  <form method="post" action="{{ url_for('dm.profile_save') }}">
+    <div class="form-grid">
+      <div class="field"><label>一句话风格（客人挑 DM 时看这句）</label>
+        <input name="style" maxlength="20" value="{{ (u.dmProfile or {}).get('style') or '' }}"
+               placeholder="例：情感本一把好手"></div>
+      <div class="field"><label>接不接客人点名</label>
+        <select name="canOpen">
+          <option value="1" {{ 'selected' if (u.dmProfile or {}).get('canOpen', True) }}>可以（显示在剧本页的「指定 DM」里）</option>
+          <option value="0" {{ 'selected' if not (u.dmProfile or {}).get('canOpen', True) }}>先不接（只按门店排班带本）</option>
+        </select></div>
+      <div class="field full"><label>自我介绍（最多 200 字）</label>
+        <textarea name="bio" rows="3" maxlength="200">{{ (u.dmProfile or {}).get('bio') or '' }}</textarea></div>
+    </div>
+    <button class="btn btn-primary" type="submit">保存主页</button>
+  </form>
+  <p class="sub mt">客人在剧本页点你的名字就能看到这段介绍。段位、评分、带本量是系统算的，不用自己填。</p>
+</div>
+
+{% if st.topTags %}
+<div class="adm-panel">
+  <h3>最常带的类型</h3>
+  <div class="chips">{% for t in st.topTags %}<span class="badge">{{ t }}</span>{% endfor %}</div>
+</div>
+{% endif %}

@@ -46,8 +46,8 @@
     <input type="hidden" name="ts" value="{{ ts }}">
     <div class="field" style="flex:2 1 150px"><label>剧本</label>
       <select name="sid">{% for s in scripts %}<option value="{{ s.id }}">{{ s.title }}</option>{% endfor %}</select></div>
-    <div class="field" style="flex:0 0 110px"><label>时间</label>
-      <select name="time">{% for t in ['13:00','15:30','19:00','20:30','22:00'] %}<option>{{ t }}</option>{% endfor %}</select></div>
+    <div class="field" style="flex:0 0 120px"><label>时间（自己填）</label>
+      <input name="time" type="time" value="19:00" required></div>
     <div class="field" style="flex:0 0 130px"><label>房间</label>
       <select name="roomId">{% for r in rooms %}<option value="{{ r.name }}">{{ r.name }}</option>{% endfor %}</select></div>
     <div class="field" style="flex:0 0 120px"><label>DM</label>

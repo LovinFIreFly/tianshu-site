@@ -288,10 +288,71 @@ def dm_settlement(month=None):
         a['total'] = a['share'] + a['fee']
         a['count'] = len(a.pop('sessions'))
         a['dmName'] = users.get(phone, {}).get('username') or phone
+        g = dm_growth(phone)                  # 顺手把段位和好评率带上，后台一眼看出谁在成长
+        a['tier'] = g['tier']
+        a['goodRate'] = g['goodRate']
+        a['rating'] = g['rating']
         a['settled'] = any(str(x.get('dmPhone')) == phone and x.get('month') == month and x.get('settled')
                            for x in settles)
         rows.append(a)
     return {'month': month, 'rows': sorted(rows, key=lambda x: -x['total'])}
+
+
+# ---------------------------------------------------------------- DM 成长（段位）
+# 六段位，定义照抄老版 DM_TIER_DEFS：带本量够了、好评率也够，才给晋升
+DM_TIERS = [
+    {'name': '见习 DM', 'icon': '🌱', 'need': 0, 'rate': 0},
+    {'name': '青铜 DM', 'icon': '🥉', 'need': 5, 'rate': 3.5},
+    {'name': '白银 DM', 'icon': '🥈', 'need': 15, 'rate': 4.0},
+    {'name': '黄金 DM', 'icon': '🥇', 'need': 30, 'rate': 4.3},
+    {'name': '铂金 DM', 'icon': '💠', 'need': 60, 'rate': 4.5},
+    {'name': '王者 DM', 'icon': '👑', 'need': 100, 'rate': 4.7},
+]
+
+
+def dm_level(st):
+    """定段位：带本量到位 + 好评率达标才升（老版 dmLevel 的规则，一模一样）"""
+    tier = DM_TIERS[0]
+    for t in DM_TIERS:
+        if st['done'] >= t['need'] and (t['rate'] == 0 or st['rating'] >= t['rate']):
+            tier = t
+    return tier
+
+
+def dm_growth(phone):
+    """一个 DM 的成长档案（老版 dmGrowth 的 Python 版）
+
+    带本量 = 排在他名下的场次 + 客人点名他的单（去重前的条数，跟结算口径一致）
+    好评率 = 收到的评价里 4–5 星占比；指定次数 = 客人下单时点名他的单数
+    """
+    phone = str(phone)
+    sessions = [s for s in db.rows('sessions') if str(s.get('dm')) == phone]
+    ses_ids = {s.get('id') for s in sessions}
+    bookings = db.rows('bookings')
+    mine = [b for b in bookings if b.get('status') != 'cancelled'
+            and (b.get('sessionId') in ses_ids or str(b.get('dmPhone')) == phone)]
+    reviews = [r for r in db.rows('reviews') if str(r.get('dmPhone')) == phone and not r.get('hidden')]
+    good = [r for r in reviews if float(r.get('rating') or 0) >= 4]
+    scripts = {str(s.get('id')): s for s in db.rows('scripts')}
+    tag_count = {}
+    for b in mine:
+        for t in (scripts.get(str(b.get('sid')), {}).get('tags') or []):
+            tag_count[t] = tag_count.get(t, 0) + 1
+    st = {
+        'done': len(mine),
+        'sessions': len(sessions),
+        'players': sum(int(b.get('players') or 1) for b in mine),
+        'revenue': sum(int(b.get('amount') or 0) for b in mine),
+        'rating': round(sum(float(r.get('rating') or 0) for r in reviews) / len(reviews), 1) if reviews else 0,
+        'ratingCount': len(reviews),
+        'goodRate': round(len(good) / len(reviews) * 100) if reviews else 0,
+        'assigned': len([b for b in bookings if str(b.get('dmPhone')) == phone and b.get('status') != 'cancelled']),
+        'topTags': [t for t, _ in sorted(tag_count.items(), key=lambda x: -x[1])[:3]],
+    }
+    st['tier'] = dm_level(st)
+    st['next'] = next((t for t in DM_TIERS if t['need'] > st['done']), None)
+    st['toNext'] = (st['next']['need'] - st['done']) if st['next'] else 0
+    return st
 
 
 def dm_customers_of(phone):

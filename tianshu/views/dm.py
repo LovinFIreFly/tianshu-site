@@ -102,5 +102,33 @@ def practice_new():
     return redirect(url_for('dm.index') + '#guides')
 
 
+@dm_required
+def growth():
+    """我的成长（老版 dm-stats + dm-me 合成一块）：段位、带本量、好评率、指定次数，
+    外加编辑自己的公开主页 —— 客人能在剧本页点进来看到这段介绍"""
+    u = current_user()
+    return render_template('dm/panel_growth.html', st=business.dm_growth(str(u.get('phone'))), u=u)
+
+
+@bp.post('/profile')
+@dm_required
+def profile_save():
+    """DM 自己编辑公开主页：风格 / 简介 / 接不接客人点名"""
+    u = current_user()
+    f = request.form
+    users = db.rows('users')
+    for x in users:
+        if str(x.get('phone')) == str(u.get('phone')):
+            pf = x.get('dmProfile') or {}
+            pf['style'] = business.clean(f.get('style'), 20)
+            pf['bio'] = business.clean(f.get('bio'), 200)
+            pf['canOpen'] = f.get('canOpen') == '1'
+            x['dmProfile'] = pf
+    db.write('users', users)
+    business.audit(u.get('username'), role(), '更新了自己的 DM 主页')
+    flash('主页更新好了 —— 客人在剧本页点你的名字就能看到', 'ok')
+    return redirect(url_for('dm.index') + '#growth')
+
+
 # 标签总表（放末尾因为它要引用上面的函数；index() 里是运行时才查，顺序无所谓）
-_TAB_FUNCS = {'today': today_panel, 'credit': credit, 'guides': guides}
+_TAB_FUNCS = {'today': today_panel, 'credit': credit, 'growth': growth, 'guides': guides}

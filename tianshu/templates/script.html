@@ -3,26 +3,39 @@
 {% block body %}
 <div class="two">
   <div>
-    <div class="panel">
-      <div class="row" style="align-items:flex-start;gap:16px">
-        {% if sc.img %}<img class="detail-cover" src="{{ sc.img }}" alt="{{ sc.title }}" style="max-width:180px">
-        {% else %}<div style="font-size:56px;line-height:1">{{ sc.emoji or '🎭' }}</div>{% endif %}
-        <div style="flex:1;min-width:200px">
-          <h1>{{ sc.title }}
-            {% if rating %}<span class="badge ok">★ {{ rating }}</span>{% endif %}
-            {% if sc.isNew %}<span class="badge new">上新</span>{% endif %}
-          </h1>
-          <div class="meta">{{ sc.players or '—' }} · {{ sc.dur or '时长待定' }} · 难度 {{ sc.diff or 3 }}/5 · {{ sc.type or '盒装' }}</div>
-          <div>{% for t in sc.tags or [] %}<span class="badge">{{ t }}</span>{% endfor %}</div>
-          <p class="mt" style="color:var(--text2)">{{ sc.desc or '门店还没写简介。' }}</p>
-          <div class="mt row" style="gap:10px">
-            <span class="price" style="font-size:20px">¥{{ sc.price|int }}<span class="sub">/人</span></span>
-            <form method="post" action="{{ url_for('public.fav', sid=sc.id) }}">
-              <button class="btn btn-sm" type="submit">{{ '❤ 已收藏' if sc.id|string in favs else '♡ 加进想玩' }}</button>
-            </form>
-          </div>
-        </div>
+    {# 详情头部做成一张"戏单"：大标题 + 规格表 + 简介，不套卡片 #}
+    <span class="kicker">剧本 / Script</span>
+    <div class="between" style="margin-top:var(--sp-3);align-items:flex-start">
+      <h1 style="font-size:44px;margin:0">{{ sc.title }}</h1>
+      <div class="row" style="gap:var(--sp-2)">
+        {% if rating %}<span class="badge ok">★ {{ rating }}</span>{% endif %}
+        {% if sc.isNew %}<span class="badge new">上新</span>{% endif %}
       </div>
+    </div>
+
+    {% if sc.tags %}<div class="row" style="gap:var(--sp-2);margin-top:var(--sp-4)">
+      {% for t in sc.tags %}<span class="badge">{{ t }}</span>{% endfor %}</div>{% endif %}
+
+    {% if sc.img %}
+      <img class="detail-cover" src="{{ sc.img }}" alt="{{ sc.title }}" style="max-width:none;margin:var(--sp-6) 0">
+    {% else %}
+      <div style="font-size:64px;line-height:1;margin:var(--sp-6) 0">{{ sc.emoji or '🎭' }}</div>
+    {% endif %}
+
+    <div class="kv">
+      <div class="cell"><b>{{ sc.players or '—' }}</b><span>人数</span></div>
+      <div class="cell"><b>{{ sc.dur or '待定' }}</b><span>时长</span></div>
+      <div class="cell"><b>{{ sc.diff or 3 }}/5</b><span>难度</span></div>
+      <div class="cell"><b>{{ sc.type or '盒装' }}</b><span>类型</span></div>
+    </div>
+
+    <p class="lead">{{ sc.desc or '门店还没写简介。' }}</p>
+
+    <div class="row" style="gap:var(--sp-5);margin-top:var(--sp-6);padding-top:var(--sp-5);border-top:1px solid var(--rule)">
+      <span class="price" style="font-size:22px">{{ sc.price|int }}<small> / 人</small></span>
+      <form method="post" action="{{ url_for('public.fav', sid=sc.id) }}">
+        <button class="btn btn-sm btn-ghost" type="submit">{{ '❤ 已收藏' if sc.id|string in favs else '♡ 加进想玩' }}</button>
+      </form>
     </div>
 
     {% if sc.roles %}
@@ -99,10 +112,10 @@
         <input type="hidden" name="sid" value="{{ sc.id }}">
         <div class="field"><label>日期</label>
           <select name="ts">{% for d in days %}<option value="{{ d.ts }}">{{ d.label }}</option>{% endfor %}</select></div>
-        <div class="field"><label>开场时间</label>
-          <select name="time">
-            {% for t in ['13:00','15:30','19:00','20:30','22:00'] %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
-          </select></div>
+        {# 开场时间自己填：点右边的小钟能选，也能直接打字（例 19:30） #}
+        <div class="field"><label>开场时间（自己填）</label>
+          <input name="time" type="time" value="{{ request.form.get('time') or '19:00' }}" required>
+          <span class="sub">店里一般 13:00 / 15:30 / 19:00 / 20:30 开场，其它时间也可以商量</span></div>
         <div class="field"><label>人数（{{ lo }}-{{ hi }} 人）</label>
           <input name="players" type="number" min="{{ lo }}" max="{{ hi }}" value="{{ lo }}"></div>
         <div class="field"><label>玩法</label>
@@ -113,7 +126,11 @@
           <select name="dmPhone">
             <option value="">不用，店里安排</option>
             {% for d in dms %}<option value="{{ d.phone }}">{{ d.name }}</option>{% endfor %}
-          </select></div>
+          </select>
+          {# 挑之前先看看人：主页上有段位、好评率、带过的本（老版那句"点击查看主页"） #}
+          <span class="sub">想先看看人？
+            {% for d in dms %}<a class="lnk" href="{{ url_for('public.dm_page', phone=d.phone) }}">{{ d.name }}</a>{% if not loop.last %} · {% endif %}{% endfor %}
+          </span></div>
         {% endif %}
 
         {% if sc.allowRolePick and sc.roles %}

@@ -15,10 +15,13 @@
 
 <div class="scroll panel mt">
   <table>
-    <tr><th>DM</th><th>场次</th><th>服务人次</th><th>营业额</th><th>分成</th><th>指定加价</th><th>合计</th><th>状态</th></tr>
+    <tr><th>DM</th><th>段位</th><th>好评率</th><th>场次</th><th>服务人次</th><th>营业额</th><th>分成</th><th>指定加价</th><th>合计</th><th>状态</th></tr>
     {% for r in data.rows %}
     <tr>
-      <td><b>{{ r.dmName }}</b><div class="sub">{{ r.dmPhone }}</div></td>
+      <td><a class="lnk" href="{{ url_for('public.dm_page', phone=r.dmPhone) }}"><b>{{ r.dmName }}</b></a>
+        <div class="sub">{{ r.dmPhone }}</div></td>
+      <td>{{ r.tier.icon }} {{ r.tier.name }}</td>
+      <td>{{ r.goodRate }}%{% if r.rating %}<div class="sub">★ {{ r.rating }}</div>{% endif %}</td>
       <td>{{ r.count }}</td>
       <td>{{ r.players }}</td>
       <td>¥{{ r.income }}</td>
@@ -36,7 +39,7 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="8" class="empty">
+    <tr><td colspan="10" class="empty">
       这个月还没有可结算的场次。<br>
       <span class="sub">结算口径：场次在「排期」里指定了 DM，或者客人下单时点名了 DM</span>
     </td></tr>

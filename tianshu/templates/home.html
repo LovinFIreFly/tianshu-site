@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}{{ settings.shopName }} · 首页{% endblock %}
+{# 首页要整幅色块贴到屏幕两边，所以不要 <main class="wrap">，各段自己套 .wrap #}
+{% block main_class %}{% endblock %}
 {% block body %}
 
 {# ============ 第一屏：整幅墨色，只有一件事 —— 让你开始挑本（Nike 的"一屏一件事"）============ #}

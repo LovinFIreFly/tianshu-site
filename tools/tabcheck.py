@@ -95,11 +95,12 @@ def main():
         check('%s → %s' % (old, want), code in (301, 302, 303, 308) and loc.endswith(want),
               '%s %s' % (code, loc))
 
-    print('\n=== DM /dm：3 个面板 ===')
+    print('\n=== DM /dm：4 个面板 ===')
     dm = login('dm测试', '123123')
     s, html, ms = get(dm, '/dm')
     check('/dm 能打开', s == 200, '%dms  %dKB' % (ms, len(html) / 1024))
-    check('装了 3 个面板', len(re.findall(r'class="tabpane[^"]*"\s+data-tab=', html)) == 3)
+    check('装了 4 个面板', len(re.findall(r'class="tabpane[^"]*"\s+data-tab=', html)) == 4,
+          '今日 / 我的客人 / 我的成长 / 学本资料')
 
     print('\n=== 我的 /me：5 个面板 ===')
     s, html, ms = get(adm, '/me')

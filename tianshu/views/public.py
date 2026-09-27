@@ -188,11 +188,42 @@ def upload_img(sub, name):
     return send_from_directory(os.path.join(IMG_DIR, sub), name)
 
 
+@bp.get('/dm/<phone>')
+def dm_page(phone):
+    """DM 公开主页（老版那句"点击查看主页"）：段位、风格、自我介绍、带过的本、最近评价。
+
+    客户和 DM 本人都能看；改资料在 DM 工作台「我的成长」里改。
+    注意路由顺序：/dm/credit 这类静态路径优先于 /dm/<phone>，不会被吃掉。
+    """
+    u = db.one('users', phone=phone)
+    if not u or business.role_of(u) not in ('dm', 'admin', 'super'):
+        flash('没找到这位 DM', 'warn')
+        return redirect(url_for('public.scripts'))
+    st = business.dm_growth(phone)
+    # 他实际带过的本（从预约里推，不靠手工维护的清单）
+    my_sids = {str(b.get('sid')) for b in db.rows('bookings')
+               if str(b.get('dmPhone')) == phone and b.get('status') != 'cancelled'}
+    titles = [s.get('title') for s in db.rows('scripts') if str(s.get('id')) in my_sids][:8]
+    reviews = sorted([r for r in db.rows('reviews')
+                      if str(r.get('dmPhone')) == phone and not r.get('hidden')],
+                     key=lambda x: -(x.get('createdAt') or 0))[:4]
+    return render_template('dm_profile.html', u=u, st=st, titles=titles, reviews=reviews,
+                           nickname=(u.get('profile') or {}).get('nick') or u.get('username'))
+
+
 @bp.get('/comm')
 def comm():
-    """玩家社区：约不到人、想吐槽本子、想晒战报，都来这儿发（前台不主动推，玩家自己点进来）"""
+    """玩家社区。分「动态 / 日记 / 攻略 / 组队」四类（老版就是这个分法），
+    顶上能按分类筛；不带参数就是全部。"""
     u = current_user()
-    return render_template('comm.html', posts=business.community_posts(60, str((u or {}).get('phone') or '')))
+    t = (request.args.get('t') or '').strip()
+    posts = business.community_posts(60, str((u or {}).get('phone') or ''))
+    counts = {}
+    for p in posts:
+        k = p.get('type') or 'chat'
+        counts[k] = counts.get(k, 0) + 1
+    rows = [p for p in posts if not t or (p.get('type') or 'chat') == t]
+    return render_template('comm.html', posts=rows, t=t, counts=counts)
 
 
 @bp.post('/post')
