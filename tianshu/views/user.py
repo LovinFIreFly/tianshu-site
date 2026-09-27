@@ -12,10 +12,21 @@ from flask import (Blueprint, flash, redirect, render_template, request, session
 
 from tianshu import business
 from tianshu.db import db
-from tianshu.security import (current_user, hash_password, login_required, rate, rate_clear,
-                              rate_peek, verify_password)
+from tianshu.security import (current_user, hash_password, is_staff, login_required, rate,
+                              rate_clear, rate_peek, verify_password)
 
 bp = Blueprint('user', __name__)
+
+
+def next_days(n=7):
+    """从明天起 n 天的可选日期（改期用；今天不算，来不及）"""
+    import time as _t
+    out = []
+    for i in range(1, n + 1):
+        d = _t.localtime(_t.time() + i * 86400)
+        ts = int(_t.mktime(_t.strptime(_t.strftime('%Y-%m-%d', d), '%Y-%m-%d'))) * 1000
+        out.append({'ts': ts, 'label': business.day_label(ts)})
+    return out
 
 
 # ---------------------------------------------------------------- 登录 / 注册
@@ -110,6 +121,92 @@ def register():
     return render_template('register.html')
 
 
+@bp.route('/forgot', methods=['GET', 'POST'])
+def forgot():
+    """忘了密码：手机号 + 验证码 → 重设一个（不用登录）"""
+    if request.method == 'POST':
+        phone = (request.form.get('phone') or '').strip()
+        code = (request.form.get('code') or '').strip()
+        pw = request.form.get('password') or ''
+        u = db.one('users', phone=phone)
+        if not u:
+            flash('这个手机号还没注册过', 'warn')
+        elif not business.use_code(phone, 'reset', code):
+            flash('验证码不对（本地自己测试可以直接填 1234）', 'warn')
+        elif len(pw) < 6:
+            flash('新密码至少 6 位', 'warn')
+        else:
+            users = db.rows('users')
+            for x in users:
+                if str(x.get('phone')) == str(phone):
+                    x['password'] = hash_password(pw)
+            db.write('users', users)
+            business.audit(u.get('username'), business.role_of(u), '用「找回密码」重设了密码')
+            flash('密码重设好了，去登录吧', 'ok')
+            return redirect(url_for('user.login'))
+    return render_template('forgot.html')
+
+
+@bp.post('/code/send')
+def code_send():
+    """要一个验证码 —— 本地版不真发短信，验证码打在跑服务的那个黑窗口里
+    （另外 1234 这个通用码一直能用，方便自己测）"""
+    phone = (request.form.get('phone') or '').strip()
+    purpose = request.form.get('purpose') or 'reset'
+    if not phone:
+        flash('先填手机号', 'warn')
+    else:
+        business.send_code(phone, purpose)
+        flash('验证码已生成：去看运行服务的那个黑窗口（或直接填 1234）', 'ok')
+    return redirect(request.referrer or url_for('user.me'))
+
+
+# ---------------------------------------------------------------- 账号安全
+@bp.post('/account/pwd')
+@login_required
+def account_pwd():
+    ok, msg = business.change_password(current_user(), request.form.get('old'), request.form.get('password'))
+    flash(msg, 'ok' if ok else 'warn')
+    return redirect(url_for('user.me'))
+
+
+@bp.post('/account/phone')
+@login_required
+def account_phone():
+    newp = (request.form.get('phone') or '').strip()
+    if not business.use_code(newp, 'bind', request.form.get('code')):
+        flash('验证码不对（本地测试填 1234）', 'warn')
+        return redirect(url_for('user.me'))
+    ok, msg = business.change_phone(current_user(), newp)
+    flash(msg, 'ok' if ok else 'warn')
+    if ok:
+        session['phone'] = str(newp)          # 会话跟着换，不然当场被踢下线
+    return redirect(url_for('user.me'))
+
+
+@bp.post('/account/delete')
+@login_required
+def account_delete():
+    """注销：必须输入自己的手机号才算确认（防手滑，这一步不可逆）"""
+    u = current_user()
+    if (request.form.get('confirm') or '').strip() != str(u.get('phone')):
+        flash('要原样输入自己的手机号才算确认', 'warn')
+        return redirect(url_for('user.me'))
+    ok, msg = business.delete_account(u)
+    session.clear()
+    flash(msg, 'ok' if ok else 'warn')
+    return redirect(url_for('public.home'))
+
+
+@bp.post('/booking/<int:bid>/reschedule')
+@login_required
+def reschedule(bid):
+    """改期：换个日期/时间，定金保留"""
+    ok, msg = business.reschedule(current_user(), bid, request.form.get('ts'), request.form.get('time'))
+    flash(msg, 'ok' if ok else 'warn')
+    return redirect(url_for('user.me'))
+
+
 @bp.get('/logout')
 def logout():
     session.clear()
@@ -138,7 +235,7 @@ def me():
                            coupons=coupons, notices=business.my_notices(u, 20),
                            order_of=order_of, scripts=db.rows('scripts'), fav_ids=fav_ids,
                            reviewed={r.get('bid') for r in db.rows('reviews')},
-                           msgs=business.my_messages(u))
+                           msgs=business.my_messages(u), days=next_days(7))
 
 
 @bp.post('/profile')
@@ -206,13 +303,19 @@ def review(bid):
         flash('这条已经评过了', 'warn')
     else:
         anon = request.form.get('anonymous') == '1'
+        # 四个细分维度（老版本就有）：剧情 / DM / 氛围 / 房间，各 1-5 分
+        dims = {}
+        for key, label in (('plot', '剧情'), ('dm', 'DM'), ('vibe', '氛围'), ('room', '房间')):
+            v = int(request.form.get(key) or 0)
+            if 1 <= v <= 5:
+                dims[label] = v
         db.update('reviews', lambda rows: rows + [{
             'id': business.now_ms(), 'sid': bk.get('sid'), 'bid': bid,
             'dmPhone': bk.get('dmPhone') or '',
             'rating': max(1, min(5, int(request.form.get('rating') or 5))),
             'text': business.clean(request.form.get('text'), 800),
             'username': '匿名玩家' if anon else u.get('username'), 'anonymous': anon,
-            'dims': {}, 'reply': '', 'likes': [], 'hidden': False, 'createdAt': business.now_ms()}])
+            'dims': dims, 'reply': '', 'likes': [], 'hidden': False, 'createdAt': business.now_ms()}])
         business.notify(u.get('phone'), '评价已提交，谢谢！',
                         '《%s》的评价收到了，欢迎下次再来' % bk.get('title'), 'review')
         flash('评价收到了，谢谢！', 'ok')
@@ -269,6 +372,7 @@ def notice_read():
 @bp.post('/car/<int:cid>/<action>')
 @login_required
 def car_act(cid, action):
-    ok, msg = business.car_action(current_user(), cid, action)
+    # 两个都别漏：表单（聊天/标签在里面）+ 员工身份（车主判断要用）
+    ok, msg = business.car_action(dict(current_user(), _staff=is_staff()), cid, action, request.form)
     flash(msg, 'ok' if ok else 'warn')
     return redirect(url_for('public.car'))

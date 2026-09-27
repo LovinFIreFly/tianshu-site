@@ -45,7 +45,7 @@
         <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='join') }}">
           <button class="btn btn-sm btn-primary" type="submit">上车</button></form>
       {% endif %}
-      <a class="btn btn-sm" href="{{ url_for('public.script_detail', sid=c.sid) }}">看剧本</a>
+      <a class="btn btn-sm" href="{{ url_for('public.car_detail', cid=c.id) }}">进车队</a>
     </div>
   </div>
   {% endfor %}

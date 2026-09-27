@@ -40,10 +40,38 @@
             </select></div>
           <div class="field" style="flex:1 1 200px;margin:0"><label>说两句（可留空只打分）</label>
             <input name="text" placeholder="剧情 / DM / 房间 都可以聊"></div>
+          <div class="field" style="max-width:96px;margin:0"><label>剧情</label>
+            <select name="plot"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></div>
+          <div class="field" style="max-width:80px;margin:0"><label>DM</label>
+            <select name="dm"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></div>
+          <div class="field" style="max-width:80px;margin:0"><label>氛围</label>
+            <select name="vibe"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></div>
+          <div class="field" style="max-width:80px;margin:0"><label>房间</label>
+            <select name="room"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></div>
           <label class="sub" style="display:flex;gap:4px;align-items:center">
             <input type="checkbox" name="anonymous" value="1" style="width:auto"> 匿名</label>
           <button class="btn btn-sm btn-accent" type="submit">提交评价</button>
         </form>
+        {% endif %}
+
+        {% if b.status == 'booked' %}
+        <details class="mt">
+          <summary class="sub" style="cursor:pointer">改个时间（定金保留）</summary>
+          <form class="row mt" method="post" action="{{ url_for('user.reschedule', bid=b.id) }}"
+                style="gap:8px;align-items:flex-end">
+            <div class="field" style="flex:1 1 130px;margin:0"><label>新日期</label>
+              <select name="ts">
+                {% for d in days %}<option value="{{ d.ts }}">{{ d.label }}</option>{% endfor %}
+              </select></div>
+            <div class="field" style="flex:0 0 110px;margin:0"><label>时间</label>
+              <select name="time">
+                {% for t in ['13:00','15:30','19:00','20:30','22:00'] %}
+                  <option value="{{ t }}" {{ 'selected' if b.time == t }}>{{ t }}</option>
+                {% endfor %}
+              </select></div>
+            <button class="btn btn-sm" type="submit">改期</button>
+          </form>
+        </details>
         {% endif %}
 
         <div class="row mt" style="gap:8px">
@@ -169,6 +197,44 @@
       </div>
       {% endif %}
     </div>
+
+    <details class="panel">
+      <summary><h3 style="display:inline-block;cursor:pointer">账号安全</h3></summary>
+
+      <form method="post" action="{{ url_for('user.account_pwd') }}" class="mt">
+        <h3>改密码</h3>
+        <div class="field"><label>现在的密码</label>
+          <input name="old" type="password" autocomplete="current-password"></div>
+        <div class="field"><label>新密码（至少 6 位）</label>
+          <input name="password" type="password" autocomplete="new-password"></div>
+        <button class="btn btn-sm btn-primary" type="submit">改密码</button>
+      </form>
+
+      <form method="post" action="{{ url_for('user.account_phone') }}" class="mt"
+            style="border-top:1px solid var(--line);padding-top:10px">
+        <h3>换绑手机号</h3>
+        <div class="field"><label>新手机号</label>
+          <input name="phone" inputmode="numeric" maxlength="11" placeholder="11 位"></div>
+        <div class="field"><label>验证码</label>
+          <div class="row" style="gap:8px">
+            <input name="code" inputmode="numeric" maxlength="6" placeholder="1234">
+            <button class="btn btn-sm" type="submit" formaction="{{ url_for('user.code_send') }}"
+                    formmethod="post" onclick="this.form.purpose.value='bind'">要验证码</button>
+          </div></div>
+        <input type="hidden" name="purpose" value="bind">
+        <button class="btn btn-sm btn-primary" type="submit">确认换绑</button>
+        <p class="sub mt">换绑后，你以前的预约、订单、券都会跟着迁到新号码下。</p>
+      </form>
+
+      <form method="post" action="{{ url_for('user.account_delete') }}" class="mt"
+            style="border-top:1px solid var(--line);padding-top:10px"
+            onsubmit="return confirm('注销后账号和名下数据都会删除，确定？')">
+        <h3>注销账号</h3>
+        <div class="field"><label>输入你的手机号确认（{{ me.phone[:3] }}****{{ me.phone[-4:] }}）</label>
+          <input name="confirm" placeholder="完整手机号"></div>
+        <button class="btn btn-sm btn-danger" type="submit">注销</button>
+      </form>
+    </details>
 
     <div class="panel">
       <h3>我的心愿单</h3>

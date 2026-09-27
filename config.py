@@ -19,6 +19,10 @@ LAN_MODE = False               # 手机访问开关：要测手机端再开（�
 SESSION_DAYS = 7               # 登录保持多少天
 MAX_IMG_BYTES = 700 * 1024     # 上传图片上限
 
+# 通用验证码：本地没接短信服务商，靠它让改密码/换绑/注销这些流程能走通。
+# 真要放线上对外服务，这里必须换成真发短信（删掉这行也不影响程序，只是验证码只能靠窗口里那个）
+DEMO_CODE = '1234'
+
 SECRET_FILE = os.path.join(DATA_DIR, 'secret.key')     # 会话签名密钥，首次运行自动生成
 
 # 经营参数默认值。首次运行会写进 data/settings.json，之后以那个文件为准，

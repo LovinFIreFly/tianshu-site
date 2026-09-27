@@ -10,7 +10,8 @@ import secrets
 import time
 
 from tianshu.db import db
-from config import IMG_DIR, MAX_IMG_BYTES, WEEK
+from tianshu.security import hash_password, verify_password
+from config import DEMO_CODE, IMG_DIR, MAX_IMG_BYTES, WEEK
 
 # ---------------------------------------------------------------- 小工具
 def now_ms():
@@ -167,6 +168,12 @@ def car_pool(me_phone=''):
     return sorted(out, key=lambda c: (c.get('ts') or 0, str(c.get('time'))))
 
 
+def car_msgs(car_id, limit=50):
+    """某个车队的聊天记录（不暴露手机号，只看是谁说的）"""
+    rows = [m for m in db.rows('carmsgs') if str(m.get('carId')) == str(car_id)]
+    return sorted(rows, key=lambda x: x.get('at') or 0)[-limit:]
+
+
 def my_cars(me_phone):
     """我所在的车队 id（模板里判断按钮显示用）"""
     out = set()
@@ -311,6 +318,131 @@ def save_upload(file_storage, sub='misc'):
     with open(os.path.join(folder, name), 'wb') as f:
         f.write(raw)
     return '/img/%s/%s' % (sub, name), ''
+
+
+# ---------------------------------------------------------------- 验证码
+def send_code(phone, purpose):
+    """发验证码。本地版不真发短信 —— 验证码会打在服务那个黑窗口里，
+    另外通用码 1234 一直能用（方便自己测试）"""
+    code = '%06d' % secrets.randbelow(1000000)
+    rows = [c for c in db.rows('codes') if (c.get('exp') or 0) > now_ms()]      # 先清掉过期的
+    rows.append({'id': now_ms(), 'target': str(phone), 'purpose': purpose, 'code': code,
+                 'exp': now_ms() + 300000, 'used': False})
+    db.write('codes', rows[-50:])
+    print('[验证码] %s（%s）：%s    也可以直接用 %s' % (phone, purpose, code, DEMO_CODE))
+    return code
+
+
+def use_code(phone, purpose, code):
+    """校验并核销验证码（一次性）"""
+    code = str(code or '').strip()
+    if not code:
+        return False
+    if code == DEMO_CODE:
+        return True
+    rows = db.rows('codes')
+    for c in rows:
+        if (str(c.get('target')) == str(phone) and c.get('purpose') == purpose
+                and str(c.get('code')) == code and not c.get('used') and (c.get('exp') or 0) > now_ms()):
+            c['used'] = True
+            db.write('codes', rows)
+            return True
+    return False
+
+
+# ---------------------------------------------------------------- 账号安全（改密码 / 换绑 / 注销）
+def change_password(user, old_pw, new_pw):
+    if not verify_password(old_pw or '', user.get('password')):
+        return False, '原密码不对'
+    if len(new_pw or '') < 6:
+        return False, '新密码至少 6 位'
+    users = db.rows('users')
+    for x in users:
+        if str(x.get('phone')) == str(user.get('phone')):
+            x['password'] = hash_password(new_pw)
+    db.write('users', users)
+    notify(user.get('phone'), '密码已修改', '你的登录密码刚改过，如果不是你本人操作请联系门店', 'safe')
+    audit(user.get('username'), role_of(user), '改了密码')
+    return True, '密码改好了，下次用新密码登录'
+
+
+def change_phone(user, new_phone):
+    """换绑手机号，并把名下的预约/订单/留言/券/收藏一起迁过去（不然数据就断了）"""
+    import re
+    old = str(user.get('phone'))
+    if not re.match(r'^1\d{10}$', str(new_phone or '')):
+        return False, '手机号要 11 位'
+    users = db.rows('users')
+    if any(str(x.get('phone')) == str(new_phone) for x in users):
+        return False, '这个号已经被别的账号用了'
+    for x in users:
+        if str(x.get('phone')) == old:
+            x['oldPhone'] = old
+            x['phone'] = str(new_phone)
+    db.write('users', users)
+    for key, field in (('bookings', 'phone'), ('pays', 'phone'), ('messages', 'phone'),
+                       ('coupons', 'phone'), ('favs', 'phone'), ('notices', 'to')):
+        rows = db.rows(key)
+        changed = False
+        for x in rows:
+            if field not in x:
+                continue
+            if isinstance(x[field], list):
+                if old in [str(v) for v in x[field]]:
+                    x[field] = [str(new_phone) if str(v) == old else v for v in x[field]]
+                    changed = True
+            elif str(x[field]) == old:
+                x[field] = str(new_phone)
+                changed = True
+        if changed:
+            db.write(key, rows)
+    audit(user.get('username'), role_of(user), '换绑手机号 %s → %s' % (old, new_phone))
+    return True, '换绑完成，以后用新手机号登录'
+
+
+def delete_account(user):
+    """注销：账号 + 名下数据一起删（客人有这个权利，别留着）"""
+    phone = str(user.get('phone'))
+    db.write('users', [x for x in db.rows('users') if str(x.get('phone')) != phone])
+    for key in ('bookings', 'pays', 'messages', 'coupons', 'favs'):
+        db.write(key, [x for x in db.rows(key) if str(x.get('phone')) != phone])
+    audit(user.get('username'), role_of(user), '注销了账号（名下数据一并删除）')
+    return True, '账号已注销，数据也清了'
+
+
+def reschedule(user, bid, ts, new_time):
+    """改期：换到新的日期/时间，定金保留；新时段没位子就改不了"""
+    bookings = db.rows('bookings')
+    hit = next((b for b in bookings if b.get('id') == bid), None)
+    if not hit:
+        return False, '没这条预约'
+    if str(hit.get('phone')) != str(user.get('phone')):
+        return False, '这不是你的预约'
+    if hit.get('status') != 'booked':
+        return False, '只有「待开本」的预约能改期'
+    ts = int(ts or 0)
+    tm = str(new_time or hit.get('time'))
+    if not ts:
+        return False, '选个新日期'
+    ses = next((x for x in db.rows('sessions') if str(x.get('sid')) == str(hit.get('sid'))
+                and x.get('ts') == ts and x.get('time') == tm and x.get('status') == 'open'), None)
+    if ses:
+        used = sum((b.get('players') or 1) for b in bookings if b.get('sessionId') == ses.get('id')
+                   and b.get('status') != 'cancelled' and b.get('id') != bid)
+        if (ses.get('cap') or 99) - used < (hit.get('players') or 1):
+            return False, '那个时段没位子了，换一个吧'
+        hit['sessionId'] = ses.get('id')
+    hit.update(ts=ts, time=tm, day=day_label(ts),
+               rescheduleCount=(hit.get('rescheduleCount') or 0) + 1)
+    db.write('bookings', bookings)
+    pays = db.rows('pays')
+    for o in pays:
+        if o.get('bid') == bid:
+            o.update(ts=ts, time=tm, day=hit['day'])
+    db.write('pays', pays)
+    notify(user.get('phone'), '改期成功 📅', '《%s》改到 %s %s，定金保留' % (hit.get('title'), hit['day'], tm), 'booking')
+    audit(user.get('username'), role_of(user), '把《%s》改期到 %s %s' % (hit.get('title'), hit['day'], tm))
+    return True, '改到 %s %s，定金保留' % (hit['day'], tm)
 
 
 def adjust_balance(phone, delta, note='', by='系统'):
@@ -560,6 +692,38 @@ def car_action(user, car_id, action, form=None):
                    '《%s》%s %s 空出一个位置，快去上车' % (ob.get('title'), ob.get('day'), ob.get('time')), 'car')
             return True, '已下车（顺手通知了一位候补的）'
         return True, '已下车'
+
+    if action == 'tags':
+        """车主给车队贴标签（不跳车 / 准时到场 / 新手友好…），别人看了更放心"""
+        if str(ob.get('phone')) != str(phone) and not user.get('_staff'):
+            return False, '只有车主能改车队标签'
+        # 表单可能给一个字符串（单选）也可能给一组（多选勾选框），两种都收
+        raw = form.getlist('tags') if hasattr(form, 'getlist') else form.get('tags')
+        if isinstance(raw, str):
+            raw = [t for t in raw.replace('，', ',').split(',') if t.strip()]
+        tags = [clean(t, 8) for t in (raw or [])][:4]
+        ob['carTags'] = tags
+        db.write('bookings', bookings)
+        return True, '车队标签存好了'
+
+    if action == 'reserved':
+        """车主留几个熟人位（别人就占不满了）"""
+        if str(ob.get('phone')) != str(phone) and not user.get('_staff'):
+            return False, '只有车主能留位'
+        n = max(0, min(3, int(form.get('n') or 0)))
+        ob['reserved'] = n
+        db.write('bookings', bookings)
+        return True, '留了 %d 个熟人位' % n
+
+    if action == 'msg':
+        """车队里聊两句（拼车的人互相通气用）"""
+        text = clean(form.get('text'), 120)
+        if not text:
+            return False, '说点什么再发'
+        db.update('carmsgs', lambda rows: rows + [{
+            'id': now_ms(), 'carId': car_id, 'by': name, 'phone': phone,
+            'text': text, 'at': now_ms()}], 300)
+        return True, '发出去了'
 
     if action == 'wait':
         rows = db.rows('wants')

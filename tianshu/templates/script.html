@@ -57,6 +57,18 @@
         <span class="sub">{% for i in range(r.rating or 5) %}★{% endfor %} · {{ day_label(r.createdAt) }}</span>
       </div>
       <p style="color:var(--text2)">{{ r.text or '（只打了分）' }}</p>
+      {% if r.dims %}
+      <div class="row" style="gap:6px">
+        {% for k, v in r.dims.items() %}<span class="pill">{{ k }} {{ v }}/5</span>{% endfor %}
+      </div>
+      {% endif %}
+      <div class="row mt" style="gap:8px">
+        <form method="post" action="{{ url_for('public.review_like', rid=r.id) }}">
+          <button class="btn btn-sm" type="submit">
+            {{ '❤' if (me and me.phone|string in (r.likes or [])) else '♡' }} {{ (r.likes or [])|length }}
+          </button>
+        </form>
+      </div>
       {% if r.reply %}
       <p class="sub" style="border-left:2px solid var(--primary);padding-left:8px;margin-top:4px">
         门店回复：{{ r.reply }}</p>

@@ -121,6 +121,39 @@ def car():
                            tags=business.get_settings()['carTags'])
 
 
+@bp.get('/car/<int:cid>')
+def car_detail(cid):
+    """车队详情：看成员、聊两句；车主还能贴标签、留熟人位"""
+    u = current_user()
+    car = next((c for c in business.car_pool(u.get('phone') if u else '') if str(c.get('id')) == str(cid)), None)
+    if not car:
+        return render_template('error.html', code=404, msg='这辆车已经不在了（可能过期了或被取消）'), 404
+    owner_bk = next((b for b in db.rows('bookings') if b.get('id') == car.get('id') and b.get('carNew')), None)
+    is_owner = bool(u) and owner_bk and str(owner_bk.get('phone')) == str(u.get('phone'))
+    msgs = business.car_msgs(cid)
+    for m in msgs:
+        m['mine'] = bool(u) and str(m.get('phone')) == str(u.get('phone'))
+    return render_template('car_detail.html', car=car, msgs=msgs, is_owner=is_owner,
+                           tags=business.get_settings()['carTags'])
+
+
+@bp.post('/review/<int:rid>/like')
+def review_like(rid):
+    """给别人的评价点个赞（表示"这条有用"）"""
+    u = current_user()
+    if not u:
+        flash('登录之后才能点赞', 'warn')
+        return redirect(request.referrer or url_for('public.home'))
+    phone = str(u.get('phone'))
+    rows = db.rows('reviews')
+    for r in rows:
+        if r.get('id') == rid:
+            likes = [str(x) for x in r.get('likes') or []]
+            r['likes'] = [x for x in likes if x != phone] if phone in likes else likes + [phone]
+    db.write('reviews', rows)
+    return redirect(request.referrer or url_for('public.home'))
+
+
 @bp.get('/img/<sub>/<name>')
 def upload_img(sub, name):
     """读上传的图片（封面 / 头像）。只让读 data/img/ 里这两类，别的一律不给"""

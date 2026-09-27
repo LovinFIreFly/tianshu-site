@@ -334,6 +334,63 @@ check('带 id 重导是更新而不是新建', len(same) == 1 and int(same[0].ge
 
 total = sum(1 for line in open(os.path.join(ROOT, 'tools', 'smoke_test.py'), encoding='utf-8')
             if "check('" in line)
+print('⑫ 账号安全 / 改期 / 车队详情 / 评价细节')
+s, html = guest.get('/forgot')
+check('找回密码页能打开', s == 200 and '重设' in html)
+cus5 = Client()
+cus5.post('/register', {'phone': '13900002222', 'username': '账号安全号', 'password': '123456'})
+cus5.post('/account/pwd', {'old': '123456', 'password': '654321'})
+u5 = next((x for x in jread('users') if x.get('phone') == '13900002222'), {})
+check('改密码后旧密码失效、新密码能登',
+      u5.get('password', '').startswith('pbkdf2$') and cus5.post('/login', {'account': '13900002222', 'password': '654321'}))
+cus5.post('/account/phone', {'phone': '13900003333', 'code': '1234'})
+u5b = next((x for x in jread('users') if x.get('phone') == '13900003333'), None)
+check('换绑手机号成功（旧号已不存在）', bool(u5b) and not any(x.get('phone') == '13900002222' for x in jread('users')))
+
+# 改期
+cus5.post('/book', {'sid': sc['id'], 'ts': ts_in(2), 'time': '13:00', 'players': 2, 'mode': '包车'})
+bk5 = next((b for b in jread('bookings') if b.get('phone') == '13900003333' and b.get('status') == 'booked'), None)
+new_ts = ts_in(8)
+cus5.post('/booking/%s/reschedule' % (bk5 or {}).get('id'), {'ts': new_ts, 'time': '20:30'})
+bk5b = next((b for b in jread('bookings') if b.get('id') == (bk5 or {}).get('id')), {})
+check('改期生效', bk5b.get('ts') == new_ts and bk5b.get('time') == '20:30',
+      '%s %s' % (bk5b.get('day'), bk5b.get('time')))
+o5 = next((x for x in jread('pays') if x.get('bid') == (bk5 or {}).get('id')), {})
+check('订单跟着改期（定金保留）', o5.get('ts') == new_ts and str(o5.get('deposit')) == str(bk5b.get('deposit')))
+
+# 车队详情（标签 / 预留位 / 聊天）—— 用一辆全新的拼车，别用前面已经核销掉的那辆
+cus5.post('/book', {'sid': sc['id'], 'ts': ts_in(9), 'time': '13:00', 'players': 3, 'mode': '拼车'})
+car_bk = next((b for b in jread('bookings') if b.get('ts') == ts_in(9) and b.get('carNew')), None)
+car_id = (car_bk or {}).get('id')
+s, html = admin.get('/car/%s' % car_id)
+check('车队详情页能打开', s == 200 and '车上的成员' in html)
+cus4.post('/car/%s/join' % car_id, {})
+cus4.post('/car/%s/msg' % car_id, {'text': '自检：我上车啦'})
+check('车队里能聊天', any(m.get('text') == '自检：我上车啦' for m in jread('carmsgs')))
+s, html = admin.get('/car/%s' % car_id)
+check('聊天内容显示在车队页', '自检：我上车啦' in html)
+admin.post('/car/%s/tags' % car_id, {'tags': '不跳车'})
+car_now = next((b for b in jread('bookings') if b.get('id') == car_id), {})
+check('车主能设车队标签', car_now.get('carTags') == ['不跳车'], str(car_now.get('carTags')))
+
+# 评价的细分维度（剧情/DM/氛围/房间）+ 点赞
+admin.post('/admin/verify', {'code': (bk5 or {}).get('verifyCode')})     # 先核销，才能评价
+cus5.post('/review/%s' % (bk5 or {}).get('id'),
+          {'rating': '5', 'text': '带维度评价', 'plot': '4', 'dm': '5', 'vibe': '4', 'room': '3'})
+rv_dim = next((r for r in jread('reviews') if r.get('bid') == (bk5 or {}).get('id')), {})
+check('评价的四个维度存上了', (rv_dim.get('dims') or {}).get('剧情') == 4 and (rv_dim.get('dims') or {}).get('DM') == 5,
+      str(rv_dim.get('dims')))
+s, html = guest.get('/scripts/%s' % sc['id'])
+check('维度展示在剧本页', '剧情' in html)
+
+cus4.post('/review/%s/like' % (rv_dim or {}).get('id'), {})
+rv_now = next((r for r in jread('reviews') if r.get('id') == (rv_dim or {}).get('id')), {})
+check('评价能点赞', len(rv_now.get('likes') or []) >= 1)
+
+# 注销（留到最后，因为会删号）
+cus5.post('/account/delete', {'confirm': '13900003333'})
+check('注销账号（连带数据删除）', not any(x.get('phone') == '13900003333' for x in jread('users')))
+
 print('')
 print('=' * 46)
 if fails:

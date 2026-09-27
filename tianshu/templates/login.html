@@ -12,6 +12,7 @@
     <button class="btn btn-primary btn-block" type="submit">登 录</button>
   </form>
   <p class="sub mt">还没账号？<a href="{{ url_for('user.register') }}" style="color:var(--primary2)">去注册 →</a></p>
+  <p class="sub"><a href="{{ url_for('user.forgot') }}" style="color:var(--text2)">忘了密码？</a></p>
   <p class="sub" style="margin-top:14px;opacity:.8">演示账号：FireFly / 123123（超管）· 调试debug / 123123（客户）</p>
 </div>
 {% endblock %}
