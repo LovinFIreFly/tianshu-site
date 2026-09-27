@@ -15,19 +15,29 @@
 </div>
 {% endif %}
 
+{# 首屏照 Airbnb 的做法：不放传统大 banner，直接给"找本子"这个最高频的动作 #}
 <section class="hero">
   <h1>{{ settings.shopName }}</h1>
-  <p>沉浸式剧本体验 · 一场好戏，从这儿开始</p>
-  {% if settings.notice %}<p class="sub" style="margin-top:10px">📣 {{ settings.notice }}</p>{% endif %}
+  <p class="slogan">沉浸式剧本体验 · 一场好戏，从这儿开始</p>
+
+  <form class="search-pill" method="get" action="{{ url_for('public.scripts') }}" role="search">
+    <span class="ico" aria-hidden="true">🔍</span>
+    <input name="q" placeholder="想玩什么本？搜名字 / 类型 / 人数" aria-label="搜剧本">
+    <button class="btn btn-primary" type="submit">找本子</button>
+  </form>
+
+  <div class="btns">
+    <a class="btn btn-cta" href="{{ url_for('public.scripts') }}">挑个本子</a>
+    <a class="btn btn-ghost" href="{{ url_for('public.car') }}">看看谁在拼车</a>
+  </div>
+
+  {% if settings.notice %}<p class="sub" style="margin-top:var(--sp-5)">📣 {{ settings.notice }}</p>{% endif %}
+
   <div class="stats">
     <div><b>{{ stat.plays }}</b><span>累计开本</span></div>
     <div><b>{{ scripts|length }}</b><span>在架剧本</span></div>
     <div><b>{{ sessions|length }}</b><span>今日场次</span></div>
     <div><b>{{ stat.income }}</b><span>已收定金(元)</span></div>
-  </div>
-  <div class="row" style="justify-content:center;margin-top:18px">
-    <a class="btn btn-primary" href="{{ url_for('public.scripts') }}">挑个本子</a>
-    <a class="btn btn-accent" href="{{ url_for('public.car') }}">去拼车</a>
   </div>
 </section>
 

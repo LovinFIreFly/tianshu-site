@@ -23,11 +23,15 @@ def welcome():
 
 @bp.get('/theme')
 def toggle_theme():
-    """切换深/浅色（老版那个 🌙 按钮）。主题记在 cookie 里，换台电脑会回到默认深色"""
+    """切换深/浅色（顶栏那个 🌙 按钮）。
+
+    默认是浅色（暖米底那套，Airbnb 方向的），喜欢暗的记在 cookie 里。
+    注意别把默认值写反：base.html 里是「theme == 'dark' 才输出 data-theme」。
+    """
     from flask import make_response, request as _req, redirect
-    cur = _req.cookies.get('theme') or 'dark'
+    cur = _req.cookies.get('theme') or 'light'
     resp = make_response(redirect(_req.referrer or url_for('public.home')))
-    resp.set_cookie('theme', 'light' if cur != 'light' else 'dark', max_age=365 * 86400)
+    resp.set_cookie('theme', 'dark' if cur != 'dark' else 'light', max_age=365 * 86400)
     return resp
 
 

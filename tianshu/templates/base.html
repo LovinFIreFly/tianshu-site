@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN" {% if theme == 'light' %}data-theme="light"{% endif %}>
+<html lang="zh-CN" {% if theme == 'dark' %}data-theme="dark"{% endif %}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -30,6 +30,8 @@
       <a href="{{ url_for('dm.index') }}" class="{{ 'on' if request.endpoint and request.endpoint.startswith('dm.') }}">DM 工作台</a>
       {% endif %}
     </nav>
+    {# 顶栏里放一颗「找本子」胶囊 —— Airbnb 把搜索放 header，我们也这么干 #}
+    <a class="find" href="{{ url_for('public.scripts') }}"><span>🔍</span><span>找本子</span></a>
     <a class="theme-btn" href="{{ url_for('public.toggle_theme') }}" title="切换深浅色" aria-label="切换深浅色">
       {% if theme == 'light' %}🌙{% else %}☀️{% endif %}</a>
     {% if me %}
