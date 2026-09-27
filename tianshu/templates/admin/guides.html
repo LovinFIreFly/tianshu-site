@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}学本资料 · 后台{% endblock %}
+{% block body %}
+<div class="between">
+  <div>
+    <h1>学本资料 / 练本</h1>
+    <p class="sub">发布解析、话术、复盘给 DM 看；下面处理他们提交的练本申请</p>
+  </div>
+  {% include 'admin/_nav.html' %}
+</div>
+
+<div class="panel mt">
+  <h3>发一份资料</h3>
+  <form method="post" action="{{ url_for('admin.guide_new') }}">
+    <div class="row" style="gap:8px">
+      <div class="field" style="flex:2 1 180px"><label>标题</label><input name="title" placeholder="《云使》开本解析"></div>
+      <div class="field" style="flex:0 0 120px"><label>类型</label>
+        <select name="type"><option>解析</option><option>话术</option><option>复盘</option><option>其他</option></select></div>
+      <div class="field" style="flex:1 1 140px"><label>关联剧本</label>
+        <select name="sid"><option value="0">不指定</option>
+          {% for s in scripts %}<option value="{{ s.id }}">{{ s.title }}</option>{% endfor %}</select></div>
+    </div>
+    <div class="field"><label>内容</label><textarea name="text" rows="5" placeholder="开本节奏、关键节点、容易翻车的地方…"></textarea></div>
+    <div class="field"><label>参考链接（一行一个：名字|网址）</label>
+      <textarea name="links" rows="2" placeholder="复盘视频|https://..."></textarea></div>
+    <button class="btn btn-primary" type="submit">发布</button>
+  </form>
+</div>
+
+<h2>已发布的资料（{{ guides|length }}）</h2>
+{% for g in guides %}
+<div class="panel mt">
+  <div class="between">
+    <b>{{ g.title }} <span class="badge">{{ g.type }}</span></b>
+    <form method="post" action="{{ url_for('admin.guide_del', gid=g.id) }}"
+          onsubmit="return confirm('删掉这份资料？')">
+      <button class="btn btn-sm btn-danger" type="submit">删除</button>
+    </form>
+  </div>
+  <p style="color:var(--text2);white-space:pre-wrap;line-height:1.8">{{ g.text }}</p>
+</div>
+{% else %}
+<div class="panel empty">还没发过资料</div>
+{% endfor %}
+
+<h2>练本申请（{{ practices|length }}）</h2>
+{% for p in practices %}
+<div class="panel mt">
+  <div class="between">
+    <div>
+      <b>{{ p.username }}</b>
+      <span class="badge">{{ {'pending':'待处理','planned':'已安排','done':'已完成','rejected':'不安排'}.get(p.status, p.status) }}</span>
+      <div class="sub">{{ day_label(p.at) }} · {{ p.note or '（没写说明）' }}</div>
+    </div>
+    <div class="row" style="gap:6px">
+      <form method="post" action="{{ url_for('admin.practice_status', pid=p.id) }}">
+        <input type="hidden" name="status" value="planned">
+        <button class="btn btn-sm btn-primary" type="submit">安排</button>
+      </form>
+      <form method="post" action="{{ url_for('admin.practice_status', pid=p.id) }}">
+        <input type="hidden" name="status" value="done">
+        <button class="btn btn-sm" type="submit">已完成</button>
+      </form>
+      <form method="post" action="{{ url_for('admin.practice_status', pid=p.id) }}">
+        <input type="hidden" name="status" value="rejected">
+        <button class="btn btn-sm btn-danger" type="submit">婉拒</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="panel empty">还没有练本申请</div>
+{% endfor %}
+{% endblock %}

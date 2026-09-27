@@ -16,7 +16,7 @@
 <div class="panel mt">
   <div class="between">
     <div>
-      <b>{{ u.profile.nick or u.username }}</b>
+      <b><a href="{{ url_for('admin.user_detail', phone=u.phone) }}">{{ u.profile.nick or u.username }}</a></b>
       <span class="sub">{{ u.phone[:3] }}****{{ u.phone[-4:] }}</span>
       {% if u.banned %}<span class="badge bad">已拉黑</span>{% endif %}
       {% if (u.credit or 100) < 60 %}<span class="badge bad">信用差</span>

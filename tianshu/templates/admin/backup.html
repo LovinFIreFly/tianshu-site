@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}备份与恢复 · 后台{% endblock %}
+{% block body %}
+<div class="between">
+  <div>
+    <h1>备份与恢复</h1>
+    <p class="sub">所有数据都在 <b>data/</b> 里。改数据或升级之前，先导出一份留着</p>
+  </div>
+  {% include 'admin/_nav.html' %}
+</div>
+
+<div class="panel mt">
+  <h3>导出备份</h3>
+  <p class="sub">会把 data 里所有 json 和上传的图片打成一个 zip 下载下来（不含密钥文件）</p>
+  <form method="post" action="{{ url_for('admin.backup_export') }}">
+    <button class="btn btn-primary" type="submit">下载备份 zip</button>
+  </form>
+</div>
+
+<div class="panel mt">
+  <h3>从备份恢复</h3>
+  <p class="sub">导入前会自动把当前数据另存一份（data_导入前-时间），出问题还能退回来</p>
+  <form method="post" action="{{ url_for('admin.backup_import') }}" enctype="multipart/form-data"
+        onsubmit="return confirm('导入会覆盖现有数据，确定？')">
+    <div class="field"><input type="file" name="zip" accept=".zip"></div>
+    <button class="btn btn-accent" type="submit">导入并覆盖</button>
+  </form>
+</div>
+
+<div class="panel mt">
+  <h3>当前数据（共 {{ '%.1f'|format(total/1024) }} KB）</h3>
+  <div class="scroll">
+    <table>
+      <tr><th>文件</th><th>大小</th><th>最后修改</th></tr>
+      {% for f in files %}
+      <tr>
+        <td>{{ f.name }}</td>
+        <td>{{ '%.1f'|format(f.size/1024) }} KB</td>
+        <td class="sub">{{ f.time }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" class="empty">data 目录是空的</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+{% endblock %}

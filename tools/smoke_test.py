@@ -70,6 +70,10 @@ class Client:
         except urllib.error.HTTPError as e:
             return e.code, e.read().decode('utf-8', 'replace')
 
+    def getq(self, path):
+        """带中文的路径要先转义（不然 urllib 会报 ascii 编码错 —— 踩过）"""
+        return self.get(urllib.parse.quote(path, safe='/?=&%'))
+
     def post_file(self, path, field, filename, content, extra=None):
         """带文件的表单（传封面 / 头像 / CSV 用）—— 手搓一个 multipart，不引第三方库"""
         bd = '----smoke%s' % time.strftime('%H%M%S')
@@ -392,6 +396,70 @@ check('评价能点赞', len(rv_now.get('likes') or []) >= 1)
 # 注销（留到最后，因为会删号）
 cus5.post('/account/delete', {'confirm': '13900003333'})
 check('注销账号（连带数据删除）', not any(x.get('phone') == '13900003333' for x in jread('users')))
+
+me_ok = True
+print('⑬ PWA / 心形收藏 / 举报 / 追评 / 关注 / DM与后台新页')
+s, html = guest.get('/static/manifest.webmanifest')
+check('PWA 清单能下载', s == 200 and '甜薯' in html)
+s, _ = guest.get('/static/sw.js')
+check('离线外壳能下载', s == 200)
+s, css = guest.get('/static/css/style.css')
+check('样式含手机安全区适配', 'safe-area-inset' in css)
+check('样式含右上角心形收藏', 'fav-btn' in css)
+s, html = guest.get('/scripts')
+check('剧本卡片上有那颗心', 'fav-btn' in html)
+s, html = cus4.get('/')          # 心形只在登录后显示
+check('登录状态下首页也有那颗心', 'fav-btn' in html)
+
+# 举报
+cus4.post('/post', {'type': 'chat', 'title': '被举报帖', 'text': '这条用来测举报'})
+bad = next((p for p in jread('posts') if p.get('title') == '被举报帖'), None)
+cus4.post('/post/%s/report' % (bad or {}).get('id'), {'reason': '自检举报'})
+check('举报记下来了', any(r.get('reason') == '自检举报' for r in jread('reports')))
+s, html = admin.get('/admin/reports')
+check('后台能看到举报', s == 200 and '自检举报' in html)
+admin.post('/admin/reports/%s/handle' % next(r['id'] for r in jread('reports') if r.get('reason') == '自检举报'),
+           {'act': 'del'})
+check('删帖处理生效', not any(p.get('id') == (bad or {}).get('id') for p in jread('posts')))
+
+# 追评（cus5 上一节已注销，用 cus4 那条评价来追）
+rv_mine = next((r for r in jread('reviews') if '自检评价' in str(r.get('text'))), None)
+if rv_mine:
+    cus4.post('/review/%s/follow' % rv_mine.get('id'), {'text': '玩完补一句：DM 节奏很好'})
+    rv_fu = next((r for r in jread('reviews') if r.get('id') == rv_mine.get('id')), {})
+    check('追评加上了', any('补一句' in str(f.get('text')) for f in (rv_fu.get('followUps') or [])))
+else:
+    check('追评加上了', False, '没找到自己的评价')
+
+# 关注（关注一直存在的 FireFly）
+cus4.post(urllib.parse.quote('/u/FireFly/follow'), {})
+u_follow = next((x for x in jread('users') if x.get('username') == 'FireFly'), {})
+check('关注成功（对方粉丝里出现我）', '调试debug' in [str(x) for x in (u_follow.get('followers') or [])],
+      str(u_follow.get('followers')))
+s, html = guest.getq('/u/FireFly')
+check('玩家主页能打开', s == 200 and 'FireFly' in html)
+
+# DM 三页
+dmcli = Client()
+dmcli.post('/login', {'account': 'dm测试', 'password': '123123'})
+for u in ('/dm', '/dm/credit', '/dm/guides'):
+    s, html = dmcli.get(u)
+    check('DM 页 %s' % u, s == 200)
+# 练本申请
+dmcli.post('/dm/practices', {'sid': sc['id'], 'note': '自检练本'})
+check('DM 能提练本申请', any('自检练本' in str(p.get('note')) for p in jread('practices')))
+s, html = admin.get('/admin/guides')
+check('后台能看到练本申请', s == 200 and '自检练本' in html)
+
+# 后台新页
+for u in ('/admin/guides', '/admin/notice', '/admin/backup', '/admin/reports'):
+    s, html = admin.get(u)
+    check('后台页 %s' % u, s == 200)
+s, html = admin.get('/admin/users/13800000000')
+check('客户档案页能打开', s == 200 and '13800000000' in html)
+# 群发通知
+admin.post('/admin/notice/send', {'title': '自检群发', 'text': '这是一条自检通知', 'scope': 'all'})
+check('群发通知发出去了', any(n.get('title') == '自检群发' for n in jread('notices')))
 
 print('')
 print('=' * 46)

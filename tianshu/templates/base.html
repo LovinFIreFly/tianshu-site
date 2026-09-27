@@ -2,7 +2,12 @@
 <html lang="zh-CN" {% if theme == 'light' %}data-theme="light"{% endif %}>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#8b5cf6">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" href="{{ url_for('static', filename='icon.svg') }}" type="image/svg+xml">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="甜薯">
   <title>{% block title %}{{ settings.shopName }}{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
@@ -18,7 +23,7 @@
     {% if my_role in ('admin','super') %}
       <a href="{{ url_for('admin.dashboard') }}">管理后台</a>
     {% elif my_role == 'dm' %}
-      <a href="{{ url_for('admin.bookings') }}">DM 工作台</a>
+      <a href="{{ url_for('dm.index') }}">DM 工作台</a>
     {% endif %}
   </nav>
   <div class="row" style="gap:8px">
@@ -52,6 +57,13 @@
 
 <footer class="foot">
   {{ settings.shopName }} · 纯 Python 版（Flask 服务端渲染）· {{ year }} · 数据都在 data/ 里
+  {% if me %}<div style="margin-top:4px">手机浏览器里可以「添加到桌面」，用起来像 App</div>{% endif %}
 </footer>
+<script>
+  /* 注册离线外壳：失败也无所谓，不影响正常使用 */
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('/static/sw.js').catch(function(){});
+  }
+</script>
 </body>
 </html>

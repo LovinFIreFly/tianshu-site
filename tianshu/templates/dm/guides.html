@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}学本资料 · DM 工作台{% endblock %}
+{% block body %}
+<div class="between">
+  <div>
+    <h1>学本资料库</h1>
+    <p class="sub">门店上传的解析 / 话术 / 复盘，随时能翻；想练哪个本就在下面申请</p>
+  </div>
+  <a class="btn btn-sm" href="{{ url_for('dm.index') }}">← 回工作台</a>
+</div>
+
+{% for g in guides %}
+<div class="panel mt">
+  <div class="between">
+    <h3>{{ g.title }} <span class="badge">{{ g.type or '资料' }}</span></h3>
+    <span class="sub">{{ g.by }} · {{ day_label(g.at) }}</span>
+  </div>
+  <p style="white-space:pre-wrap;color:var(--text2);line-height:1.8">{{ g.text }}</p>
+  {% if g.links %}
+  <div class="row mt" style="gap:8px">
+    {% for l in g.links %}
+      <a class="pill" href="{{ l.url }}" target="_blank" rel="noopener">🔗 {{ l.name }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% else %}
+<div class="panel empty">门店还没上传资料。你可以先在下面提个练本申请</div>
+{% endfor %}
+
+<div class="panel mt">
+  <h3>提练本申请</h3>
+  <form method="post" action="{{ url_for('dm.practice_new') }}">
+    <div class="row" style="gap:8px">
+      <div class="field" style="flex:1 1 160px"><label>想练哪个本</label>
+        <select name="sid">{% for s in scripts %}<option value="{{ s.id }}">{{ s.title }}</option>{% endfor %}</select></div>
+      <div class="field" style="flex:1 1 200px"><label>说明（想练什么、什么时候方便）</label>
+        <input name="note" placeholder="想练一下开本节奏，周末都行"></div>
+    </div>
+    <button class="btn btn-primary" type="submit">提交申请</button>
+  </form>
+
+  {% if mine %}
+  <div class="mt" style="border-top:1px solid var(--line);padding-top:8px">
+    <h3>我提交过的</h3>
+    {% for p in mine %}
+    <div class="between" style="padding:4px 0">
+      <span class="sub">{{ day_label(p.at) }} · {{ p.note or '（没写说明）' }}</span>
+      <span class="badge {{ 'ok' if p.status == 'done' else ('warn' if p.status == 'pending' else '') }}">
+        {{ {'pending':'待处理','planned':'已安排','done':'已完成','rejected':'这次不安排'}.get(p.status, p.status) }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

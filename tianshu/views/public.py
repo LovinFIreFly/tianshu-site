@@ -223,6 +223,92 @@ def post_like(pid):
     return redirect(url_for('public.comm'))
 
 
+@bp.get('/u/<username>')
+def user_profile(username):
+    """玩家主页（老版点开 DM/队友资料卡就是这种）：公开资料 + 关注 + 他的评价"""
+    from tianshu.security import current_user as _cu
+    u = db.one('users', username=username)
+    if not u:
+        return render_template('error.html', code=404, msg='没有这个人'), 404
+    me = _cu()
+    following = me and str(username) in [str(x) for x in (me.get('following') or [])]
+    return render_template('profile.html', who=u, role_name=business.role_of(u),
+                           following=following, scripts=db.rows('scripts'),
+                           reviews=[r for r in business.reviews_of() if str(r.get('username')) == str(username)],
+                           followers=len(u.get('followers') or []))
+
+
+@bp.post('/u/<username>/follow')
+def user_follow(username):
+    """关注 / 取关（老版有这套社交关系）"""
+    u = current_user()
+    if not u:
+        flash('登录之后才能关注', 'warn')
+        return redirect(url_for('user.login'))
+    target = db.one('users', username=username)
+    if not target:
+        flash('没有这个人', 'warn')
+        return redirect(url_for('public.home'))
+    users = db.rows('users')
+    me = next((x for x in users if str(x.get('phone')) == str(u.get('phone'))), None)
+    tgt = next((x for x in users if str(x.get('phone')) == str(target.get('phone'))), None)
+    if me is None or tgt is None:
+        return redirect(url_for('public.home'))
+    fl = [str(x) for x in me.get('following') or []]
+    fr = [str(x) for x in tgt.get('followers') or []]
+    if str(username) in fl:
+        me['following'] = [x for x in fl if x != str(username)]
+        tgt['followers'] = [x for x in fr if x != str(u.get('username'))]
+        flash('已取消关注', 'ok')
+    else:
+        me['following'] = fl + [str(username)]
+        tgt['followers'] = fr + [str(u.get('username'))]
+        business.notify(tgt.get('phone'), '有人关注了你',
+                        '%s 关注了你，拼车时更容易凑到一起' % u.get('username'), 'follow')
+        flash('关注成功', 'ok')
+    db.write('users', users)
+    return redirect(url_for('public.user_profile', username=username))
+
+
+@bp.post('/review/<int:rid>/follow')
+def review_follow(rid):
+    """追评：玩完过几天想补两句（老版 followUpId 就是干这个的）"""
+    u = current_user()
+    if not u:
+        flash('登录之后才能追评', 'warn')
+        return redirect(url_for('user.login'))
+    text = business.clean(request.form.get('text'), 500)
+    if not text:
+        flash('写点什么再追评', 'warn')
+        return redirect(request.referrer or url_for('public.home'))
+    rows = db.rows('reviews')
+    for r in rows:
+        if r.get('id') == rid and str(r.get('username')) == str(u.get('username')):
+            ups = r.get('followUps') or []
+            ups.append({'text': text, 'at': business.now_ms()})
+            r['followUps'] = ups
+    db.write('reviews', rows)
+    flash('追评加上了', 'ok')
+    return redirect(request.referrer or url_for('public.home'))
+
+
+@bp.post('/post/<int:pid>/report')
+def post_report(pid):
+    """举报帖子（广告 / 剧透不标注 / 人身攻击）。存起来等门店处理，不会自动删"""
+    u = current_user()
+    if not u:
+        flash('登录之后才能举报', 'warn')
+        return redirect(url_for('user.login'))
+    reason = business.clean(request.form.get('reason'), 100) or '未说明'
+    rows = db.rows('reports')
+    rows.append({'id': business.now_ms(), 'kind': 'post', 'target': pid, 'reason': reason,
+                 'by': u.get('username'), 'phone': u.get('phone'), 'at': business.now_ms(),
+                 'handled': False})
+    db.write('reports', rows[-200:])
+    flash('举报收到了，我们会尽快看（不会立刻删，避免误伤）', 'ok')
+    return redirect(url_for('public.comm'))
+
+
 @bp.post('/fav/<int:sid>')
 def fav(sid):
     """收藏（想玩）—— 没登录就先去登录"""

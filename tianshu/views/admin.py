@@ -5,11 +5,15 @@
 权限靠 staff_required（管理员和超管能进；DM 也能看一部分，按需再加）。
 后台是"破坏性操作"最多的地方：拉黑、清数据、改价 —— 改这儿的东西动手前想一下。
 """
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+import os
+import time
+
+from flask import Blueprint, flash, redirect, render_template, request, send_file, url_for
 
 from tianshu import business
 from tianshu.db import db
 from tianshu.security import current_user, is_staff, role, staff_required
+from config import DATA_DIR
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -532,6 +536,199 @@ def review_hide(rid):
     db.write('reviews', rows)
     flash('已切换显示状态（隐藏的只有员工看得见）', 'ok')
     return redirect(url_for('admin.reviews'))
+
+
+# ---------------------------------------------------------------- 学本资料库 + 练本
+@bp.get('/guides')
+@staff_required
+def guides_page():
+    """DM 的学本资料（解析/话术/复盘）+ 练本申请，都在这儿管"""
+    return render_template('admin/guides.html', guides=business.guides(),
+                           practices=business.practices(), scripts=db.rows('scripts'))
+
+
+@bp.post('/guides/new')
+@staff_required
+def guide_new():
+    f = request.form
+    links = []
+    for line in (f.get('links') or '').splitlines():          # 一行一个：名字|网址
+        parts = [p.strip() for p in line.split('|')]
+        if len(parts) >= 2 and parts[1].startswith(('http://', 'https://')):
+            links.append({'name': parts[0] or '参考资料', 'url': parts[1]})
+    db.update('guides', lambda rows: rows + [{
+        'id': business.now_ms(), 'sid': int(f.get('sid') or 0), 'type': f.get('type') or '解析',
+        'title': business.clean(f.get('title'), 60) or '未命名资料',
+        'text': business.clean(f.get('text'), 5000), 'links': links[:8],
+        'by': current_user().get('username'), 'at': business.now_ms()}])
+    business.audit(current_user().get('username'), role(), '上传了学本资料')
+    flash('资料发布了，DM 端立刻能看到', 'ok')
+    return redirect(url_for('admin.guides_page'))
+
+
+@bp.post('/guides/<int:gid>/del')
+@staff_required
+def guide_del(gid):
+    db.write('guides', [g for g in db.rows('guides') if g.get('id') != gid])
+    flash('资料删了', 'ok')
+    return redirect(url_for('admin.guides_page'))
+
+
+@bp.post('/practices/<int:pid>/status')
+@staff_required
+def practice_status(pid):
+    """处理练本申请：安排 / 完成 / 婉拒（DM 会收到通知）"""
+    st = request.form.get('status') or 'planned'
+    rows = db.rows('practices')
+    hit = next((p for p in rows if p.get('id') == pid), None)
+    if hit:
+        hit['status'] = st
+        hit['handledBy'] = current_user().get('username')
+        db.write('practices', rows)
+        business.notify(hit.get('phone'), '练本申请有新进展',
+                        '你申请的练本：%s' % {'planned': '门店已安排，等你时间确认',
+                                             'done': '已练完，辛苦啦',
+                                             'rejected': '这次先不安排，下次优先你'}.get(st, '已处理'), 'practice')
+        flash('已处理', 'ok')
+    return redirect(url_for('admin.guides_page'))
+
+
+# ---------------------------------------------------------------- 通知群发
+@bp.get('/notice')
+@staff_required
+def notice_page():
+    """给客人/DM 群发站内消息（节日问候、临时停业、活动通知都用它）"""
+    recent = [n for n in db.rows('notices') if n.get('kind') == 'broadcast'][:10]
+    return render_template('admin/notice.html', recent=recent)
+
+
+@bp.post('/notice/send')
+@staff_required
+def notice_send():
+    title = business.clean(request.form.get('title'), 40)
+    text = business.clean(request.form.get('text'), 300)
+    if not title or not text:
+        flash('标题和内容都要填', 'warn')
+    else:
+        n = business.broadcast(title, text, request.form.get('scope') or 'all')
+        business.audit(current_user().get('username'), role(), '群发通知：%s（%d 人）' % (title, n))
+        flash('发出去了，共 %d 人收到' % n, 'ok')
+    return redirect(url_for('admin.notice_page'))
+
+
+# ---------------------------------------------------------------- 举报处理
+@bp.get('/reports')
+@staff_required
+def reports_page():
+    """客人举报的帖子，在这儿处理（删 / 忽略）"""
+    return render_template('admin/reports.html',
+                           rows=sorted(db.rows('reports'), key=lambda x: -(x.get('at') or 0)))
+
+
+@bp.post('/reports/<int:rid>/handle')
+@staff_required
+def report_handle(rid):
+    act = request.form.get('act') or 'ignore'
+    rows = db.rows('reports')
+    hit = next((r for r in rows if r.get('id') == rid), None)
+    if hit:
+        hit['handled'] = True
+        hit['handledBy'] = current_user().get('username')
+        if act == 'del' and hit.get('kind') == 'post':
+            db.write('posts', [p for p in db.rows('posts') if p.get('id') != hit.get('target')])
+        db.write('reports', rows)
+        business.audit(current_user().get('username'), role(),
+                       '处理举报：%s' % ('删帖' if act == 'del' else '忽略'))
+        flash('处理完成', 'ok')
+    return redirect(url_for('admin.reports_page'))
+
+
+# ---------------------------------------------------------------- 备份 / 恢复
+@bp.get('/backup')
+@staff_required
+def backup_page():
+    """数据备份与恢复（老版后台就有一页，出问题能一键回滚）"""
+    files = []
+    total = 0
+    if os.path.isdir(DATA_DIR):
+        for fn in sorted(os.listdir(DATA_DIR)):
+            p = os.path.join(DATA_DIR, fn)
+            if os.path.isfile(p) and (fn.endswith('.json') or fn.startswith('img')):
+                files.append({'name': fn, 'size': os.path.getsize(p),
+                              'time': time.strftime('%m-%d %H:%M', time.localtime(os.path.getmtime(p)))})
+                total += os.path.getsize(p)
+    return render_template('admin/backup.html', files=files, total=total)
+
+
+@bp.post('/backup/export')
+@staff_required
+def backup_export():
+    """把 data 里所有 json 打包下载（不含密钥文件）"""
+    import io
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as z:
+        for fn in sorted(os.listdir(DATA_DIR)):
+            if fn.endswith('.json'):
+                z.write(os.path.join(DATA_DIR, fn), fn)
+        img_dir = os.path.join(DATA_DIR, 'img')
+        if os.path.isdir(img_dir):
+            for root, _dirs, names in os.walk(img_dir):
+                for nm in names:
+                    p = os.path.join(root, nm)
+                    z.write(p, os.path.relpath(p, DATA_DIR))
+    buf.seek(0)
+    name = '甜薯备份-%s.zip' % time.strftime('%Y%m%d-%H%M')
+    business.audit(current_user().get('username'), role(), '导出了数据备份')
+    return send_file(buf, mimetype='application/zip', as_attachment=True, download_name=name)
+
+
+@bp.post('/backup/import')
+@staff_required
+def backup_import():
+    """导入备份 zip（会先自动备份当前数据，出问题还能再退回来）"""
+    import io
+    import shutil
+    import zipfile
+
+    f = request.files.get('zip')
+    if not f or not f.filename:
+        flash('先选一个备份 zip', 'warn')
+        return redirect(url_for('admin.backup_page'))
+    keep = os.path.join(os.path.dirname(DATA_DIR), 'data_导入前-%s' % time.strftime('%Y%m%d-%H%M%S'))
+    if os.path.isdir(DATA_DIR):
+        shutil.copytree(DATA_DIR, keep)
+    n = 0
+    with zipfile.ZipFile(io.BytesIO(f.read())) as z:
+        for nm in z.namelist():
+            if nm.endswith('.json') or nm.startswith('img/'):
+                if '..' in nm or nm.startswith('/'):
+                    continue
+                z.extract(nm, DATA_DIR)
+                n += 1
+    business.audit(current_user().get('username'), role(), '导入了备份（%d 个文件）' % n)
+    flash('导入完成：%d 个文件。原来的数据留在 %s' % (n, os.path.basename(keep)), 'ok')
+    return redirect(url_for('admin.backup_page'))
+
+
+# ---------------------------------------------------------------- 客户档案
+@bp.get('/users/<phone>')
+@staff_required
+def user_detail(phone):
+    """单个客户的档案：来过几次、花过多少、信用和余额流水、说过什么"""
+    u = db.one('users', phone=phone)
+    if not u:
+        flash('没这个客户', 'warn')
+        return redirect(url_for('admin.users'))
+    mine = [b for b in db.rows('bookings') if str(b.get('phone')) == str(phone)]
+    msgs = [m for m in db.rows('messages') if str(m.get('phone')) == str(phone)]
+    rvs = [r for r in db.rows('reviews') if str(r.get('phone')) == str(phone)]
+    return render_template('admin/user_detail.html', u=u,
+                           bookings=sorted(mine, key=lambda x: -(x.get('id') or 0)),
+                           spent=sum(int(b.get('amount') or 0) for b in mine if b.get('status') != 'cancelled'),
+                           msgs=sorted(msgs, key=lambda x: -(x.get('createdAt') or 0)),
+                           reviews=sorted(rvs, key=lambda x: -(x.get('createdAt') or 0)))
 
 
 # ---------------------------------------------------------------- 店客留言 / 社区

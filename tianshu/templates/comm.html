@@ -47,6 +47,11 @@
     <form method="post" action="{{ url_for('public.post_like', pid=p.id) }}">
       <button class="btn btn-sm" type="submit">{{ '❤' if p.liked else '♡' }} {{ p.likeCount }}</button>
     </form>
+    <form method="post" action="{{ url_for('public.post_report', pid=p.id) }}"
+          onsubmit="var r=prompt('举报原因（如：广告 / 剧透不标注 / 人身攻击）'); if(!r){return false;} this.reason.value=r; return true;">
+      <input type="hidden" name="reason" value="">
+      <button class="btn btn-sm" type="submit">举报</button>
+    </form>
     {% if my_role in ('admin', 'super') %}
     <form method="post" action="{{ url_for('admin.post_del', pid=p.id) }}"
           onsubmit="return confirm('删掉这条帖子？')">

@@ -294,6 +294,74 @@ def dm_settlement(month=None):
     return {'month': month, 'rows': sorted(rows, key=lambda x: -x['total'])}
 
 
+def dm_customers_of(phone):
+    """某个 DM 带过的客人（老版 dm-credit 用的就是这个口径）
+
+    只算两类：① 排期里指定他当 DM 的那些场次里的客人 ② 下单时点名要他的客人。
+    别人的客人他不该看到，这是边界。
+    """
+    ses_ids = {s.get('id') for s in db.rows('sessions') if str(s.get('dm')) == str(phone)}
+    users = {str(u.get('phone')): u for u in db.rows('users')}
+    seen = {}
+    for b in db.rows('bookings'):
+        p = str(b.get('phone'))
+        if not p or p == str(phone):
+            continue
+        if b.get('sessionId') in ses_ids or str(b.get('dmPhone')) == str(phone):
+            seen[p] = b.get('username') or '客人'
+    out = []
+    for p, name in seen.items():
+        u = users.get(p, {})
+        out.append({'phone': p,
+                    'username': (u.get('profile') or {}).get('nick') or name,
+                    'credit': u.get('credit', 100)})
+    return sorted(out, key=lambda x: -(x.get('credit') or 100))
+
+
+def guides(sid=None):
+    """学本资料库（门店上传的解析 / 话术 / 复盘，DM 端看）"""
+    rows = db.rows('guides')
+    if sid is not None:
+        rows = [g for g in rows if str(g.get('sid')) == str(sid)]
+    return sorted(rows, key=lambda x: -(x.get('at') or 0))
+
+
+def practices(status=None):
+    """练本申请（DM 提、门店处理）"""
+    rows = db.rows('practices')
+    if status:
+        rows = [p for p in rows if (p.get('status') or 'pending') == status]
+    return sorted(rows, key=lambda x: -(x.get('at') or 0))
+
+
+def broadcast(title, text, scope='all'):
+    """群发站内通知：scope = all(全员) / customers(只客户) / dm / sleeping(老没来的)"""
+    users = db.rows('users')
+    cut = now_ms() - 30 * 86400000
+    bookings = db.rows('bookings')
+    hit = []
+    for u in users:
+        r = role_of(u)
+        if scope == 'customers' and r != 'user':
+            continue
+        if scope == 'dm' and r != 'dm':
+            continue
+        if scope == 'sleeping':
+            if r != 'user':
+                continue
+            last = max([b.get('createdAt') or 0 for b in bookings
+                        if str(b.get('phone')) == str(u.get('phone'))] or [u.get('first') or 0])
+            if last >= cut:
+                continue
+        hit.append(u)
+    rows = db.rows('notices')
+    row = {'id': now_ms(), 'title': title, 'text': text, 'at': now_ms(), 'by': '门店',
+           'kind': 'broadcast', 'to': [str(u.get('phone')) for u in hit], 'readBy': []}
+    rows.insert(0, row)
+    db.write('notices', rows[:500])
+    return len(hit)
+
+
 def banners():
     """首页轮播（后台设置里能改）。老版是写死在页面里的，新版放到设置里方便改"""
     return get_settings().get('banners') or []

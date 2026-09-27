@@ -1,0 +1,14 @@
+{
+  "name": "甜薯剧本杀",
+  "short_name": "甜薯",
+  "description": "沉浸式剧本体验 · 一场好戏，从甜薯开始",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0e0c1a",
+  "theme_color": "#8b5cf6",
+  "orientation": "portrait",
+  "icons": [
+    {"src": "/static/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}
+  ]
+}

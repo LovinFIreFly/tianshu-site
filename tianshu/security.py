@@ -123,6 +123,18 @@ def login_required(view):
     return wrapper
 
 
+def dm_required(view):
+    """DM 工作台专用（老版有一整套 DM 界面）。管理员和超管也能进，方便代班"""
+    @wraps(view)
+    def wrapper(*a, **kw):
+        if not current_user():
+            return redirect(url_for('user.login', next=request.path))
+        if not is_dm():
+            abort(403, '这块只有 DM 能进')
+        return view(*a, **kw)
+    return wrapper
+
+
 def staff_required(view):
     @wraps(view)
     def wrapper(*a, **kw):

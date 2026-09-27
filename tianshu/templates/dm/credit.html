@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}我的客人 · DM 工作台{% endblock %}
+{% block body %}
+<div class="between">
+  <div>
+    <h1>我的客人</h1>
+    <p class="sub">只显示你带过的场次里的客人，别的客人你看不到</p>
+  </div>
+  <a class="btn btn-sm" href="{{ url_for('dm.index') }}">← 回工作台</a>
+</div>
+
+{% for r in rows %}
+<div class="panel mt">
+  <div class="between">
+    <div>
+      <b>{{ r.username }}</b>
+      <span class="sub">{{ r.phone[:3] }}****{{ r.phone[-4:] }}</span>
+      {% if (r.credit or 100) < 60 %}<span class="badge bad">信用差</span>
+      {% elif (r.credit or 100) >= 90 %}<span class="badge ok">信用好</span>{% endif %}
+    </div>
+    <span class="sub">信用 {{ r.credit or 100 }} 分</span>
+  </div>
+  <form class="row mt" method="post" action="{{ url_for('dm.credit_set') }}" style="gap:8px;align-items:flex-end">
+    <input type="hidden" name="phone" value="{{ r.phone }}">
+    <div class="field" style="max-width:90px;margin:0"><label>加减分</label>
+      <input name="delta" type="number" value="-10"></div>
+    <div class="field" style="flex:1 1 180px;margin:0"><label>原因</label>
+      <input name="reason" placeholder="迟到 / 跳车 / 玩得好"></div>
+    <button class="btn btn-sm btn-primary" type="submit">调整</button>
+  </form>
+</div>
+{% else %}
+<div class="panel empty">还没有你的客人（排期里指定你当 DM，结束后这里就会出现）</div>
+{% endfor %}
+{% endblock %}

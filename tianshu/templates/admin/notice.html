@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}通知群发 · 后台{% endblock %}
+{% block body %}
+<div class="between">
+  <div>
+    <h1>通知群发</h1>
+    <p class="sub">节日问候、临时停业、活动通知 —— 发完客人会在「消息中心」和我的页看到</p>
+  </div>
+  {% include 'admin/_nav.html' %}
+</div>
+
+<div class="panel mt">
+  <form method="post" action="{{ url_for('admin.notice_send') }}">
+    <div class="field"><label>发给谁</label>
+      <select name="scope">
+        <option value="all">所有账号（含员工）</option>
+        <option value="customers" selected>只发客户</option>
+        <option value="dm">只发 DM</option>
+        <option value="sleeping">30 天没来的客户（唤回用）</option>
+      </select></div>
+    <div class="field"><label>标题</label><input name="title" maxlength="40" placeholder="周末加场啦"></div>
+    <div class="field"><label>内容</label>
+      <textarea name="text" rows="3" placeholder="本周六晚 19:00 加一场《云使》，老客优先"></textarea></div>
+    <button class="btn btn-primary" type="submit" onclick="return confirm('确定群发？发出去就收不回了')">群发</button>
+  </form>
+</div>
+
+<h2>最近群发过</h2>
+{% for n in recent %}
+<div class="panel mt">
+  <div class="between">
+    <b>{{ n.title }}</b>
+    <span class="sub">{{ day_label(n.at) }} · {{ (n.to or [])|length }} 人</span>
+  </div>
+  <p style="color:var(--text2)">{{ n.text }}</p>
+</div>
+{% else %}
+<div class="panel empty">还没群发过</div>
+{% endfor %}
+{% endblock %}

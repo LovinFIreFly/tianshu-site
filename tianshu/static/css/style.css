@@ -31,6 +31,19 @@ button,input,select,textarea{font:inherit;color:inherit}
 /* ---------- 布局 ---------- */
 .wrap{max-width:1080px;margin:0 auto;padding:22px 18px 60px}
 .foot{color:var(--text2);font-size:12px;text-align:center;padding:26px;opacity:.75}
+/* 剧本卡片要能放下右上角那颗心 */
+.juben{position:relative}
+/* 右上角心形收藏（老版 fav-btn 就长这样） */
+.fav-btn{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;
+  background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;
+  font-size:15px;z-index:3;border:0;cursor:pointer;transition:.2s}
+.fav-btn:hover{background:rgba(0,0,0,.7);transform:scale(1.1)}
+.fav-btn.on{background:rgba(248,113,113,.8);color:#fff}
+/* 手机底部安全区：iPhone 那条小黑条别压住内容和页脚 */
+@supports (padding-bottom:env(safe-area-inset-bottom)){
+  .wrap{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+  .foot{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+}
 .row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
 .between{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:14px}

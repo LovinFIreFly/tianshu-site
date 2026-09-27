@@ -24,7 +24,7 @@
     <div class="panel">
       {% for m in car.members %}
       <div class="between" style="padding:6px 0;border-bottom:1px solid var(--line)">
-        <span>{{ m.nick }}{% if m.owner %} 👑 车主{% endif %}</span>
+        <span><a href="{{ url_for('public.user_profile', username=(m.nick or '')) }}">{{ m.nick }}</a>{% if m.owner %} 👑 车主{% endif %}</span>
         <span class="sub">{{ m.players }} 人{% if m.gender %} · {{ m.gender }}{% endif %}{% if m.ageBucket %} · {{ m.ageBucket }}{% endif %}</span>
       </div>
       {% endfor %}
