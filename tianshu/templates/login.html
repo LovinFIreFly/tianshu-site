@@ -1,29 +1,26 @@
-{% extends 'base.html' %}
+{% extends 'auth_base.html' %}
 {% block title %}登录 · {{ settings.shopName }}{% endblock %}
-{% block body %}
-{# 老版 page-login 的原样复刻：居中卡片 + 图标输入框 + 渐变背景 #}
-<div class="auth-page">
-  <div class="login-card">
-    <a class="back" href="{{ url_for('public.welcome') }}">‹ 返回首页</a>
-    <h2>账号登录</h2>
-    <p class="sub">使用手机号或用户名登录</p>
+{% block card %}
+<div class="auth-card">
+  <div class="auth-brand"><span class="logo">🍠</span><span>{{ settings.shopName }}</span></div>
+  <h2>账号登录</h2>
+  <p class="sub">使用手机号或用户名登录</p>
 
-    <form method="post">
-      <div class="field"><span class="ico" aria-hidden="true">👤</span>
-        <input name="account" placeholder="手机号 / 用户名" aria-label="账号" autocomplete="username"
-               enterkeyhint="next" required autofocus value="{{ request.form.get('account','') }}"></div>
-      <div class="field"><span class="ico" aria-hidden="true">🔒</span>
-        <input name="password" type="password" placeholder="密码" aria-label="密码"
-               autocomplete="current-password" enterkeyhint="go" required></div>
+  <form method="post">
+    <div class="field"><span class="ico" aria-hidden="true">👤</span>
+      <input name="account" placeholder="手机号 / 用户名" aria-label="账号" autocomplete="username"
+             enterkeyhint="next" required autofocus value="{{ request.form.get('account','') }}"></div>
+    <div class="field"><span class="ico" aria-hidden="true">🔒</span>
+      <input name="password" type="password" placeholder="密码" aria-label="密码"
+             autocomplete="current-password" enterkeyhint="go" required></div>
 
-      <p style="text-align:right;margin:2px 2px 18px;font-size:13px">
-        <a class="lnk" href="{{ url_for('user.forgot') }}">忘记密码？</a></p>
+    <p style="text-align:right;margin:2px 2px 18px;font-size:13px">
+      <a class="lnk" href="{{ url_for('user.forgot') }}">忘记密码？</a></p>
 
-      <button class="btn btn-accent" type="submit">登 录</button>
-    </form>
+    <button class="btn btn-primary" type="submit">登 录</button>
+  </form>
 
-    <p class="foot-line">没有账号？<a class="lnk" href="{{ url_for('user.register') }}">前往注册 →</a></p>
-    <p class="hint-dev">演示账号：FireFly / 123123（超管）· 调试debug / 123123（客户）</p>
-  </div>
+  <p class="foot-line">没有账号？<a class="lnk" href="{{ url_for('user.register') }}">前往注册 →</a></p>
+  <p class="hint-dev">演示账号：FireFly / 123123（超管）· 调试debug / 123123（客户）</p>
 </div>
 {% endblock %}

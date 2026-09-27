@@ -341,7 +341,7 @@ total = sum(1 for line in open(os.path.join(ROOT, 'tools', 'smoke_test.py'), enc
             if "check('" in line)
 print('⑫ 账号安全 / 改期 / 车队详情 / 评价细节')
 s, html = guest.get('/forgot')
-check('找回密码页能打开', s == 200 and '重置密码' in html and 'login-card' in html)
+check('找回密码页能打开', s == 200 and '重置密码' in html and 'auth-card' in html)
 cus5 = Client()
 cus5.post('/register', {'phone': '13900002222', 'username': '账号安全号', 'password': '123456',
                         'password2': '123456', 'code': '1234', 'agree': '1'})
