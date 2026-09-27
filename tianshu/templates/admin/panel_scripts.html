@@ -1,13 +1,10 @@
-{% extends 'base.html' %}
-{% block title %}剧本管理 · {{ settings.shopName }}{% endblock %}
-{% block body %}
+{# 面板：scripts（由 tools/_split_panels.py 从 scripts.html 拆出来，别单独改这里的骨架） #}
 <div class="between">
   <div>
     <h1>剧本</h1>
     <p class="sub">改价、上下架、填角色、开关「可提前选角」—— 客人能不能在网页上挑角色，就看那个开关</p>
   </div>
 </div>
-{% include 'admin/_nav.html' %}
 
 <div class="panel mt">
   <h3>加一个新剧本</h3>
@@ -89,4 +86,3 @@
   存盘后刷新本页即可。
 </div>
 {% endif %}
-{% endblock %}

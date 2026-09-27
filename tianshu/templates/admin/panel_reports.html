@@ -1,12 +1,9 @@
-{% extends 'base.html' %}
-{% block title %}举报处理 · 后台{% endblock %}
-{% block body %}
+{# 面板：reports（由 tools/_split_panels.py 从 reports.html 拆出来，别单独改这里的骨架） #}
 <div class="between">
   <div>
     <h1>举报</h1>
     <p class="sub">客人在社区点的举报都在这儿。不会自动删，由你判断</p>
   </div>
-  {% include 'admin/_nav.html' %}
 </div>
 
 {% for r in rows %}
@@ -34,4 +31,3 @@
 {% else %}
 <div class="panel empty">还没有举报 —— 说明社区挺和谐</div>
 {% endfor %}
-{% endblock %}

@@ -1,13 +1,10 @@
-{% extends 'base.html' %}
-{% block title %}DM 工作台 · {{ settings.shopName }}{% endblock %}
-{% block body %}
+{# 面板：today（由 tools/_split_panels.py 从 index.html 拆出来，别单独改这里的骨架） #}
 <div class="between">
   <div>
     <h1>DM 工作台</h1>
     <p class="sub">{{ today }} · 你好，{{ me.profile.nick or me.username }}</p>
   </div>
 </div>
-{% include 'dm/_nav.html' %}
 
 <div class="panel mt">
   <h3>到店核销（客人报 6 位码）</h3>
@@ -80,4 +77,3 @@
     ＋ 客人点名加价。最终以「DM 结算」页标记为准</p>
 </div>
 {% endif %}
-{% endblock %}

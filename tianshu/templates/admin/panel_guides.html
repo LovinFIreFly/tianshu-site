@@ -1,12 +1,9 @@
-{% extends 'base.html' %}
-{% block title %}学本资料 · 后台{% endblock %}
-{% block body %}
+{# 面板：guides（由 tools/_split_panels.py 从 guides.html 拆出来，别单独改这里的骨架） #}
 <div class="between">
   <div>
     <h1>学本资料 / 练本</h1>
     <p class="sub">发布解析、话术、复盘给 DM 看；下面处理他们提交的练本申请</p>
   </div>
-  {% include 'admin/_nav.html' %}
 </div>
 
 <div class="panel mt">
@@ -71,4 +68,3 @@
 {% else %}
 <div class="panel empty">还没有练本申请</div>
 {% endfor %}
-{% endblock %}

@@ -2,9 +2,7 @@
 {% block title %}我的 · {{ settings.shopName }}{% endblock %}
 {% block body %}
 
-{# 我的：一页里全是卡片太长了，改成标签切换（都在 /me 这个网址里） #}
-{% set t = request.args.get('tab') or 'bookings' %}
-
+{# 我的：以前一页塞了七块卡片太长，现在拆 5 个面板；点标签只是前端切显示，网址一直是 /me #}
 <div class="between">
   <div>
     <h1>我的</h1>
@@ -17,16 +15,16 @@
   </div>
 </div>
 
-<nav class="tabbar">
-  <a href="?tab=bookings" class="{{ 'on' if t == 'bookings' }}">我的预约{% if bookings %}（{{ bookings|length }}）{% endif %}</a>
-  <a href="?tab=orders" class="{{ 'on' if t == 'orders' }}">订单</a>
-  <a href="?tab=coupons" class="{{ 'on' if t == 'coupons' }}">券 / 余额 / 心愿单</a>
-  <a href="?tab=notices" class="{{ 'on' if t == 'notices' }}">消息与留言{% if unread %} <span class="dot">{{ unread }}</span>{% endif %}</a>
-  <a href="?tab=profile" class="{{ 'on' if t == 'profile' }}">资料与安全</a>
+<nav class="tabbar" data-tabs="me">
+  <button type="button" data-tab="bookings" class="on">我的预约{% if bookings %}（{{ bookings|length }}）{% endif %}</button>
+  <button type="button" data-tab="orders">订单</button>
+  <button type="button" data-tab="coupons">券 / 余额 / 心愿单</button>
+  <button type="button" data-tab="notices">消息与留言{% if unread %} <span class="dot">{{ unread }}</span>{% endif %}</button>
+  <button type="button" data-tab="profile">资料与安全</button>
 </nav>
 
 {# ---------------------------------------------------------------- 我的预约 #}
-{% if t == 'bookings' %}
+<div class="tabpane on" data-tab="bookings">
   {% for b in bookings %}
   {% set o = order_of.get(b.id) %}
   <div class="panel">
@@ -111,7 +109,9 @@
   {% endfor %}
 
 {# ---------------------------------------------------------------- 订单 #}
-{% elif t == 'orders' %}
+</div>
+
+<div class="tabpane" data-tab="orders">
   {% if orders %}
   <div class="scroll panel">
     <table>
@@ -139,7 +139,9 @@
   {% endif %}
 
 {# ---------------------------------------------------------------- 券 / 余额 / 心愿单 #}
-{% elif t == 'coupons' %}
+</div>
+
+<div class="tabpane" data-tab="coupons">
   <div class="two">
     <div>
       <h2>我的券（{{ coupons|length }}）</h2>
@@ -188,7 +190,9 @@
   </div>
 
 {# ---------------------------------------------------------------- 消息与留言 #}
-{% elif t == 'notices' %}
+</div>
+
+<div class="tabpane" data-tab="notices">
   <div class="two">
     <div>
       <div class="between">
@@ -239,7 +243,9 @@
   </div>
 
 {# ---------------------------------------------------------------- 资料与安全 #}
-{% else %}
+</div>
+
+<div class="tabpane" data-tab="profile">
   <div class="two">
     <div>
       <h2>我的资料</h2>
@@ -313,6 +319,6 @@
       </div>
     </div>
   </div>
-{% endif %}
+</div>
 
 {% endblock %}

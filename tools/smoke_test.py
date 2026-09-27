@@ -441,12 +441,16 @@ check('关注成功（对方粉丝里出现我）', '调试debug' in [str(x) for
 s, html = guest.getq('/u/FireFly')
 check('玩家主页能打开', s == 200 and 'FireFly' in html)
 
-# DM 三页
+# DM 工作台：三块内容现在都在 /dm 一个页面里（点标签前端切，不再各占一个网址）
 dmcli = Client()
 dmcli.post('/login', {'account': 'dm测试', 'password': '123123'})
-for u in ('/dm', '/dm/credit', '/dm/guides'):
-    s, html = dmcli.get(u)
-    check('DM 页 %s' % u, s == 200)
+s, html = dmcli.get('/dm')
+check('DM 工作台能打开', s == 200)
+check('三块面板都在同一页', all(('data-tab="%s"' % k) in html for k in ('today', 'credit', 'guides')))
+check('DM 页不留子网址', 'href="?tab=' not in html and 'href="/dm/credit"' not in html)
+s, html = dmcli.get('/me')
+check('「我的」五个面板都渲染了', all(('data-tab="%s"' % k) in html
+                                     for k in ('bookings', 'orders', 'coupons', 'notices', 'profile')))
 # 练本申请
 dmcli.post('/dm/practices', {'sid': sc['id'], 'note': '自检练本'})
 check('DM 能提练本申请', any('自检练本' in str(p.get('note')) for p in jread('practices')))

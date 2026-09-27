@@ -1,13 +1,10 @@
-{% extends 'base.html' %}
-{% block title %}学本资料 · DM 工作台{% endblock %}
-{% block body %}
+{# 面板：guides（由 tools/_split_panels.py 从 guides.html 拆出来，别单独改这里的骨架） #}
 <div class="between">
   <div>
     <h1>学本资料库</h1>
     <p class="sub">门店上传的解析 / 话术 / 复盘，随时能翻；想练哪个本就在下面申请</p>
   </div>
 </div>
-{% include 'dm/_nav.html' %}
 
 {% for g in guides %}
 <div class="panel mt">
@@ -53,4 +50,3 @@
   </div>
   {% endif %}
 </div>
-{% endblock %}

@@ -1,9 +1,6 @@
-{% extends 'base.html' %}
-{% block title %}管理后台 · {{ settings.shopName }}{% endblock %}
-{% block body %}
+{# 面板：dash（由 tools/_split_panels.py 从 dashboard.html 拆出来，别单独改这里的骨架） #}
 <div class="between">
   <h1>管理后台</h1>
-  {% include 'admin/_nav.html' %}
 </div>
 
 <div class="panel">
@@ -100,4 +97,3 @@
     </div>
   </div>
 </div>
-{% endblock %}

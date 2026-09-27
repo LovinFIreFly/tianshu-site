@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}DM 工作台 · {{ settings.shopName }}{% endblock %}
+{% block body %}
+
+{# DM 工作台：三块内容都在这一页，点标签前端切，网址一直是 /dm #}
+{% set TABS = [('today', '今日场次'), ('credit', '我的客人'), ('guides', '学本资料')] %}
+
+<nav class="tabbar" data-tabs="dm">
+  {% for key, name in TABS %}
+  <button type="button" data-tab="{{ key }}" class="{{ 'on' if loop.first }}">{{ name }}</button>
+  {% endfor %}
+  <span class="sep"></span>
+  <a href="{{ url_for('admin.dashboard') + '#dm' }}" class="sub">我这个月能拿多少 →</a>
+</nav>
+
+{% for key, name in TABS %}
+<div class="tabpane {{ 'on' if loop.first }}" data-tab="{{ key }}">{{ panels.get(key, '')|safe }}</div>
+{% endfor %}
+
+{% endblock %}

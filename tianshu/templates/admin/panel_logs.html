@@ -1,10 +1,7 @@
-{% extends 'base.html' %}
-{% block title %}操作日志 · {{ settings.shopName }}{% endblock %}
-{% block body %}
+{# 面板：logs（由 tools/_split_panels.py 从 logs.html 拆出来，别单独改这里的骨架） #}
 <div class="between">
   <h1>操作日志</h1>
 </div>
-{% include 'admin/_nav.html' %}
 <p class="sub">谁在什么时候动过什么，出问题先翻这里（只留最近 500 条）</p>
 
 <div class="scroll panel mt">
@@ -22,4 +19,3 @@
     {% endfor %}
   </table>
 </div>
-{% endblock %}

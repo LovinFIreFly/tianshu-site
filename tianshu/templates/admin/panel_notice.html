@@ -1,12 +1,9 @@
-{% extends 'base.html' %}
-{% block title %}通知群发 · 后台{% endblock %}
-{% block body %}
+{# 面板：notice（由 tools/_split_panels.py 从 notice.html 拆出来，别单独改这里的骨架） #}
 <div class="between">
   <div>
     <h1>通知群发</h1>
     <p class="sub">节日问候、临时停业、活动通知 —— 发完客人会在「消息中心」和我的页看到</p>
   </div>
-  {% include 'admin/_nav.html' %}
 </div>
 
 <div class="panel mt">
@@ -37,4 +34,3 @@
 {% else %}
 <div class="panel empty">还没群发过</div>
 {% endfor %}
-{% endblock %}

@@ -18,29 +18,43 @@ from config import DATA_DIR
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 
-@bp.get('/')
-@staff_required
-def dashboard():
-    """后台总入口。所有标签都在这一个网址里切（/admin?tab=xxx）
-
-    早先每个功能各占一个网址（/admin/bookings、/admin/users…），点一下整页跳一次，
-    又碎又慢；老版 index.html 是一个页面里切面板的，这里改回那个思路。
-    旧的网址我没删，直接输进去照样能打开（当书签用），只是导航里不再产生新网址。
-    """
-    tab = (request.args.get('tab') or 'dash').strip()
-    fn = _TAB_FUNCS.get(tab)
-    if fn is not None:
-        return fn()                      # 转到对应标签的视图函数（它们自己会读 query 参数）
+def dash_panel():
+    """概览面板：今天几场、待核销、最近预约、操作日志"""
     bookings = db.rows('bookings')
     st = business.stats()
     today0 = business.day_label(business.now_ms())
-    return render_template('admin/dashboard.html',
+    return render_template('admin/panel_dash.html',
                            stat=st, sessions=business.today_sessions(),
                            pending=[b for b in bookings if b.get('status') == 'booked'
                                     and b.get('day') == today0][:10],
                            recent=sorted(bookings, key=lambda x: -(x.get('id') or 0))[:8],
                            logs=db.rows('logs')[:6],
                            users=db.rows('users'), scripts=db.rows('scripts'))
+
+
+def _panel_html(key):
+    """把某个面板渲染成一段 HTML —— 外壳页面要把它塞进 <div class="tabpane">"""
+    r = _TAB_FUNCS[key]()
+    return r.get_data(as_text=True) if hasattr(r, 'get_data') else str(r)
+
+
+@bp.get('/')
+@staff_required
+def dashboard():
+    """管理后台 —— 唯一的入口页。
+
+    14 个面板在这一次全渲染好，点标签只是前端切显示：不跳页、不改网址、点了就到
+    （老版 index.html 就是这么干的）。所以不管点哪个功能，网址永远停在 /admin。
+    """
+    return render_template('admin/index.html', panels={k: _panel_html(k) for k in _TAB_FUNCS})
+
+
+@bp.get('/<path:old>')
+@staff_required
+def legacy(old):
+    """老网址（/admin/bookings 之类）送回 /admin，用 #标签 打开对应面板。
+    留着纯粹是为了以前存的书签还能点开。"""
+    return redirect(url_for('admin.dashboard') + '#' + old.split('/')[0])
 
 
 @bp.post('/verify')
@@ -52,20 +66,18 @@ def verify():
     return redirect(request.referrer or url_for('admin.dashboard'))
 
 
-@bp.get('/bookings')
 @staff_required
 def bookings():
     """预约管理：按状态/日期筛，能代客户取消、能核销"""
     rows = db.rows('bookings')
-    status = request.args.get('status') or 'booked'
+    status = request.args.get('status') or 'booked'      # 只用来点亮默认那颗筛选按钮
     kw = (request.args.get('q') or '').strip()
-    if status != 'all':
-        rows = [b for b in rows if b.get('status') == status]
+    # 状态筛选现在由前端就地做（tabs.js 藏行），所以这里不再过滤，全都渲染出来
     if kw:
         rows = [b for b in rows if kw in str(b.get('title', '')) or kw in str(b.get('username', ''))
                 or kw in str(b.get('phone', '')) or kw in str(b.get('verifyCode', ''))]
     rows = sorted(rows, key=lambda x: (-(x.get('ts') or 0), str(x.get('time'))))
-    return render_template('admin/bookings.html', rows=rows, status=status, q=kw,
+    return render_template('admin/panel_bookings.html', rows=rows, status=status, q=kw,
                            counts={s: len([b for b in db.rows('bookings') if b.get('status') == s])
                                    for s in ('booked', 'arrived', 'done', 'cancelled')})
 
@@ -78,7 +90,7 @@ def cancel_booking(bid):
     hit = next((b for b in rows if b.get('id') == bid), None)
     if not hit:
         flash('没这条预约', 'warn')
-        return redirect(url_for('admin.bookings'))
+        return redirect(url_for('admin.dashboard') + '#bookings')
     hit.update(status='cancelled', cancelAt=business.now_ms(), cancelBy='staff')
     db.write('bookings', rows)
     order = next((o for o in db.rows('pays') if o.get('bid') == bid), None)
@@ -87,10 +99,9 @@ def cancel_booking(bid):
     business.audit(current_user().get('username'), role(), '店员取消了《%s》%s 的预约'
                    % (hit.get('title'), hit.get('day')))
     flash('已取消并处理退款', 'ok')
-    return redirect(url_for('admin.bookings'))
+    return redirect(url_for('admin.dashboard') + '#bookings')
 
 
-@bp.get('/users')
 @staff_required
 def users():
     """客户档案：信用分、消费、是否拉黑（点开能改）"""
@@ -106,7 +117,7 @@ def users():
         rows.append({'u': u, 'visits': len(mine), 'spent': sum(int(b.get('amount') or 0) for b in mine),
                      'last': max([b.get('createdAt') or 0 for b in mine] or [0])})
     rows.sort(key=lambda x: -x['visits'])
-    return render_template('admin/users.html', rows=rows, q=kw)
+    return render_template('admin/panel_users.html', rows=rows, q=kw)
 
 
 @bp.post('/users/<phone>/credit')
@@ -117,7 +128,7 @@ def set_credit(phone):
     before, after = business.adjust_credit(phone, delta, reason, current_user().get('username'))
     flash('信用分 %s → %s（原因：%s）' % (before, after, reason) if before is not None else '没这个账号',
           'ok' if before is not None else 'warn')
-    return redirect(url_for('admin.users'))
+    return redirect(url_for('admin.dashboard') + '#users')
 
 
 @bp.post('/users/<phone>/ban')
@@ -137,7 +148,7 @@ def ban(phone):
         business.audit(current_user().get('username'), role(),
                        ('拉黑' if banned else '恢复') + '了 ' + str(hit.get('username')))
         flash('已拉黑该账号' if banned else '已恢复该账号', 'ok')
-    return redirect(url_for('admin.users'))
+    return redirect(url_for('admin.dashboard') + '#users')
 
 
 @bp.post('/users/<phone>/recharge')
@@ -159,7 +170,7 @@ def recharge(phone):
         db.write('users', rows)
         business.notify(phone, '会员余额变动 💳', '充值 ¥%d，当前余额 ¥%d' % (amount, hit['balance']), 'wallet')
         flash('充值成功：¥%d → ¥%d' % (before, hit['balance']), 'ok')
-    return redirect(url_for('admin.users'))
+    return redirect(url_for('admin.dashboard') + '#users')
 
 
 @bp.post('/coupon')
@@ -194,11 +205,10 @@ def coupon():
     return redirect(url_for('admin.dashboard'))
 
 
-@bp.get('/scripts')
 @staff_required
 def scripts():
     """剧本管理：改价、上下架、角色、是否允许客人提前选角"""
-    return render_template('admin/scripts.html', rows=db.rows('scripts'))
+    return render_template('admin/panel_scripts.html', rows=db.rows('scripts'))
 
 
 @bp.post('/scripts/new')
@@ -216,7 +226,7 @@ def script_new():
     db.write('scripts', rows)
     business.audit(current_user().get('username'), role(), '新增剧本《%s》' % rows[-1]['title'])
     flash('《%s》建好了，下面填细节' % rows[-1]['title'], 'ok')
-    return redirect(url_for('admin.scripts'))
+    return redirect(url_for('admin.dashboard') + '#scripts')
 
 
 @bp.get('/scripts/export')
@@ -255,7 +265,7 @@ def scripts_import():
     f = request.files.get('csv')
     if not f or not f.filename:
         flash('先选一个 CSV 文件（可以先用「导出」下一个当模板）', 'warn')
-        return redirect(url_for('admin.scripts'))
+        return redirect(url_for('admin.dashboard') + '#scripts')
     text = f.read().decode('utf-8-sig', 'replace')
     rows = db.rows('scripts')
     by_id = {str(s.get('id')): s for s in rows}
@@ -296,7 +306,7 @@ def scripts_import():
                    '导入剧本 CSV：新增 %d、更新 %d' % (added, updated))
     flash('导入完成：新增 %d 个、更新 %d 个%s'
           % (added, updated, ('、跳过 %d 行（没填名字）' % skipped) if skipped else ''), 'ok')
-    return redirect(url_for('admin.scripts'))
+    return redirect(url_for('admin.dashboard') + '#scripts')
 
 
 @bp.post('/scripts/<int:sid>/img')
@@ -307,7 +317,7 @@ def script_img(sid):
     hit = next((s for s in rows if s.get('id') == sid), None)
     if not hit:
         flash('没这个剧本', 'warn')
-        return redirect(url_for('admin.scripts'))
+        return redirect(url_for('admin.dashboard') + '#scripts')
     url, err = business.save_upload(request.files.get('cover'), 'cover')
     if not url:
         flash('封面没传上：%s' % err, 'warn')
@@ -316,7 +326,7 @@ def script_img(sid):
         db.write('scripts', rows)
         business.audit(current_user().get('username'), role(), '换了《%s》的封面' % hit.get('title'))
         flash('封面换好了（前台立刻能看到）', 'ok')
-    return redirect(url_for('admin.scripts'))
+    return redirect(url_for('admin.dashboard') + '#scripts')
 
 
 @bp.post('/scripts/<int:sid>/save')
@@ -326,7 +336,7 @@ def script_save(sid):
     hit = next((s for s in rows if s.get('id') == sid), None)
     if not hit:
         flash('没这个剧本', 'warn')
-        return redirect(url_for('admin.scripts'))
+        return redirect(url_for('admin.dashboard') + '#scripts')
     f = request.form
     if f.get('title'):
         hit['title'] = business.clean(f.get('title'), 30)
@@ -345,23 +355,20 @@ def script_save(sid):
     db.write('scripts', rows)
     business.audit(current_user().get('username'), role(), '改了剧本《%s》' % hit.get('title'))
     flash('《%s》存好了' % hit.get('title'), 'ok')
-    return redirect(url_for('admin.scripts'))
+    return redirect(url_for('admin.dashboard') + '#scripts')
 
 
-@bp.get('/orders')
 @staff_required
 def orders():
     """订单 + 日结：一天卖了多少、退了多少"""
     rows = sorted(db.rows('pays'), key=lambda x: -(x.get('id') or 0))
-    status = request.args.get('status') or 'all'
-    if status != 'all':
-        rows = [o for o in rows if o.get('status') == status]
+    status = request.args.get('status') or 'all'         # 状态筛选在前端做，不在这儿过滤
     by_day = {}
     for o in db.rows('pays'):
         if o.get('status') == 'paid':
             d = o.get('day') or '未知'
             by_day[d] = by_day.get(d, 0) + int(o.get('deposit') or 0)
-    return render_template('admin/orders.html', rows=rows, status=status,
+    return render_template('admin/panel_orders.html', rows=rows, status=status,
                            by_day=sorted(by_day.items(), key=lambda kv: kv[0], reverse=True)[:14])
 
 
@@ -392,14 +399,12 @@ def settings():
     return redirect(url_for('admin.dashboard'))
 
 
-@bp.get('/logs')
 @staff_required
 def logs():
-    return render_template('admin/logs.html', rows=db.rows('logs')[:200])
+    return render_template('admin/panel_logs.html', rows=db.rows('logs')[:200])
 
 
 # ---------------------------------------------------------------- 排期（每天真正要用的）
-@bp.get('/sessions')
 @staff_required
 def sessions():
     """一天的排期：新排一场、锁场、取消；同一房间同一时段排两场会被拦下来"""
@@ -417,7 +422,7 @@ def sessions():
         for i in range(7):
             d = monday + i * 86400000
             week.append({'ts': d, 'day': business.day_label(d), 'rows': business.sessions_of(d)})
-    return render_template('admin/sessions.html', rows=business.sessions_of(ts), ts=ts, view=view,
+    return render_template('admin/panel_sessions.html', rows=business.sessions_of(ts), ts=ts, view=view,
                            prev=ts - 86400000, nxt=ts + 86400000, day=business.day_label(ts),
                            week=week, rooms=db.rows('rooms'), dms=dms,
                            scripts=[s for s in db.rows('scripts') if s.get('onSale') is not False])
@@ -434,7 +439,7 @@ def session_new():
     if busy:
         flash('撞房了：%s %s 的「%s」已经排了《%s》，换个房间或时间'
               % (business.day_label(ts), tm, room, busy.get('title')), 'warn')
-        return redirect(url_for('admin.sessions', ts=ts))
+        return redirect(url_for('admin.dashboard') + '#sessions')
     sc = db.one('scripts', id=f.get('sid'))
     dm_phone = business.clean(f.get('dm'), 20)
     dm = db.one('users', phone=dm_phone) if dm_phone else None
@@ -448,7 +453,7 @@ def session_new():
     business.audit(current_user().get('username'), role(),
                    '排期：%s %s《%s》%s' % (business.day_label(ts), tm, rows[-1]['title'], room))
     flash('排好了：%s %s《%s》' % (business.day_label(ts), tm, rows[-1]['title']), 'ok')
-    return redirect(url_for('admin.sessions', ts=ts))
+    return redirect(url_for('admin.dashboard') + '#sessions')
 
 
 @bp.post('/sessions/<int:sid>/status')
@@ -459,13 +464,13 @@ def session_status(sid):
     hit = next((s for s in rows if s.get('id') == sid), None)
     if not hit:
         flash('没这场', 'warn')
-        return redirect(url_for('admin.sessions'))
+        return redirect(url_for('admin.dashboard') + '#sessions')
     st = request.form.get('status') or 'open'
     if st == 'open':
         busy = business.room_busy(hit.get('roomId'), hit.get('ts'), hit.get('time'), skip_id=sid)
         if busy:
             flash('这间房那个时段已经排了《%s》，没法恢复开放' % busy.get('title'), 'warn')
-            return redirect(url_for('admin.sessions', ts=hit.get('ts')))
+            return redirect(url_for('admin.dashboard') + '#sessions')
     hit['status'] = st
     if request.form.get('reason'):
         hit['statusReason'] = business.clean(request.form.get('reason'), 60)
@@ -480,7 +485,7 @@ def session_status(sid):
     business.audit(current_user().get('username'), role(),
                    '场次《%s》%s %s → %s' % (hit.get('title'), business.day_label(hit.get('ts')), hit.get('time'), st))
     flash('状态改成：%s' % st, 'ok')
-    return redirect(url_for('admin.sessions', ts=hit.get('ts')))
+    return redirect(url_for('admin.dashboard') + '#sessions')
 
 
 @bp.post('/rooms/new')
@@ -495,7 +500,7 @@ def room_new():
                      'cap': int(request.form.get('cap') or 6), 'dev': business.clean(request.form.get('dev'), 40)})
         db.write('rooms', rows)
         flash('加了房间：%s' % name, 'ok')
-    return redirect(url_for('admin.sessions'))
+    return redirect(url_for('admin.dashboard') + '#sessions')
 
 
 @bp.post('/rooms/<int:rid>/del')
@@ -503,14 +508,13 @@ def room_new():
 def room_del(rid):
     db.write('rooms', [r for r in db.rows('rooms') if r.get('id') != rid])
     flash('房间删了（已排的场次不受影响，但那些场次会显示空房间）', 'ok')
-    return redirect(url_for('admin.sessions'))
+    return redirect(url_for('admin.dashboard') + '#sessions')
 
 
 # ---------------------------------------------------------------- 评价
-@bp.get('/reviews')
 @staff_required
 def reviews():
-    return render_template('admin/reviews.html', rows=business.reviews_of(only_visible=False))
+    return render_template('admin/panel_reviews.html', rows=business.reviews_of(only_visible=False))
 
 
 @bp.post('/reviews/<int:rid>/reply')
@@ -532,7 +536,7 @@ def review_reply(rid):
             business.notify(bk.get('phone'), '门店回复了你的评价',
                             '《%s》那条评价，店家说：%s' % (bk.get('title'), text), 'review')
         flash('回复已发出', 'ok')
-    return redirect(url_for('admin.reviews'))
+    return redirect(url_for('admin.dashboard') + '#reviews')
 
 
 @bp.post('/reviews/<int:rid>/hide')
@@ -544,15 +548,14 @@ def review_hide(rid):
             r['hidden'] = not r.get('hidden')
     db.write('reviews', rows)
     flash('已切换显示状态（隐藏的只有员工看得见）', 'ok')
-    return redirect(url_for('admin.reviews'))
+    return redirect(url_for('admin.dashboard') + '#reviews')
 
 
 # ---------------------------------------------------------------- 学本资料库 + 练本
-@bp.get('/guides')
 @staff_required
 def guides_page():
     """DM 的学本资料（解析/话术/复盘）+ 练本申请，都在这儿管"""
-    return render_template('admin/guides.html', guides=business.guides(),
+    return render_template('admin/panel_guides.html', guides=business.guides(),
                            practices=business.practices(), scripts=db.rows('scripts'))
 
 
@@ -572,7 +575,7 @@ def guide_new():
         'by': current_user().get('username'), 'at': business.now_ms()}])
     business.audit(current_user().get('username'), role(), '上传了学本资料')
     flash('资料发布了，DM 端立刻能看到', 'ok')
-    return redirect(url_for('admin.guides_page'))
+    return redirect(url_for('admin.dashboard') + '#guides')
 
 
 @bp.post('/guides/<int:gid>/del')
@@ -580,7 +583,7 @@ def guide_new():
 def guide_del(gid):
     db.write('guides', [g for g in db.rows('guides') if g.get('id') != gid])
     flash('资料删了', 'ok')
-    return redirect(url_for('admin.guides_page'))
+    return redirect(url_for('admin.dashboard') + '#guides')
 
 
 @bp.post('/practices/<int:pid>/status')
@@ -599,16 +602,15 @@ def practice_status(pid):
                                              'done': '已练完，辛苦啦',
                                              'rejected': '这次先不安排，下次优先你'}.get(st, '已处理'), 'practice')
         flash('已处理', 'ok')
-    return redirect(url_for('admin.guides_page'))
+    return redirect(url_for('admin.dashboard') + '#guides')
 
 
 # ---------------------------------------------------------------- 通知群发
-@bp.get('/notice')
 @staff_required
 def notice_page():
     """给客人/DM 群发站内消息（节日问候、临时停业、活动通知都用它）"""
     recent = [n for n in db.rows('notices') if n.get('kind') == 'broadcast'][:10]
-    return render_template('admin/notice.html', recent=recent)
+    return render_template('admin/panel_notice.html', recent=recent)
 
 
 @bp.post('/notice/send')
@@ -622,15 +624,14 @@ def notice_send():
         n = business.broadcast(title, text, request.form.get('scope') or 'all')
         business.audit(current_user().get('username'), role(), '群发通知：%s（%d 人）' % (title, n))
         flash('发出去了，共 %d 人收到' % n, 'ok')
-    return redirect(url_for('admin.notice_page'))
+    return redirect(url_for('admin.dashboard') + '#notice')
 
 
 # ---------------------------------------------------------------- 举报处理
-@bp.get('/reports')
 @staff_required
 def reports_page():
     """客人举报的帖子，在这儿处理（删 / 忽略）"""
-    return render_template('admin/reports.html',
+    return render_template('admin/panel_reports.html',
                            rows=sorted(db.rows('reports'), key=lambda x: -(x.get('at') or 0)))
 
 
@@ -649,11 +650,10 @@ def report_handle(rid):
         business.audit(current_user().get('username'), role(),
                        '处理举报：%s' % ('删帖' if act == 'del' else '忽略'))
         flash('处理完成', 'ok')
-    return redirect(url_for('admin.reports_page'))
+    return redirect(url_for('admin.dashboard') + '#reports')
 
 
 # ---------------------------------------------------------------- 备份 / 恢复
-@bp.get('/backup')
 @staff_required
 def backup_page():
     """数据备份与恢复（老版后台就有一页，出问题能一键回滚）"""
@@ -666,7 +666,7 @@ def backup_page():
                 files.append({'name': fn, 'size': os.path.getsize(p),
                               'time': time.strftime('%m-%d %H:%M', time.localtime(os.path.getmtime(p)))})
                 total += os.path.getsize(p)
-    return render_template('admin/backup.html', files=files, total=total)
+    return render_template('admin/panel_backup.html', files=files, total=total)
 
 
 @bp.post('/backup/export')
@@ -704,7 +704,7 @@ def backup_import():
     f = request.files.get('zip')
     if not f or not f.filename:
         flash('先选一个备份 zip', 'warn')
-        return redirect(url_for('admin.backup_page'))
+        return redirect(url_for('admin.dashboard') + '#backup')
     keep = os.path.join(os.path.dirname(DATA_DIR), 'data_导入前-%s' % time.strftime('%Y%m%d-%H%M%S'))
     if os.path.isdir(DATA_DIR):
         shutil.copytree(DATA_DIR, keep)
@@ -718,7 +718,7 @@ def backup_import():
                 n += 1
     business.audit(current_user().get('username'), role(), '导入了备份（%d 个文件）' % n)
     flash('导入完成：%d 个文件。原来的数据留在 %s' % (n, os.path.basename(keep)), 'ok')
-    return redirect(url_for('admin.backup_page'))
+    return redirect(url_for('admin.dashboard') + '#backup')
 
 
 # ---------------------------------------------------------------- 客户档案
@@ -729,7 +729,7 @@ def user_detail(phone):
     u = db.one('users', phone=phone)
     if not u:
         flash('没这个客户', 'warn')
-        return redirect(url_for('admin.users'))
+        return redirect(url_for('admin.dashboard') + '#users')
     mine = [b for b in db.rows('bookings') if str(b.get('phone')) == str(phone)]
     msgs = [m for m in db.rows('messages') if str(m.get('phone')) == str(phone)]
     rvs = [r for r in db.rows('reviews') if str(r.get('phone')) == str(phone)]
@@ -741,15 +741,12 @@ def user_detail(phone):
 
 
 # ---------------------------------------------------------------- 店客留言 / 社区
-@bp.get('/messages')
 @staff_required
 def messages():
     """客人留的言（没回的排前面）—— 晚到没车、想换时间、问价，基本都从这儿来"""
     rows = sorted(db.rows('messages'), key=lambda x: -(x.get('createdAt') or 0))
-    status = request.args.get('status') or 'pending'
-    if status != 'all':
-        rows = [m for m in rows if (m.get('status') or 'pending') == status]
-    return render_template('admin/messages.html', rows=rows, status=status,
+    status = request.args.get('status') or 'pending'     # 状态筛选在前端做
+    return render_template('admin/panel_messages.html', rows=rows, status=status,
                            counts={k: len([m for m in db.rows('messages') if (m.get('status') or 'pending') == k])
                                    for k in ('pending', 'replied')})
 
@@ -769,7 +766,7 @@ def message_reply(mid):
         business.notify(hit.get('phone'), '店家回复了你的留言',
                         '你问「%s」，店家回：%s' % (hit.get('text', '')[:18], text), 'msg')
         flash('回复已发出', 'ok')
-    return redirect(url_for('admin.messages'))
+    return redirect(url_for('admin.dashboard') + '#messages')
 
 
 @bp.post('/post/<int:pid>/del')
@@ -783,12 +780,11 @@ def post_del(pid):
 
 
 # ---------------------------------------------------------------- DM 结算
-@bp.get('/dm')
 @staff_required
 def dm_page():
     """DM 结算：这个月每个 DM 分成多少（分成 = 营业额 × 比例，指定加价另算）"""
     month = request.args.get('month') or __import__('time').strftime('%Y-%m')
-    return render_template('admin/dm.html', data=business.dm_settlement(month),
+    return render_template('admin/panel_dm.html', data=business.dm_settlement(month),
                            dms=[u for u in db.rows('users') if business.role_of(u) == 'dm'])
 
 
@@ -809,7 +805,7 @@ def dm_settle():
                      'settledAt': business.now_ms(), 'settledBy': current_user().get('username')})
     db.write('settles', rows)
     flash('已标记 %s 的 %s 月结算' % (phone, month), 'ok')
-    return redirect(url_for('admin.dm_page', month=month))
+    return redirect(url_for('admin.dashboard') + '#dm')
 
 
 # ---------------------------------------------------------------- 后台标签总表
@@ -817,7 +813,7 @@ def dm_settle():
 # 以后加新功能：先照抄一个视图函数，再来这里补一行，最后去 _nav.html 加个标签。
 # （放在文件末尾是因为它要引用上面所有函数；dashboard() 里是运行时才查这张表，所以顺序没问题）
 _TAB_FUNCS = {
-    'sessions': sessions, 'bookings': bookings, 'users': users, 'reviews': reviews,
+    'dash': dash_panel, 'sessions': sessions, 'bookings': bookings, 'users': users, 'reviews': reviews,
     'messages': messages, 'scripts': scripts, 'orders': orders, 'guides': guides_page,
     'notice': notice_page, 'dm': dm_page, 'backup': backup_page, 'reports': reports_page,
     'logs': logs,

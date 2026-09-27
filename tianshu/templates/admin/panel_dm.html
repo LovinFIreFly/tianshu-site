@@ -1,16 +1,13 @@
-{% extends 'base.html' %}
-{% block title %}DM 结算 · {{ settings.shopName }}{% endblock %}
-{% block body %}
+{# 面板：dm（由 tools/_split_panels.py 从 dm.html 拆出来，别单独改这里的骨架） #}
 <div class="between">
   <div>
     <h1>DM 结算</h1>
     <p class="sub">分成 = 他带的场次营业额 × {{ (settings.dmRate * 100)|round(1) }}%
       ＋ 客人点名加价（¥{{ settings.dmFee|int }}/人）。比例在「概览 → 门店设置」里改</p>
   </div>
-  {% include 'admin/_nav.html' %}
 </div>
 
-<form class="form-inline" method="get" action="{{ url_for('admin.dm_page') }}">
+<form class="form-inline" method="get" action="{{ url_for('admin.dashboard') }}">
   <div class="field" style="max-width:160px"><label>月份</label>
     <input name="month" value="{{ data.month }}" placeholder="2026-09"></div>
   <button class="btn btn-primary" type="submit">查这个月</button>
@@ -54,4 +51,3 @@
     {% else %}<span class="sub">没有 DM 账号（在「客户」里把某人的角色改成 DM 就能排他的场）</span>{% endfor %}
   </div>
 </div>
-{% endblock %}

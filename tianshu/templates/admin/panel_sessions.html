@@ -1,22 +1,21 @@
-{% extends 'base.html' %}
-{% block title %}排期 · {{ settings.shopName }}{% endblock %}
-{% block body %}
+{# 面板：sessions（由 tools/_split_panels.py 从 sessions.html 拆出来，别单独改这里的骨架） #}
 <div class="between">
   <h1>排期</h1>
-  {% include 'admin/_nav.html' %}
 </div>
 
+{# 日期和视图（天/周）是要回服务器重算的，所以这一块仍然带查询参数 —— 像日历一样，
+   条件是条件，但功能不是子网址。其余面板的切换一律不走网址。 #}
 <div class="panel between">
-  <a class="btn btn-sm" href="{{ url_for('admin.sessions', ts=prev, view=view) }}">← 前一天</a>
+  <a class="btn btn-sm" href="{{ url_for('admin.dashboard', ts=prev, view=view) }}#sessions">← 前一天</a>
   <b style="font-size:17px">{{ day }}</b>
-  <a class="btn btn-sm" href="{{ url_for('admin.sessions', ts=nxt, view=view) }}">后一天 →</a>
+  <a class="btn btn-sm" href="{{ url_for('admin.dashboard', ts=nxt, view=view) }}#sessions">后一天 →</a>
 </div>
 
 <div class="row" style="gap:6px">
-  <a class="pill" href="{{ url_for('admin.sessions', ts=ts) }}"
-     style="{{ 'color:var(--accent)' if view != 'week' }}">看这一天</a>
-  <a class="pill" href="{{ url_for('admin.sessions', ts=ts, view='week') }}"
-     style="{{ 'color:var(--accent)' if view == 'week' }}">看这一周（排班用）</a>
+  <a class="pill {{ 'on' if view != 'week' }}"
+     href="{{ url_for('admin.dashboard', ts=ts, view='day') }}#sessions">看这一天</a>
+  <a class="pill {{ 'on' if view == 'week' }}"
+     href="{{ url_for('admin.dashboard', ts=ts, view='week') }}#sessions">看这一周（排班用）</a>
 </div>
 
 {% if view == 'week' %}
@@ -34,7 +33,7 @@
           </span>
         {% else %}<span class="sub">还没排</span>{% endfor %}
       </td>
-      <td><a class="btn btn-sm" href="{{ url_for('admin.sessions', ts=d.ts) }}">看这天</a></td>
+      <td><a class="btn btn-sm" href="{{ url_for('admin.dashboard') + '#sessions' }}">看这天</a></td>
     </tr>
     {% endfor %}
   </table>
@@ -117,4 +116,3 @@
     {% else %}<span class="sub">还没有房间</span>{% endfor %}
   </div>
 </div>
-{% endblock %}

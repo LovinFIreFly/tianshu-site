@@ -168,16 +168,27 @@ h3{font-size:var(--fs-h3);font-weight:var(--fw-h3);line-height:var(--lh-h3);marg
 .bell.new .dot{display:flex}
 .avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;margin-right:var(--sp-1)}
 
-/* ============================ 5. 标签页（后台/我的：一个网址里切） ============================ */
+/* ================= 5. 标签页：后台 / DM / 我的 都在一个网址里切 =================
+   tabbar 只是前端开关（static/js/tabs.js）：点了藏/显 .tabpane，不跳页、不改网址。
+   用 <button> 而不是 <a>，就是为了不留子网址。 */
 .tabbar{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;width:100%;flex:1 1 100%;
   border-bottom:1px solid var(--line);margin:var(--sp-2) 0 var(--sp-4);padding-bottom:0}
 .tabbar::-webkit-scrollbar{display:none}
-.tabbar a{padding:9px var(--sp-3);font-size:var(--fs-sm);color:var(--text-2);white-space:nowrap;
-  border-bottom:2px solid transparent;margin-bottom:-1px;transition:all var(--t) var(--ease)}
-.tabbar a:hover{color:var(--text)}
-.tabbar a.on{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+.tabbar a,.tabbar button{padding:9px var(--sp-3);font-size:var(--fs-sm);color:var(--text-2);white-space:nowrap;
+  background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;
+  transition:all var(--t) var(--ease)}
+.tabbar a:hover,.tabbar button:hover{color:var(--text)}
+.tabbar a.on,.tabbar button.on{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
 .tabbar .sep{flex:1}
-@media(max-width:640px){.tabbar{margin-bottom:var(--sp-4)}.tabbar a{padding:8px 10px}}
+.tabbar .sub{padding:9px var(--sp-3);white-space:nowrap}
+.tabpane{display:none}
+.tabpane.on{display:block}
+.tabpane.on > :first-child{margin-top:0}
+/* 就地筛选的按钮（data-show）：亮着的那颗用金色描边，别跟主按钮混 -->
+button.pill{background:none;cursor:pointer}
+button.pill:hover{color:var(--text);border-color:var(--line-strong)}
+.pill.on{color:var(--primary);border-color:rgba(var(--primary-rgb),.5);background:rgba(var(--primary-rgb),.08)}
+@media(max-width:640px){.tabbar{margin-bottom:var(--sp-4)}.tabbar a,.tabbar button{padding:8px 10px}}
 
 /* ============================ 6. 卡片 / 面板 ============================ */
 .card,.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);padding:var(--sp-4);

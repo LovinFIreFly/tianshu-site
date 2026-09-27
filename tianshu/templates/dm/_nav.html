@@ -1,9 +1,0 @@
-{# DM 工作台标签栏：都在 /dm 一个网址里切 #}
-{% set _cur = request.args.get('tab') or {
-  'dm.index':'today', 'dm.credit':'credit', 'dm.guides':'guides'
-}.get(request.endpoint, 'today') %}
-<nav class="tabbar">
-  <a href="{{ url_for('dm.index', tab='today') }}" class="{{ 'on' if _cur == 'today' }}">今日场次</a>
-  <a href="{{ url_for('dm.index', tab='credit') }}" class="{{ 'on' if _cur == 'credit' }}">我的客人</a>
-  <a href="{{ url_for('dm.index', tab='guides') }}" class="{{ 'on' if _cur == 'guides' }}">学本资料</a>
-</nav>

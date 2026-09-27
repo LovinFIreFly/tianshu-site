@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}管理后台 · {{ settings.shopName }}{% endblock %}
+{% block body %}
+
+{# 管理后台：14 个面板全都在这一页里（views/admin.py 把每块渲染好塞进 panels），
+   点上面的标签只是前端切显示 —— 不跳页、不刷新、网址从头到尾就是 /admin。
+   要加新功能：① views/admin.py 写个函数 ② 文件末尾 _TAB_FUNCS 补一行 ③ 下面 TABS 补一行。 #}
+{% set TABS = [
+  ('dash', '概览'), ('sessions', '排期'), ('bookings', '预约'), ('users', '客户'),
+  ('reviews', '评价'), ('messages', '留言'), ('scripts', '剧本'), ('orders', '订单'),
+  ('guides', '学本'), ('notice', '通知'), ('dm', 'DM 结算'), ('backup', '备份'),
+  ('reports', '举报'), ('logs', '日志')
+] %}
+
+<nav class="tabbar" data-tabs="admin">
+  {% for key, name in TABS %}
+  <button type="button" data-tab="{{ key }}" class="{{ 'on' if loop.first }}">{{ name }}</button>
+  {% endfor %}
+</nav>
+
+{% for key, name in TABS %}
+<div class="tabpane {{ 'on' if loop.first }}" data-tab="{{ key }}">{{ panels.get(key, '')|safe }}</div>
+{% endfor %}
+
+{% endblock %}

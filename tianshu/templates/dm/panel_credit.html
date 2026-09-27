@@ -1,13 +1,10 @@
-{% extends 'base.html' %}
-{% block title %}我的客人 · DM 工作台{% endblock %}
-{% block body %}
+{# 面板：credit（由 tools/_split_panels.py 从 credit.html 拆出来，别单独改这里的骨架） #}
 <div class="between">
   <div>
     <h1>我的客人</h1>
     <p class="sub">只显示你带过的场次里的客人，别的客人你看不到</p>
   </div>
 </div>
-{% include 'dm/_nav.html' %}
 
 {% for r in rows %}
 <div class="panel mt">
@@ -32,4 +29,3 @@
 {% else %}
 <div class="panel empty">还没有你的客人（排期里指定你当 DM，结束后这里就会出现）</div>
 {% endfor %}
-{% endblock %}

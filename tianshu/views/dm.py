@@ -2,9 +2,10 @@
 """
 DM 工作台：对应老版那一整套 dm-* 界面
 
-    /dm            今日我带哪几场、几个人、顺手核销 + 我这个月能拿多少
-    /dm/credit     我场次里的客人（只看自己带过的，别人的看不到）
-    /dm/guides     学本资料库（门店上传的解析/话术/复盘）+ 提练本申请
+    /dm            就这一个网址。三块内容都在这一页里，点标签前端切（不改网址）：
+                     · 今日        我带哪几场、几个人、顺手核销 + 这个月能拿多少
+                     · 我的客人    只看自己带过的客人，别人的看不到
+                     · 学本资料    门店上传的解析/话术/复盘 + 提练本申请
 
 权限：DM 本人 / 管理员 / 超管（管理员代班时也能用）
 """
@@ -17,14 +18,8 @@ from tianshu.security import current_user, dm_required, is_dm, role
 bp = Blueprint('dm', __name__, url_prefix='/dm')
 
 
-@bp.get('/')
-@dm_required
-def index():
-    """DM 工作台总入口：今日 / 我的客人 / 学本资料 都在这一个网址里切（?tab=xxx）"""
-    tab = (request.args.get('tab') or 'today').strip()
-    fn = _TAB_FUNCS.get(tab)
-    if fn is not None:
-        return fn()
+def today_panel():
+    """今日面板：我带哪几场、谁到场、顺手核销（就是老版 /dm 那一屏）"""
     u = current_user()
     phone = str(u.get('phone'))
     today = business.today_sessions()
@@ -35,8 +30,25 @@ def index():
     bookings.sort(key=lambda x: str(x.get('time')))
     month = business.dm_settlement()
     my_row = next((r for r in month['rows'] if str(r.get('dmPhone')) == phone), None)
-    return render_template('dm/index.html', sessions=mine, bookings=bookings,
+    return render_template('dm/panel_today.html', sessions=mine, bookings=bookings,
                            today=business.day_label(business.midnight()), my_row=my_row, month=month['month'])
+
+
+def _panel_html(key):
+    """把面板渲染成一段 HTML —— 外壳页面要把它塞进 <div class="tabpane">"""
+    r = _TAB_FUNCS[key]()
+    return r.get_data(as_text=True) if hasattr(r, 'get_data') else str(r)
+
+
+@bp.get('/')
+@dm_required
+def index():
+    """DM 工作台 —— 唯一的入口页。
+
+    三块内容（今日 / 我的客人 / 学本资料）都在这一页里渲染好，点标签只是前端切显示：
+    不跳页、不改网址。所以不管点哪块，网址一直是 /dm。
+    """
+    return render_template('dm/shell.html', panels={k: _panel_html(k) for k in _TAB_FUNCS})
 
 
 @bp.post('/verify')
@@ -48,12 +60,11 @@ def verify():
     return redirect(url_for('dm.index'))
 
 
-@bp.get('/credit')
 @dm_required
 def credit():
     """我带过的客人 + 改信用分（老版 dm-credit）"""
     u = current_user()
-    return render_template('dm/credit.html', rows=business.dm_customers_of(str(u.get('phone'))))
+    return render_template('dm/panel_credit.html', rows=business.dm_customers_of(str(u.get('phone'))))
 
 
 @bp.post('/credit')
@@ -64,15 +75,14 @@ def credit_set():
         business.clean(request.form.get('reason'), 40) or 'DM 调整', current_user().get('username'))
     flash('信用分 %s → %s' % (before, after) if before is not None else '没这个客人',
           'ok' if before is not None else 'warn')
-    return redirect(url_for('dm.credit'))
+    return redirect(url_for('dm.index') + '#credit')
 
 
-@bp.get('/guides')
 @dm_required
 def guides():
     """学本资料库 + 我的练本申请（老版 dm-guides / 练本）"""
     u = current_user()
-    return render_template('dm/guides.html', guides=business.guides(),
+    return render_template('dm/panel_guides.html', guides=business.guides(),
                            mine=[p for p in db.rows('practices') if str(p.get('phone')) == str(u.get('phone'))],
                            scripts=db.rows('scripts'))
 
@@ -89,8 +99,8 @@ def practice_new():
         'at': business.now_ms()}])
     business.audit(u.get('username'), role(), '提交了练本申请')
     flash('练本申请提交啦，等门店安排', 'ok')
-    return redirect(url_for('dm.guides'))
+    return redirect(url_for('dm.index') + '#guides')
 
 
 # 标签总表（放末尾因为它要引用上面的函数；index() 里是运行时才查，顺序无所谓）
-_TAB_FUNCS = {'credit': credit, 'guides': guides}
+_TAB_FUNCS = {'today': today_panel, 'credit': credit, 'guides': guides}

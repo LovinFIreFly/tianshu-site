@@ -1,10 +1,7 @@
-{% extends 'base.html' %}
-{% block title %}客户管理 · {{ settings.shopName }}{% endblock %}
-{% block body %}
+{# 面板：users（由 tools/_split_panels.py 从 users.html 拆出来，别单独改这里的骨架） #}
 <div class="between">
   <h1>客户</h1>
 </div>
-{% include 'admin/_nav.html' %}
 
 <form class="form-inline mt" method="get">
   <div class="field"><input name="q" value="{{ q }}" placeholder="搜昵称 / 手机号"></div>
@@ -58,4 +55,3 @@
 {% endfor %}
 
 {% if not rows %}<div class="panel empty">没有匹配的客户</div>{% endif %}
-{% endblock %}

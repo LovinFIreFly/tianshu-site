@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#8b5cf6">
+  <meta name="theme-color" content="#0b0d11">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
   <link rel="icon" href="{{ url_for('static', filename='icon.svg') }}" type="image/svg+xml">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -59,6 +59,7 @@
   {{ settings.shopName }} · 纯 Python 版（Flask 服务端渲染）· {{ year }} · 数据都在 data/ 里
   {% if me %}<div style="margin-top:4px">手机浏览器里可以「添加到桌面」，用起来像 App</div>{% endif %}
 </footer>
+<script src="{{ url_for('static', filename='js/tabs.js') }}" defer></script>
 <script>
   /* 注册离线外壳：失败也无所谓，不影响正常使用 */
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {

@@ -1,12 +1,9 @@
-{% extends 'base.html' %}
-{% block title %}备份与恢复 · 后台{% endblock %}
-{% block body %}
+{# 面板：backup（由 tools/_split_panels.py 从 backup.html 拆出来，别单独改这里的骨架） #}
 <div class="between">
   <div>
     <h1>备份与恢复</h1>
     <p class="sub">所有数据都在 <b>data/</b> 里。改数据或升级之前，先导出一份留着</p>
   </div>
-  {% include 'admin/_nav.html' %}
 </div>
 
 <div class="panel mt">
@@ -44,4 +41,3 @@
     </table>
   </div>
 </div>
-{% endblock %}

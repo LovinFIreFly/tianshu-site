@@ -1,21 +1,19 @@
-{% extends 'base.html' %}
-{% block title %}预约管理 · {{ settings.shopName }}{% endblock %}
-{% block body %}
+{# 面板：bookings（由 tools/_split_panels.py 从 bookings.html 拆出来） #}
 <div class="between">
   <h1>预约管理</h1>
 </div>
-{% include 'admin/_nav.html' %}
 
-<div class="row mt" style="gap:6px">
-  <a class="pill" href="{{ url_for('admin.bookings', status='booked') }}" style="{{ 'color:var(--accent)' if status=='booked' }}">待开本 {{ counts.booked }}</a>
-  <a class="pill" href="{{ url_for('admin.bookings', status='arrived') }}" style="{{ 'color:var(--accent)' if status=='arrived' }}">已到店 {{ counts.arrived }}</a>
-  <a class="pill" href="{{ url_for('admin.bookings', status='done') }}" style="{{ 'color:var(--accent)' if status=='done' }}">已完成 {{ counts.done }}</a>
-  <a class="pill" href="{{ url_for('admin.bookings', status='cancelled') }}" style="{{ 'color:var(--accent)' if status=='cancelled' }}">已取消 {{ counts.cancelled }}</a>
-  <a class="pill" href="{{ url_for('admin.bookings', status='all') }}" style="{{ 'color:var(--accent)' if status=='all' }}">全部</a>
+{# 这几颗按钮不再跳网址了：点一下由 tabs.js 就地筛表格（整页的表格都在，只是藏一部分）
+   所以服务端现在一律把全部预约都渲染出来，筛选是前端的事 #}
+<div class="row mt" style="gap:6px" data-filter="status">
+  <button type="button" class="pill {{ 'on' if status == 'booked' }}" data-show="booked">待开本 {{ counts.booked }}</button>
+  <button type="button" class="pill" data-show="arrived">已到店 {{ counts.arrived }}</button>
+  <button type="button" class="pill" data-show="done">已完成 {{ counts.done }}</button>
+  <button type="button" class="pill" data-show="cancelled">已取消 {{ counts.cancelled }}</button>
+  <button type="button" class="pill" data-show="all">全部</button>
 </div>
 
 <form class="form-inline mt" method="get">
-  <input type="hidden" name="status" value="{{ status }}">
   <div class="field"><input name="q" value="{{ q }}" placeholder="搜剧本 / 客户 / 手机号 / 核销码"></div>
   <button class="btn btn-primary" type="submit">搜索</button>
 </form>
@@ -24,7 +22,7 @@
   <table>
     <tr><th>核销码</th><th>日期</th><th>剧本</th><th>客户</th><th>人数</th><th>模式</th><th>定金</th><th>状态</th><th>操作</th></tr>
     {% for b in rows %}
-    <tr>
+    <tr data-status="{{ b.status }}">
       <td class="code-big" style="font-size:15px">{{ b.verifyCode or '—' }}</td>
       <td>{{ b.day }} {{ b.time }}</td>
       <td>{{ b.emoji or '' }} {{ b.title }}{% if b.role %} <span class="badge">{{ b.role }}</span>{% endif %}</td>
@@ -52,8 +50,8 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="9" class="empty">这个筛选下没有记录</td></tr>
+    <tr><td colspan="9" class="empty">还没有预约记录</td></tr>
     {% endfor %}
+    <tr class="no-hit" hidden><td colspan="9" class="empty">这个筛选下没有记录</td></tr>
   </table>
 </div>
-{% endblock %}
