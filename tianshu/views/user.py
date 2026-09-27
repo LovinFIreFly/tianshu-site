@@ -117,19 +117,23 @@ def register():
                           'first': business.now_ms(), 'last': business.now_ms(),
                           'invite': my_invite, 'banned': False})
             db.write('users', users)
-            # 填了邀请码：两个人各得一张 10 元券（拉新用）
+            # 填了邀请码：双方各得一张抵扣券（金额在「门店设置 → 邀请返利券金额」里改，默认 10 元）
             inviter = db.one('users', invite=invite) if invite else None
+            invite_amount = int(business.get_settings().get('inviteCoupon') or 10)
             if inviter:
                 for who in ({'phone': phone}, inviter):
                     db.update('coupons', lambda rows: rows + [{
                         'id': business.now_ms() + secrets.randbelow(999),
-                        'phone': who.get('phone'), 'amount': 10, 'minAmount': 0, 'used': False,
+                        'phone': who.get('phone'), 'amount': invite_amount, 'minAmount': 0, 'used': False,
                         'exp': business.now_ms() + 90 * 86400000, 'from': '邀请返利'}])
                 business.notify(inviter.get('phone'), '邀请成功 🎁',
-                                '%s 用你的邀请码注册了，送你一张 10 元券' % name, 'coupon')
+                                '%s 用你的邀请码注册了，送你一张 %s 元抵扣券' % (name, invite_amount), 'coupon')
+                business.audit(name, 'user', '用 %s 的邀请码注册，双方各得 %s 元券'
+                               % (inviter.get('username'), invite_amount))
             session.permanent = True
             session['phone'] = phone
-            flash('注册好了，你的邀请码是 %s（朋友用它注册，你俩各得一张券）' % my_invite, 'ok')
+            flash('注册好了，你的邀请码是 %s（朋友用它注册，你俩各得一张 %s 元券）'
+                  % (my_invite, invite_amount), 'ok')
             return redirect(url_for('public.home'))
     return render_template('register.html')
 
@@ -228,7 +232,7 @@ def logout():
 @bp.get('/me')
 @login_required
 def me():
-    u = current_user()
+    u = business.ensure_invite(current_user())      # 老账号没邀请码的话，这里补一个
     phone = str(u.get('phone'))
     bookings = sorted([b for b in db.rows('bookings') if str(b.get('phone')) == phone],
                       key=lambda x: -(x.get('id') or 0))

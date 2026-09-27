@@ -296,7 +296,8 @@
         <div class="between"><span class="sub">登录手机号</span><b>{{ me.phone[:3] }}****{{ me.phone[-4:] }}</b></div>
         <div class="between"><span class="sub">注册时间</span><span class="sub">{{ day_label(me.first) }}</span></div>
         <div class="between"><span class="sub">我的邀请码</span><b class="mono">{{ me.invite or '—' }}</b></div>
-        <p class="sub mt">朋友填你的邀请码注册，你俩各得一张券。</p>
+        <p class="sub mt">朋友填你的邀请码注册，你俩各得一张 ¥{{ settings.inviteCoupon }} 抵扣券
+          （直接抵定金，90 天内有效）。</p>
       </div>
     </div>
 

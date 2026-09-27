@@ -34,6 +34,7 @@ SETTINGS_DEFAULT = {
     "dmFee": 20,               # 指定 DM 的加价（元/人）
     "depositRatio": 0.30,      # 定金比例（包车用这个算）
     "carDeposit": 50,          # 拼车定金：一口价（元），跟人数无关
+    "inviteCoupon": 10,        # 邀请返利：填了邀请码注册，双方各得一张券（元）
     "serviceWechat": "tianshu-kefu",   # 小客服微信号（客人付定金那页显示，记得改成真的）
     "freeCancelHours": 24,     # 开场前 N 小时内取消算临期
     "lateCancelPenalty": 2,    # 临期取消扣的信用分
@@ -46,7 +47,7 @@ SETTINGS_DEFAULT = {
     "banners": [
         {'emoji': '🎭', 'title': '沉浸式开本 · 专业 DM', 'text': '一场好戏，从甜薯开始', 'sid': 0},
         {'emoji': '🚗', 'title': '一个人也能玩', 'text': '去拼车大厅看看，凑齐就开局', 'sid': 0},
-        {'emoji': '🎁', 'title': '邀友各得一张券', 'text': '注册就送，邀请码填上再得一张', 'sid': 0},
+        {'emoji': '🎁', 'title': '邀友各得 ¥10 券', 'text': '注册时填好友的邀请码，你俩各得一张抵扣券', 'sid': 0},
     ],
 }
 

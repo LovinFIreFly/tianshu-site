@@ -109,6 +109,22 @@ def set_role(phone, new_role, by_user):
     return True, msg
 
 
+def ensure_invite(user):
+    """老账号可能没有邀请码（邀请返利是后加的功能），打开「我的」时顺手补一个。
+
+    不补的话，这些账号的「我的 → 资料」里邀请码是「—」，想拉新也没码可用。
+    """
+    if not user or user.get('invite'):
+        return user
+    code = 'TS' + secrets.token_hex(3).upper()
+    users = db.rows('users')
+    for x in users:
+        if str(x.get('phone')) == str(user.get('phone')) and not x.get('invite'):
+            x['invite'] = code
+    db.write('users', users)
+    return dict(user, invite=code)
+
+
 def public_profile(u):
     """给外人看的资料：昵称/头像/性别/年龄段，没手机号"""
     p = u.get('profile') or {}

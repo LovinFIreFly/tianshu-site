@@ -468,7 +468,7 @@ def settings():
     if f.get('dmPayMode') in ('rate', 'fixed'):
         rows['dmPayMode'] = f.get('dmPayMode')
     for k in ('dmFee', 'depositRatio', 'freeCancelHours', 'lateCancelPenalty', 'dmRate', 'dmFixedPay',
-              'carDeposit'):
+              'carDeposit', 'inviteCoupon'):
         if f.get(k):
             try:
                 rows[k] = float(f.get(k))

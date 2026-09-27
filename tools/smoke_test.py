@@ -515,6 +515,27 @@ if rv_mine:
 else:
     check('追评加上了', False, '没找到自己的评价')
 
+# 邀请返利：填好友的邀请码，双方各得一张抵扣券（金额 = 门店设置里的 inviteCoupon，默认 10 元）
+inv_code = next((x.get('invite') for x in jread('users') if x.get('phone') == '13900001111'), None)
+check('注册时自动生成了邀请码', bool(inv_code), str(inv_code))
+cus6 = Client()
+cus6.post('/register', {'phone': '13900008888', 'username': '被邀请号', 'password': '123456',
+                        'password2': '123456', 'code': '1234', 'agree': '1',
+                        'email': 'check6@example.com', 'invite': inv_code})
+inv_cps = [c for c in jread('coupons') if c.get('from') == '邀请返利']
+got_phones = {str(c.get('phone')) for c in inv_cps}
+check('邀请发出两张券（邀请人 + 新注册的人各一张）',
+      {'13900001111', '13900008888'} <= got_phones, '发给了 %s' % '、'.join(sorted(got_phones)))
+check('券是 10 元（不是文案上旧写的 15）',
+      bool(inv_cps) and all(int(c.get('amount') or 0) == 10 for c in inv_cps),
+      '金额 %s' % [c.get('amount') for c in inv_cps])
+s, html = cus6.get('/me?tab=coupons')
+check('新人能在「我的 → 券」里看到这张券', s == 200 and '邀请返利' in html)
+s, html = guest.get('/register')
+check('注册页文案跟设置一致（显示 ¥10）', '¥10' in html)
+s, html = cus6.get('/me?tab=profile')
+check('「资料」里能看到自己的邀请码', 'TS' in html)
+
 # 关注（关注一直存在的 FireFly）
 cus4.post(urllib.parse.quote('/u/FireFly/follow'), {})
 u_follow = next((x for x in jread('users') if x.get('username') == 'FireFly'), {})

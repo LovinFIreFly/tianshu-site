@@ -39,7 +39,8 @@
     <div class="field"><span class="ico" aria-hidden="true">🎁</span>
       <input name="invite" placeholder="邀请码（选填）" aria-label="邀请码"
              value="{{ request.form.get('invite','') }}"></div>
-    <p class="hint-dev">🎁 填写好友的邀请码，你和好友各得一张 ¥15 定金抵扣券</p>
+    {# 金额跟后端同一处设置（门店设置 → 邀请返利券金额），别再写死在这里 #}
+  <p class="hint-dev">🎁 填写好友的邀请码，你和好友各得一张 ¥{{ settings.inviteCoupon }} 抵扣券</p>
 
     <label class="agree">
       <input type="checkbox" name="agree" value="1" checked>
