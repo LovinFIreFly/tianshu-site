@@ -81,24 +81,35 @@ def register():
         if not rate('reg:' + ip, 12, 3600000):
             flash('注册太频繁了，歇一会儿再试', 'warn')
             return render_template('register.html'), 429
-        phone = (request.form.get('phone') or '').strip()
-        name = business.clean(request.form.get('username'), 20)
-        pw = request.form.get('password') or ''
-        invite = (request.form.get('invite') or '').strip().upper()
+        # 跟老版一样：手机号 + 验证码 + 两次密码 + 同意协议，才给建号
+        f = request.form
+        phone = (f.get('phone') or '').strip()
+        email = (f.get('email') or '').strip()
+        code = (f.get('code') or '').strip()
+        name = business.clean(f.get('username'), 20)
+        pw = f.get('password') or ''
+        pw2 = f.get('password2') or ''
+        invite = (f.get('invite') or '').strip().upper()
         if not re.match(r'^1\d{10}$', phone):
             flash('手机号要 11 位', 'warn')
         elif len(pw) < 6:
             flash('密码至少 6 位', 'warn')
+        elif pw != pw2:
+            flash('两次输入的密码不一样', 'warn')
         elif not name:
             flash('起个名字吧', 'warn')
+        elif f.get('agree') != '1':
+            flash('要先同意《用户协议》才能注册', 'warn')
         elif db.one('users', phone=phone):
             flash('这个手机号注册过了，直接登录', 'warn')
         elif db.one('users', username=name):
             flash('名字被占了，换一个', 'warn')
+        elif not business.use_code(phone, 'register', code):
+            flash('验证码不对（本地测试可以直接填 1234）', 'warn')
         else:
             my_invite = 'TS' + secrets.token_hex(3).upper()
             users = db.rows('users')
-            users.append({'phone': phone, 'username': name, 'email': '', 'role': 'user', 'super': False,
+            users.append({'phone': phone, 'username': name, 'email': email, 'role': 'user', 'super': False,
                           'password': hash_password(pw), 'credit': 100, 'creditLogs': [],
                           'profile': {'avatar': '🎭', 'nick': name, 'gender': '', 'age': None},
                           'first': business.now_ms(), 'last': business.now_ms(),
@@ -128,6 +139,7 @@ def forgot():
         phone = (request.form.get('phone') or '').strip()
         code = (request.form.get('code') or '').strip()
         pw = request.form.get('password') or ''
+        pw2 = request.form.get('password2') or ''
         u = db.one('users', phone=phone)
         if not u:
             flash('这个手机号还没注册过', 'warn')
@@ -135,6 +147,8 @@ def forgot():
             flash('验证码不对（本地自己测试可以直接填 1234）', 'warn')
         elif len(pw) < 6:
             flash('新密码至少 6 位', 'warn')
+        elif pw != pw2:
+            flash('两次输入的密码不一样', 'warn')
         else:
             users = db.rows('users')
             for x in users:

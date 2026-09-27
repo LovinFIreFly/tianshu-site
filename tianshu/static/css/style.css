@@ -94,6 +94,44 @@ th{color:var(--text2);font-size:12px;font-weight:600}
 tbody tr:hover{background:rgba(255,255,255,.03)}
 .scroll{overflow-x:auto}
 
+/* ---------- 登录 / 注册 / 找回密码（老版那套居中卡片，原样搬过来的） ---------- */
+.auth-page{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 64px);
+  background:radial-gradient(50% 50% at 50% 0%,rgba(109,40,217,.25),transparent 70%);padding:40px 20px;
+  margin:-22px -18px 0}
+.login-card{width:420px;max-width:100%;background:var(--bg2);border:1px solid var(--line);
+  border-radius:22px;padding:40px 38px;box-shadow:0 30px 80px rgba(0,0,0,.4)}
+.login-card .back{color:var(--text2);font-size:13px;margin-bottom:20px;display:inline-block}
+.login-card .back:hover{color:var(--text)}
+.login-card h2{font-size:24px;font-weight:700}
+.login-card .sub{color:var(--text2);font-size:13px;margin:6px 0 30px}
+/* 卡片里的输入框：老版是「图标 + 占位符」，不带 label */
+.login-card .field{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:0 16px;display:flex;align-items:center;margin-bottom:14px;transition:.2s}
+.login-card .field label{display:none}
+.login-card .field:focus-within{border-color:var(--primary)}
+.login-card .field .ico{color:var(--text2);margin-right:10px;flex:none}
+.login-card .field input{border:0;background:none;height:48px;padding:0;flex:1;min-width:0}
+.login-card .field input::placeholder{color:#6b6790}
+.login-card .code-row{display:flex;gap:12px}
+.login-card .code-row .field{flex:1;min-width:0}
+.login-card .btn-code{width:120px;height:48px;border-radius:12px;background:rgba(139,92,246,.14);
+  color:var(--primary2);font-size:13px;font-weight:600;white-space:nowrap;flex:none;border:0;cursor:pointer}
+.login-card .btn-code:hover{background:rgba(139,92,246,.25)}
+.login-card .btn{height:50px;width:100%;font-size:16px}
+.login-card .foot-line{text-align:center;margin:18px 0 0;font-size:13px;color:var(--text2)}
+.login-card .hint-dev{font-size:11px;color:var(--text2);margin:8px 2px 14px}
+/* 协议勾选（纯 CSS，不用 JS） */
+.login-card .agree{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);
+  margin:4px 2px 24px;cursor:pointer;user-select:none}
+.login-card .agree input{position:absolute;opacity:0;width:0;height:0}
+.login-card .agree .dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--primary2);
+  flex:none;display:flex;align-items:center;justify-content:center;transition:.2s}
+.login-card .agree input:checked ~ .dot{background:var(--primary);border-color:var(--primary)}
+.login-card .agree .dot::after{content:'✓';font-size:10px;color:#fff;opacity:0}
+.login-card .agree input:checked ~ .dot::after{opacity:1}
+.lnk{color:var(--primary2);cursor:pointer}
+@media(max-width:640px){.login-card{padding:26px 18px}.auth-page{padding:24px 14px;margin:-22px -14px 0}}
+
 /* ---------- 提示条 ---------- */
 .flash-wrap{max-width:1080px;margin:12px auto 0;padding:0 18px}
 .flash{padding:10px 14px;border-radius:10px;margin-bottom:8px;font-size:14px;

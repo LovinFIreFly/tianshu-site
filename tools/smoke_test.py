@@ -141,7 +141,8 @@ check('核销码是 6 位', bk and len(str(bk.get('verifyCode'))) == 6)
 check('选角记上了', bk and bk.get('role') == '阿甲')
 # 同一个角色第二个人不能选
 cus2 = Client()
-cus2.post('/register', {'phone': '13900001111', 'username': '自检小号', 'password': '123456'})
+cus2.post('/register', {'phone': '13900001111', 'username': '自检小号', 'password': '123456',
+                        'password2': '123456', 'code': '1234', 'agree': '1'})
 cus2.post('/book', {'sid': sc['id'], 'ts': day, 'time': '19:00', 'players': 2, 'mode': '拼车', 'role': '阿甲'})
 dup = [b for b in jread('bookings') if b.get('role') == '阿甲' and b.get('ts') == day
        and b.get('status') == 'booked']
@@ -336,9 +337,10 @@ total = sum(1 for line in open(os.path.join(ROOT, 'tools', 'smoke_test.py'), enc
             if "check('" in line)
 print('⑫ 账号安全 / 改期 / 车队详情 / 评价细节')
 s, html = guest.get('/forgot')
-check('找回密码页能打开', s == 200 and '重设' in html)
+check('找回密码页能打开', s == 200 and '重置密码' in html and 'login-card' in html)
 cus5 = Client()
-cus5.post('/register', {'phone': '13900002222', 'username': '账号安全号', 'password': '123456'})
+cus5.post('/register', {'phone': '13900002222', 'username': '账号安全号', 'password': '123456',
+                        'password2': '123456', 'code': '1234', 'agree': '1'})
 cus5.post('/account/pwd', {'old': '123456', 'password': '654321'})
 u5 = next((x for x in jread('users') if x.get('phone') == '13900002222'), {})
 check('改密码后旧密码失效、新密码能登',
