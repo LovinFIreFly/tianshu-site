@@ -628,8 +628,48 @@ def _post_json(url, payload, headers=None, timeout=15):
     }
     hdr.update(headers or {})
     req = urllib.request.Request(url, data=data, method='POST', headers=hdr)
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return r.status, r.read().decode('utf-8', 'replace')
+    import urllib.error
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return r.status, r.read().decode('utf-8', 'replace')
+    except urllib.error.HTTPError as e:
+        # ★ 服务端的说明在正文里，一定要读出来。
+        # 以前这里直接把异常往外扔，只剩 `str(e)` = "HTTP Error 403: Forbidden" ——
+        # 真正的线索（error code: 1010 / restricted_api_key / domain is not verified）
+        # 全被吞了，人在后台只看得到一句"连不上"，没法修。
+        try:
+            body = e.read().decode('utf-8', 'replace')
+        except Exception:
+            body = ''
+        return e.code, body or str(e)
+
+
+def mail_error_hint(status, text):
+    """把邮件服务的报错翻译成一句"下一步该动哪里"的中文。
+
+    后台那个提示条是写给店主看的，光有 `HTTP Error 403: Forbidden` 等于没说 ——
+    上线当天就是被这种没头没尾的报错卡了半天，所以把已知的几种都写明白。
+    """
+    t = str(text or '').strip()[:220]
+    low = t.lower()
+    if '1010' in low:
+        return ('被 Cloudflare 挡了（error code: 1010）—— 发信程序没带正常 User-Agent，'
+                '说明服务器跑的还是老代码。上去更新一下：\n'
+                'cd /opt/tianshu && git pull && bash deploy/install.sh tianshu.lovinfirefly.cn')
+    if 'api key' in low or 'unauthorized' in low or 'restricted' in low:
+        return ('Resend 不认这把 Key（%s）。去 resend.com → API Keys 重新复制一把'
+                '（注意别粘到空格、别混入换行），贴到上面「API Key」栏再测' % t)
+    if 'only send testing emails' in low or 'your own email' in low or 'own email address' in low:
+        return ('测试发件人 onboarding@resend.dev 只能发给"注册 Resend 的那个邮箱"。'
+                '想给客人发：先在 resend.com 的 Domains 里验证 lovinfirefly.cn（加几条 DNS），'
+                '再把发件人改成 noreply@lovinfirefly.cn')
+    if 'not verified' in low or 'verify' in low and 'domain' in low:
+        return ('发件人的域名没在 Resend 验证过（%s）。去 resend.com → Domains 添加 '
+                'lovinfirefly.cn，按提示加 SPF / DKIM 的 DNS 记录，验证通过再改发件人' % t)
+    if 'name resolution' in low or 'getaddrinfo' in low or 'timed out' in low:
+        return ('服务器连不上 api.resend.com（网络/DNS 问题）：%s —— 在服务器上跑一下 '
+                '`curl -I https://api.resend.com` 看看通不通' % t)
+    return '%s：%s' % (status, t)
 
 
 def send_mail(to, subject, body, st=None, code=''):
@@ -658,11 +698,12 @@ def send_mail(to, subject, body, st=None, code=''):
         try:
             status, resp = _post_json('https://api.resend.com/emails', payload,
                                       {'Authorization': 'Bearer ' + key})
-            if 200 <= status < 300:
-                return True, ''
-            return False, 'Resend 返回 %s：%s' % (status, resp[:140])
         except Exception as e:
-            return False, '连不上 Resend：%s' % str(e)[:140]
+            # 到不了服务器（DNS / 超时 / 端口不通）
+            return False, mail_error_hint(-1, '%s: %s' % (type(e).__name__, e))
+        if 200 <= status < 300:
+            return True, ''
+        return False, mail_error_hint(status, resp)
 
     if provider == 'webhook':
         url = str(st.get('mailWebhook') or '').strip()
