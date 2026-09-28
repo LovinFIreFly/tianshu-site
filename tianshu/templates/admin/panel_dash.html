@@ -90,8 +90,33 @@
         <div class="field"><label>首页轮播（一行一条：表情|标题|一句话|剧本id）</label>
           <textarea name="banners" rows="4">{% for b in (settings.banners or []) %}{{ b.emoji or '🎭' }}|{{ b.title or '' }}|{{ b.text or '' }}|{{ b.sid or 0 }}
 {% endfor %}</textarea></div>
+        {# 验证码发信：填了才真发邮件（客人注册/找回密码用）；留空只打印在服务器控制台里 #}
+        <h3 style="margin-top:var(--sp-6)">验证码发信（邮箱）</h3>
+        <p class="sub">客人注册 / 找回密码的验证码从这里发出。用阿里云「邮件推送」就是：
+          <b>smtpdm.aliyun.com</b> + 端口 <b>465</b> + 你的发信地址 + 控制台里设的 <b>SMTP 密码</b>。
+          留空 = 不真发（只打印在跑服务的黑窗口里，本机自测够用）。</p>
+        <div class="field"><label>SMTP 服务器</label>
+          <input name="smtpHost" value="{{ settings.smtpHost }}" placeholder="smtpdm.aliyun.com"></div>
+        <div class="field"><label>端口（465 = SSL，推荐；587 = STARTTLS）</label>
+          <input name="smtpPort" value="{{ settings.smtpPort }}"></div>
+        <div class="field"><label>发信地址（= 登录账号）</label>
+          <input name="smtpUser" value="{{ settings.smtpUser }}" placeholder="noreply@lovinfirefly.cn"></div>
+        <div class="field"><label>SMTP 密码（邮件推送控制台里单独设的那个）</label>
+          <input name="smtpPass" type="password" value="{{ settings.smtpPass }}" autocomplete="new-password"></div>
+        <div class="field"><label>发件人显示地址（可留空，默认同发信地址）</label>
+          <input name="smtpFrom" value="{{ settings.smtpFrom }}"></div>
         <button class="btn btn-primary btn-block" type="submit">保存设置</button>
       </form>
+    </div>
+
+    <div class="panel mt">
+      <h3>发一封测试邮件</h3>
+      <form method="post" action="{{ url_for('admin.mail_test') }}" class="form-inline">
+        <div class="field" style="flex:1 1 220px;margin:0"><label>收件邮箱</label>
+          <input name="to" type="email" value="{{ me.email or '' }}" placeholder="你的邮箱"></div>
+        <button class="btn btn-sm" type="submit">发测试邮件</button>
+      </form>
+      <p class="sub mt">把上面的 SMTP 填好并「保存设置」后再点这个 —— 收到邮件就说明验证码能正常发出去了。</p>
     </div>
 
     <h2>最近操作</h2>

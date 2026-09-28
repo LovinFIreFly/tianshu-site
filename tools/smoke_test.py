@@ -434,6 +434,19 @@ except Exception:
 check('公网（用域名访问）拿 1234 注册不了（后门已堵）',
       not any(u.get('username') == '通用码测试号' for u in jread('users')))
 
+# ============ 验证码发信（配了 SMTP 就真发邮件；没配也不该崩） ============
+s, html = admin.get('/admin')
+check('门店设置里有「验证码发信（邮箱）」这几栏', 'smtpHost' in html and 'smtpdm.aliyun.com' in html)
+check('有「发一封测试邮件」入口', '发一封测试邮件' in html)
+check('SMTP 密码那栏是 password 类型（不明文显示）', 'name="smtpPass" type="password"' in html)
+s, html = admin.post('/admin/mail/test', {'to': 'test@example.com'})
+check('没配 SMTP 时点测试邮件只给提示、不报错', '没发出去' in html or '还没配置' in html)
+check('发信配置不当成"已发送"骗人', '已发出' not in html or '没发出去' in html)
+# 没配 SMTP 时，本机要码还是照旧走"打印到黑窗口"这条路
+# 注意：只认成功那句中文字 —— 之前用「黑窗口」当判据，500 错误页里也有这仨字，误判过一次
+s, html = guest.post('/code/send', {'email': 'someone@example.com', 'purpose': 'register'})
+check('没配发信邮箱时，本机要码仍可用（走控制台打印）', '验证码已生成' in html, 'HTTP %s' % s)
+
 # 仓库卫生：该进仓库的代码文件不能被 .gitignore 吞掉
 # 2026-09 踩过：.gitignore 里的 `_*.py` 把 tianshu/__init__.py 也忽略了 ——
 # 本地跑得好好的，clone 到服务器上 `from tianshu import create_app` 直接 ImportError。

@@ -35,6 +35,13 @@ SETTINGS_DEFAULT = {
     "depositRatio": 0.30,      # 定金比例（包车用这个算）
     "carDeposit": 50,          # 拼车定金：一口价（元），跟人数无关
     "inviteCoupon": 10,        # 邀请返利：填了邀请码注册，双方各得一张券（元）
+    # ---- 验证码发信（阿里云「邮件推送」等 SMTP 服务）----
+    # 留空 = 不真发，验证码只打印在运行服务的黑窗口里（本机开发够用；线上必须配，不然客人收不到码）
+    "smtpHost": "",            # 例：smtpdm.aliyun.com
+    "smtpPort": 465,           # 465 = SSL（推荐）；587 = STARTTLS。别用 25，云厂商默认封
+    "smtpUser": "",            # 发信账号，例：noreply@lovinfirefly.cn
+    "smtpPass": "",            # SMTP 密码（在邮件推送控制台单独设置，不是登录密码）
+    "smtpFrom": "",            # 发件人地址，留空就用 smtpUser
     "serviceWechat": "tianshu-kefu",   # 小客服微信号（客人付定金那页显示，记得改成真的）
     "freeCancelHours": 24,     # 开场前 N 小时内取消算临期
     "lateCancelPenalty": 2,    # 临期取消扣的信用分

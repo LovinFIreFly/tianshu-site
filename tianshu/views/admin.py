@@ -453,6 +453,24 @@ def order_confirm(oid):
     return redirect(url_for('admin.dashboard') + '#orders')
 
 
+@bp.post('/mail/test')
+@staff_required
+def mail_test():
+    """发一封测试邮件 —— 验证码发信的配置对不对，点一下就知道（不用真去注册个号）"""
+    to = (request.form.get('to') or '').strip() or str(current_user().get('email') or '')
+    if not to:
+        flash('先填一个收件邮箱', 'warn')
+    else:
+        st = business.get_settings()
+        ok, err = business.send_mail(to, '【%s】发信测试' % (st.get('shopName') or '甜薯剧本杀'),
+                                     '这是一封测试邮件。\n收到它，说明客人注册/找回密码的验证码也能正常发出。\n',
+                                     st)
+        flash('测试邮件已发出 → %s（没看到就翻翻垃圾邮件箱）' % to if ok else '没发出去：%s' % err,
+              'ok' if ok else 'warn')
+        business.audit(current_user().get('username'), role(), '点了发信测试（%s）' % ('成功' if ok else '失败'))
+    return redirect(url_for('admin.dashboard'))
+
+
 @bp.post('/settings')
 @staff_required
 def settings():
@@ -465,6 +483,17 @@ def settings():
     # 小客服微信号：客人点「支付定金」那页上显示的就是它
     if f.get('serviceWechat') is not None:
         rows['serviceWechat'] = business.clean(f.get('serviceWechat'), 40)
+    # 验证码发信（阿里云邮件推送等 SMTP）：密码这类不做长度截断以外处理，原样存
+    for k in ('smtpHost', 'smtpUser', 'smtpFrom'):
+        if f.get(k) is not None:
+            rows[k] = business.clean(f.get(k), 80)
+    if f.get('smtpPass') is not None:
+        rows['smtpPass'] = business.clean(f.get('smtpPass'), 120)
+    if f.get('smtpPort'):
+        try:
+            rows['smtpPort'] = int(float(f.get('smtpPort')))
+        except ValueError:
+            pass
     if f.get('dmPayMode') in ('rate', 'fixed'):
         rows['dmPayMode'] = f.get('dmPayMode')
     for k in ('dmFee', 'depositRatio', 'freeCancelHours', 'lateCancelPenalty', 'dmRate', 'dmFixedPay',

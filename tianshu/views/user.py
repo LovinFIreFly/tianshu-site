@@ -174,14 +174,22 @@ def forgot():
 @bp.post('/code/send')
 def code_send():
     """要一个验证码 —— 只认邮箱（咱们没有短信通道，手机号收不到码）。
-    本地版不真发邮件，验证码打在跑服务的那个黑窗口里（通用码 1234 也一直能用）。"""
+
+    配了发信邮箱（后台「门店设置 → 验证码发信」）就真发邮件；
+    没配（比如店家自己在电脑上跑）就打进运行服务的黑窗口，方便本机测试。
+    """
     email = (request.form.get('email') or '').strip()
     purpose = request.form.get('purpose') or 'reset'
     if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
         flash('先填个有效的邮箱，验证码是发到邮箱的', 'warn')
     else:
-        business.send_code(email, purpose)
-        flash('验证码已生成：去看运行服务的那个黑窗口（或直接填 1234）', 'ok')
+        code, sent, err = business.send_code(email, purpose)
+        if sent:
+            flash('验证码已发到 %s，5 分钟内有效（收不到就翻翻垃圾邮件箱）' % email, 'ok')
+        elif business.is_dev_request():
+            flash('验证码已生成：去看运行服务的那个黑窗口（本机测试也可以直接填 1234）', 'ok')
+        else:
+            flash('店里的发信邮箱还没配好，邮件发不出去（%s）—— 请先联系门店' % (err or '未配置'), 'warn')
     return redirect(request.referrer or url_for('user.me'))
 
 

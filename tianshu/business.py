@@ -565,17 +565,92 @@ def save_upload(file_storage, sub='misc'):
 # ---------------------------------------------------------------- 验证码（只走邮箱）
 # 咱们没有短信通道，验证码一律发到邮箱：注册、找回密码都是往邮箱发。
 # 手机号只当账号用（登录名），别拿它收码 —— 发不出去的。
+def mail_ready(st=None):
+    """发信邮箱配好了没？（后台「门店设置 → 验证码发信」里填）"""
+    st = st or get_settings()
+    return bool(str(st.get('smtpHost') or '').strip() and str(st.get('smtpUser') or '').strip()
+                and str(st.get('smtpPass') or '').strip())
+
+
+def send_mail(to, subject, body, st=None):
+    """发一封邮件（SMTP 直连）。返回 (成功吗, 错误说明)。
+
+    · 465 端口走 SSL（阿里云邮件推送推荐这个）
+    · 587 端口走 STARTTLS
+    · 25 端口不要用 —— 阿里云默认封 25，全世界的云厂商也基本都封（防垃圾邮件）
+    收件人、发信人、密码都从「门店设置」里取，不写在代码里。
+    """
+    import smtplib
+    from email.header import Header
+    from email.mime.text import MIMEText
+    from email.utils import formataddr
+
+    st = st or get_settings()
+    host = str(st.get('smtpHost') or '').strip()
+    user = str(st.get('smtpUser') or '').strip()
+    pw = str(st.get('smtpPass') or '').strip()
+    if not (host and user and pw):
+        return False, '还没配置发信邮箱（后台「概览 → 门店设置 → 验证码发信」里填上）'
+    try:
+        port = int(st.get('smtpPort') or 465)
+    except Exception:
+        port = 465
+    sender = str(st.get('smtpFrom') or '').strip() or user
+    shop = st.get('shopName') or '甜薯剧本杀'
+
+    msg = MIMEText(body, 'plain', 'utf-8')
+    msg['Subject'] = Header(subject, 'utf-8')
+    msg['From'] = formataddr((str(Header(shop, 'utf-8')), sender))
+    msg['To'] = to
+    try:
+        if port == 587:
+            server = smtplib.SMTP(host, port, timeout=15)
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+        else:
+            server = smtplib.SMTP_SSL(host, port, timeout=15)
+        try:
+            server.login(user, pw)
+            server.sendmail(sender, [to], msg.as_string())
+        finally:
+            try:
+                server.quit()
+            except Exception:
+                pass
+        return True, ''
+    except Exception as e:
+        return False, str(e)[:180]
+
+
 def send_code(email, purpose):
-    """发验证码。本地版不真发邮件 —— 验证码打在服务那个黑窗口里，
-    另外通用码 1234 一直能用（方便自己测试）"""
+    """发验证码。返回 (验证码, 是否真发出去了, 错误说明)。
+
+    ※ 2026-09 起这里会**真发邮件**（配了发信邮箱的话）。
+       没配发信邮箱（比如店里本机使用）就退回老办法：码打印在运行服务的黑窗口里。
+       老版（legacy）也是这个思路，注释原话："未接短信服务商时为演示模式" ——
+       区别是现在线上必须真发，因为没人看得到服务器那个黑窗口。
+    """
+    st = get_settings()
     code = '%06d' % secrets.randbelow(1000000)
     rows = [c for c in db.rows('codes') if (c.get('exp') or 0) > now_ms()]      # 先清掉过期的
     rows.append({'id': now_ms(), 'target': str(email).strip().lower(), 'purpose': purpose, 'code': code,
                  'exp': now_ms() + 300000, 'used': False})
     db.write('codes', rows[-50:])
+    to = str(email).strip().lower()
+    if mail_ready(st):
+        shop = st.get('shopName') or '甜薯剧本杀'
+        body = ('你的验证码是：%s\n\n'
+                '5 分钟内有效，请别转发给别人。\n'
+                '如果不是你本人操作，忽略这封邮件就行。\n\n'
+                '—— %s' % (code, shop))
+        ok, err = send_mail(to, '【%s】验证码 %s' % (shop, code), body, st)
+        print('[邮箱验证码] 发往 %s（%s）：%s  →  %s'
+              % (to, purpose, code, '已发送' if ok else ('发送失败：%s' % err)))
+        return code, ok, err
     print('[邮箱验证码] %s（%s）：%s%s'
-          % (email, purpose, code, ('    也可以直接用 %s' % DEMO_CODE) if is_dev_request() else ''))
-    return code
+          % (to, purpose, code, ('    也可以直接用 %s' % DEMO_CODE) if is_dev_request() else ''))
+    return code, False, '还没配置发信邮箱'
 
 
 def is_dev_request():
