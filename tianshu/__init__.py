@@ -59,6 +59,7 @@ def create_app():
         u = current_user()
         return {'me': u, 'my_role': role(), 'settings': business.get_settings(),
                 'unread': business.unread_count(u) if u else 0,
+                'dev_env': business.is_dev_request(),      # 本机开发才显示"通用码 1234"这类提示
                 'day_label': business.day_label, 'year': _t.strftime('%Y'),
                 'theme': _req.cookies.get('theme') or 'light'}     # 深浅色（存在 cookie 里；2026-09 起默认浅色）
 

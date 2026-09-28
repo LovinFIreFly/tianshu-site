@@ -414,6 +414,26 @@ same = [x for x in jread('scripts') if x.get('title') == 'CSV导入本']
 check('带 id 重导是更新而不是新建', len(same) == 1 and int(same[0].get('price')) == 188,
       '库里 %d 条，价格 %s' % (len(same), same[0].get('price') if same else '?'))
 
+# ============ 上线安全：把"后门"堵上（2026-09 上线当天发现） ============
+# 通用码 1234 只在本机开发时认：靠 Host 判断（线上是用域名访问的 → 一律不认）
+_PUB = {'Host': 'tianshu.lovinfirefly.cn', 'X-Forwarded-For': '203.0.113.7'}
+_reqq = urllib.request.Request(BASE + '/register', headers=_PUB)
+_pub_reg = urllib.request.urlopen(_reqq, timeout=15).read().decode('utf-8', 'replace')
+check('公网访问注册页时不再写"可以直接填 1234"', '直接填 1234' not in _pub_reg)
+check('本机开发时还留着那句提示（本地好用）', '本机开发也可以直接填 1234' in guest.get('/register')[1])
+check('登录页已删掉"演示账号"提示', '演示账号' not in guest.get('/login')[1])
+# 用域名（= 公网）拿通用码注册 → 必须失败
+_body = urllib.parse.urlencode({'phone': '13900007777', 'username': '通用码测试号',
+                                'password': '123456', 'password2': '123456', 'code': '1234',
+                                'agree': '1', 'email': 'backdoor@example.com'}).encode()
+_reqp = urllib.request.Request(BASE + '/register', data=_body, method='POST', headers=_PUB)
+try:
+    urllib.request.urlopen(_reqp, timeout=15).read()
+except Exception:
+    pass
+check('公网（用域名访问）拿 1234 注册不了（后门已堵）',
+      not any(u.get('username') == '通用码测试号' for u in jread('users')))
+
 # 仓库卫生：该进仓库的代码文件不能被 .gitignore 吞掉
 # 2026-09 踩过：.gitignore 里的 `_*.py` 把 tianshu/__init__.py 也忽略了 ——
 # 本地跑得好好的，clone 到服务器上 `from tianshu import create_app` 直接 ImportError。

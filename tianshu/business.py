@@ -573,8 +573,38 @@ def send_code(email, purpose):
     rows.append({'id': now_ms(), 'target': str(email).strip().lower(), 'purpose': purpose, 'code': code,
                  'exp': now_ms() + 300000, 'used': False})
     db.write('codes', rows[-50:])
-    print('[邮箱验证码] %s（%s）：%s    也可以直接用 %s' % (email, purpose, code, DEMO_CODE))
+    print('[邮箱验证码] %s（%s）：%s%s'
+          % (email, purpose, code, ('    也可以直接用 %s' % DEMO_CODE) if is_dev_request() else ''))
     return code
+
+
+def is_dev_request():
+    """这次请求算不算"在本机开发"？—— 决定通用码 1234 认不认。
+
+    为什么不能只看 remote_addr：云服务器上 Caddy 反代之后，**所有访客的 remote_addr
+    都是 127.0.0.1** —— 那样通用码就等于对全网开放（谁都能注册、还能重置别人密码）。
+
+    主判断看 **Host**（最可靠，伪造不了）：
+      · 本机开发：浏览器地址是 127.0.0.1:8000 / localhost:8000 / 局域网 192.168.x.x:8000
+      · 线上：地址是自己的域名（tianshu.lovinfirefly.cn）→ 一律不算本地
+    再加上两道：带 X-Forwarded-For（经反代进来）不算；来源 IP 不是内网也不算。
+    （线上 8000 端口没对外开、只走 Caddy，所以"伪造 Host 为 127.0.0.1"根本进不来）
+    """
+    try:
+        from flask import request
+        host = (request.host or '').split(':')[0].strip().lower()
+        if request.headers.get('X-Forwarded-For'):
+            return False
+        ip = request.remote_addr or ''
+    except Exception:
+        return True                    # 没有请求上下文（自检里直接调函数）→ 当本地
+    local_host = (host in ('127.0.0.1', 'localhost', '', '0.0.0.0')
+                  or host.startswith(('192.168.', '10.'))
+                  or any(host.startswith('172.%d.' % n) for n in range(16, 32)))
+    if not local_host:
+        return False                   # 用域名访问 = 线上
+    return (ip in ('', '::1', 'localhost') or ip.startswith(('127.', '10.', '192.168.'))
+            or any(ip.startswith('172.%d.' % n) for n in range(16, 32)))
 
 
 def use_code(email, purpose, code):
@@ -583,7 +613,8 @@ def use_code(email, purpose, code):
     if not code:
         return False
     if code == DEMO_CODE:
-        return True
+        # 通用码只在本机开发时有效。⚠️ 上线后这条就是后门：公网填 1234 能注册、能重置密码
+        return is_dev_request()
     target = str(email or '').strip().lower()
     rows = db.rows('codes')
     for c in rows:
