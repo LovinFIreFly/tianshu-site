@@ -60,16 +60,29 @@ class Client:
         self.jar = http.cookiejar.CookieJar()
         self.op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(self.jar))
 
-    def get(self, path):
+    def get(self, path, headers=None):
         try:
-            with self.op.open(BASE + path, timeout=15) as r:
+            with self.op.open(urllib.request.Request(BASE + path, headers=headers or {}), timeout=15) as r:
                 return r.status, r.read().decode('utf-8', 'replace')
         except urllib.error.HTTPError as e:
             return e.code, e.read().decode('utf-8', 'replace')
 
+    def _csrf(self):
+        """每个访客都有一颗 CSRF 令牌 cookie，写操作必须带着它（跟浏览器里 csrf.js 干的一样）"""
+        for c in self.jar:
+            if c.name == 'csrf':
+                return c.value
+        self.get('/')                     # 还没有令牌：先 GET 一下领一颗
+        for c in self.jar:
+            if c.name == 'csrf':
+                return c.value
+        return ''
+
     def post(self, path, data=None, headers=None):
         body = urllib.parse.urlencode(data or {}).encode('utf-8')
-        req = urllib.request.Request(BASE + path, data=body, method='POST', headers=headers or {})
+        h = {'X-CSRF': self._csrf()}
+        h.update(headers or {})
+        req = urllib.request.Request(BASE + path, data=body, method='POST', headers=h)
         try:
             with self.op.open(req, timeout=15) as r:
                 return r.status, r.read().decode('utf-8', 'replace')
@@ -90,7 +103,8 @@ class Client:
                      'Content-Type: application/octet-stream\r\n\r\n' % (bd, field, filename))
         body = ''.join(parts).encode('utf-8') + content + ('\r\n--%s--\r\n' % bd).encode('utf-8')
         req = urllib.request.Request(BASE + path, data=body, method='POST',
-                                     headers={'Content-Type': 'multipart/form-data; boundary=%s' % bd})
+                                     headers={'Content-Type': 'multipart/form-data; boundary=%s' % bd,
+                                              'X-CSRF': self._csrf()})
         try:
             with self.op.open(req, timeout=20) as r:
                 return r.status, r.read().decode('utf-8', 'replace')
@@ -344,6 +358,25 @@ admin.post('/admin/sessions/new', {'ts': ts_in(0), 'time': '18:30', 'roomId': '�
 s, _h = admin.get('/admin/sessions')
 check('排期页有「全部房间」总览，能看到刚排的场',
       '全部房间' in _h and 'room-grid' in _h and '自检房' in _h and '18:30' in _h)
+
+# 角色图片：后台给角色传一张 → 前台剧本页摆成人物卡 → 能删掉
+_role_sid = jread('scripts')[0].get('id')
+admin.post('/admin/scripts/%s/save' % _role_sid,
+           {'title': '', 'roles': '沈池, 阿澈', 'onSale': '1', 'allowRolePick': '1'})
+_png1 = bytes.fromhex('89504e470d0a1a0a0000000d4948445200000001000000010806000000'
+                      '1f15c4890000000a49444154789c63000100000500010d0a2db400000000'
+                      '49454e44ae426082')
+admin.post_file('/admin/scripts/%s/role-img' % _role_sid, 'img', 'role.png', _png1, {'idx': '0'})
+_sc = next((x for x in jread('scripts') if x.get('id') == _role_sid), {})
+check('能给角色传头像图', bool(((_sc.get('roles') or [{}])[0]).get('img')),
+      str(((_sc.get('roles') or [{}])[0]).get('img')))
+s, _h = guest.get('/scripts/%s' % _role_sid)
+check('前台剧本页把角色摆成人物卡（带图）',
+      s == 200 and 'role-gallery' in _h and '/img/role/' in _h, 'HTTP %s' % s)
+admin.post('/admin/scripts/%s/role-img' % _role_sid, {'idx': '0', 'remove': '1'})
+_sc = next((x for x in jread('scripts') if x.get('id') == _role_sid), {})
+check('角色图能删掉', not ((_sc.get('roles') or [{}])[0]).get('img'))
+
 s, _ = admin.post('/admin/users/13800000000/credit', {'delta': '-10', 'reason': '自检扣分'})
 u = next((x for x in jread('users') if x.get('phone') == '13800000000'), {})
 check('信用分改动生效并留了流水', int(u.get('credit') or 100) <= 90 and u.get('creditLogs'))
@@ -501,16 +534,24 @@ check('本机开发时点按钮会给提示（码在黑窗口 / 也能填 1234�
       '验证码已生成' in _dev_tip and '黑窗口' in _dev_tip, _dev_tip[:60])
 check('登录页已删掉"演示账号"提示', '演示账号' not in guest.get('/login')[1])
 # 用域名（= 公网）拿通用码注册 → 必须失败
-_body = urllib.parse.urlencode({'phone': '13900007777', 'username': '通用码测试号',
-                                'password': '123456', 'password2': '123456', 'code': '1234',
-                                'agree': '1', 'email': 'backdoor@example.com'}).encode()
-_reqp = urllib.request.Request(BASE + '/register', data=_body, method='POST', headers=_PUB)
-try:
-    urllib.request.urlopen(_reqp, timeout=15).read()
-except Exception:
-    pass
+# 走 Client（先领 CSRF 令牌再交表单，和真浏览器一样）—— 这样测的才是"后门堵没堵"，
+# 而不是"令牌对不对"（令牌不对的话请求根本到不了业务逻辑，测了等于没测）
+_pc = Client()
+_pc.get('/register', headers=_PUB)
+_pc.post('/register', {'phone': '13900007777', 'username': '通用码测试号',
+                       'password': '123456', 'password2': '123456', 'code': '1234',
+                       'agree': '1', 'email': 'backdoor@example.com'}, headers=_PUB)
 check('公网（用域名访问）拿 1234 注册不了（后门已堵）',
       not any(u.get('username') == '通用码测试号' for u in jread('users')))
+
+# CSRF 闸门：写操作令牌不对必须被拒（防的是"别的网站骗你的浏览器替你提交"）
+_cc = Client()
+_cc.get('/')                                   # 领一颗令牌
+s, _h = _cc.post('/login', {'account': 'FireFly', 'password': '123123'},
+                 headers={'X-CSRF': 'wrong-token-000'})
+check('写操作的 CSRF 令牌不对会被拒（403）', s == 403, 'HTTP %s' % s)
+s, _h = _cc.post('/login', {'account': 'FireFly', 'password': '123123'})   # 带上正确的令牌
+check('令牌对了就能正常过（不会误伤自己人）', s == 200 or s == 302, 'HTTP %s' % s)
 
 # ============ 验证码发信（配了 SMTP 就真发邮件；没配也不该崩） ============
 s, html = admin.get('/admin')

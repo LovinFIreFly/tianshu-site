@@ -369,6 +369,43 @@ def script_img(sid):
     return redirect(url_for('admin.dashboard') + '#scripts')
 
 
+@bp.post('/scripts/<int:sid>/role-img')
+@staff_required
+def script_role_img(sid):
+    """给某个角色传头像图 / 删图（按 roles 列表里的**下标**定位）
+
+    为什么用下标不用角色名：名字随时可能改，图得跟着那一格走 ——
+    用名字配对的话，改个名图就串到别人头上。表单里带 remove=1 就是删图。
+    """
+    rows = db.rows('scripts')
+    hit = next((s for s in rows if s.get('id') == sid), None)
+    if not hit:
+        flash('没这个剧本', 'warn')
+        return redirect(url_for('admin.dashboard') + '#scripts')
+    roles = hit.get('roles') or []
+    try:
+        idx = int(request.form.get('idx') or -1)
+    except ValueError:
+        idx = -1
+    if idx < 0 or idx >= len(roles):
+        flash('角色对不上（可能刚改过角色名，刷新页面再传一次）', 'warn')
+        return redirect(url_for('admin.dashboard') + '#scripts')
+    who = roles[idx].get('name')
+    if request.form.get('remove'):
+        roles[idx]['img'] = ''
+        flash('「%s」的图删了' % who, 'ok')
+    else:
+        url, err = business.save_upload(request.files.get('img'), 'role')
+        if not url:
+            flash('图没传上：%s' % err, 'warn')
+            return redirect(url_for('admin.dashboard') + '#scripts')
+        roles[idx]['img'] = url
+        flash('「%s」的图换好了（前台立刻能看到）' % who, 'ok')
+    hit['roles'] = roles
+    db.write('scripts', rows)
+    return redirect(url_for('admin.dashboard') + '#scripts')
+
+
 @bp.post('/scripts/<int:sid>/save')
 @staff_required
 def script_save(sid):
@@ -501,7 +538,10 @@ def settings():
         if f.get(k) is not None:
             rows[k] = business.clean(f.get(k), 120)
     if f.get('mailKey') is not None:
-        rows['mailKey'] = business.clean(f.get('mailKey'), 120)
+        _k = business.clean(f.get('mailKey'), 120)
+        # 表单里放的是打码值（••••••••xxxx）：原样交回来 = 没改，别把真 Key 冲掉
+        if _k and '•' not in _k:
+            rows['mailKey'] = _k
     # 发件人昵称：客人收件箱里显示的名字（留空 = 只显示地址），见 business.mail_from_name
     if f.get('mailFromName') is not None:
         rows['mailFromName'] = business.clean(f.get('mailFromName'), 40)

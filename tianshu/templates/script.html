@@ -44,11 +44,25 @@
         {% if sc.allowRolePick %}<span class="badge ok">可提前选角</span>
         {% else %}<span class="pill">到店随机分配</span>{% endif %}
       </h3>
+      {% if sc.roles|selectattr('img')|list %}
+      {# 后台配过角色图的，摆成"人物卡" —— 剧本杀挑角色主要看这张脸 #}
+      <div class="role-gallery">
+        {% for r in sc.roles %}
+        <div class="role-card {{ 'taken' if r.name in taken }}">
+          {% if r.img %}<img src="{{ r.img }}" alt="{{ r.name }}">
+          {% else %}<span class="ph">{{ r.name[0] }}</span>{% endif %}
+          <b>{{ r.name }}</b>
+          {% if r.name in taken %}<span class="badge">已被选</span>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
       <div class="row" style="gap:8px">
         {% for r in sc.roles %}
           <span class="pill">{{ r.name }}{% if r.name in taken %} ✓已选{% endif %}</span>
         {% endfor %}
       </div>
+      {% endif %}
     </div>
     {% endif %}
 

@@ -127,8 +127,10 @@
         <input name="mailFrom" value="{{ settings.mailFrom }}" placeholder="noreply@lovinfirefly.cn"></div>
       <div class="field"><label>发件人昵称（收件箱里显示的名字；留空 = 只显示地址）</label>
         <input name="mailFromName" value="{{ settings.mailFromName }}" placeholder="{{ settings.shopName }}"></div>
-      <div class="field full"><label>Resend API Key（<code>re_</code> 开头；老版 Cloudflare 里的 <code>MAIL_KEY</code> 抄过来即可）</label>
-        <input name="mailKey" type="password" value="{{ settings.mailKey }}" autocomplete="new-password"></div>
+      <div class="field full"><label>Resend API Key（<code>re_</code> 开头。存着的会打码显示；<b>留空 = 不改</b>，贴上新的才会替换）</label>
+        <input name="mailKey" type="password"
+               value="{{ ('••••••••' + settings.mailKey[-4:]) if settings.mailKey else '' }}"
+               autocomplete="new-password" placeholder="粘贴新的 Key 才会替换"></div>
       <div class="field"><label>邮件主题（可留空，默认「【店名】验证码」）</label>
         <input name="mailSubject" value="{{ settings.mailSubject }}"></div>
       <div class="field"><label>Webhook 地址（选 Webhook 时填）</label>

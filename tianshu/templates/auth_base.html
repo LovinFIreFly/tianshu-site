@@ -36,6 +36,8 @@
     <p class="auth-foot">{{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}</p>
   </div>
 
+  <script src="{{ url_for('static', filename='js/csrf.js') }}"></script>
+
   {# 「获取验证码」：用 fetch 只把邮箱发给 /code/send，回一行提示，**不刷页面**。
      为什么不能用 type=submit + formaction：浏览器在提交表单前会先跑一遍整表校验，
      那时验证码/用户名/密码还空着 —— 直接弹"请填写此字段"，请求根本没发出去。

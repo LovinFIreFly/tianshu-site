@@ -40,8 +40,12 @@ def check(name, ok, note=''):
 def login(account, password):
     jar = http.cookiejar.CookieJar()
     op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+    # 先领一颗 CSRF 令牌再登录（写操作必须带上它 —— 跟浏览器里 csrf.js 干的一样）
+    op.open(BASE + '/', timeout=15).read()
+    tok = next((c.value for c in jar if c.name == 'csrf'), '')
     op.open(urllib.request.Request(BASE + '/login', method='POST',
-                                   data=urllib.parse.urlencode({'account': account, 'password': password}).encode()),
+                                   data=urllib.parse.urlencode({'account': account, 'password': password}).encode(),
+                                   headers={'X-CSRF': tok}),
             timeout=15).read()
     op._jar = jar                   # 留给 peek() 用（不跟着跳转的时候要带上登录 cookie）
     return op

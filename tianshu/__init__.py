@@ -6,9 +6,10 @@
     app = create_app()
 """
 import os
+import secrets
 from datetime import timedelta
 
-from flask import Flask, jsonify, render_template
+from flask import Flask, abort, g, jsonify, render_template, request
 
 from config import IMG_DIR, ROOMS_DEFAULT, SEED_USERS, SESSION_DAYS, SETTINGS_DEFAULT, TEMPLATES_AUTO_RELOAD
 from tianshu import business
@@ -42,6 +43,10 @@ def create_app():
         PERMANENT_SESSION_LIFETIME=timedelta(days=SESSION_DAYS),
         MAX_CONTENT_LENGTH=4 * 1024 * 1024,          # 表单别传太大（图片走单独上传）
         TEMPLATES_AUTO_RELOAD=TEMPLATES_AUTO_RELOAD,  # 热重载会拖慢每个请求，默认关；开发用 --dev
+        # Cookie 安全标记：HttpOnly 让 JS 读不到登录会话（脚本偷不走）；
+        # SameSite=Lax 让"别的网站骗你点一下"时带不上会话（CSRF 的第一道防线）。
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE='Lax',
     )
 
     from tianshu.views import admin, dm, public, user
@@ -66,6 +71,33 @@ def create_app():
                 'dev_env': business.is_dev_request(),      # 本机开发才显示"通用码 1234"这类提示
                 'day_label': business.day_label, 'year': _t.strftime('%Y'),
                 'theme': _req.cookies.get('theme') or 'light'}     # 深浅色（存在 cookie 里；2026-09 起默认浅色）
+
+    @app.before_request
+    def csrf_guard():
+        """CSRF 防护（double-submit cookie）：**写操作必须带上本站发的令牌**。
+
+        这是"防别人替你操作"的关键一道：令牌放在一个只有本站页面能读到的 cookie 里，
+        别的网站就算骗你点了提交，也读不到你的 cookie、造不出匹配的令牌 → 请求被拒。
+        static/js/csrf.js 负责把令牌自动塞进页面里**所有**表单和 fetch，
+        所以模板里的表单一个都不用改，以后新加的也自动被覆盖。
+
+        顺带把真相说清楚：前端代码永远可以被改（F12 改的是他自己浏览器里的副本），
+        所以真正的防线是——金额、人数、状态、权限全部由**服务端**重新计算和校验，
+        前端传什么都只当参考。这条从设计上就是这么做 的。
+        """
+        g.csrf = request.cookies.get('csrf') or ''
+        if request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
+            sent = request.form.get('_csrf') or request.headers.get('X-CSRF') or ''
+            if not g.csrf or not secrets.compare_digest(str(sent), str(g.csrf)):
+                abort(403, '页面放太久，安全令牌对不上 —— 刷新一下页面再试')
+
+    @app.after_request
+    def csrf_issue(resp):
+        """第一次来的访客还没有令牌：发一颗（跟登录一样长），之后的表单就都带着它"""
+        if not g.get('csrf'):
+            resp.set_cookie('csrf', secrets.token_hex(16), max_age=SESSION_DAYS * 86400,
+                            samesite='Lax', httponly=False)   # 这颗故意让 JS 可读：它不是会话，泄了也无害
+        return resp
 
     @app.get('/health')
     def health():
