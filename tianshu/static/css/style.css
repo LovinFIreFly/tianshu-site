@@ -54,11 +54,12 @@
   --mono:ui-monospace,SFMono-Regular,"JetBrains Mono",Consolas,monospace;
 
   /* —— 字阶：落差拉到 5 倍以上（display 72 / 正文 16.5）—— */
-  --fs-display:72px;  --lh-display:.98;
-  --fs-title:40px;    --lh-title:1.1;
-  --fs-h2:26px;       --lh-h2:1.25;
-  --fs-h3:19px;       --lh-h3:1.4;
-  --fs-lead:19px;     --lh-lead:1.6;     /* 导语 */
+  --fs-display:58px;  --lh-display:1;    /* 72 → 58：巨型标题在手机上要滑两屏才看完 */
+  --fs-title:34px;    --lh-title:1.15;   /* 40 → 34 */
+  --fs-h2:23px;       --lh-h2:1.3;       /* 26 → 23 */
+  --fs-h3:18px;       --lh-h3:1.4;
+  --fs-lead:18px;     --lh-lead:1.6;     /* 导语 */
+  /* 正文 16.5px 不动：这是可读性的底线，再小看着累 */
   --fs-body:16.5px;   --lh-body:1.75;
   --fs-sm:14px;
   --fs-xs:12.5px;
@@ -66,9 +67,13 @@
   --track-kicker:.2em;
   --track-display:-.02em;
 
-  /* —— 间距：8px 基准 —— */
+  /* —— 间距：8px 基准 ——
+     2026-09 收紧过：原来 sp-8~sp-11 是 48/64/96/128，堆到首屏上就是"上下各空一大截"
+     （.hero 上下 128/96、.band 96、后台 128）—— 屏幕上没多少内容，全是留白。
+     主流 App（微信/小红书/美团）的大区块间距普遍 24~40px，所以这一档整体压下来。
+     别再往回加：留白是用来分区的，不是用来占屏幕的。 */
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px;
-  --sp-6:24px; --sp-7:32px; --sp-8:48px; --sp-9:64px; --sp-10:96px; --sp-11:128px;
+  --sp-6:20px; --sp-7:24px; --sp-8:32px; --sp-9:40px; --sp-10:56px; --sp-11:72px; --sp-12:96px;
   --container:1200px;                    /* 编辑式容器比工具站窄一点，行更好读 */
   --measure:66ch;                        /* 正文最大行长 */
 
@@ -154,13 +159,13 @@ hr,.rule{border:0;border-top:1px solid var(--rule);margin:var(--sp-8) 0}
 /* ============================ 3. 版式骨架 ============================ */
 /* 上下留白收紧：以前底部 128px（--sp-11）、顶部 48px，手机上滑半天才看到第二屏内容。
    主流 App（微信/小红书/美团）的内容区上下留白都在 16~32px —— 这里取 32 / 48。 */
-.wrap{max-width:var(--container);margin:0 auto;padding:var(--sp-7) var(--sp-7) var(--sp-8);width:100%}
+.wrap{max-width:var(--container);margin:0 auto;padding:var(--sp-6) var(--sp-7) var(--sp-7);width:100%}
 .row{display:flex;gap:var(--sp-4);flex-wrap:wrap;align-items:center}
 .between{display:flex;justify-content:space-between;align-items:baseline;gap:var(--sp-5);flex-wrap:wrap}
 .two{display:grid;grid-template-columns:1.62fr 1fr;gap:var(--sp-9);align-items:start}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:var(--sp-8) var(--sp-6)}
 .scroll{overflow-x:auto}
-.foot{padding:var(--sp-7) var(--sp-7);border-top:1px solid var(--rule);color:var(--ink-4);
+.foot{padding:var(--sp-6) var(--sp-7);border-top:1px solid var(--rule);color:var(--ink-4);
   font-size:var(--fs-xs);text-align:center}
 /* 整段色块分区：Apple 的"用底色切段"，不靠分割线。
    出血不靠 100vw + overflow 裁剪（那会把 position:fixed 的弹窗一起裁掉 —— 踩过），
@@ -524,7 +529,7 @@ tbody tr:last-child td{border-bottom:0}
 .adm-main .sub{font-size:var(--fs-sm);color:var(--ink-4);margin-top:var(--sp-2)}
 .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--rule);
   border:1px solid var(--rule);margin-bottom:var(--sp-8)}
-.stat-card{background:var(--paper-3);padding:var(--sp-5)}   /* 24 → 20px，格子不再撑得老高 */
+.stat-card{background:var(--paper-3);padding:var(--sp-4)}   /* 24 → 16px，格子不再撑得老高 */
 .stat-card b{display:block;font-family:var(--serif);font-size:34px;font-weight:700;line-height:1.15}
 .stat-card span{font-size:var(--fs-xs);letter-spacing:.06em;color:var(--ink-4)}
 .stat-card .ic{display:none}
@@ -738,8 +743,8 @@ details.spoiler[open] > summary{color:var(--ink);margin-bottom:var(--sp-5)}
 .mobtab{display:none}
 
 @media (max-width:744px){
-  :root{--fs-display:34px;--fs-title:24px;--fs-h2:20px;--fs-body:16px}
-  .wrap{padding:var(--sp-6) var(--sp-4) calc(var(--sp-9) + env(safe-area-inset-bottom))}
+  :root{--fs-display:30px;--fs-title:21px;--fs-h2:18px;--fs-body:16px}
+  .wrap{padding:var(--sp-4) var(--sp-4) calc(72px + env(safe-area-inset-bottom))}
   .band{padding:var(--sp-9) 0}
   .grid{grid-template-columns:repeat(2,1fr);gap:var(--sp-6) var(--sp-4)}
   .juben .cover{aspect-ratio:1/1;padding:var(--sp-4);font-size:52px}
@@ -779,7 +784,7 @@ details.spoiler[open] > summary{color:var(--ink);margin-bottom:var(--sp-5)}
   .banner .slide .t{font-size:24px}
   .banner .slide .emo{font-size:48px}
   .quote{font-size:24px;padding-left:var(--sp-4)}
-  .panel,.card,.adm-panel{padding:var(--sp-5)}
+  .panel,.card,.adm-panel{padding:var(--sp-4)}   /* 20 → 16px：卡片里的"框"不再鼓着 */
   .cust-grid{grid-template-columns:1fr}
   .modal,.modal.small,.modal.mid{width:100%}
   .modal > div{padding-left:var(--sp-4) !important;padding-right:var(--sp-4) !important}
