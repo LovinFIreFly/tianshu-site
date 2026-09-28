@@ -382,11 +382,14 @@ tbody tr:last-child td{border-bottom:0}
   max-width:34ch}
 .hero .btns{display:flex;gap:var(--sp-4);justify-content:center;flex-wrap:wrap}
 /* 搜索胶囊在墨色舞台上，所以它是"浅底深字"：用 stage 令牌，不跟主题翻 */
+/* 搜索胶囊：四周留一样宽的内边距（4px），里面的按钮也吃胶囊圆角。
+   以前是 padding 上面 5px、左边 20px，按钮 44px 高（正好顶满上下）且是小圆角 ——
+   结果只有右边孤零零多出 5px，看着像按钮"从胶囊里戳出来/右边缺一块月牙"。 */
 .search-pill{display:flex;align-items:center;gap:var(--sp-3);width:min(560px,100%);margin:0 auto var(--sp-7);
-  padding:5px 5px 5px var(--sp-5);background:var(--stage-ink);border-radius:var(--r-pill)}
-.search-pill .ico{font-size:15px;color:#78726A}
-.search-pill input{flex:1;min-width:0;height:44px;font-size:15px;color:var(--stage)}
-.search-pill .btn{height:44px;flex:none}
+  padding:4px;background:var(--stage-ink);border-radius:var(--r-pill);overflow:hidden}
+.search-pill .ico{margin-left:var(--sp-4);font-size:15px;color:#78726A}
+.search-pill input{flex:1;min-width:0;height:46px;font-size:15px;color:var(--stage)}
+.search-pill .btn{height:46px;flex:none;border-radius:var(--r-pill);padding:0 var(--sp-6)}
 .hero .stats{display:flex;gap:0;justify-content:center;flex-wrap:wrap;margin-top:var(--sp-9);
   border-top:1px solid var(--stage-hair);max-width:720px;margin-left:auto;margin-right:auto}
 .hero .stats div{flex:1 1 120px;padding:var(--sp-5) var(--sp-3) 0;text-align:center}

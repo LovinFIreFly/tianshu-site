@@ -144,8 +144,11 @@ python tools/smoke_test.py     # 另一个窗口跑自检
 - [x] 店客留言（可回复、会推送）
 - [x] 玩家社区（发帖 / 点赞 / 删帖）
 - [x] DM 结算（按比例分成 / 每场固定场费，两种口径可切）
-- [x] 图片上传（剧本封面、头像）
-- [x] 会员余额抵扣定金（退单退回余额）
+- [x] 图片上传（剧本封面、头像、DM 形象照）
+- [x] 邀请返利（填邀请码，双方各得一张抵扣券，金额后台可改）
+- [x] 定金流程：支付页（加小客服微信）→ 待客服确认 → 管理员确认后才给客人看核销码
+- [x] 后台 DM 成长档案（段位 / 擅长本 / 带本情况 / 客人反馈 / 本月分成）
+- [ ] 会员余额抵扣定金（后端逻辑都留着，界面已撤 —— 要做的话把 7 处 UI 加回来）
 - [x] 剧本 CSV 批量导入导出（Excel 改完导回来）
 - [x] 老数据搬家脚本 + 备份工具 + 一键上线脚本
 - [ ] 手机端 PWA（加到桌面像 App）
@@ -154,21 +157,56 @@ python tools/smoke_test.py     # 另一个窗口跑自检
 
 ## 部署（让它上线，别人也能访问）
 
-三种办法，从省事到正规：
+**先把"现在有哪些东西"说清楚**（2026-09），不然容易改错地方：
+
+| | 在哪 | 是什么 | 能跑新版吗 |
+|---|---|---|---|
+| 代码（新） | GitHub `LovinFireFly/tianshu-site` → `python-rewrite` 分支 | 现在这套 Python 版（Flask + `data/*.json`） | — |
+| 代码（老）+ **现在的线上站** | 同仓库 `main` 分支 → Cloudflare **Pages** 项目 `tianshu-co8` → 域名 `lovinfirefly.cn` | 老的单文件 `index.html` + `functions/`，数据存在 `LovinFireFly/tianshu-data` | ❌ Pages 只能跑静态文件 + JS，跑不了 Python |
+| 公网入口（新） | 本机 `cloudflared` 隧道 → 自己的域名 | 这套 Python 版 | ✅ |
+
+所以：**新版上线走隧道**（不用买服务器、也不用动 Cloudflare Pages 那套）；老的 Pages 站留在那儿当备份，
+哪天不想留了，去 Cloudflare 把 `tianshu-co8` 那个项目停掉就行。
+
+> 别把 `python-rewrite` 合并进 `main` —— 那会触发 Pages 用老架构重新部署，两边对不上。
 
 ### 1. Cloudflare 隧道（推荐，免费，不用服务器）
 
-家里/店里那台电脑开着就能对外服务 —— 已经在用 Cloudflare 的话最顺：
+**① 临时网址（零配置，先用起来）：**
 
 ```powershell
 winget install --id Cloudflare.cloudflared -e     # 装隧道程序（一次就够）
 ```
 
-然后**双击 `启动上线版.bat`**：它会起本地服务，再挂一条隧道，
-窗口里会出现一个 `https://xxxx.trycloudflare.com` 的网址，发给朋友就能用。
-（这个临时网址每次重启都变；想固定用自己域名，去 Cloudflare Zero Trust 建一条 Named Tunnel 绑 `lovinfirefly.cn`。）
+然后**双击 `启动上线版.bat`** → 起本地服务 + 挂隧道，窗口里出现
+`https://xxxx.trycloudflare.com`，发给朋友就能用（这个网址每次重启都会变）。
 
-注意：电脑要一直开着、别睡眠；隧道一开公网就能访问，后台密码别外传。
+**② 固定域名（配一次，一劳永逸）** —— 用已有的 `lovinfirefly.cn`：
+
+```powershell
+cloudflared tunnel login                                        # 浏览器里授权一次，选 lovinfirefly.cn
+cloudflared tunnel create tianshu                               # 建隧道，记住打印的隧道 ID
+cloudflared tunnel route dns tianshu tianshu.lovinfirefly.cn    # 自动加一条 CNAME（子域名随你起）
+```
+
+再建 `C:\Users\junbo\.cloudflared\config.yml`：
+
+```yaml
+tunnel: tianshu
+credentials-file: C:\Users\junbo\.cloudflared\<隧道ID>.json
+ingress:
+  - hostname: tianshu.lovinfirefly.cn
+    service: http://localhost:8000
+  - service: http_status:404
+```
+
+之后**双击 `启动上线版.bat`** 就会自动走固定域名（脚本一看有 config.yml 就切模式，
+没有就还是临时网址）。想后台常驻 + 开机自启：`cloudflared service install`（一次就够）。
+
+> · 隧道是从本机连出去的，所以**不用**改 `LAN_MODE`、也不用在路由器开端口；
+>   Cloudflare 那边自动给 HTTPS 证书，外面只能通过你的域名进来，比直接暴露端口安全。
+> · 数据仍在本地 `data/`；要把老线上（`tianshu-data`）的数据搬过来跑 `python tools/import_cloud.py`。
+> · 电脑要一直开着、别睡眠；隧道一开公网就能访问，后台密码别外传。
 
 ### 2. Railway / Render（有免费档，24 小时在线）
 

@@ -174,12 +174,7 @@
           </select></div>
         {% endif %}
 
-        {% if me and (me.balance or 0) > 0 %}
-        <div class="field" style="display:flex;align-items:center;gap:8px">
-          <input type="checkbox" name="use_balance" value="1" checked style="width:auto">
-          <span class="sub">用余额 ¥{{ me.balance }} 抵定金（能抵多少抵多少，剩下的到店付）</span>
-        </div>
-        {% endif %}
+        {# 用余额抵定金那个勾选撤掉了（余额功能先不做），后端逻辑还留着，想恢复再加回来 #}
 
         {% if me %}
           <button class="btn btn-accent btn-block" type="submit">提交预约</button>

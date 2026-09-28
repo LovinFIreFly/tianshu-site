@@ -31,7 +31,7 @@
           data-cust='{{ {
             'name': nick, 'phone': u.phone, 'credit': cr,
             'role': r.role, 'roleName': r.roleName, 'canEditRole': r.canEditRole,
-            'visits': r.visits, 'spent': r.spent, 'balance': u.balance or 0,
+            'visits': r.visits, 'spent': r.spent,
             'banned': (u.banned or False), 'banReason': u.banReason or '',
             'logs': (u.creditLogs or [])[:6],
             'recent': (r.recent | map(attribute='title') | list)
@@ -75,7 +75,6 @@
         <div class="cell"><b id="c-credit">—</b><span>信用分</span></div>
         <div class="cell"><b id="c-visits">—</b><span>来过几次</span></div>
         <div class="cell"><b id="c-spent">—</b><span>消费(元)</span></div>
-        <div class="cell"><b id="c-balance">—</b><span>余额(元)</span></div>
       </div>
 
       <div class="adm-panel">
@@ -95,19 +94,11 @@
         </form>
       </div>
 
-      <div class="adm-panel">
-        <h3>② 会员充值</h3>
-        <form id="f-money" method="post" class="form-inline">
-          <div class="field" style="flex:0 0 118px;margin:0"><label>充多少(元)</label>
-            <input name="amount" type="number" value="200"></div>
-          <div class="field" style="flex:1 1 140px;margin:0"><label>备注（可不填）</label>
-            <input name="note" placeholder="例：充 300 送 50"></div>
-          <button class="btn btn-sm btn-accent" type="submit">充进去</button>
-        </form>
-      </div>
+      {# 「会员充值」撤掉了：目前不做余额充值（后端 recharge 路由和 balance 字段都还留着，
+         以后想恢复，把这块和下面的 JS 赋值加回来就行） #}
 
       <div class="adm-panel">
-        <h3>③ 角色 / 权限</h3>
+        <h3>② 角色 / 权限</h3>
         <form id="f-role" method="post">
           <div class="row" style="gap:6px;margin-bottom:10px">
             <button type="button" class="chip-sm" data-role="user">普通用户</button>
@@ -121,13 +112,13 @@
           </div>
         </form>
         <p class="sub" style="margin-top:var(--sp-3)">
-          DM 能进 DM 工作台；管理员能进后台（14 个面板全都能看）。<br>
+          DM 能进 DM 工作台；管理员能进后台（后台所有面板都能看）。<br>
           超级管理员的角色改不了；想调管理员，得由超级管理员来操作。
         </p>
       </div>
 
       <div class="adm-panel">
-        <h3>④ 限制 / 恢复</h3>
+        <h3>③ 限制 / 恢复</h3>
         <form id="f-ban" method="post">
           <div class="field" style="margin-bottom:10px"><label>拉黑原因（要拉黑时才填）</label>
             <input name="reason" id="f-banreason" placeholder="例：恶意占座"></div>
@@ -151,7 +142,6 @@
   if (!mask) return;
   var U = {
     credit:  "{{ url_for('admin.set_credit', phone='__P__') }}",
-    money:   "{{ url_for('admin.recharge', phone='__P__') }}",
     ban:     "{{ url_for('admin.ban', phone='__P__') }}",
     role:    "{{ url_for('admin.user_role', phone='__P__') }}",
     detail:  "{{ url_for('admin.user_detail', phone='__P__') }}"
@@ -171,7 +161,7 @@
     byId('c-credit').textContent = c.credit;
     byId('c-visits').textContent = c.visits;
     byId('c-spent').textContent = '¥' + c.spent;
-    byId('c-balance').textContent = '¥' + c.balance;
+
 
     var pill = byId('c-pill');
     pill.textContent = '信用 ' + c.credit + (c.credit >= 90 ? ' · 好' : (c.credit < 60 ? ' · 差' : ' · 一般'));
@@ -181,7 +171,6 @@
     bar.style.background = c.credit >= 90 ? 'var(--ok)' : (c.credit < 60 ? 'var(--bad)' : 'var(--accent)');
 
     byId('f-credit').action = url('credit');
-    byId('f-money').action = url('money');
     byId('f-ban').action = url('ban');
     byId('f-role').action = url('role');
     byId('f-detail').href = url('detail');

@@ -245,8 +245,10 @@ def me():
     for r in db.rows('favs'):
         if str(r.get('phone')) == phone:
             fav_ids = {str(x) for x in r.get('sids') or []}
+    # 侧栏那三格里显示"已付定金"，代替原来的余额（余额功能先撤了）
+    spent = sum(int(o.get('deposit') or 0) for o in orders if o.get('status') == 'paid')
     return render_template('me.html', u=u, bookings=bookings, orders=orders,
-                           coupons=coupons, notices=business.my_notices(u, 20),
+                           coupons=coupons, notices=business.my_notices(u, 20), spent=spent,
                            order_of=order_of, scripts=db.rows('scripts'), fav_ids=fav_ids,
                            reviewed={r.get('bid') for r in db.rows('reviews')},
                            msgs=business.my_messages(u), days=next_days(7))

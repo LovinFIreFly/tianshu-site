@@ -7,8 +7,7 @@
   <div class="panel pay-card">
     <span class="kicker">支付定金</span>
     <div class="pay-amount">¥{{ o.payable if o.payable is not none else o.deposit }}</div>
-    <p class="sub">《{{ o.title }}》{{ o.day }} {{ o.time }} · {{ o.players }} 人
-      {% if o.balanceUsed %} · 余额已抵 ¥{{ o.balanceUsed }}{% endif %}</p>
+    <p class="sub">《{{ o.title }}》{{ o.day }} {{ o.time }} · {{ o.players }} 人</p>
 
     <div class="pay-wx">
       <span class="ico" aria-hidden="true">💬</span>

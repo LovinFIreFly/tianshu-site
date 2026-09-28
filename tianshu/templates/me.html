@@ -14,13 +14,13 @@
       <div class="p-stats">
         <div class="cell"><b>{{ me.credit or 100 }}</b><span>信用分</span></div>
         <div class="cell"><b>{{ coupons|selectattr('used', 'equalto', false)|list|length }}</b><span>可用券</span></div>
-        <div class="cell"><b>{{ me.balance or 0 }}</b><span>余额</span></div>
+        <div class="cell"><b>{{ spent }}</b><span>已付定金</span></div>
       </div>
     </div>
     <div class="menu" data-tabs="me">
       <button type="button" class="mi {{ 'on' if true }}" data-tab="bookings">我的预约<span>{{ bookings|length }} 条 ›</span></button>
       <button type="button" class="mi" data-tab="orders">订单<span>{{ orders|length }} 条 ›</span></button>
-      <button type="button" class="mi" data-tab="coupons">券 / 余额 / 心愿单<span>{{ coupons|length }} 张券 ›</span></button>
+      <button type="button" class="mi" data-tab="coupons">券 / 心愿单<span>{{ coupons|length }} 张券 ›</span></button>
       <button type="button" class="mi" data-tab="notices">消息与留言<span>{{ unread }} 条未读 ›</span></button>
       <button type="button" class="mi" data-tab="profile">资料与安全<span>›</span></button>
     </div>
@@ -49,7 +49,6 @@
     <div class="sub mt">
       {{ b.players }} 人 · 总价 ¥{{ b.amount or 0 }} · 定金 ¥{{ b.deposit or 0 }}
       {% if o %} · 订单：{{ {'unpaid':'待付定金','claimed':'待小客服确认','paid':'已付定金','refunded':'已退款','closed':'已关闭'}.get(o.status, o.status) }}{% endif %}
-      {% if o and o.balanceUsed %} · 余额抵了 ¥{{ o.balanceUsed }}{% if o.payable %}（还需付 ¥{{ o.payable }}）{% endif %}{% endif %}
     </div>
 
     {# 核销码的规矩：定金被小客服确认之后才给客人看。
@@ -180,22 +179,8 @@
       {% endfor %}
     </div>
     <div>
-      <h2>余额 ¥{{ me.balance or 0 }}</h2>
-      <div class="panel">
-        <p class="sub">下单时可以勾选用余额抵定金，退单会退回余额。</p>
-        {% if me.walletLogs %}
-        <div class="mt" style="border-top:1px solid var(--line);padding-top:8px">
-          {% for l in me.walletLogs[:8] %}
-          <div class="between" style="padding:3px 0">
-            <span class="sub">{{ day_label(l.at) }} · {{ l.note or '调整' }}</span>
-            <span class="{{ 'price' if l.delta > 0 }}">{{ '+' if l.delta > 0 }}{{ l.delta }}</span>
-          </div>
-          {% endfor %}
-        </div>
-        {% else %}
-        <p class="sub mt">还没有余额流水</p>
-        {% endif %}
-      </div>
+      {# 会员余额这块撤掉了（2026-09，目前不做充值/余额抵扣）。数据字段和后台逻辑都留着，
+         以后想恢复的话：把这段、下单页的 use_balance、后台用户弹窗的「会员充值」加回来就行。 #}
 
       <h2>心愿单</h2>
       {% set hit = [] %}

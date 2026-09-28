@@ -376,28 +376,22 @@ check('能给剧本传封面', str(sc2.get('img') or '').startswith('/img/cover/
 s, html = guest.get('/scripts/%s' % sc['id'])
 check('封面出现在剧本页', '/img/cover/' in html)
 
-# 会员余额：先充值，再用余额抵定金
+# 会员余额：界面上撤掉了（2026-09，不做充值/余额抵扣）—— 逐页确认"真的看不到"
+s, html = cus4.get('/me')
+check('「我的」里不再出现余额', '余额' not in html)
+s, html = cus4.get('/me?tab=coupons')
+check('那栏改叫「券 / 心愿单」', '券 / 心愿单' in html and '余额' not in html)
+check('侧栏那格换成了「已付定金」', '已付定金' in html)
+s, html = cus4.get('/scripts/%s' % sc['id'])
+check('下单页不再有「用余额抵定金」', 'use_balance' not in html and '抵定金' not in html)
+s, html = admin.get('/admin')
+check('后台用户弹窗里没有「会员充值」', '会员充值' not in html and 'f-money' not in html)
+s, html = admin.get('/admin/users/13800000000')
+check('用户详情页也没有余额', s == 200 and '余额' not in html)
+# 后端逻辑还留着（数据字段没删，以后想恢复不用重写）：充值的口子仍然能用
 admin.post('/admin/users/13800000000/recharge', {'amount': '300', 'note': '自检充值'})
 u_me = next((x for x in jread('users') if x.get('phone') == '13800000000'), {})
-check('充值到账', (u_me.get('balance') or 0) >= 300, '余额 ¥%s' % u_me.get('balance'))
-before_bal = int(u_me.get('balance') or 0)
-cus4.post('/book', {'sid': sc['id'], 'ts': ts_in(6), 'time': '13:00', 'players': 2,
-                    'mode': '包车', 'use_balance': '1'})
-bk4 = next((b for b in jread('bookings') if b.get('ts') == ts_in(6) and b.get('status') == 'booked'), None)
-u_me = next((x for x in jread('users') if x.get('phone') == '13800000000'), {})
-after_bal = int(u_me.get('balance') or 0)
-o4 = next((x for x in jread('pays') if x.get('bid') == (bk4 or {}).get('id')), {})
-check('下单自动用余额抵了定金', (bk4 or {}).get('balanceUsed', 0) > 0 and after_bal < before_bal,
-      '抵了 ¥%s，余额 %s→%s' % ((bk4 or {}).get('balanceUsed'), before_bal, after_bal))
-check('订单记了「余额抵了多少、还需付多少」', 'balanceUsed' in o4 and 'payable' in o4,
-      'payable=¥%s' % o4.get('payable'))
-
-# 退掉这单 → 抵掉的余额退回来
-cus4.post('/order/%s/pay' % o4.get('id'), {})
-cus4.post('/order/%s/refund' % o4.get('id'), {})
-u_me = next((x for x in jread('users') if x.get('phone') == '13800000000'), {})
-check('退单把余额退回来了', int(u_me.get('balance') or 0) == before_bal,
-      '余额 %s（应回到 %s）' % (u_me.get('balance'), before_bal))
+check('后端余额逻辑仍在（只是界面不露）', (u_me.get('balance') or 0) >= 300)
 
 # CSV 导出 / 导入
 s, csv_text = admin.get('/admin/scripts/export')

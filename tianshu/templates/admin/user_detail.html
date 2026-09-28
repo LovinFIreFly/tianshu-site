@@ -48,7 +48,6 @@
     <div class="panel">
       <h3>账号信息</h3>
       <div class="between"><span>信用分</span><b>{{ u.credit or 100 }}</b></div>
-      <div class="between"><span>余额</span><b>¥{{ u.balance or 0 }}</b></div>
       <div class="between"><span>注册时间</span><span class="sub">{{ day_label(u.first) }}</span></div>
       <div class="between"><span>最近活跃</span><span class="sub">{{ day_label(u.last) }}</span></div>
       <div class="between"><span>邀请码</span><span class="sub">{{ u.invite or '—' }}</span></div>
@@ -66,17 +65,7 @@
     </div>
     {% endif %}
 
-    {% if u.walletLogs %}
-    <div class="panel mt">
-      <h3>余额流水</h3>
-      {% for l in u.walletLogs[:8] %}
-      <div class="between" style="padding:3px 0">
-        <span class="sub">{{ l.note or '调整' }}</span>
-        <span>{{ '+' if l.delta > 0 }}{{ l.delta }}</span>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
+    {# 余额流水撤掉了：目前不做充值/余额抵扣 #}
 
     {% if msgs %}
     <div class="panel mt">
