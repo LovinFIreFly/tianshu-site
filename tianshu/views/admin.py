@@ -8,6 +8,8 @@
 import os
 import time
 
+import secrets
+
 from flask import Blueprint, flash, redirect, render_template, request, send_file, url_for
 
 from tianshu import business
@@ -618,10 +620,80 @@ def sessions():
     room_map = {}
     for s in rows:
         room_map.setdefault(s.get('roomId') or '房间待定', []).append(s)
+    # 待安排：客人已经下单、但还没给房间和 DM 的预约 —— 时间客人定了，这里只挑房和 DM
+    pending = [b for b in db.rows('bookings')
+               if b.get('status') == 'booked' and not b.get('sessionId')
+               and (b.get('ts') or 0) >= business.midnight()]
+    pending.sort(key=lambda x: (x.get('ts') or 0, str(x.get('time'))))
+    for b in pending:
+        b['dayTxt'] = business.day_label(b.get('ts') or 0)
     return render_template('admin/panel_sessions.html', rows=rows, ts=ts, view=view,
                            prev=ts - 86400000, nxt=ts + 86400000, day=business.day_label(ts),
-                           week=week, rooms=db.rows('rooms'), dms=dms, room_map=room_map, times=SESSION_TIMES,
-                           scripts=[s for s in db.rows('scripts') if s.get('onSale') is not False])
+                           week=week, rooms=db.rows('rooms'), dms=dms, room_map=room_map,
+                           times=SESSION_TIMES, pending=pending)
+
+
+@bp.post('/bookings/<int:bid>/arrange')
+@staff_required
+def booking_arrange(bid):
+    """把一条预约安排进房间：**时间客人已经定了**，这里只挑房间和 DM。
+
+    同剧本同时段已经有场（比如拼车的另一拨）就并进去，没有就新开一场；
+    一个房间一个时段只演一场，冲突会被拦下来。安排完客人和 DM 都会收到通知。
+    """
+    bookings = db.rows('bookings')
+    hit = next((b for b in bookings if str(b.get('id')) == str(bid)), None)
+    if not hit:
+        flash('没这条预约', 'warn')
+        return redirect(url_for('admin.dashboard') + '#sessions')
+    if hit.get('status') != 'booked' or hit.get('sessionId'):
+        flash('这条预约不在待安排里（可能已取消或已安排过）', 'warn')
+        return redirect(url_for('admin.dashboard') + '#sessions')
+    room = business.clean(request.form.get('roomId'), 20)
+    dm = business.clean(request.form.get('dm'), 20)
+    ts, tm = hit.get('ts') or 0, hit.get('time') or '19:00'
+
+    sessions = db.rows('sessions')
+    ses = next((s for s in sessions if str(s.get('sid')) == str(hit.get('sid'))
+                and s.get('ts') == ts and s.get('time') == tm and s.get('status') == 'open'), None)
+    if ses:
+        used = sum(int(b.get('players') or 0) for b in bookings
+                   if b.get('sessionId') == ses.get('id') and b.get('status') != 'cancelled')
+        if room and (ses.get('roomId') or '') != room and business.room_busy(room, ts, tm):
+            flash('%s 在 %s 已经有别的场了 —— 换一间房' % (room, tm), 'warn')
+            return redirect(url_for('admin.dashboard', ts=ts, view='day') + '#sessions')
+        if room:
+            ses['roomId'] = room
+        if dm:
+            ses['dm'] = dm
+        ses['cap'] = max(int(ses.get('cap') or 0), used) + int(hit.get('players') or 0)
+    else:
+        if room and business.room_busy(room, ts, tm):
+            flash('%s 在 %s 已经有别的场了 —— 换一间房' % (room, tm), 'warn')
+            return redirect(url_for('admin.dashboard', ts=ts, view='day') + '#sessions')
+        room_row = next((r for r in db.rows('rooms') if r.get('name') == room), {})
+        ses = {'id': business.now_ms() + secrets.randbelow(90), 'sid': hit.get('sid'),
+               'title': hit.get('title'), 'ts': ts, 'time': tm, 'roomId': room or '',
+               'dm': dm, 'cap': int(room_row.get('cap') or hit.get('players') or 6),
+               'status': 'open', 'createdAt': business.now_ms()}
+        sessions.append(ses)
+    hit['sessionId'] = ses['id']
+    db.write('sessions', sessions)
+    db.write('bookings', bookings)
+    dm_row = next((u for u in db.rows('users') if str(u.get('phone')) == str(dm)), {})
+    business.notify(hit.get('phone'), '已为你安排房间 ✅',
+                    '《%s》%s %s 安排在 %s，DM：%s —— 到店报核销码就行。'
+                    % (hit.get('title'), hit.get('day'), tm, room or '房间待定',
+                       (dm_row.get('profile') or {}).get('nick') or dm_row.get('username') or '待定'), 'arrange')
+    if dm:
+        business.notify(dm, '新场次',
+                        '《%s》%s %s 在 %s，你来带（%d 人）。'
+                        % (hit.get('title'), hit.get('day'), tm, room or '房间待定',
+                           int(hit.get('players') or 0)), 'sched')
+    business.audit(current_user().get('username'), role(), '安排《%s》%s %s → %s · DM %s'
+                   % (hit.get('title'), hit.get('day'), tm, room or '待定', dm or '待定'))
+    flash('安排好了：%s · %s · DM %s' % (tm, room or '待定', dm or '待定'), 'ok')
+    return redirect(url_for('admin.dashboard', ts=ts, view='day') + '#sessions')
 
 
 @bp.post('/sessions/new')

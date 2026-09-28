@@ -392,6 +392,26 @@ s, _h = admin.get('/admin/sessions')
 check('排期页有「全部房间」总览，能看到刚排的场',
       '全部房间' in _h and 'room-grid' in _h and '自检房' in _h and '18:30' in _h)
 
+# 排期改成「预约驱动」：客人挑时间下单 → 后台出现待安排 → 管理员只挑房间和 DM（时间不能改）
+s, html = admin.get('/admin/sessions')
+check('排期页不再让管理员自己排时间（「排一场」表单没了）',
+      '待安排' in html and '排一场</h3>' not in html)
+cus7.post('/book', {'sid': sc['id'], 'ts_day': iso_of(day), 'time': '13:00', 'players': 2, 'mode': '包车'})
+_bka = next((b for b in jread('bookings') if b.get('phone') == '13900007666'
+             and b.get('status') == 'booked' and not b.get('sessionId')), None)
+s, html = admin.get('/admin/sessions')
+check('客人的新预约出现在「待安排」里', bool(_bka) and '待安排' in html)
+_dm_ph = next((u.get('phone') for u in jread('users') if _bs.has_role(u, 'dm')), '')
+admin.post('/admin/bookings/%s/arrange' % (_bka or {}).get('id'), {'roomId': '自检房', 'dm': _dm_ph})
+_bka = next((b for b in jread('bookings') if b.get('id') == (_bka or {}).get('id')), {})
+check('安排成功（预约绑上了场次）', bool(_bka.get('sessionId')))
+_ses = next((x for x in jread('sessions') if x.get('id') == _bka.get('sessionId')), {})
+check('场次带上了房间和 DM', _ses.get('roomId') == '自检房' and _ses.get('dm') == _dm_ph,
+      '%s / %s' % (_ses.get('roomId'), _ses.get('dm')))
+check('客人收到「已安排房间」通知',
+      any('已为你安排房间' in str(x.get('title')) and '13900007666' in [str(p) for p in (x.get('to') or [])]
+          for x in jread('notices')))
+
 # 角色图片：后台给角色传一张 → 前台剧本页摆成人物卡 → 能删掉
 _role_sid = jread('scripts')[0].get('id')
 admin.post('/admin/scripts/%s/save' % _role_sid,
@@ -446,7 +466,7 @@ same = [x for x in jread('sessions') if x.get('ts') == day5 and x.get('time') ==
         and x.get('roomId') == 'A房']
 check('同一房间同一时段排不了第二场（防撞房）', len(same) == 1, '这间房有 %d 场' % len(same))
 s, html = admin.get('/admin/sessions')
-check('排期页能打开', s == 200 and '排一场' in html)
+check('排期页能打开（预约驱动：有待安排区）', s == 200 and '待安排' in html)
 
 cus4 = Client()
 cus4.post('/login', {'account': '调试debug', 'password': '123123'})

@@ -40,24 +40,38 @@
 </div>
 {% endif %}
 
+{# 排期是「预约驱动」的：客人挑好剧本和时间，这里只负责给每条预约安排房间和 DM ——
+   时间是客人定的，不能在这儿改（要改私下跟客人商量改期）。 #}
 <div class="panel">
-  <h3>排一场</h3>
-  <form class="form-inline" method="post" action="{{ url_for('admin.session_new') }}">
-    <input type="hidden" name="ts" value="{{ ts }}">
-    <div class="field" style="flex:2 1 150px"><label>剧本</label>
-      <select name="sid">{% for s in scripts %}<option value="{{ s.id }}">{{ s.title }}</option>{% endfor %}</select></div>
-    <div class="field" style="flex:0 0 110px"><label>时间</label>
-      <select name="time" required>{% for t in times %}<option {{ 'selected' if t == '19:00' }}>{{ t }}</option>{% endfor %}</select></div>
-    <div class="field" style="flex:0 0 130px"><label>房间</label>
-      <select name="roomId">{% for r in rooms %}<option value="{{ r.name }}">{{ r.name }}</option>{% endfor %}</select></div>
-    <div class="field" style="flex:0 0 120px"><label>DM</label>
-      <select name="dm"><option value="">待定</option>
-        {% for d in dms %}<option value="{{ d.phone }}">{{ d.username }}</option>{% endfor %}</select></div>
-    <div class="field" style="flex:0 0 90px"><label>人数上限</label><input name="cap" type="number" value="6"></div>
-    <button class="btn btn-accent" type="submit">排上</button>
-  </form>
-  {% if not scripts %}<p class="sub mt">还没有剧本 —— 先去「剧本」页加一个，再回来排期</p>{% endif %}
-  {% if not rooms %}<p class="sub mt">还没有房间 —— 在下面的「房间」里加一个</p>{% endif %}
+  <h3>待安排{% if pending %}（{{ pending|length }}）{% endif %}</h3>
+  {% if pending %}
+  <p class="sub" style="margin:0 0 var(--sp-3)">客人挑好时间了 —— 给每条挑个<b>房间</b>和 <b>DM</b> 点「安排」就完成；
+    同剧本同时段会自动并成一场（拼车凑人）。安排完，客人和 DM 都会收到通知。</p>
+  {% for b in pending %}
+  <div class="between" style="padding:var(--sp-3) 0;border-top:1px solid var(--rule);flex-wrap:wrap;gap:8px">
+    <div style="min-width:220px">
+      <b>{{ b.dayTxt }} {{ b.time }}</b> · 《{{ b.title }}》 · {{ b.players }} 人
+      <span class="pill">{{ b.mode or '拼车' }}</span>
+      <div class="sub">{{ b.username }}{% if b.role %} · 想玩 {{ b.role }}{% endif %}
+        {% if b.mode == '拼车' %} · 车主 {{ b.carOwner or b.username }}{% endif %}</div>
+    </div>
+    <form class="row" method="post" action="{{ url_for('admin.booking_arrange', bid=b.id) }}"
+          style="gap:8px;align-items:center;margin:0">
+      <select name="roomId" style="min-width:120px">
+        <option value="">房间…</option>
+        {% for r in rooms %}<option value="{{ r.name }}">{{ r.name }}（{{ r.cap }}人）</option>{% endfor %}
+      </select>
+      <select name="dm" style="min-width:110px">
+        <option value="">DM 待定</option>
+        {% for d in dms %}<option value="{{ d.phone }}">{{ d.username }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-sm btn-primary" type="submit">安排</button>
+    </form>
+  </div>
+  {% endfor %}
+  {% else %}
+  <p class="sub" style="margin:0">没有待安排的预约 —— 客人下单后会出现在这里（同时会给管理员发通知）。</p>
+  {% endif %}
 </div>
 
 {% if view != 'week' %}

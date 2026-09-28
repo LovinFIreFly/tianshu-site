@@ -1214,6 +1214,10 @@ def create_booking(user, form):
            '《%s》%s %s 先给你留着位子了，定金 ¥%d。付完定金、小客服确认到账后，'
            '核销码才会出现在「我的预约」里。'
            % (sc.get('title'), booking['day'], tm, deposit), 'booking')
+    # 门店这边也要第一时间知道：客人挑好时间了，去排期页给这条安排房间和 DM
+    notify_staff('有新预约待安排',
+                 '%s 约《%s》%s %s（%s · %d 人）—— 去排期页给这条安排房间和 DM'
+                 % (user.get('username'), sc.get('title'), booking['day'], tm, mode, players), 'booking')
     audit(user.get('username'), role_of(user),
           '%s《%s》%s %s' % ('上车' if join_car else '预约', sc.get('title'), booking['day'], tm))
     return True, '预约成功！定金 ¥%d —— 付完等小客服确认，核销码就会显示' % deposit, booking
