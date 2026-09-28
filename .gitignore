@@ -16,12 +16,18 @@ venv/
 .vscode/
 .idea/
 
-# 临时脚本（体检、提取用的）
-_*.js
-_*.py
-_check.js
-_c.js
-_f.mjs
+# 临时脚本（体检、提取用的）。
+# ⚠️ 必须带前导斜杠，只在项目根目录匹配！
+# 踩过的坑：写成 `_*.py` 会把 **所有** 以 _ 开头的 py 都忽略掉 —— 包括
+# tianshu/__init__.py 和 tianshu/views/__init__.py，结果本地一切正常、
+# clone 到服务器上 `from tianshu import create_app` 直接 ImportError（2026-09）
+/_*.js
+/_*.mjs
+/_*.py
+/_*.txt
+/_check.js
+/_c.js
+/_f.mjs
 
 # 日志
 *.log
