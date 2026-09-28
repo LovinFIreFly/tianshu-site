@@ -137,6 +137,9 @@
       if (/iPhone|iPad|iPod/i.test(ua)) {
         steps.textContent = 'iPhone：用 Safari 打开本站 → 点底部中间的「分享」按钮 → 选「添加到主屏幕」。'
           + '（用其它浏览器的话，在它们的菜单里找「添加到主屏幕」）';
+      } else if (/Via/i.test(ua)) {
+        steps.textContent = 'Via 浏览器：点右下角「⋯ 菜单」→「添加到桌面」（有的版本叫「创建快捷方式」）→ 桌面出现甜薯图标。'
+          + '（Via 不支持网页自己弹安装框，只能走它自己的菜单 —— 效果一样）';
       } else if (/Quark|UCBrowser|MiuiBrowser|VivoBrowser|HeyTapBrowser|MQQBrowser|Baidu|OppoBrowser/i.test(ua)) {
         steps.textContent = '你这台用的是国产浏览器：点浏览器底部中间的「☰ 菜单」→ 找「添加到桌面」'
           + '（有的叫「收藏到桌面 / 加到桌面」）→ 桌面出现甜薯图标，点开就能用。';

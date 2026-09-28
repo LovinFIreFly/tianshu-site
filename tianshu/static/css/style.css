@@ -152,13 +152,15 @@ h4{font-size:17px;line-height:1.4}
 hr,.rule{border:0;border-top:1px solid var(--rule);margin:var(--sp-8) 0}
 
 /* ============================ 3. 版式骨架 ============================ */
-.wrap{max-width:var(--container);margin:0 auto;padding:var(--sp-8) var(--sp-7) var(--sp-11);width:100%}
+/* 上下留白收紧：以前底部 128px（--sp-11）、顶部 48px，手机上滑半天才看到第二屏内容。
+   主流 App（微信/小红书/美团）的内容区上下留白都在 16~32px —— 这里取 32 / 48。 */
+.wrap{max-width:var(--container);margin:0 auto;padding:var(--sp-7) var(--sp-7) var(--sp-8);width:100%}
 .row{display:flex;gap:var(--sp-4);flex-wrap:wrap;align-items:center}
 .between{display:flex;justify-content:space-between;align-items:baseline;gap:var(--sp-5);flex-wrap:wrap}
 .two{display:grid;grid-template-columns:1.62fr 1fr;gap:var(--sp-9);align-items:start}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:var(--sp-8) var(--sp-6)}
 .scroll{overflow-x:auto}
-.foot{padding:var(--sp-9) var(--sp-7);border-top:1px solid var(--rule);color:var(--ink-4);
+.foot{padding:var(--sp-7) var(--sp-7);border-top:1px solid var(--rule);color:var(--ink-4);
   font-size:var(--fs-xs);text-align:center}
 /* 整段色块分区：Apple 的"用底色切段"，不靠分割线。
    出血不靠 100vw + overflow 裁剪（那会把 position:fixed 的弹窗一起裁掉 —— 踩过），
@@ -192,7 +194,7 @@ hr,.rule{border:0;border-top:1px solid var(--rule);margin:var(--sp-8) 0}
 .masthead .util .sp{flex:1}
 .masthead .util a:hover{color:var(--ink)}
 .masthead .top{display:flex;align-items:center;gap:var(--sp-5);max-width:var(--container);
-  margin:0 auto;padding:var(--sp-4) var(--sp-7) var(--sp-3)}
+  margin:0 auto;padding:var(--sp-3) var(--sp-7) var(--sp-2)}   /* 上下收紧（16/12 → 12/8） */
 .masthead .wordmark{display:flex;align-items:baseline;gap:var(--sp-3);font-family:var(--serif);
   font-size:26px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
 .masthead .wordmark small{font-family:var(--sans);font-size:var(--fs-kicker);
@@ -253,7 +255,9 @@ hr,.rule{border:0;border-top:1px solid var(--rule);margin:var(--sp-8) 0}
 /* ============================ 6. 表单（GOV.UK 纪律） ============================ */
 .field{display:flex;flex-direction:column;gap:6px;margin-bottom:var(--sp-5)}
 .field > label{font-size:var(--fs-xs);letter-spacing:.06em;color:var(--ink-4);font-weight:600}
-.field > input,.field > select,.field > textarea{min-height:48px;padding:0 var(--sp-4);
+/* 输入框 48 → 44px：44 是 Apple/Google 共同的最小触控尺寸，再小手指就点不准了；
+   内边距 16 → 12px，视觉上不再是个"大框"。 */
+.field > input,.field > select,.field > textarea{min-height:44px;padding:0 var(--sp-3);
   border:1px solid var(--rule-strong);border-radius:var(--r-sm);background:var(--paper-3);
   font-size:var(--fs-body);transition:border-color var(--t) var(--ease),box-shadow var(--t) var(--ease)}
 .field > textarea{min-height:104px;padding:var(--sp-3) var(--sp-4);line-height:1.7}
@@ -520,7 +524,7 @@ tbody tr:last-child td{border-bottom:0}
 .adm-main .sub{font-size:var(--fs-sm);color:var(--ink-4);margin-top:var(--sp-2)}
 .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--rule);
   border:1px solid var(--rule);margin-bottom:var(--sp-8)}
-.stat-card{background:var(--paper-3);padding:var(--sp-6)}
+.stat-card{background:var(--paper-3);padding:var(--sp-5)}   /* 24 → 20px，格子不再撑得老高 */
 .stat-card b{display:block;font-family:var(--serif);font-size:34px;font-weight:700;line-height:1.15}
 .stat-card span{font-size:var(--fs-xs);letter-spacing:.06em;color:var(--ink-4)}
 .stat-card .ic{display:none}
@@ -766,7 +770,7 @@ details.spoiler[open] > summary{color:var(--ink);margin-bottom:var(--sp-5)}
   .mobtab a.on{color:var(--ink);font-weight:600}
   .mobtab a.on .ico{opacity:1}
   /* 别让底部条压住最后一段内容（含 iPhone 那条 home 横条的安全区） */
-  .wrap{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+  .wrap{padding:var(--sp-4) var(--sp-4) calc(68px + env(safe-area-inset-bottom))}
   .hero{padding:var(--sp-9) var(--sp-4) var(--sp-8)}
   .hero .stats{border-top:0}
   .hero .stats div{border-top:1px solid var(--stage-hair);padding-top:var(--sp-4)}
