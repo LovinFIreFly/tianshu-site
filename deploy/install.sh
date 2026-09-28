@@ -41,6 +41,14 @@ echo " 域名：$DOMAIN    目录：$DIR    分支：$BRANCH"
 echo "=============================================="
 
 echo "① 先做准备（内存小就加 swap），再装系统依赖…"
+# 清场：如果还有 apt 进程赖着（常见于按了 Ctrl+Z 被"挂起"、或上一次被中断的），
+# 先收拾干净 —— 否则它占着 dpkg 锁，后面所有 apt 都会失败
+if pgrep -f 'apt-get' >/dev/null 2>&1; then
+  echo "   发现还有 apt 进程在（可能被挂起了），先停掉"
+  pkill -9 -f 'apt-get' 2>/dev/null || true
+  sleep 1
+fi
+dpkg --configure -a >/dev/null 2>&1 || true      # 把上次没配完的包收尾
 # 便宜的轻量服务器常见 0.5G 内存 —— 不加 swap 的话 apt/pip 很容易被 OOM 杀掉
 MEM_MB=$(awk '/MemTotal/{print int($2/1024)}' /proc/meminfo 2>/dev/null || echo 0)
 SWAP_MB=$(awk '/SwapTotal/{print int($2/1024)}' /proc/meminfo 2>/dev/null || echo 0)
