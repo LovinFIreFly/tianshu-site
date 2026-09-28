@@ -57,6 +57,14 @@ else
   echo "   内存 ${MEM_MB}MB / swap ${SWAP_MB}MB，够用，跳过"
 fi
 
+# 阿里云的内网镜像（mirrors.cloud.aliyuncs.com）在部分地域 / 轻量机型上很慢甚至直接挂住，
+# 让人以为"卡死了"。换成公网镜像，apt 才走得动（2026-09 在香港轻量上踩过）
+if grep -rqs 'mirrors.cloud.aliyuncs.com' /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null; then
+  sed -i 's|mirrors.cloud.aliyuncs.com|mirrors.aliyun.com|g' \
+    /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+  echo "   已把 apt 源从内网镜像换成公网镜像 mirrors.aliyun.com"
+fi
+
 apt-get update -qq
 apt-get install -y -qq python3 python3-venv python3-pip git curl gnupg \
   debian-keyring debian-archive-keyring apt-transport-https
