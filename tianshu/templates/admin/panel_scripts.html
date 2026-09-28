@@ -77,6 +77,15 @@
         <div class="field" style="flex:0 0 130px;margin:0"><label>类型</label>
           <input name="type" value="{{ s.type or '' }}" placeholder="盒装 / 独家 / 情感"></div>
       </div>
+      <div class="field mt"><label>标签（客人在剧本库筛这个；点预设直接加上，也可以自己打）</label>
+        <input name="tags" id="tags-{{ s.id }}" value="{{ (s.tags or [])|join(', ') }}"
+               placeholder="例：情感, 硬核, 新手友好">
+        <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px">
+          {% for tp in tag_presets %}
+          <button type="button" class="pill" style="padding:4px 10px;cursor:pointer"
+                  onclick="var i=document.getElementById('tags-{{ s.id }}');var a=i.value?i.value.split(/[,，]/):[];a=a.map(function(x){return x.trim();}).filter(Boolean);if(a.indexOf('{{ tp }}')<0){a.push('{{ tp }}');}i.value=a.join(', ');">{{ tp }}</button>
+          {% endfor %}
+        </div></div>
       <div class="field mt"><label>角色（用逗号隔开，顺序就是客人看到的顺序）</label>
         <input name="roles" value="{{ (s.roles or [])|map(attribute='name')|join(', ') }}"
                placeholder="例：沈池, 阿澈, 江雪">

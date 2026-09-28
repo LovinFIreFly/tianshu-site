@@ -1183,7 +1183,9 @@ def create_booking(user, form):
                             else (user.get('username') if mode == '拼车' else None)),
                'carCap': (join_car.get('carCap') if join_car else hi),
                'carMin': (join_car.get('carMin') if join_car else min(lo, players)),
-               'carTags': [], 'reserved': 0, 'sessionId': session_id,
+               'carTags': (list(join_car.get('carTags') or []) if join_car
+                           else [clean(t, 10) for t in form.getlist('carTags') if clean(t, 10)][:4]),
+               'reserved': 0, 'sessionId': session_id,
                'dmPhone': (join_car.get('dmPhone') if join_car else clean(form.get('dmPhone'), 20)),
                'role': role,
                # 到店报这个码核销。**付定金并经小客服确认之前，客人自己看不到它**
@@ -1258,6 +1260,37 @@ def order_action(user, order_id, action, is_staff=False):
                '《%s》%s %s 的定金 ¥%d 收到了 —— 核销码已经出现在「我的预约」里，到店报给 DM 就行。'
                % (order.get('title'), order.get('day'), order.get('time'), order.get('deposit')), 'pay')
         return True, '已确认收到定金 —— 客人那边现在能看到核销码了'
+
+    # 尾款：玩完（核销）之后结清剩下的钱。客人点"我已完成支付"→ claimed；
+    # 客服 / DM 确认到账 → paid，**这时客人的点评才解锁**（玩完直接跑单的口子堵上）。
+    if action == 'claim-bal':
+        bal = max(0, int(order.get('amount') or 0) - int(order.get('deposit') or 0))
+        if order.get('balStatus') == 'paid':
+            return False, '尾款已经确认过了，不用再交'
+        if bal <= 0:
+            return False, '这一单没有尾款要交'
+        order.update(balStatus='claimed', balClaimedAt=now_ms())
+        db.write('pays', pays)
+        notify(order.get('phone'), '尾款已提交，等门店确认',
+               '《%s》%s 的尾款 ¥%d —— 小客服确认到账后，就能去「我的预约」点评这场啦。'
+               % (order.get('title'), order.get('day'), bal), 'pay')
+        notify_staff('有客人提交了尾款，去确认一下',
+                     '%s《%s》的尾款 ¥%d 待确认 —— 确认完客人才能点评。'
+                     % (order.get('username'), order.get('title'), bal), 'pay')
+        return True, '已提交，等小客服确认到账（确认后就能点评了）'
+
+    if action == 'pay-bal':
+        bal = max(0, int(order.get('amount') or 0) - int(order.get('deposit') or 0))
+        if order.get('balStatus') == 'paid':
+            return False, '这单的尾款已经确认过了'
+        order.update(balStatus='paid', balPaidAt=now_ms())
+        db.write('pays', pays)
+        notify(order.get('phone'), '尾款已确认 ✅',
+               '《%s》%s 的尾款 ¥%d 收到了 —— 去「我的预约」点评这场吧，等你一句话～'
+               % (order.get('title'), order.get('day'), bal), 'pay')
+        audit((user or {}).get('username') or '门店', 'staff',
+              '确认《%s》尾款 ¥%d' % (order.get('title'), bal))
+        return True, '已确认收到尾款 —— 客人那边的点评解锁了'
 
     if action == 'refund':
         if order.get('status') not in ('paid', 'unpaid', 'claimed'):

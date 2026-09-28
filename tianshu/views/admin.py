@@ -12,8 +12,8 @@ from flask import Blueprint, flash, redirect, render_template, request, send_fil
 
 from tianshu import business
 from tianshu.db import db
-from tianshu.security import current_user, is_staff, role, staff_required
-from config import DATA_DIR
+from tianshu.security import current_user, dm_required, is_staff, role, staff_required
+from config import DATA_DIR, SESSION_TIMES, TAG_PRESETS
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -248,7 +248,8 @@ def coupon():
 @staff_required
 def scripts():
     """剧本管理：改价、上下架、角色、是否允许客人提前选角"""
-    return render_template('admin/panel_scripts.html', rows=db.rows('scripts'))
+    return render_template('admin/panel_scripts.html', rows=db.rows('scripts'),
+                           tag_presets=TAG_PRESETS)
 
 
 @bp.post('/scripts/new')
@@ -432,6 +433,9 @@ def script_save(sid):
             hit['diff'] = max(1, min(5, int(f.get('diff'))))   # 难度：钳在 1-5，别让人填 99
         except ValueError:
             pass
+    if f.get('tags') is not None:
+        hit['tags'] = [x.strip() for x in str(f.get('tags')).replace('，', ',').split(',')
+                       if x.strip()][:8]                # 标签：最多 8 个，多了前台也摆不下
     if f.get('desc') is not None:
         hit['desc'] = business.clean(f.get('desc'), 200)
     if f.get('roles') is not None:
@@ -499,13 +503,16 @@ def growth():
 
 
 @bp.post('/orders/<int:oid>/confirm')
-@staff_required
+@dm_required
 def order_confirm(oid):
-    """确认收到定金（客人在「支付定金」页点完提交之后，由店里确认）
+    """确认收款（客人在支付页点完「我已完成支付」之后，由店里确认）
 
-    点完这一步，客人的「我的预约」里才会出现核销码 —— 所以钱到账了再来点。
+    定金 / 尾款共用这一颗按钮：按订单当前状态自动挑动作。
+    DM 也能点（带完本当场收尾款最方便）—— 所以闸门是 dm_required，不是 staff_required。
     """
-    ok, msg = business.order_action(current_user(), oid, 'pay', is_staff=True)
+    o = next((x for x in db.rows('pays') if str(x.get('id')) == str(oid)), None)
+    action = 'pay-bal' if (o or {}).get('balStatus') == 'claimed' else 'pay'
+    ok, msg = business.order_action(current_user(), oid, action, is_staff=True)
     flash(msg, 'ok' if ok else 'warn')
     return redirect(url_for('admin.dashboard') + '#orders')
 
@@ -613,7 +620,7 @@ def sessions():
         room_map.setdefault(s.get('roomId') or '房间待定', []).append(s)
     return render_template('admin/panel_sessions.html', rows=rows, ts=ts, view=view,
                            prev=ts - 86400000, nxt=ts + 86400000, day=business.day_label(ts),
-                           week=week, rooms=db.rows('rooms'), dms=dms, room_map=room_map,
+                           week=week, rooms=db.rows('rooms'), dms=dms, room_map=room_map, times=SESSION_TIMES,
                            scripts=[s for s in db.rows('scripts') if s.get('onSale') is not False])
 
 

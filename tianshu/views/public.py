@@ -79,9 +79,10 @@ def home():
     rating = {k: v.get('rating') for k, v in st['byScript'].items()}
     # 累计场次：到今天为止一共排了多少场（含今天的）—— 首页对外不露营业额，就露这个
     day_end = business.midnight() + 86400000
-    done_sessions = len([s for s in db.rows('sessions') if (s.get('ts') or 0) < day_end])
+    served = sum(int(b.get('players') or 0) for b in db.rows('bookings')
+                 if b.get('status') in ('arrived', 'done') and (b.get('ts') or 0) < day_end)
     return render_template('home.html', scripts=feat, stat=st, rating=rating,
-                           banners=business.banners(), done_sessions=done_sessions,
+                           banners=business.banners(), served=served,
                            sessions=business.today_sessions(), cars=business.car_pool()[:3])
 
 
@@ -110,10 +111,11 @@ def scripts():
             continue
         rows.append(s)
 
-    tags = []
-    for s in all_rows:                       # 标签是从剧本里现攒的，不用单独维护
+    from config import TAG_PRESETS
+    tags = list(TAG_PRESETS)                 # 平台常见的分类先摆上，客人一进来就有得筛
+    for s in all_rows:                       # 剧本里自定义的标签也一并露出（去重、保持顺序）
         for t in s.get('tags') or []:
-            if t not in tags:
+            if t and t not in tags:
                 tags.append(t)
     st = business.stats()
     return render_template('scripts.html', scripts=rows, tags=tags,

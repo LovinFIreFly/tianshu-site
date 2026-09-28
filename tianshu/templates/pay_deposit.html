@@ -1,32 +1,39 @@
 {% extends 'base.html' %}
-{% block title %}支付定金 · {{ settings.shopName }}{% endblock %}
-{# 支付定金页：上面是小客服微信，下面一颗「我已完成支付」。
-   点完回「我的」，这一单变成「待小客服确认」，核销码还是不给看 —— 等管理员确认到账才显示。 #}
+{% block title %}支付{{ o.dueKind }} · {{ settings.shopName }}{% endblock %}
+{# 支付页（定金/尾款两用）：上面是小客服微信，下面一颗「我已完成支付」。
+   点完回「我的」，这一单变成「待小客服确认」—— 定金等管理员确认后出核销码；
+   尾款等客服/DM 确认后，客人才解锁点评。 #}
 {% block body %}
 <div class="pay-wrap">
   <div class="panel pay-card">
-    <span class="kicker">支付定金</span>
-    <div class="pay-amount">¥{{ o.payable if o.payable is not none else o.deposit }}</div>
+    <span class="kicker">支付{{ o.dueKind }}</span>
+    <div class="pay-amount">¥{{ o.due }}</div>
     <p class="sub">《{{ o.title }}》{{ o.day }} {{ o.time }} · {{ o.players }} 人</p>
 
     <div class="pay-wx">
       <span class="ico" aria-hidden="true">💬</span>
       <div>
         <b class="mono">{{ settings.serviceWechat }}</b>
-        <div class="sub">小客服微信号 —— 添加后把定金转给它，也可以到店付</div>
+        <div class="sub">小客服微信号 —— 添加后把{{ o.dueKind }}转给它，也可以到店付</div>
       </div>
     </div>
 
-    <form method="post" action="{{ url_for('user.order_act', oid=o.id, action='claim') }}">
+    <form method="post" action="{{ url_for('user.order_act', oid=o.id, action=o.dueAct) }}">
       <button class="btn btn-primary btn-block" type="submit" style="height:50px">我已完成支付</button>
     </form>
 
+    {% if o.dueKind == '定金' %}
     <p class="sub mt">点完这一单会显示「待小客服确认」。小客服确认到账后，核销码才会出现在「我的预约」里。</p>
+    {% else %}
+    <p class="sub mt">点完这一单会显示「待小客服确认」。客服 / DM 确认到账后，就可以去「我的预约」点评这场了。</p>
+    {% endif %}
 
     <div class="row mt" style="gap:8px">
       <a class="btn btn-sm" href="{{ url_for('user.me') }}">← 回我的</a>
+      {% if o.dueKind == '定金' %}
       <form method="post" action="{{ url_for('user.order_act', oid=o.id, action='refund') }}">
         <button class="btn btn-sm" type="submit">取消这一单</button></form>
+      {% endif %}
     </div>
   </div>
 </div>

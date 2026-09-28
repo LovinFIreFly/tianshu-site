@@ -290,6 +290,39 @@ s, html = cus.post('/order/%s/refund' % (o2 or {}).get('id'), {})
 o2 = next((x for x in jread('pays') if x.get('id') == (o2 or {}).get('id')), {})
 check('提前 4 天取消 → 全额退定金', o2.get('status') == 'refunded', '状态=%s' % o2.get('status'))
 
+# 尾款流程（2026-09 新规矩）：核销后不弹评分 → 「立即支付尾款」→ 小客服页提交 → 客服/DM 确认 → 解锁点评
+# 用一个干净的新号走全流程（cus 的名下还有别的单，页面断言会被干扰）
+cus7 = Client()
+cus7.post('/register', {'phone': '13900007666', 'username': '尾款测试号', 'password': '123456',
+                        'password2': '123456', 'code': '1234', 'agree': '1',
+                        'email': 'check7@example.com'})
+cus7.post('/book', {'sid': sc['id'], 'ts_day': iso_of(day), 'time': '19:00', 'players': 2, 'mode': '包车'})
+_bk9 = next((b for b in jread('bookings') if b.get('phone') == '13900007666'
+             and b.get('status') == 'booked'), None)
+_o9 = next((x for x in jread('pays') if x.get('bid') == (_bk9 or {}).get('id')), None)
+check('尾款 = 总价 - 定金（>0 才有得收）',
+      _o9 and int(_o9.get('amount') or 0) - int(_o9.get('deposit') or 0) > 0,
+      '总价 %s 定金 %s' % ((_o9 or {}).get('amount'), (_o9 or {}).get('deposit')))
+s, html = cus7.get('/me')
+check('玩完之前不显示「立即支付尾款」', '立即支付尾款' not in html)
+admin.post('/admin/verify', {'code': (_bk9 or {}).get('verifyCode')})
+s, html = cus7.get('/me')
+check('核销后出现「立即支付尾款」，且不再有「取消 / 退定金」',
+      '立即支付尾款' in html and '取消 / 退定金' not in html)
+_bal9 = int((_o9 or {}).get('amount') or 0) - int((_o9 or {}).get('deposit') or 0)
+s, html = cus7.get('/me/pay/%s' % (_o9 or {}).get('id'))
+check('尾款支付页走小客服，金额是尾款', s == 200 and '尾款' in html and ('¥%d' % _bal9) in html)
+s, _ = cus7.post('/order/%s/claim-bal' % (_o9 or {}).get('id'), {})
+_o9 = next((x for x in jread('pays') if x.get('id') == (_o9 or {}).get('id')), {})
+check('点完成 → 尾款待确认', _o9.get('balStatus') == 'claimed', '状态=%s' % _o9.get('balStatus'))
+s, html = cus7.get('/me')
+check('确认前点评没解锁（没有打几分表单）', '打几分' not in html)
+s, _ = admin.post('/admin/orders/%s/confirm' % (_o9 or {}).get('id'), {})
+_o9 = next((x for x in jread('pays') if x.get('id') == (_o9 or {}).get('id')), {})
+check('客服/DM 确认尾款', _o9.get('balStatus') == 'paid', '状态=%s' % _o9.get('balStatus'))
+s, html = cus7.get('/me')
+check('确认后点评解锁（打几分出现了）', '打几分' in html)
+
 print('⑦ 用户档案 / 改角色 / 发券')
 s, html = admin.get('/admin/users')
 check('用户列表能看到人（里面包含普通用户）', s == 200 and '调试debug' in html)

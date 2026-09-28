@@ -441,6 +441,16 @@ tbody tr:last-child td{border-bottom:0}
 .code-tip{margin:var(--sp-3) 0 0;font-size:var(--fs-xs);color:var(--ink-4);text-align:left}
 .code-tip.bad{color:var(--vermilion)}
 
+/* 星级打分（radio + label，行内倒序）：代替原生 select —— 下拉的选项列表会被面板裁掉
+   （用户截图：★★★ 那格点开只露一半）。点几颗星就是几分，默认 5 星。 */
+.stars{display:inline-flex;flex-direction:row-reverse;gap:2px;font-size:24px;line-height:1}
+.stars input{position:absolute;opacity:0;width:0;height:0}
+.stars label{color:var(--rule-strong);cursor:pointer;transition:transform var(--t) var(--ease),color var(--t)}
+.stars label:hover{transform:scale(1.18)}
+.stars input:checked ~ label,
+.stars label:hover,
+.stars label:hover ~ label{color:#E8A33D}
+
 /* 角色人物卡（剧本站）：后台配了头像就摆成一排圆脸，没配就退回原来的胶囊 */
 .role-gallery{display:flex;gap:var(--sp-4);flex-wrap:wrap;margin-top:var(--sp-3)}
 .role-card{width:96px;display:flex;flex-direction:column;align-items:center;gap:var(--sp-2);text-align:center}
@@ -469,6 +479,7 @@ tbody tr:last-child td{border-bottom:0}
   font-size:14px;color:var(--ink-2);cursor:pointer;user-select:none}
 .chip-check input{position:absolute;opacity:0;width:0;height:0}
 .chip-check:hover{border-color:var(--ink-4)}
+.chip-check:has(input:checked){background:var(--ink);border-color:var(--ink);color:var(--paper)}
 .chip-check.on{background:var(--ink);border-color:var(--ink);color:var(--paper)}
 .chip-check.off{opacity:.45;cursor:not-allowed}
 .auth-card .btn{width:100%;height:48px;font-size:15.5px;margin-top:var(--sp-4)}

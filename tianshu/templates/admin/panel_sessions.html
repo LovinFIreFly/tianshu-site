@@ -46,8 +46,8 @@
     <input type="hidden" name="ts" value="{{ ts }}">
     <div class="field" style="flex:2 1 150px"><label>剧本</label>
       <select name="sid">{% for s in scripts %}<option value="{{ s.id }}">{{ s.title }}</option>{% endfor %}</select></div>
-    <div class="field" style="flex:0 0 120px"><label>时间（自己填）</label>
-      <input name="time" type="time" value="19:00" required></div>
+    <div class="field" style="flex:0 0 110px"><label>时间</label>
+      <select name="time" required>{% for t in times %}<option {{ 'selected' if t == '19:00' }}>{{ t }}</option>{% endfor %}</select></div>
     <div class="field" style="flex:0 0 130px"><label>房间</label>
       <select name="roomId">{% for r in rooms %}<option value="{{ r.name }}">{{ r.name }}</option>{% endfor %}</select></div>
     <div class="field" style="flex:0 0 120px"><label>DM</label>
@@ -148,11 +148,12 @@
     <div class="field" style="flex:2 1 160px"><label>配置</label><input name="dev" placeholder="投影 / 音响 / 换装间"></div>
     <button class="btn" type="submit">加房间</button>
   </form>
-  <div class="row mt" style="gap:8px">
+  <div class="row mt" style="gap:8px;flex-wrap:wrap;align-items:center">
     {% for r in rooms %}
       <span class="pill">{{ r.name }} · {{ r.cap }}人{% if r.dev %} · {{ r.dev }}{% endif %}</span>
-      <form method="post" action="{{ url_for('admin.room_del', rid=r.id) }}" style="display:inline">
-        <button class="btn btn-sm btn-danger" type="submit" onclick="return confirm('删掉这个房间？')">×</button>
+      <form method="post" action="{{ url_for('admin.room_del', rid=r.id) }}" style="display:inline"
+            onsubmit="return confirm('删掉 {{ r.name }}？（已排的场次还留着，只是不再挂在这个房间下）')">
+        <button class="btn btn-sm btn-ghost" type="submit">删除</button>
       </form>
     {% else %}<span class="sub">还没有房间</span>{% endfor %}
   </div>

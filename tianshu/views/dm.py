@@ -30,8 +30,28 @@ def today_panel():
     bookings.sort(key=lambda x: str(x.get('time')))
     month = business.dm_settlement()
     my_row = next((r for r in month['rows'] if str(r.get('dmPhone')) == phone), None)
+    # 我带的场里，有谁的尾款等着确认（客人在支付页点过"我已完成支付"的）
+    pays = {str(x.get('bid')): x for x in db.rows('pays')}
+    bal_wait = []
+    for b in db.rows('bookings'):
+        if b.get('status') not in ('arrived', 'done') or b.get('sessionId') not in sids:
+            continue
+        o = pays.get(str(b.get('id')))
+        if o and o.get('balStatus') == 'claimed':
+            bal_wait.append({'b': b, 'o': o,
+                             'bal': max(0, int(o.get('amount') or 0) - int(o.get('deposit') or 0))})
     return render_template('dm/panel_today.html', sessions=mine, bookings=bookings,
-                           today=business.day_label(business.midnight()), my_row=my_row, month=month['month'])
+                           today=business.day_label(business.midnight()), my_row=my_row,
+                           month=month['month'], bal_wait=bal_wait)
+
+
+@bp.post('/orders/<int:oid>/confirm-bal')
+@dm_required
+def confirm_bal(oid):
+    """DM 确认收到尾款（带完本当场收钱最方便）—— 确认完客人才解锁点评"""
+    ok, msg = business.order_action(current_user(), oid, 'pay-bal', is_staff=True)
+    flash(msg, 'ok' if ok else 'warn')
+    return redirect(url_for('dm.index') + '#today')
 
 
 def _panel_html(key):

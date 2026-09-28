@@ -149,7 +149,17 @@
             <option value="join"{{ ' disabled' if not open_cars }}>加入已有的车（现在 {{ open_cars|length }} 辆有位）</option>
           </select>
           <span class="sub">拼车定金统一 ¥{{ car_deposit|int }}，先付定金占住位子；
-            付完等小客服确认到账，核销码才会出现</span></div>
+            付完等小客服确认到账，核销码才会出现</span>
+          {% if settings.carTags %}
+          <label style="display:block;margin-top:8px">给这车贴标签（可多选，让别人一眼知道什么风格）</label>
+          <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px">
+            {% for t in settings.carTags %}
+            <label class="chip-check" style="padding:6px 12px;font-size:13px">
+              <input type="checkbox" name="carTags" value="{{ t }}"><span>{{ t }}</span></label>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
 
         <div class="field" id="car-pick-box" style="display:none"><label>挑一辆车</label>
           <select name="carId">

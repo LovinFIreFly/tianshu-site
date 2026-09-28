@@ -75,19 +75,26 @@
             style="gap:8px;align-items:flex-end">
         <div class="field" style="flex:1 1 130px;margin:0"><label>新日期</label>
           <select name="ts">{% for d in days %}<option value="{{ d.ts }}">{{ d.label }}</option>{% endfor %}</select></div>
-        <div class="field" style="flex:0 0 130px;margin:0"><label>时间（自己填）</label>
+        <div class="field" style="flex:1 1 190px;margin:0"><label>时间（自己填）</label>
           <input name="time" type="time" value="{{ b.time }}" required></div>
         <button class="btn btn-sm" type="submit">改期</button>
       </form>
     </details>
     {% endif %}
 
-    {% if b.status in ('arrived', 'done') and b.id not in reviewed %}
+    {# 点评解锁：玩完了（arrived/done）**并且**尾款结清（没有尾款，或客服/DM 已确认）——
+       以前一到店就弹打分框，钱还没收齐 ✗（2026-09 用户要求改） #}
+    {% if b.status in ('arrived', 'done') and b.id not in reviewed
+          and (not o or o.balStatus == 'paid' or (o.amount or 0) - (o.deposit or 0) <= 0) %}
     <form class="row mt" method="post" action="{{ url_for('user.review', bid=b.id) }}"
           style="gap:8px;align-items:flex-end;border-top:1px solid var(--line);padding-top:10px">
-      <div class="field" style="max-width:104px;margin:0"><label>打几分</label>
-        <select name="rating"><option value="5">★★★★★</option><option value="4">★★★★</option>
-          <option value="3">★★★</option><option value="2">★★</option><option value="1">★</option></select></div>
+      <div class="field" style="margin:0"><label>打几分（点星星）</label>
+        <div class="stars">
+          {% for i in range(5, 0, -1) %}
+          <input type="radio" name="rating" value="{{ i }}" id="st{{ b.id }}-{{ i }}" {{ 'checked' if i == 5 }}>
+          <label for="st{{ b.id }}-{{ i }}" title="{{ i }} 星">★</label>
+          {% endfor %}
+        </div></div>
       <div class="field" style="flex:1 1 180px;margin:0"><label>说两句（可留空只打分）</label>
         <input name="text" placeholder="剧情 / DM / 房间 都可以聊"></div>
       <div class="field" style="max-width:84px;margin:0"><label>剧情</label>
@@ -112,7 +119,17 @@
       {% elif o and o.status == 'claimed' %}
       <a class="btn btn-sm" href="{{ url_for('user.pay_deposit', oid=o.id) }}">再看支付方式</a>
       {% endif %}
-      {% if b.status != 'cancelled' %}
+      {% if b.status in ('arrived', 'done') %}
+        {# 玩完之后就没有"取消"了 —— 剩下的是结尾款：跳小客服支付页，等客服/DM 确认 #}
+        {% set _bal = ((o.amount or 0) - (o.deposit or 0)) if o else 0 %}
+        {% if o and o.balStatus == 'paid' %}
+          <span class="badge ok">已结清 ✓</span>
+        {% elif o and o.balStatus == 'claimed' %}
+          <a class="btn btn-sm" href="{{ url_for('user.pay_deposit', oid=o.id) }}">尾款待确认 · 再看支付方式</a>
+        {% elif _bal > 0 %}
+          <a class="btn btn-sm btn-primary" href="{{ url_for('user.pay_deposit', oid=o.id) }}">立即支付尾款 ¥{{ _bal }}</a>
+        {% endif %}
+      {% elif b.status != 'cancelled' %}
         {% if o and o.status in ('unpaid','paid') %}
         <form method="post" action="{{ url_for('user.order_act', oid=o.id, action='refund') }}">
           <button class="btn btn-sm" type="submit">取消 / 退定金</button></form>
@@ -229,7 +246,7 @@
             <textarea name="text" rows="3" placeholder="想改时间 / 问价 / 对 DM 有要求…"></textarea></div>
           <div class="row" style="gap:8px;align-items:flex-end">
             <div class="field" style="max-width:132px;margin:0"><label>类型</label>
-              <select name="cat"><option>💡 建议</option><option>⏰ 改时间</option>
+              <select name="cat" style="min-width:150px"><option>💡 建议</option><option>⏰ 改时间</option>
                 <option>💰 问价</option><option>🙋 找人</option><option>😤 投诉</option></select></div>
             <button class="btn btn-sm btn-primary" type="submit">发出去</button>
           </div>
@@ -263,7 +280,7 @@
           <div class="row" style="gap:8px">
             <div class="field" style="flex:1"><label>性别（拼车时别人能看到）</label>
               <select name="gender">
-                <option value="">不说</option>
+                <option value="">保密</option>
                 <option value="男" {{ 'selected' if me.profile.gender == '男' }}>男</option>
                 <option value="女" {{ 'selected' if me.profile.gender == '女' }}>女</option>
               </select></div>
@@ -301,15 +318,21 @@
 
       {# 换绑手机号已经删掉了：咱们只做邮箱验证码，手机号发不了码，就没法验证新号是不是本人的 #}
 
-      <div class="panel">
-        <form method="post" action="{{ url_for('user.account_delete') }}"
-              onsubmit="return confirm('注销后账号和名下数据都会删除，确定？')">
-          <h3>注销账号</h3>
-          <div class="field"><label>输入完整手机号确认</label>
-            <input name="confirm" placeholder="{{ me.phone }}"></div>
-          <button class="btn btn-sm btn-danger" type="submit">注销</button>
-        </form>
-      </div>
+      {# 注销是不可逆的危险操作：默认折起来，不让人手滑点到（也解决了下面一大块空白看着空荡荡） #}
+      <details class="spoiler">
+        <summary>危险区：注销账号（点开才显示）</summary>
+        <div class="panel" style="margin-top:var(--sp-3)">
+          <form method="post" action="{{ url_for('user.account_delete') }}"
+                onsubmit="return confirm('注销后账号和名下数据都会删除，确定？')">
+            <p class="sub" style="margin:0 0 var(--sp-3)">注销 = 账号和名下的预约、券、积分全部删除，<b>不可恢复</b>。
+              输入完整手机号确认（{{ me.phone }}）：</p>
+            <div class="row" style="gap:8px;align-items:center">
+              <input name="confirm" placeholder="输入 {{ me.phone }}" style="max-width:220px">
+              <button class="btn btn-sm btn-danger" type="submit">确认注销</button>
+            </div>
+          </form>
+        </div>
+      </details>
     </div>
   </div>
 </div>
