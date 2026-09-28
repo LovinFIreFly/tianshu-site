@@ -110,14 +110,15 @@ s, html = guest.get('/')
 check('进站先看到欢迎页（不是登录表单）',
       s == 200 and '沉浸式剧本体验' in html and '账号登录' not in html)
 s, html = guest.get('/?browse=1')
-# 用页面特征判断（空库时首页的引导卡里也会出现"账号登录"字样，别拿它当判据）
+# 判据用页面结构：'welcome-card' 只在欢迎页有。
+# 别拿文案当判据 —— 页脚、slogan 都可能撞字（"沉浸式剧本体验"页脚里也有，踩过一次）。
 check('点「先随便逛逛」能进门店首页',
-      s == 200 and '沉浸式剧本体验' not in html and '拼车' in html)
+      s == 200 and 'welcome-card' not in html and '拼车' in html)
 g2 = Client()                    # 另一个"没点过逛逛、但已经逛过剧本库"的游客
 g2.get('/scripts')
 s, html = g2.get('/')
 check('已经在站里逛的人，回首页不会再被欢迎页挡住',
-      s == 200 and '沉浸式剧本体验' not in html)
+      s == 200 and 'welcome-card' not in html)
 for path, want in (('/scripts', '剧本库'), ('/car', '拼车'), ('/login', '登录'), ('/register', '注册')):
     s, html = guest.get(path)
     check('打开 %s' % path, s == 200 and want in html, 'HTTP %s' % s)
@@ -420,7 +421,16 @@ _PUB = {'Host': 'tianshu.lovinfirefly.cn', 'X-Forwarded-For': '203.0.113.7'}
 _reqq = urllib.request.Request(BASE + '/register', headers=_PUB)
 _pub_reg = urllib.request.urlopen(_reqq, timeout=15).read().decode('utf-8', 'replace')
 check('公网访问注册页时不再写"可以直接填 1234"', '直接填 1234' not in _pub_reg)
-check('本机开发时还留着那句提示（本地好用）', '本机开发也可以直接填 1234' in guest.get('/register')[1])
+# 开发提示现在只在"点完按钮"的动态回话里（静态那行删了，免得跟动态提示说两遍）
+try:
+    _dev_tip = json.loads(guest.post('/code/send', {'email': 'dev-tip@example.com',
+                         'purpose': 'register'},
+                         headers={'X-Requested-With': 'fetch'})[1]).get('msg', '')
+except Exception:
+    _dev_tip = ''            # 500 或不是 JSON：当"没给提示"，别让整个自检崩掉
+# 判据要带上成功那句话：光看"黑窗口"不够 —— 出错页里也可能有这仨字（误判过一次）
+check('本机开发时点按钮会给提示（码在黑窗口 / 也能填 1234）',
+      '验证码已生成' in _dev_tip and '黑窗口' in _dev_tip, _dev_tip[:60])
 check('登录页已删掉"演示账号"提示', '演示账号' not in guest.get('/login')[1])
 # 用域名（= 公网）拿通用码注册 → 必须失败
 _body = urllib.parse.urlencode({'phone': '13900007777', 'username': '通用码测试号',

@@ -78,9 +78,10 @@
    可以把 main_class 覆盖成空，自己用 <div class="wrap"> 控制每一段的内容宽度。 #}
 <main class="{% block main_class %}wrap{% endblock %}">{% block body %}{% endblock %}</main>
 
+{# 页脚是给客人看的，别写实现细节（"纯 Python 版 / 数据都在 data/ 里"那套只有自己人看得懂） #}
 <footer class="foot">
-  {{ settings.shopName }} · 纯 Python 版（Flask 服务端渲染）· {{ year }} · 数据都在 data/ 里
-  {% if me %}<div style="margin-top:6px">手机浏览器里可以「添加到桌面」，用起来像 App</div>{% endif %}
+  {{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}
+  {% if me %}<div style="margin-top:6px">手机浏览器「添加到桌面」，下次打开更快、还能全屏玩</div>{% endif %}
 </footer>
 <script src="{{ url_for('static', filename='js/tabs.js') }}" defer></script>
 <script>

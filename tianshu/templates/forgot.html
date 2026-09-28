@@ -24,11 +24,7 @@
     </div>
     <p class="code-tip" data-code-tip hidden></p>
     <input type="hidden" name="purpose" value="reset">
-    {% if dev_env %}
-    <p class="hint-dev" style="text-align:left">本地开发：验证码打印在运行服务的黑窗口里，也可以直接填 1234</p>
-    {% else %}
-    <p class="hint-dev" style="text-align:left">收不到邮件？看看垃圾邮件箱；实在不行请联系门店帮你重置</p>
-    {% endif %}
+    {# 静态提示删了：发码结果由按钮下面那行动态提示说（见 auth_base.html），别重复 #}
 
     <div class="field"><span class="ico" aria-hidden="true">🔒</span>
       <input name="password" type="password" placeholder="新密码（至少 6 位）" aria-label="新密码"

@@ -32,7 +32,8 @@
 
     {% block card %}{% endblock %}
 
-    <p class="auth-foot">{{ settings.shopName }} · 数据都在本地 data/ 里 · {{ year }}</p>
+    {# 登录/注册页的页脚：同样是客人看的，不写"数据都在 data/ 里"这类实现细节 #}
+    <p class="auth-foot">{{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}</p>
   </div>
 
   {# 「获取验证码」：用 fetch 只把邮箱发给 /code/send，回一行提示，**不刷页面**。
