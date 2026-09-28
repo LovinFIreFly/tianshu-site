@@ -761,7 +761,7 @@ details.spoiler[open] > summary{color:var(--ink);margin-bottom:var(--sp-5)}
     background:var(--paper-3);border-top:1px solid var(--rule);
     box-shadow:0 -3px 14px rgba(20,19,18,.07)}
   .mobtab a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
-    padding:var(--sp-2) 0 3px;font-size:var(--fs-xs);color:var(--ink-3);text-decoration:none}
+    padding:var(--sp-2) 0 3px;font-size:var(--fs-xs);color:var(--ink-3);text-decoration:none;cursor:pointer}
   .mobtab a .ico{font-size:19px;line-height:1;opacity:.55}
   .mobtab a.on{color:var(--ink);font-weight:600}
   .mobtab a.on .ico{opacity:1}

@@ -34,7 +34,8 @@
     {% block card %}{% endblock %}
 
     {# 登录/注册页的页脚：同样是客人看的，不写"数据都在 data/ 里"这类实现细节 #}
-    <p class="auth-foot">{{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}</p>
+    <p class="auth-foot">{{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}
+      <button id="install-btn" class="btn btn-sm btn-ghost" style="margin-left:8px">📱 装到桌面</button></p>
   </div>
 
   <script src="{{ url_for('static', filename='js/csrf.js') }}"></script>
@@ -81,6 +82,52 @@
         .catch(function () { say('网络不通，稍后再点一次', true); btn.disabled = false; });
     });
   })();
+  </script>
+  {# 装到桌面的引导：登录页就能装 —— Chrome/Edge 直接弹系统安装框；
+     国产浏览器（夸克/UC/小米/vivo/QQ）和 iPhone 弹出对应的菜单步骤。 #}
+  <div class="mask" id="install-mask">
+    <div class="modal small">
+      <div class="m-head">
+        <div><h2 style="font-size:20px;margin:0">📱 装到桌面</h2></div>
+        <button class="m-close" type="button" id="install-close" aria-label="关闭">✕</button>
+      </div>
+      <div class="m-body">
+        <p id="install-steps" style="margin:0;line-height:1.8">…</p>
+        <p class="sub" style="margin-top:var(--sp-3)">装完桌面就有甜薯图标，打开是全屏独立窗口，
+          和 App 一样；网站更新了它也自动是新版。</p>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var btn = document.getElementById('install-btn');
+      var mask = document.getElementById('install-mask');
+      var steps = document.getElementById('install-steps');
+      if (!btn || !mask || !steps) return;
+      var evt = null;
+      window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); evt = e; });
+      function guide() {
+        var ua = navigator.userAgent;
+        if (/iPhone|iPad|iPod/i.test(ua)) {
+          steps.textContent = 'iPhone：用 Safari 打开本站 → 底部中间「分享」→ 选「添加到主屏幕」。（其它浏览器在各自菜单里找）';
+        } else if (/Quark|UCBrowser|MiuiBrowser|VivoBrowser|HeyTapBrowser|MQQBrowser|Baidu|OppoBrowser/i.test(ua)) {
+          steps.textContent = '你用的是国产浏览器：点底部中间「☰ 菜单」→ 找「添加到桌面」（有的叫「收藏到桌面」）→ 桌面出现甜薯图标。';
+        } else if (/Edg\//i.test(ua)) {
+          steps.textContent = '电脑 Edge：地址栏右侧「安装」小图标点一下；手机 Edge：底部菜单 →「添加到主屏幕」。';
+        } else if (/Chrome|SamsungBrowser/i.test(ua)) {
+          steps.textContent = '安卓 Chrome：右上角菜单 →「安装应用 / 添加到主屏幕」。电脑 Chrome：地址栏右侧「安装」图标。';
+        } else {
+          steps.textContent = '通用做法：浏览器「菜单」→「添加到桌面 / 添加到主屏幕」，装完桌面就有甜薯图标。';
+        }
+        mask.classList.add('show');
+      }
+      btn.addEventListener('click', function () {
+        if (evt) { evt.prompt(); evt = null; return; }
+        guide();
+      });
+      document.getElementById('install-close').addEventListener('click', function () { mask.classList.remove('show'); });
+      mask.addEventListener('click', function (e) { if (e.target === mask) mask.classList.remove('show'); });
+    })();
   </script>
 </body>
 </html>
