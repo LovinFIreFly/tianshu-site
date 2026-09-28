@@ -61,6 +61,15 @@ def create_app():
         import time as _t
 
         from flask import request as _req
+
+        def static_v(fname):
+            """静态文件版本号 = 文件的修改时间。文件一改，URL 就变（?v=1695…），
+            浏览器立刻拉新版 —— 否则手机上老缓存不更新，"明明改了却没变化"（2026-09 用户被坑过）。"""
+            import os as _os
+            try:
+                return int(_os.stat(_os.path.join(app.static_folder, fname)).st_mtime)
+            except OSError:
+                return 0
         u = current_user()
         # my_role 是"主角色"（显示用）；能不能进后台/工作台看 my_admin / my_dm
         # （一个人可以同时是 DM + 管理员，所以是三个独立的量，不是一个 my_role）
@@ -70,7 +79,8 @@ def create_app():
                 'unread': business.unread_count(u) if u else 0,
                 'dev_env': business.is_dev_request(),      # 本机开发才显示"通用码 1234"这类提示
                 'day_label': business.day_label, 'year': _t.strftime('%Y'),
-                'theme': _req.cookies.get('theme') or 'light'}     # 深浅色（存在 cookie 里；2026-09 起默认浅色）
+                'theme': _req.cookies.get('theme') or 'light',     # 深浅色（存在 cookie 里；2026-09 起默认浅色）
+                'static_v': static_v}
 
     @app.before_request
     def csrf_guard():

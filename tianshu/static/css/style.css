@@ -743,7 +743,7 @@ details.spoiler[open] > summary{color:var(--ink);margin-bottom:var(--sp-5)}
 .mobtab{display:none}
 
 @media (max-width:744px){
-  :root{--fs-display:30px;--fs-title:21px;--fs-h2:18px;--fs-body:16px}
+  :root{--fs-display:26px;--fs-title:20px;--fs-h2:18px;--fs-body:16px}
   .wrap{padding:var(--sp-4) var(--sp-4) calc(72px + env(safe-area-inset-bottom))}
   .band{padding:var(--sp-9) 0}
   .grid{grid-template-columns:repeat(2,1fr);gap:var(--sp-6) var(--sp-4)}
@@ -752,16 +752,19 @@ details.spoiler[open] > summary{color:var(--ink);margin-bottom:var(--sp-5)}
   .masthead .util{display:none}
   /* 手机上刊头排两行：① 字标 + 右侧按钮  ② 一整条搜索框。
      以前全挤在一行，搜索被压成 logo 旁边一个小点，根本点不到（2026-09 用户报的）。 */
-  .masthead .top{flex-wrap:wrap;row-gap:var(--sp-3);padding:var(--sp-3) var(--sp-4) var(--sp-2);gap:var(--sp-3)}
-  .masthead .wordmark{order:1;flex:none;font-size:20px}
-  .masthead .acts{order:2;flex:none}
-  .masthead .search{order:3;flex:1 1 100%;max-width:none;height:42px}
-  .masthead .search input{height:40px;font-size:16px}       /* ≥16px：iOS 聚焦时不会把整页放大 */
-  .masthead .search .ico{font-size:16px;margin-left:var(--sp-3)}
-  .masthead .who{max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .masthead .icon-btn{width:40px;height:40px}               /* 手指点得中（Apple 建议 ≥44，40 够用） */
-  .masthead .acts .btn-sm{height:36px;padding:0 var(--sp-3)}
-  .masthead .links{padding:0 var(--sp-4);gap:var(--sp-5)}
+  /* 手机刊头：能压多低压多低 —— 顶栏是每一屏都要占的地方，多 1px 全站少 1px 内容 */
+  .masthead .top{flex-wrap:wrap;row-gap:4px;padding:6px var(--sp-3) 2px;gap:var(--sp-2)}
+  .masthead .wordmark{order:1;flex:none;font-size:17px;gap:var(--sp-2)}
+  .masthead .wordmark small{display:none}
+  .masthead .acts{order:2;flex:none;gap:2px}
+  .masthead .search{order:3;flex:1 1 100%;max-width:none;height:36px}
+  .masthead .search input{height:34px;font-size:16px}       /* 字号仍 ≥16：iOS 聚焦不放大整页 */
+  .masthead .search .ico{font-size:14px;margin-left:var(--sp-2)}
+  .masthead .who{max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+  .masthead .icon-btn{width:34px;height:34px}
+  .masthead .acts .btn-sm{height:30px;padding:0 var(--sp-2);font-size:13px}
+  .masthead .links{padding:0 var(--sp-3);gap:var(--sp-4)}
+  .masthead .links a{padding:var(--sp-2) 0;font-size:13.5px}
   /* iOS 上输入框字号 <16px 时，一聚焦就会把整页放大一下（跳一下很烦）—— 手机上统一 16px */
   input,select,textarea{font-size:16px}
   /* 底部导航：手机单手玩时大拇指够得着的地方（桌面端不显示，见 .mobtab 基础规则） */
@@ -776,8 +779,13 @@ details.spoiler[open] > summary{color:var(--ink);margin-bottom:var(--sp-5)}
   .mobtab a.on .ico{opacity:1}
   /* 别让底部条压住最后一段内容（含 iPhone 那条 home 横条的安全区） */
   .wrap{padding:var(--sp-4) var(--sp-4) calc(68px + env(safe-area-inset-bottom))}
-  .hero{padding:var(--sp-9) var(--sp-4) var(--sp-8)}
-  .hero .stats{border-top:0}
+  /* 手机首屏：原来的 40/16/32 还是嫌高 —— 首屏要一眼看到下面的剧本，别全让标题占了 */
+  .hero{padding:var(--sp-6) var(--sp-4) var(--sp-5)}
+  .hero .kicker{margin-bottom:var(--sp-2)}
+  .hero .slogan{font-size:15px;margin:var(--sp-3) auto var(--sp-5)}
+  .hero .stats{margin-top:var(--sp-5)}
+  .hero .stats div{border-top:1px solid var(--stage-hair);padding-top:var(--sp-3)}
+  .hero .stats b{font-size:22px}
   .hero .stats div{border-top:1px solid var(--stage-hair);padding-top:var(--sp-4)}
   .banner{height:220px}
   .banner .slide{padding:0 var(--sp-4)}
