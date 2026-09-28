@@ -12,6 +12,7 @@
 import http.cookiejar
 import json
 import os
+import subprocess
 import sys
 import time
 import urllib.error
@@ -412,6 +413,19 @@ admin.post_file('/admin/scripts/import', 'csv', 'scripts.csv', ('\ufeff' + head 
 same = [x for x in jread('scripts') if x.get('title') == 'CSV导入本']
 check('带 id 重导是更新而不是新建', len(same) == 1 and int(same[0].get('price')) == 188,
       '库里 %d 条，价格 %s' % (len(same), same[0].get('price') if same else '?'))
+
+# 仓库卫生：该进仓库的代码文件不能被 .gitignore 吞掉
+# 2026-09 踩过：.gitignore 里的 `_*.py` 把 tianshu/__init__.py 也忽略了 ——
+# 本地跑得好好的，clone 到服务器上 `from tianshu import create_app` 直接 ImportError。
+try:
+    _ig = subprocess.run(['git', 'ls-files', '--others', '--ignored', '--exclude-standard'],
+                         cwd=ROOT, capture_output=True, text=True, timeout=15).stdout.splitlines()
+    _bad = [f for f in _ig
+            if f.endswith(('.py', '.html', '.js', '.css'))
+            and '__pycache__' not in f and not f.startswith('miniprogram/')]
+    check('没有被 .gitignore 误吞的代码文件', not _bad, '、'.join(_bad[:5]))
+except Exception:
+    pass          # 没装 git / 不是仓库就跳过，别让自检因为环境问题失败
 
 total = sum(1 for line in open(os.path.join(ROOT, 'tools', 'smoke_test.py'), encoding='utf-8')
             if "check('" in line)
