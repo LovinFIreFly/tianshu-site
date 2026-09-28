@@ -65,9 +65,26 @@ if grep -rqs 'mirrors.cloud.aliyuncs.com' /etc/apt/sources.list /etc/apt/sources
   echo "   已把 apt 源从内网镜像换成公网镜像 mirrors.aliyun.com"
 fi
 
-apt-get update -qq
-apt-get install -y -qq python3 python3-venv python3-pip git curl gnupg \
-  debian-keyring debian-archive-keyring apt-transport-https
+# 给 apt 上保险（2026-09 在香港轻量上踩过：apt-get update 卡十几分钟、CPU 0:00 = 在网络上干等）：
+#   · 强制 IPv4 —— 机器没有 IPv6 路由时，apt 会死等 IPv6 地址
+#   · 加超时 —— 卡住就失败，不无限期挂着
+#   · 每个 apt 调用外面再套 timeout，"宁可失败也别装死"
+cat > /etc/apt/apt.conf.d/99-tianshu <<'APT'
+Acquire::ForceIPv4 "true";
+Acquire::http::Timeout "20";
+Acquire::https::Timeout "20";
+Acquire::Retries "2";
+APT
+rm -f /etc/apt/sources.list.d/caddy-stable.list     # 清掉上次被打断留下的源，它连不上就会拖死 apt
+
+timeout 300 apt-get update -qq || echo "   （apt update 超时或失败，先继续往下试）"
+timeout 900 apt-get install -y -qq python3 python3-venv python3-pip git curl gnupg \
+  debian-keyring debian-archive-keyring apt-transport-https || true
+if ! command -v python3 >/dev/null 2>&1 || ! command -v curl >/dev/null 2>&1; then
+  echo "   [X] 系统包没装上（apt 连不上镜像）。先把 apt 弄通再重跑本脚本："
+  echo "       试试换镜像：sed -i 's|mirrors.aliyun.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources"
+  exit 1
+fi
 
 echo "② 取代码…"
 if [ -d "$DIR/.git" ]; then
@@ -106,8 +123,8 @@ if ! command -v caddy >/dev/null 2>&1; then
     gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg /tmp/caddy.key 2>/dev/null || true
     if curl -fsSL --connect-timeout 10 --max-time 60 -o /etc/apt/sources.list.d/caddy-stable.list \
          'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' 2>/dev/null; then
-      apt-get update -qq 2>/dev/null || true
-      apt-get install -y -qq caddy 2>/dev/null && OK=1
+      timeout 300 apt-get update -qq 2>/dev/null || true
+      timeout 600 apt-get install -y -qq caddy 2>/dev/null && OK=1
     fi
   fi
   if [ "$OK" != "1" ]; then
