@@ -165,6 +165,8 @@ def script_detail(sid):
 
     # 拼车：「加入已有的车」那个下拉里列出来的车（别人开的、还没满、还没过日期）
     open_cars = [c for c in business.car_pool() if str(c.get('sid')) == str(sid) and not c.get('full')]
+    # 评分 = 玩家点评的平均分（没人评过就是 0，页面上显示"—"）；n 是评价条数
+    _st = business.stats()['byScript'].get(str(sid), {})
 
     return render_template('script.html', sc=sc, days=days, sessions=ses, coupons=coupons,
                            lo=lo, hi=hi, dm_fee=st['dmFee'], reviews=reviews, dms=dms,
@@ -172,7 +174,7 @@ def script_detail(sid):
                            open_cars=open_cars, car_deposit=business.car_deposit(st),
                            # 日历控件的可选范围：今天 ~ 30 天后（别再让客人翻无意义的月份）
                            day_min=business.iso_day(0), day_max=business.iso_day(30),
-                           rating=business.stats()['byScript'].get(str(sid), {}).get('rating'))
+                           rating=_st.get('rating'), rating_n=_st.get('n'))
 
 
 @bp.get('/car')

@@ -27,6 +27,8 @@
       <div class="cell"><b>{{ sc.dur or '待定' }}</b><span>时长</span></div>
       <div class="cell"><b>{{ sc.diff or 3 }}/5</b><span>难度</span></div>
       <div class="cell"><b>{{ sc.type or '盒装' }}</b><span>类型</span></div>
+    {# 评分由玩家点评算出来（平均分），没人评过就显示 — —— 这格以前空着，看着像漏了东西 #}
+    <div class="cell"><b>{% if rating %}★ {{ rating }}{% else %}—{% endif %}</b><span>玩家评分{% if rating_n %} · {{ rating_n }} 条{% endif %}</span></div>
     </div>
 
     <p class="lead">{{ sc.desc or '门店还没写简介。' }}</p>

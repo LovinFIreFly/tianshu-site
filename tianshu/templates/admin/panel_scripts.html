@@ -70,6 +70,12 @@
       <div class="row mt" style="gap:12px">
         <div class="field" style="flex:0 0 150px;margin:0"><label>人数</label>
           <input name="players" value="{{ s.players or '' }}" placeholder="例：6人 / 4-6人"></div>
+        <div class="field" style="flex:0 0 120px;margin:0"><label>时长</label>
+          <input name="dur" value="{{ s.dur or '' }}" placeholder="例：约4小时"></div>
+        <div class="field" style="flex:0 0 90px;margin:0"><label>难度（1-5）</label>
+          <input name="diff" type="number" min="1" max="5" value="{{ s.diff or 3 }}"></div>
+        <div class="field" style="flex:0 0 130px;margin:0"><label>类型</label>
+          <input name="type" value="{{ s.type or '' }}" placeholder="盒装 / 独家 / 情感"></div>
       </div>
       <div class="field mt"><label>角色（用逗号隔开，顺序就是客人看到的顺序）</label>
         <input name="roles" value="{{ (s.roles or [])|map(attribute='name')|join(', ') }}"

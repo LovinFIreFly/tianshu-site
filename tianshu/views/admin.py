@@ -423,6 +423,15 @@ def script_save(sid):
     hit['allowRolePick'] = f.get('allowRolePick') == '1'      # 开了客人才能在网页上选角色
     if f.get('players'):
         hit['players'] = business.clean(f.get('players'), 12)
+    if f.get('dur') is not None:
+        hit['dur'] = business.clean(f.get('dur'), 12)          # 时长：例"约4小时"
+    if f.get('type') is not None:
+        hit['type'] = business.clean(f.get('type'), 12)        # 类型：盒装/独家/情感…
+    if f.get('diff'):
+        try:
+            hit['diff'] = max(1, min(5, int(f.get('diff'))))   # 难度：钳在 1-5，别让人填 99
+        except ValueError:
+            pass
     if f.get('desc') is not None:
         hit['desc'] = business.clean(f.get('desc'), 200)
     if f.get('roles') is not None:

@@ -377,6 +377,20 @@ admin.post('/admin/scripts/%s/role-img' % _role_sid, {'idx': '0', 'remove': '1'}
 _sc = next((x for x in jread('scripts') if x.get('id') == _role_sid), {})
 check('角色图能删掉', not ((_sc.get('roles') or [{}])[0]).get('img'))
 
+# 剧本详情那排格子：评分这格由玩家点评算平均分；时长/难度/类型管理员能改
+admin.post('/admin/scripts/%s/save' % _role_sid,
+           {'title': '', 'players': '6人', 'dur': '约5小时', 'diff': '4',
+            'type': '独家', 'onSale': '1', 'allowRolePick': '1'})
+_sc = next((x for x in jread('scripts') if x.get('id') == _role_sid), {})
+check('时长 / 难度 / 类型 后台能改',
+      _sc.get('dur') == '约5小时' and _sc.get('diff') == 4 and _sc.get('type') == '独家',
+      '%s / %s / %s' % (_sc.get('dur'), _sc.get('diff'), _sc.get('type')))
+s, _h = guest.get('/scripts/%s' % _role_sid)
+check('前台那排格子跟着变（4/5、约5小时、独家）',
+      s == 200 and '约5小时' in _h and '4/5' in _h and '独家' in _h)
+check('评分格在（有人点评才显示 ★ 分数，没有就显示 —）',
+      s == 200 and '玩家评分' in _h)
+
 s, _ = admin.post('/admin/users/13800000000/credit', {'delta': '-10', 'reason': '自检扣分'})
 u = next((x for x in jread('users') if x.get('phone') == '13800000000'), {})
 check('信用分改动生效并留了流水', int(u.get('credit') or 100) <= 90 and u.get('creditLogs'))
