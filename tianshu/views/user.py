@@ -65,7 +65,10 @@ def login():
                         x['password'] = hash_password(pw)
                 db.write('users', users)
             rate_clear(ip_key, acc_key)
-            session.permanent = True
+            # 「记住我」勾着 = 半年不用再登（config.SESSION_DAYS）。
+            # 没勾（表单里只有那个 hidden 的 0）= 只在这次浏览器会话里有效，关掉就要重登。
+            # 老客户端/自检脚本不带这个字段，按"记住"处理，免得把它们的登录判成临时会话。
+            session.permanent = ('1' in request.form.getlist('remember')) or ('remember' not in request.form)
             session['phone'] = u.get('phone')
             business.audit(u.get('username'), business.role_of(u), '登录')
             flash('欢迎回来，%s' % ((u.get('profile') or {}).get('nick') or u.get('username')), 'ok')

@@ -16,7 +16,8 @@ IMG_DIR = os.path.join(DATA_DIR, 'img')
 PORT = 8000                    # 被占用会自动往后试 8001、8002…
 OPEN_BROWSER = True            # 启动后自动开浏览器
 LAN_MODE = False               # 手机访问开关：要测手机端再开（同一 WiFi 下的设备都能进）
-SESSION_DAYS = 7               # 登录保持多少天
+SESSION_DAYS = 180             # 登录保持多少天（半年）—— 客人最烦的就是"又要登一次"，
+                               # 尤其注册得收邮箱验证码。共享设备/员工机在登录页把「记住我」取消勾选就行
 MAX_IMG_BYTES = 700 * 1024     # 上传图片上限
 TEMPLATES_AUTO_RELOAD = False  # 页面速度优化：平时关掉（改模板后重启生效）；开发时用 python app.py --dev
 

@@ -14,6 +14,16 @@
       <input name="password" type="password" placeholder="密码" aria-label="密码"
              autocomplete="current-password" enterkeyhint="go" required></div>
 
+    {# 「记住我」：勾着 = 这台设备 {{ settings.loginDays or 180 }} 天不用再登（默认勾，最省事）；
+       共享电脑/员工机可以取消勾选，那样关掉浏览器就要重登。
+       hidden 那个 0 是为了"取消勾选"也能被后端读出来（复选框不勾就不会提交）。 #}
+    <input type="hidden" name="remember" value="0">
+    <label class="agree" style="margin:2px 2px 14px">
+      <input type="checkbox" name="remember" value="1" checked>
+      <span class="dot" aria-hidden="true"></span>
+      <span>记住我（这台设备半年内不用再登）</span>
+    </label>
+
     <p style="text-align:right;margin:2px 2px 18px;font-size:13px">
       <a class="lnk" href="{{ url_for('user.forgot') }}">忘记密码？</a></p>
 
