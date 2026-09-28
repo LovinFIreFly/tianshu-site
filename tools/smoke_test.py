@@ -119,6 +119,24 @@ g2.get('/scripts')
 s, html = g2.get('/')
 check('已经在站里逛的人，回首页不会再被欢迎页挡住',
       s == 200 and 'welcome-card' not in html)
+
+# 手机端底部导航（.mobtab，只在窄屏出现的固定底栏）—— 桌面端必须藏着，否则会多一条
+import re as _re
+_pat = r'<a href="([^"]+)" class="(on)?">\s*<span class="ico"[^>]*>([^<]+)</span><span>([^<]+)</span>'
+_mt = _re.search(r'<nav class="mobtab".*?</nav>', html, _re.S)
+_tabs = _re.findall(_pat, _mt.group(0) if _mt else '')
+check('对外页面有手机底部导航，正好四个入口',
+      [t[3] for t in _tabs] == ['首页', '剧本库', '拼车', '我的'], str([t[3] for t in _tabs]))
+check('高亮跟着当前页走（首页时只亮「首页」）',
+      [t[3] for t in _tabs if t[1]] == ['首页'], str([t[3] for t in _tabs if t[1]]))
+_s2, _css = guest.get('/static/css/style.css')
+check('底部导航桌面端隐藏、窄屏才是固定底栏',
+      '.mobtab{display:none}' in _css and '.mobtab{display:flex;position:fixed' in _css)
+_s2, _car = guest.get('/car')
+_mt2 = _re.search(r'<nav class="mobtab".*?</nav>', _car, _re.S)
+_t2 = _re.findall(_pat, _mt2.group(0) if _mt2 else '')
+check('拼车页底部导航把「拼车」点亮',
+      [t[3] for t in _t2 if t[1]] == ['拼车'], str([t[3] for t in _t2 if t[1]]))
 for path, want in (('/scripts', '剧本库'), ('/car', '拼车'), ('/login', '登录'), ('/register', '注册')):
     s, html = guest.get(path)
     check('打开 %s' % path, s == 200 and want in html, 'HTTP %s' % s)

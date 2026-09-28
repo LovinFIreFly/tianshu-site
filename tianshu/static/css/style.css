@@ -683,6 +683,9 @@ details.spoiler[open] > summary{color:var(--ink);margin-bottom:var(--sp-5)}
   .welcome-card .btns .btn{width:100%;min-width:0}
   .field > input,.field > select,.field > textarea,.auth-card .field > input{font-size:16px}
 }
+/* 手机端底部导航（.mobtab）：桌面端藏着，窄屏才变成固定底栏（规则见下面的 @media 里） */
+.mobtab{display:none}
+
 @media (max-width:744px){
   :root{--fs-display:34px;--fs-title:24px;--fs-h2:20px;--fs-body:16px}
   .wrap{padding:var(--sp-6) var(--sp-4) calc(var(--sp-9) + env(safe-area-inset-bottom))}
@@ -705,6 +708,18 @@ details.spoiler[open] > summary{color:var(--ink);margin-bottom:var(--sp-5)}
   .masthead .links{padding:0 var(--sp-4);gap:var(--sp-5)}
   /* iOS 上输入框字号 <16px 时，一聚焦就会把整页放大一下（跳一下很烦）—— 手机上统一 16px */
   input,select,textarea{font-size:16px}
+  /* 底部导航：手机单手玩时大拇指够得着的地方（桌面端不显示，见 .mobtab 基础规则） */
+  .mobtab{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:70;
+    padding:var(--sp-2) var(--sp-2) calc(var(--sp-2) + env(safe-area-inset-bottom));
+    background:var(--paper-3);border-top:1px solid var(--rule);
+    box-shadow:0 -3px 14px rgba(20,19,18,.07)}
+  .mobtab a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+    padding:var(--sp-2) 0 3px;font-size:var(--fs-xs);color:var(--ink-3);text-decoration:none}
+  .mobtab a .ico{font-size:19px;line-height:1;opacity:.55}
+  .mobtab a.on{color:var(--ink);font-weight:600}
+  .mobtab a.on .ico{opacity:1}
+  /* 别让底部条压住最后一段内容（含 iPhone 那条 home 横条的安全区） */
+  .wrap{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
   .hero{padding:var(--sp-9) var(--sp-4) var(--sp-8)}
   .hero .stats{border-top:0}
   .hero .stats div{border-top:1px solid var(--stage-hair);padding-top:var(--sp-4)}

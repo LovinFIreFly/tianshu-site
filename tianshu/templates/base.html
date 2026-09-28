@@ -83,6 +83,20 @@
   {{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}
   {% if me %}<div style="margin-top:6px">手机浏览器「添加到桌面」，下次打开更快、还能全屏玩</div>{% endif %}
 </footer>
+{# 手机端底部导航：只在窄屏出现（桌面端 CSS 里 display:none）。
+   为什么再给一份：手机单手玩时，**底部才是大拇指够得着的地方** ——
+   顶部那条栏目条得换手才点得到。跟后台/DM 那种「文字横条 .tabbar」不是一回事，别混。 #}
+<nav class="mobtab" aria-label="主要导航">
+  <a href="{{ url_for('public.home') }}" class="{{ 'on' if request.endpoint == 'public.home' }}">
+    <span class="ico" aria-hidden="true">🏠</span><span>首页</span></a>
+  <a href="{{ url_for('public.scripts') }}" class="{{ 'on' if (request.endpoint or '').startswith('public.script') }}">
+    <span class="ico" aria-hidden="true">📚</span><span>剧本库</span></a>
+  <a href="{{ url_for('public.car') }}" class="{{ 'on' if request.endpoint == 'public.car' }}">
+    <span class="ico" aria-hidden="true">🚗</span><span>拼车</span></a>
+  <a href="{{ url_for('user.me') }}" class="{{ 'on' if request.endpoint == 'user.me' }}">
+    <span class="ico" aria-hidden="true">👤</span><span>我的</span></a>
+</nav>
+
 <script src="{{ url_for('static', filename='js/tabs.js') }}" defer></script>
 <script>
   /* 注册离线外壳：失败也无所谓，不影响正常使用 */
