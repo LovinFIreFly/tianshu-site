@@ -5,9 +5,12 @@
 {% block title %}{{ settings.shopName }}{% endblock %}
 
 {% block top %}
+{# 左上角原来写着「桌面演示版」—— 那是给自己看的备注，客人进来第一眼看到它，
+   会觉得这网站还没做完（2026-09 用户要求删掉这类字）。欢迎页本身就是首页，
+   不需要「‹ 门店首页」，所以这一行只留右上角的深浅色开关。 #}
 <div class="auth-top">
-  <span class="auth-home" style="opacity:.45;cursor:default">桌面演示版</span>
-  <a class="theme-btn" href="{{ url_for('public.toggle_theme') }}" title="切换深浅色" aria-label="切换深浅色">
+  <a class="theme-btn" href="{{ url_for('public.toggle_theme') }}" style="margin-left:auto"
+     title="切换深浅色" aria-label="切换深浅色">
     {% if theme == 'light' %}🌙{% else %}☀️{% endif %}</a>
 </div>
 {% endblock %}
