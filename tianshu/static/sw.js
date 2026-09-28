@@ -3,10 +3,12 @@
    · 页面和数据一律走网络（预约/余位/核销码必须是最新的，缓存不得）
    · 样式表 / 图标这类静态资源：网络优先，失败时回退缓存（断网也能打开外壳）
 */
-const CACHE = 'tianshu-shell-v1';
+const CACHE = 'tianshu-shell-v2';
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/', '/static/css/style.css', '/static/icon.svg', '/static/manifest.webmanifest']).catch(() => null)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/', '/static/css/style.css', '/static/icon.svg',
+    '/static/manifest.webmanifest', '/static/icons/icon-192.png', '/static/icons/icon-512.png'])
+    .catch(() => null)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {

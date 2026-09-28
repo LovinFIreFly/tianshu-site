@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#F4F1EA">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
   <link rel="icon" href="{{ url_for('static', filename='icon.svg') }}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="甜薯">
   <title>{% block title %}{{ settings.shopName }}{% endblock %}</title>
@@ -80,7 +81,8 @@
 {# 页脚是给客人看的，别写实现细节（"纯 Python 版 / 数据都在 data/ 里"那套只有自己人看得懂） #}
 <footer class="foot">
   {{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}
-  {% if me %}<div style="margin-top:6px">手机浏览器「添加到桌面」，下次打开更快、还能全屏玩</div>{% endif %}
+  {% if me %}<div style="margin-top:6px">手机浏览器「添加到桌面」，下次打开更快、还能全屏玩
+    <button id="install-btn" class="btn btn-sm btn-ghost" hidden style="margin-left:8px">📱 一键安装到桌面</button></div>{% endif %}
 </footer>
 {# 手机端底部导航：只在窄屏出现（桌面端 CSS 里 display:none）。
    为什么再给一份：手机单手玩时，**底部才是大拇指够得着的地方** ——
@@ -96,6 +98,26 @@
     <span class="ico" aria-hidden="true">👤</span><span>我的</span></a>
 </nav>
 
+<script>
+  /* 「一键安装到桌面」：浏览器允许时才显示（Android 的 Chrome / 电脑的 Edge）。
+     iPhone 不支持这个事件 —— 走 Safari 的「添加到主屏幕」就行（页脚那句就是提示它）。 */
+  (function () {
+    var b = document.getElementById('install-btn');
+    if (!b) return;
+    var evt = null;
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      evt = e;
+      b.hidden = false;
+    });
+    b.addEventListener('click', function () {
+      if (!evt) return;
+      evt.prompt();
+      evt = null;
+      b.hidden = true;
+    });
+  })();
+</script>
 <script src="{{ url_for('static', filename='js/csrf.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/upload.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/tabs.js') }}" defer></script>
