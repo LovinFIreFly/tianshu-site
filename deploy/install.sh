@@ -131,7 +131,8 @@ if ! command -v caddy >/dev/null 2>&1; then
   # 时间给短一点：连不上就别耗着（香港机器连 cloudsmith 很慢/不通，最多等 25 秒就切 GitHub）
   if curl -fsSL --connect-timeout 6 --max-time 25 -o /tmp/caddy.key \
        'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' 2>/dev/null; then
-    gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg /tmp/caddy.key 2>/dev/null || true
+    # --batch --yes：密钥文件已存在时不再停下来问"Overwrite? (Y/N)"（交互提问会把脚本挂住）
+    gpg --batch --yes --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg /tmp/caddy.key 2>/dev/null || true
     if curl -fsSL --connect-timeout 6 --max-time 25 -o /etc/apt/sources.list.d/caddy-stable.list \
          'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' 2>/dev/null; then
       timeout 300 apt-get update -qq 2>/dev/null || true
