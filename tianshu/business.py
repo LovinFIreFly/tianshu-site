@@ -610,11 +610,22 @@ def code_mail_html(code, shop='甜薯剧本杀', minutes=5):
 
 
 def _post_json(url, payload, headers=None, timeout=15):
-    """POST 一个 JSON（标准库，不引第三方 requests）。返回 (状态码, 响应文本)"""
+    """POST 一个 JSON（标准库，不引第三方 requests）。返回 (状态码, 响应文本)
+
+    ⚠️ 必须带个像浏览器的 User-Agent：urllib 默认发的是 `Python-urllib/3.x`，
+    而 Resend 前面挂着 Cloudflare，会把这种请求当机器人**直接拦掉**，
+    返回 `403 ... error code: 1010` —— 看着像密钥错，其实是请求头被判定成爬虫，
+    导致"验证码永远发不出去"（2026-09 上线当天排查出来的，别删这个头）。
+    """
     import json as _json
     import urllib.request
     data = _json.dumps(payload, ensure_ascii=False).encode('utf-8')
-    hdr = {'Content-Type': 'application/json'}
+    hdr = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                       '(KHTML, like Gecko) Chrome/124.0 Safari/537.36'),
+    }
     hdr.update(headers or {})
     req = urllib.request.Request(url, data=data, method='POST', headers=hdr)
     with urllib.request.urlopen(req, timeout=timeout) as r:
