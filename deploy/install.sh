@@ -97,13 +97,46 @@ echo "③ 装 Python 依赖（虚拟环境 $DIR/.venv）…"
 
 echo "④ 装 Caddy（自动 HTTPS）…"
 if ! command -v caddy >/dev/null 2>&1; then
-  curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
-    | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-  curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
-    > /etc/apt/sources.list.d/caddy-stable.list
-  apt-get update -qq
-  apt-get install -y -qq caddy
+  CADDY_VER="${CADDY_VER:-2.8.4}"
+  OK=0
+  # 先试官方 apt 源（好处：以后跟系统一起升级）
+  # —— 所有下载都带 --connect-timeout/--max-time：境外源连不上时是"失败"而不是"永远卡住"
+  if curl -fsSL --connect-timeout 10 --max-time 60 -o /tmp/caddy.key \
+       'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' 2>/dev/null; then
+    gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg /tmp/caddy.key 2>/dev/null || true
+    if curl -fsSL --connect-timeout 10 --max-time 60 -o /etc/apt/sources.list.d/caddy-stable.list \
+         'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' 2>/dev/null; then
+      apt-get update -qq 2>/dev/null || true
+      apt-get install -y -qq caddy 2>/dev/null && OK=1
+    fi
+  fi
+  if [ "$OK" != "1" ]; then
+    # 退回 GitHub 单文件版：一样是官方构建，只是不走 apt
+    echo "   官方 apt 源连不上，改用 GitHub 上的 Caddy 单文件版…"
+    curl -fL --connect-timeout 10 --max-time 240 -o /tmp/caddy.tgz \
+      "https://github.com/caddyserver/caddy/releases/download/v${CADDY_VER}/caddy_${CADDY_VER}_linux_amd64.tar.gz"
+    tar -xzf /tmp/caddy.tgz -C /usr/local/bin caddy
+    chmod +x /usr/local/bin/caddy
+    cat > /etc/systemd/system/caddy.service <<'UNIT'
+[Unit]
+Description=Caddy（单文件版，由 tianshu 部署脚本安装）
+After=network.target
+
+[Service]
+Type=notify
+ExecStart=/usr/local/bin/caddy run --environ --config /etc/caddy/Caddyfile
+ExecReload=/usr/local/bin/caddy reload --config /etc/caddy/Caddyfile --force
+Restart=on-failure
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+    systemctl daemon-reload
+  fi
+  /usr/local/bin/caddy version 2>/dev/null || caddy version || true
 fi
+mkdir -p /etc/caddy
 
 echo "⑤ 写 systemd 服务与 Caddy 配置…"
 cat > /etc/systemd/system/tianshu.service <<EOF
