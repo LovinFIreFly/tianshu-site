@@ -1,37 +1,41 @@
+// 注意：这是 build.gradle（Groovy 写法），不是 build.gradle.kts。
+// Groovy 里没有 isMinifyEnabled 这种写法 —— 要写 minifyEnabled false。
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
 }
 
 android {
-    namespace = "cn.lovinfirefly.tianshu"
-    compileSdk = 35
+    namespace 'cn.lovinfirefly.tianshu'
+    compileSdk 35
 
     defaultConfig {
-        applicationId = "cn.lovinfirefly.tianshu"
-        minSdk = 24            // Android 7.0（2016）以上，覆盖几乎所有在用的手机
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        applicationId "cn.lovinfirefly.tianshu"
+        minSdk 24            // Android 7.0（2016）以上，覆盖几乎所有在用的手机
+        targetSdk 35
+        versionCode 1
+        versionName "1.0"
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            // 正式签名：把下面两行的注释去掉，换成你自己的签名文件
-            // signingConfig = signingConfigs.getByName("debug")
+            minifyEnabled false
+            // 正式签名：去掉下面这行的注释，换成你自己的签名配置
+            // signingConfig signingConfigs.debug
         }
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = "17" }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")   // 下拉刷新
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'   // 下拉刷新
 }
