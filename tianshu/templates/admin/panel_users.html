@@ -42,7 +42,8 @@
       <small>{{ u.phone[:3] }}****{{ u.phone[-4:] }} · 来过 {{ r.visits }} 次 · 消费 ¥{{ r.spent }}</small>
     </span>
     <span style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex:none">
-      <span class="badge {{ '' if r.role == 'user' else ('new' if r.role == 'dm' else 'done') }}">{{ r.roleName }}</span>
+      {# 徽章只显示"额外身份"：普通用户人人都有，写全了（普通用户、DM、管理员）会把卡片挤崩 #}
+      <span class="badge {{ '' if r.role == 'user' else ('new' if r.role == 'dm' else 'done') }}">{{ r.badge }}</span>
       <span class="credit-pill {{ 'good' if cr >= 90 else ('bad' if cr < 60 else 'mid') }}">{{ cr }}</span>
     </span>
   </button>
@@ -103,8 +104,9 @@
           {# 可多选：一个人能**同时**是 DM 和管理员（店主自己带本很常见）——
              勾几个算几个；一个都不勾 = 普通用户。 #}
           <div class="row" style="gap:8px;margin-bottom:10px">
-            <label class="chip-check"><input type="checkbox" name="roles" value="user"
-                   data-role="user"><span>普通用户</span></label>
+            {# 普通用户是人人都有、去不掉的 —— 所以这颗是"亮着的死胶囊"，不是勾选项 #}
+            <span class="chip-check on" style="cursor:default"
+                  title="所有账号都是普通用户：能下单、能评价、能攒券">普通用户（人人都有）</span>
             <label class="chip-check"><input type="checkbox" name="roles" value="dm"
                    data-role="dm"><span>DM（能进工作台）</span></label>
             <label class="chip-check"><input type="checkbox" name="roles" value="admin"
@@ -150,7 +152,7 @@
     role:    "{{ url_for('admin.user_role', phone='__P__') }}",
     detail:  "{{ url_for('admin.user_detail', phone='__P__') }}"
   };
-  var CHIP = { user: '普通用户', dm: 'DM', admin: '管理员' };
+  var CHIP = { dm: 'DM', admin: '管理员' };   // "普通用户"是人人都有、去不掉的，不在这儿
   function byId(id) { return document.getElementById(id); }
   function open(c) {
     // 把弹窗挪到 <body> 底下再打开：这样它一定相对视口居中，

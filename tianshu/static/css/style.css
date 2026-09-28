@@ -441,6 +441,15 @@ tbody tr:last-child td{border-bottom:0}
 .code-tip{margin:var(--sp-3) 0 0;font-size:var(--fs-xs);color:var(--ink-4);text-align:left}
 .code-tip.bad{color:var(--vermilion)}
 
+/* 排期页的「全部房间」总览：每间房一张小卡，列着这天排的场 */
+.room-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:var(--sp-4)}
+.room-card{border:1px solid var(--rule);background:var(--paper);padding:var(--sp-4)}
+.room-card h4{margin:0;font-size:16px;display:flex;align-items:baseline;gap:var(--sp-2);flex-wrap:wrap}
+.room-card .cnt{font-size:var(--fs-xs);color:var(--ink-4);font-weight:400}
+.room-slot{display:flex;align-items:baseline;gap:var(--sp-2);flex-wrap:wrap;
+  padding:var(--sp-2) 0;margin-top:var(--sp-2);border-top:1px dashed var(--rule);font-size:var(--fs-sm)}
+.room-slot .t{font-family:var(--serif);font-weight:700}
+
 /* 角色多选：把复选框做成"勾上就变色的胶囊"（后台用户面板的 ② 角色/权限） */
 .chip-check{position:relative;display:inline-flex;align-items:center;gap:var(--sp-2);
   padding:8px var(--sp-4);border:1px solid var(--rule-strong);background:var(--paper);
@@ -520,7 +529,12 @@ tbody tr:last-child td{border-bottom:0}
 .cust-card .info{flex:1;min-width:0}
 .cust-card .info b{display:block;font-family:var(--serif);font-size:17px;font-weight:700;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cust-card .info small{color:var(--ink-4);font-size:var(--fs-xs)}
+/* 卡片在 grid 的 1fr 轨道里：内容一长，同行卡片就被挤成竖条（2026-09 用户截图的"崩坏"）。
+   所以长文本一律"一行 + 省略号" —— 不许它撑宽卡片，也不许换行把卡片堆高。 */
+.cust-card{min-width:0;overflow:hidden}
+.cust-card .info small{display:block;color:var(--ink-4);font-size:var(--fs-xs);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cust-card .badge{max-width:118px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .credit-pill{flex:none;display:inline-flex;align-items:center;height:26px;padding:0 9px;
   border:1px solid var(--rule-strong);font-family:var(--mono);font-size:12.5px;font-weight:600}
 .credit-pill.good{border-color:var(--ok);color:var(--ok)}

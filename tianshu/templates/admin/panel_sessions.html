@@ -99,6 +99,47 @@
 </div>
 {% endif %}
 
+{% if view != 'week' %}
+{# 「全部房间」总览：这天每间房排了什么、哪间还空着 —— 排期时最常问的就是这个。
+   房间表里已经删掉的老房间、以及还没指定房间的场次，也一并列出来，别让人找不到。 #}
+<div class="panel mt">
+  <h3>全部房间 · {{ day }}</h3>
+  {% set real_names = rooms|map(attribute='name')|list %}
+  <div class="room-grid">
+    {% for r in rooms %}
+    <div class="room-card">
+      <h4>{{ r.name }}<span class="cnt">{{ r.cap or 6 }} 人{% if r.dev %} · {{ r.dev }}{% endif %}</span></h4>
+      {% for s in (room_map.get(r.name) or []) %}
+      <div class="room-slot">
+        <span class="t">{{ s.time }}</span>
+        <span>{{ s.title }}</span>
+        <span class="sub">{{ s.dmName or 'DM 待定' }}</span>
+        <span class="badge {{ 'warn' if s.status == 'locked' else ('ok' if s.status == 'open' else '') }}">
+          {{ {'open':'可报名','locked':'锁场','done':'已完成','cancelled':'已取消'}.get(s.status, s.status) }}</span>
+      </div>
+      {% else %}
+      <p class="sub" style="margin:var(--sp-2) 0 0">这天没有场次 —— 空着</p>
+      {% endfor %}
+    </div>
+    {% endfor %}
+    {% for key, items in room_map.items() %}
+      {% if key not in real_names %}
+      <div class="room-card">
+        <h4>{{ key }}<span class="cnt">已不在房间表里</span></h4>
+        {% for s in items %}
+        <div class="room-slot">
+          <span class="t">{{ s.time }}</span><span>{{ s.title }}</span>
+          <span class="sub">{{ s.dmName or 'DM 待定' }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% if not rooms %}<p class="sub mt">还没有房间 —— 在下面「房间」里加一个（例：A房 6 人）</p>{% endif %}
+</div>
+{% endif %}
+
 <div class="panel">
   <h3>房间</h3>
   <form class="form-inline" method="post" action="{{ url_for('admin.room_new') }}">

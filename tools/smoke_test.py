@@ -304,7 +304,7 @@ check('不能改自己的角色（防把自己锁在门外）', sup3.get('super'
 admin.post('/admin/users/13900001111/role', [('roles', 'dm'), ('roles', 'admin')])
 u_r = next((x for x in jread('users') if x.get('phone') == '13900001111'), {})
 check('能给人同时挂上 DM + 管理员',
-      set(u_r.get('roles') or []) == {'dm', 'admin'} and u_r.get('role') == 'admin',
+      set(u_r.get('roles') or []) == {'user', 'dm', 'admin'} and u_r.get('role') == 'admin',
       'roles=%s role=%s' % (u_r.get('roles'), u_r.get('role')))
 s, _h = cus2.get('/dm')
 check('既 DM 又管理员的人，DM 工作台能进', s == 200, 'HTTP %s' % s)
@@ -324,7 +324,7 @@ check('也进不去 DM 工作台了', s == 403, 'HTTP %s' % s)
 admin.post('/admin/users/13900001111/role', {'role': 'dm'})     # 老写法（单值）也要管用
 u_r = next((x for x in jread('users') if x.get('phone') == '13900001111'), {})
 check('老写法 role=dm 仍然管用（兼容老表单/老脚本）',
-      u_r.get('role') == 'dm' and (u_r.get('roles') or []) == ['dm'])
+      u_r.get('role') == 'dm' and (u_r.get('roles') or []) == ['user', 'dm'])
 admin.post('/admin/users/13900001111/role', {'role': 'user'})
 
 # 群发「只发普通用户」：员工（DM / 管理员 / 超管）不该收到 —— 多角色之后这条按角色集合判
@@ -335,6 +335,15 @@ _staff_phones = [str(x.get('phone')) for x in jread('users') if _bs.has_role(x, 
 check('群发「只发普通用户」不会落到 DM / 管理员头上',
       bool(_tos) and all(p not in _tos for p in _staff_phones),
       '发给了 %d 人（其中员工 %d 人）' % (len(_tos), len([p for p in _staff_phones if p in _tos])))
+
+# 排期页的「全部房间」总览：加一间房 + 排一场，总览里要能看见这场
+admin.post('/admin/rooms/new', {'name': '自检房', 'cap': '6', 'dev': '投影'})
+_first_sid = next((x.get('id') for x in jread('scripts')), 0)
+admin.post('/admin/sessions/new', {'ts': ts_in(0), 'time': '18:30', 'roomId': '自检房',
+                                   'dm': '', 'cap': '6', 'sid': _first_sid})
+s, _h = admin.get('/admin/sessions')
+check('排期页有「全部房间」总览，能看到刚排的场',
+      '全部房间' in _h and 'room-grid' in _h and '自检房' in _h and '18:30' in _h)
 s, _ = admin.post('/admin/users/13800000000/credit', {'delta': '-10', 'reason': '自检扣分'})
 u = next((x for x in jread('users') if x.get('phone') == '13800000000'), {})
 check('信用分改动生效并留了流水', int(u.get('credit') or 100) <= 90 and u.get('creditLogs'))
@@ -520,8 +529,13 @@ check('昵称里的换行被掐掉（防邮件头注入）',
 check('昵称留空 = 只显示地址（不强加店名）',
       _bs.mail_sender(dict(_chk, mailFromName='')) == 'noreply@lovinfirefly.cn')
 # 多角色（纯函数，不经过 HTTP）：角色是可多选的，老数据只有单值 role
-check('roles_of 认老的单值 role（老账号不用迁移）', _bs.roles_of({'role': 'dm'}) == ['dm'])
-check('roles_of 认新的 roles 列表', _bs.roles_of({'roles': ['dm', 'admin']}) == ['dm', 'admin'])
+check('roles_of 认老的单值 role（老账号不用迁移）', _bs.roles_of({'role': 'dm'}) == ['user', 'dm'])
+check('roles_of 认新的 roles 列表', _bs.roles_of({'roles': ['dm', 'admin']}) == ['user', 'dm', 'admin'])
+check('普通用户人人都有（不用谁去勾）',
+      'user' in _bs.roles_of({'role': 'admin'}) and 'user' in _bs.roles_of({'roles': ['dm']}))
+check('卡片徽章只写额外身份（短，才不挤崩卡片）',
+      _bs.roles_badge({'roles': ['user', 'dm', 'admin']}) == 'DM、管理员'
+      and _bs.roles_badge({'role': 'user'}) == '普通用户')
 check('超管算管理员（不然初始账号反而进不去后台）', _bs.has_role({'role': 'super'}, 'admin'))
 check('同时挂着 dm + admin，两种身份都判真',
       _bs.has_role({'roles': ['dm', 'admin']}, 'dm')

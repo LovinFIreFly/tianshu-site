@@ -73,7 +73,10 @@ ROLE_PICK = ('user', 'dm', 'admin')          # 后台能勾的三个（super 不
 def roles_of(u):
     """这个人拥有哪些角色（列表，按级别从低到高）。
 
-    · 超管（初始那个账号）：就是 ['super'] —— 它天然算管理员，见 has_role()
+    **普通用户是人人都有、去不掉的**（客人、DM、管理员一样都能下单、评价、攒券），
+    所以返回里永远带 'user' —— 后台不用让人去勾它，勾的只是"额外的身份"。
+
+    · 超管（初始那个账号）：['super']
     · 老数据只有单值 role → 包成只有一个元素的列表
     """
     if not u:
@@ -82,11 +85,24 @@ def roles_of(u):
         return ['super']
     rs = u.get('roles')
     if isinstance(rs, (list, tuple)) and rs:
-        out = sorted({str(r) for r in rs if str(r) in ROLE_PICK},
-                     key=lambda r: ROLE_RANK.get(r, 0))
-        return out or ['user']
-    r = str(u.get('role') or 'user')
-    return [r if r in ROLE_PICK else 'user']
+        out = {str(r) for r in rs if str(r) in ROLE_PICK}
+    else:
+        r = str(u.get('role') or 'user')
+        out = {r if r in ROLE_PICK else 'user'}
+    out.add('user')                       # 人人都是普通用户：显式带上，少了它说明数据不对
+    return sorted(out, key=lambda r: ROLE_RANK.get(r, 0))
+
+
+def extra_roles(u):
+    """"额外身份"：普通用户之外的那些（DM / 管理员）—— 卡片徽章只显示这些，才够短"""
+    return [r for r in roles_of(u) if r != 'user']
+
+
+def roles_badge(u_or_roles):
+    """小徽章的文字：有额外身份就写它们（"DM、管理员"），一个都没有才写"普通用户" """
+    rs = u_or_roles if isinstance(u_or_roles, (list, tuple, set)) else roles_of(u_or_roles)
+    names = [ROLE_NAMES.get(r, r) for r in sorted(rs, key=lambda r: ROLE_RANK.get(r, 0)) if r != 'user']
+    return '、'.join(names) or '普通用户'
 
 
 def has_role(u, *want):
@@ -131,9 +147,9 @@ def set_roles(phone, new_roles, by_user):
       ③ 只有超管能调整"已经是管理员"的人 —— 避免两个管理员互相降权
     """
     me = by_user or {}
-    want = {str(r).strip() for r in (new_roles or []) if str(r).strip() in ROLE_PICK}
-    if not want:
-        want = {'user'}                      # 一个都不勾 = 退回普通用户（而不是"没有任何角色"）
+    # 后台只勾 DM / 管理员这两项：普通用户是人人都有、去不掉的（见 roles_of）
+    # 一个都不勾 = 只剩普通用户权限（不是"没有任何角色"）
+    want = {str(r).strip() for r in (new_roles or []) if str(r).strip() in ('dm', 'admin')} | {'user'}
     users = db.rows('users')
     hit = next((x for x in users if str(x.get('phone')) == str(phone)), None)
     if not hit:
@@ -146,7 +162,7 @@ def set_roles(phone, new_roles, by_user):
     if 'admin' in old and 'super' not in roles_of(me):
         return False, '只有超级管理员能调整管理员'
     if old == want:
-        return False, '他本来就是%s' % roles_text(old)
+        return False, '他本来就是%s' % roles_badge(old)
     # 单值 role 跟着"最高的那个"走：老代码、日志、排序都还在读它
     primary = 'admin' if 'admin' in want else ('dm' if 'dm' in want else 'user')
     for x in users:

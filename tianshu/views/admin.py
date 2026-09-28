@@ -131,7 +131,8 @@ def users():
                     and str(u.get('phone')) != str(me.get('phone'))
                     and ('admin' not in rs or 'super' in business.roles_of(me)))
         rows.append({'u': u, 'role': r, 'roles': rs,
-                     'roleName': business.roles_text(rs),           # 例：普通用户、DM
+                     'roleName': business.roles_text(rs),           # 完整（弹窗标题用）：普通用户、DM
+                     'badge': business.roles_badge(rs),             # 短徽章：DM、管理员 / 普通用户
                      'roleNames': [business.ROLE_NAMES.get(x, x) for x in rs],
                      'canEditRole': can_edit,
                      'visits': len(mine), 'spent': sum(int(b.get('amount') or 0) for b in mine),
@@ -556,9 +557,14 @@ def sessions():
         for i in range(7):
             d = monday + i * 86400000
             week.append({'ts': d, 'day': business.day_label(d), 'rows': business.sessions_of(d)})
-    return render_template('admin/panel_sessions.html', rows=business.sessions_of(ts), ts=ts, view=view,
+    rows = business.sessions_of(ts)
+    # 「全部房间」总览：把这一天的场次按房间归堆 —— 一眼看出哪间空着、哪间排满了
+    room_map = {}
+    for s in rows:
+        room_map.setdefault(s.get('roomId') or '房间待定', []).append(s)
+    return render_template('admin/panel_sessions.html', rows=rows, ts=ts, view=view,
                            prev=ts - 86400000, nxt=ts + 86400000, day=business.day_label(ts),
-                           week=week, rooms=db.rows('rooms'), dms=dms,
+                           week=week, rooms=db.rows('rooms'), dms=dms, room_map=room_map,
                            scripts=[s for s in db.rows('scripts') if s.get('onSale') is not False])
 
 
