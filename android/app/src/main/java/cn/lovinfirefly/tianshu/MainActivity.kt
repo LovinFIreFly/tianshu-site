@@ -50,9 +50,12 @@ class MainActivity : AppCompatActivity() {
         // 顶部让出状态栏、底部让出手势条，网页从状态栏下面开始。
         ViewCompat.setOnApplyWindowInsetsListener(swipe) { v, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(0, bars.top, 0, bars.bottom)
+            val top = if (bars.top > 0) bars.top else statusBarHeight()   // 兜底：个别机型不派发 insets
+            v.setPadding(0, top, 0, bars.bottom)
             insets
         }
+        // 主动要一次 insets：onCreate 里刚注册的监听有时收不到回调（视图还没挂上窗口）
+        ViewCompat.requestApplyInsets(swipe)
 
         web.settings.apply {
             javaScriptEnabled = true          // 网站是服务端渲染 + 少量 JS，必须开
@@ -101,5 +104,11 @@ class MainActivity : AppCompatActivity() {
                 if (web.canGoBack()) web.goBack() else finish()
             }
         })
+    }
+
+    /** 状态栏高度的兜底取值（系统内部资源，拿不到就返回 0 不做处理） */
+    private fun statusBarHeight(): Int {
+        val id = resources.getIdentifier("status_bar_height", "dimen", "android")
+        return if (id > 0) resources.getDimensionPixelSize(id) else 0
     }
 }
