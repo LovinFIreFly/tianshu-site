@@ -129,6 +129,18 @@ PIP_MIRROR="${PIP_MIRROR:-https://mirrors.aliyun.com/pypi/simple/}"
   || "$DIR/.venv/bin/pip" install -q --upgrade pip
 "$DIR/.venv/bin/pip" install -q -i "$PIP_MIRROR" -r "$DIR/requirements.txt" \
   || "$DIR/.venv/bin/pip" install -q -r "$DIR/requirements.txt"
+# 必须验证一次：装没装成功，不能靠猜（2026-09 踩过：pip 静默失败 → 服务一起来就 exit 1，
+# 报错只有一个 HTTP 000，看不出原因）
+if ! "$DIR/.venv/bin/python" -c 'import flask, waitress' 2>/dev/null; then
+  echo "   [X] 虚拟环境里 Flask / waitress 没装上，重试一次（不静默，方便看报错）…"
+  "$DIR/.venv/bin/pip" install -i "$PIP_MIRROR" -r "$DIR/requirements.txt" || true
+  if ! "$DIR/.venv/bin/python" -c 'import flask, waitress' 2>/dev/null; then
+    echo "   [X] 还是不行。手动跑一下看报错："
+    echo "        $DIR/.venv/bin/pip install -r $DIR/requirements.txt"
+    exit 1
+  fi
+fi
+echo "   Flask / waitress 已就绪"
 
 echo "④ 装 Caddy（自动 HTTPS）…"
 if ! command -v caddy >/dev/null 2>&1; then
