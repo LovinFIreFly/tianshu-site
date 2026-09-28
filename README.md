@@ -173,6 +173,24 @@ python tools/smoke_test.py     # 另一个窗口跑自检
 > 要用自己域名发信，得在 Resend 里加域名并按提示加 DNS（跟下面邮件推送一样是 SPF/DKIM 那几条）；
 > 懒得弄就先填 `onboarding@resend.dev`，但它**只能发给 Resend 账号本人的邮箱**，正式用不行。
 
+**线上现状（2026-09 通的）**：通道 = Resend，发件人 = `noreply@lovinfirefly.cn`
+（域名 `lovinfirefly.cn` 已在 Resend 验证，状态 Verified），Key 是"**仅发送**"权限 —— 发信够用，不用换。
+（这种 Key 去查 `/domains` 会得到 `401 restricted_api_key`，属正常，别当故障修。）
+
+> 🔑 **Key 一旦贴进聊天/截图就等于泄露**：登 resend.com → API Keys 建一把新的、把旧的删掉，
+> 再填回后台，点「发一封测试邮件」验一下就行。
+
+#### 发信排错：三个已经踩过的坑
+
+| 症状 | 真因 | 怎么办 |
+|---|---|---|
+| 点测试邮件只报 `HTTP Error 403: Forbidden` | 请求没带正常 `User-Agent`（urllib 默认 `Python-urllib/3.x`），被 Resend 前面的 **Cloudflare 当爬虫拦掉**（响应正文里的 `error code: 1010` 才是线索） | 代码里已带浏览器 UA；服务器还报这个 = **代码没更新**：`cd /opt/tianshu && git pull && systemctl restart tianshu` |
+| 报"只能发给注册 Resend 的那个邮箱" | 发件人还是测试用的 `onboarding@resend.dev` | 先把域名在 Resend 验证掉，发件人改成 `noreply@你的域名` |
+| 点「获取验证码」弹出**"请填写此字段"**，码根本没发出去 | 那颗按钮写成了 `type="submit" + formaction` —— 浏览器**先跑整表校验**（此时验证码/用户名/密码还空着）就把提交拦下了 | 必须是 `type="button"` + `fetch` 调 `/code/send`（`auth_base.html` 里那段脚本，注册页/找回密码页共用） |
+
+> 报错信息现在是"说人话"的：`_post_json` 会把响应正文读出来（不再只剩 `403: Forbidden`），
+> 再由 `business.mail_error_hint()` 翻成"下一步动哪里"—— 排错先看后台弹的那句话就够了。
+
 ### 通道二：SMTP（阿里云「邮件推送」）
 
 用你已有的域名 `lovinfirefly.cn` 发信（这也是当年买那个域名的用途）：
