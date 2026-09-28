@@ -3,7 +3,7 @@
    · 页面和数据一律走网络（预约/余位/核销码必须是最新的，缓存不得）
    · 样式表 / 图标这类静态资源：网络优先，失败时回退缓存（断网也能打开外壳）
 */
-const CACHE = 'tianshu-shell-v2';
+const CACHE = 'tianshu-shell-v3';   // v3：换了字标图标（老缓存里的旧图得作废，不然桌面图标不更新）
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/', '/static/css/style.css', '/static/icon.svg',
