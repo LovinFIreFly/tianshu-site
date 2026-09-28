@@ -206,6 +206,11 @@ EOF
 cat > /etc/caddy/Caddyfile <<EOF
 # 甜薯剧本杀 —— Caddy 自动申请并续期 HTTPS 证书，再转发给本机的网站
 $DOMAIN {
+	# 明确指定正式环境。不写的话日志里出现过 acme-staging（staging 证书浏览器不认，
+	# 会显示"证书不受信任"），固定成正式环境最省心（2026-09 踩过）
+	tls {
+		ca https://acme-v02.api.letsencrypt.org/directory
+	}
 	encode gzip
 	reverse_proxy 127.0.0.1:$PORT
 }
