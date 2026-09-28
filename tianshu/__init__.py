@@ -111,6 +111,12 @@ def create_app():
     def notfound(e):
         return render_template('error.html', code=404, msg='这个页面不存在，可能链接过期了'), 404
 
+    @app.errorhandler(413)
+    def too_big(e):
+        return render_template('error.html', code=413,
+                               msg='文件太大了 —— 单张图最大 683KB，表单整体别超过 4MB。'
+                                   '新版的网页会自动帮你压图，刷新一下再传试试'), 413
+
     @app.errorhandler(500)
     def broken(e):
         return render_template('error.html', code=500, msg='服务端出了点问题，看下黑窗口的报错'), 500

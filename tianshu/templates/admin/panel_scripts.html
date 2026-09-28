@@ -94,7 +94,7 @@
               action="{{ url_for('admin.script_role_img', sid=s.id) }}">
           <input type="hidden" name="idx" value="{{ loop.index0 }}">
           <input type="file" name="img" accept="image/*" style="font-size:11px;width:100px"
-                 onchange="this.form.submit()">
+                 onchange="tianshuSmartSubmit(this)">
         </form>
         {% if r.img %}
         <form method="post" style="margin:0" action="{{ url_for('admin.script_role_img', sid=s.id) }}">
@@ -105,19 +105,20 @@
       </div>
       {% endfor %}
     </div>
-    <p class="sub" style="margin-top:var(--sp-2)">建议正方形头像图、300KB 以内，传完前台立刻生效。
-      角色的名字和顺序在上面的「角色」那栏改 —— 改完记得回上面点「保存」，图上不会丢。</p>
+    <p class="sub" style="margin-top:var(--sp-2)">大图会自动压缩（手机拍的直接传就行）。传完前台立刻生效。
+      角色的名字和顺序在上面的「角色」那栏改 —— 改完记得回上面点「保存」，图不会丢。</p>
   </details>
   {% endif %}
 
   <details class="spoiler">
     <summary>换封面图（可选）</summary>
     <form class="row mt" style="gap:12px;align-items:center" method="post"
-          action="{{ url_for('admin.script_img', sid=s.id) }}" enctype="multipart/form-data">
+          action="{{ url_for('admin.script_img', sid=s.id) }}" enctype="multipart/form-data"
+          onsubmit="return window.tianshuSmartUpload ? tianshuSmartUpload(this.cover) : true">
       {% if s.img %}<img class="up-prev" src="{{ s.img }}" alt="">{% else %}<span class="up-ph">🎭</span>{% endif %}
       <div style="flex:1 1 240px">
         <input type="file" name="cover" accept="image/png,image/jpeg,image/webp">
-        <p class="sub" style="margin-top:4px">建议 4:3、300KB 以内，传完前台立刻生效</p>
+        <p class="sub" style="margin-top:4px">大图会自动压缩（手机拍的直接传就行），传完前台立刻生效</p>
       </div>
       <button class="btn btn-sm" type="submit">上传</button>
     </form>
