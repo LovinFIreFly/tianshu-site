@@ -77,15 +77,28 @@
   --container:1200px;                    /* 编辑式容器比工具站窄一点，行更好读 */
   --measure:66ch;                        /* 正文最大行长 */
 
-  /* —— 形状：克制。编辑式的圆角很少，靠线分层 —— */
-  --r-xs:3px; --r-sm:4px; --r:6px; --r-lg:10px;
-  --r-pill:100px;
+  /* —— 形状：**近零圆角**。
+     AI 味的典型特征就是"所有元素统一大圆角"（卡片/按钮/输入框一个半径走天下）。
+     编辑式（We are Büro 实测 radius 多为 0/2px）反过来：线条和直角才锋利有性格，
+     圆角只留给真正需要"洞口"感的地方。这里全站 0/2px，不按层级区分——因为根本没有大圆角层。 */
+  --r-xs:0; --r-sm:0; --r:2px; --r-lg:2px;
+  --r-pill:0;                        /* 搜索条也不做胶囊：直角更符合"戏单/票根"的纸感 */
+  --r-round:100%;                    /* 只有头像/圆点这类"洞"才用 */
 
-  /* —— 阴影：只有浮层才配拥有 —— */
+  /* —— 阴影：**硬投影**，不要万能软阴影。
+     AI 最爱一层淡而弥散的软阴影套在所有卡片上（没有轻重对比 = 没有层级）。
+     这里软阴影只给浮层（弹窗/下拉），真正要"突出可按"的地方用 Mailchimp 式
+     **不模糊的硬投影**（3px 3px 0），点击时位移吃掉投影 = 物理按压感。 */
   --sh-1:0 1px 2px rgba(20,19,18,.05);
   --sh-2:0 4px 14px rgba(20,19,18,.08);
   --sh-3:0 12px 40px rgba(20,19,18,.14);
+  --sh-hard:3px 3px 0 var(--ink);            /* 主 CTA：硬投影 */
+  --sh-hard-sm:2px 2px 0 var(--ink);         /* 小按钮/标签 */
+  --sh-hard-red:3px 3px 0 var(--vermilion);  /* 朱红硬投影：只给"今日主打"这类唯一焦点 */
   --ring:0 0 0 3px rgba(200,50,30,.25);
+
+  /* —— 纸的颗粒：极淡噪点抹平"数码塑料感"（Symphony of Vines：opacity .015） */
+  --noise-opacity:.035;
 
   --ease:cubic-bezier(.2,0,0,1);
   --t-fast:.16s; --t:.24s; --t-slow:.4s;
@@ -122,6 +135,12 @@ img{max-width:100%;display:block}
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 input,select,textarea{font:inherit;color:inherit;width:100%;border:0;outline:0;background:none}
 textarea{resize:vertical}
+/* 纸的颗粒：一层极淡噪点盖在全站最上面（不吃点击）。
+   为什么：纯色块 + 圆角 = 数码塑料感（AI 味的底色）。真实纸张有纤维，
+   Symphony of Vines 用 opacity .015 的噪点就把整个站"落"下来了。 */
+body::after{content:'';position:fixed;inset:0;z-index:300;pointer-events:none;
+  opacity:var(--noise-opacity);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E")}
 [hidden]{display:none !important}
 ::selection{background:rgba(200,50,30,.18)}
 ::placeholder{color:var(--ink-4);opacity:1}
@@ -164,6 +183,11 @@ hr,.rule{border:0;border-top:1px solid var(--rule);margin:var(--sp-8) 0}
 .between{display:flex;justify-content:space-between;align-items:baseline;gap:var(--sp-5);flex-wrap:wrap}
 .two{display:grid;grid-template-columns:1.62fr 1fr;gap:var(--sp-9);align-items:start}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:var(--sp-8) var(--sp-6)}
+/* 打破均等栅格：AI 永远把内容塞进"3 列一样大的卡片"。
+   这里让**头条（第一部本）横跨两列** —— 有主有次，眼睛才知道先看哪。 */
+.grid > .juben:first-child{grid-column:span 2}
+.grid > .juben:first-child .cover{aspect-ratio:16/9}   /* 头条用横幅，跟其余竖海报拉开差别 */
+.grid > .juben:first-child .body h4{font-size:26px}
 .scroll{overflow-x:auto}
 .foot{padding:var(--sp-6) var(--sp-7);border-top:1px solid var(--rule);color:var(--ink-4);
   font-size:var(--fs-xs);text-align:center}
@@ -229,28 +253,41 @@ hr,.rule{border:0;border-top:1px solid var(--rule);margin:var(--sp-8) 0}
 .avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid var(--rule-strong)}
 
 /* ============================ 5. 按钮 ============================ */
-/* 形状：编辑式偏方（4–6px），主 CTA 才用胶囊；一个页面只该有一颗朱红实底按钮 */
+/* 【去 AI 味的关键一处】AI 的按钮：统一大圆角 + 所有 hover 都是"轻微上浮 + 变浅"。
+   这里是另一种取舍：
+     · 直角 + 1.5px 墨色描边 —— 纸印出来的票根不会有圆角
+     · 主按钮（朱红）= **硬投影**（3px 3px 0，不模糊），按下时位移 3px 把投影吃掉 = 真按压
+     · 次要按钮 hover = **反色**（墨底纸字），不是"变浅一点"
+     · 危险按钮 hover = 字色加深 + 描边变红，动作更"硬"
+   三种按钮三种反馈，一眼分得出主次 —— 这才是做过取舍的交互。 */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;
-  padding:0 var(--sp-5);border-radius:var(--r-sm);border:1px solid var(--rule-strong);
+  padding:0 var(--sp-5);border-radius:var(--r-sm);border:1.5px solid var(--ink);
   font-size:14.5px;font-weight:600;white-space:nowrap;font-family:var(--sans);
-  transition:background var(--t) var(--ease),border-color var(--t) var(--ease),color var(--t) var(--ease)}
-.btn-primary{background:var(--vermilion);border-color:var(--vermilion);color:#fff}
-.btn-primary:hover{background:var(--vermilion-600);border-color:var(--vermilion-600)}
+  background:var(--paper-3);color:var(--ink);
+  transition:transform var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease),
+             background var(--t) var(--ease),color var(--t) var(--ease)}
+.btn-primary{background:var(--vermilion);border-color:var(--ink);color:#fff;box-shadow:var(--sh-hard)}
+.btn-primary:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
+.btn-primary:active{transform:translate(3px,3px);box-shadow:none}
 .btn-ghost{background:transparent;color:var(--ink)}
-.btn-ghost:hover{background:var(--paper-2)}
+.btn-ghost:hover{background:var(--ink);color:var(--paper);transform:none}   /* 反色，不是淡变 */
 /* 暗底上的次要按钮：底色是墨色舞台，字必须跟着舞台走（以前写的是 --paper，
    深浅色一翻就变成"暗底暗字"，首屏那颗「看看谁在拼车」直接看不见） */
 .band.ink .btn-ghost,.hero .btn-ghost{color:var(--stage-ink);border-color:rgba(244,241,234,.35)}
 .band.ink .btn-ghost:hover,.hero .btn-ghost:hover{background:rgba(244,241,234,.1)}
-.btn-cta{background:var(--vermilion);border-color:var(--vermilion);color:#fff;height:52px;
-  padding:0 var(--sp-7);font-size:16px;border-radius:var(--r-pill);box-shadow:0 3px 0 var(--lip)}
-.btn-cta:hover{background:var(--vermilion-600)}
-.btn-cta:active{transform:translateY(3px);box-shadow:none}
-.btn-accent{background:var(--gold-050);border-color:transparent;color:var(--gold)}
-.btn-danger{background:var(--bad-bg);border-color:transparent;color:var(--bad)}
-.btn-sm{height:34px;padding:0 var(--sp-4);font-size:13px}
+.btn-cta{background:var(--vermilion);border-color:var(--ink);color:#fff;height:52px;
+  padding:0 var(--sp-7);font-size:16px;border-radius:var(--r-sm);box-shadow:var(--sh-hard)}
+.btn-cta:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink)}
+.btn-cta:active{transform:translate(3px,3px);box-shadow:none}
+.btn-accent{background:var(--gold-050);border-color:var(--gold);color:var(--gold)}
+.btn-danger{background:transparent;border-color:var(--bad);color:var(--bad)}
+.btn-danger:hover{background:var(--bad);color:#fff}
+.btn-sm{height:34px;padding:0 var(--sp-4);font-size:13px;box-shadow:var(--sh-hard-sm)}
+.btn-sm:active{transform:translate(2px,2px);box-shadow:none}
 .btn-block{width:100%}
-.btn:disabled{opacity:.45;cursor:not-allowed}
+/* 禁用态：AI 只画默认态，这里把"不能按"说清楚 —— 去投影、去描边力度、给禁止手势 */
+.btn:disabled{opacity:.38;cursor:not-allowed;box-shadow:none;transform:none;
+  border-style:dashed;border-color:var(--ink-4)}
 .op-btn{display:inline-flex;align-items:center;height:30px;padding:0 var(--sp-3);border-radius:var(--r-sm);
   border:1px solid var(--rule);color:var(--ink-3);font-size:12.5px;white-space:nowrap;transition:all var(--t) var(--ease)}
 .op-btn:hover{color:var(--ink);border-color:var(--rule-strong)}
@@ -814,7 +851,28 @@ details.spoiler[open] > summary{color:var(--ink);margin-bottom:var(--sp-5)}
   .act .sub{margin-left:0}
 }
 
-/* ============================ 20. 无障碍 / 降级 ============================ */
+/* ============================ 20. 状态（空 / 加载 / 错误 / 禁用） ============================ */
+/* AI 味的软肋之一：只画"默认态"这一张最好看的图。
+   真人做 UI 必须把四种状态都做掉，否则用户在真实场景里看到的是没设计过的空白。
+   用法：列表没数据 → .empty；等待接口 → .skel；表单校验不过 → .field.err。 */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--sp-2);
+  padding:var(--sp-8) var(--sp-4);border:1px dashed var(--rule-strong);
+  color:var(--ink-4);font-size:var(--fs-sm);text-align:center;background:var(--paper-3)}
+.empty .ico{font-size:26px;opacity:.45;line-height:1}
+.empty b{color:var(--ink-3);font-weight:600}
+.skel{border-radius:0;background:var(--paper-2);background-image:
+  linear-gradient(90deg,var(--paper-2) 0,var(--paper-3) 40%,var(--paper-2) 80%);
+  background-size:300% 100%;animation:skel 1.1s linear infinite}
+@keyframes skel{from{background-position:150% 0}to{background-position:-50% 0}}
+/* 表单错误：不是"变红一点"就算了 —— 边框加粗 + 底色 + 一行说明 */
+.field.err > input,.field.err > select,.field.err > textarea{
+  border-color:var(--bad);border-width:2px;background:var(--bad-bg)}
+.field .err-text{font-size:var(--fs-xs);color:var(--bad);font-weight:600}
+/* 禁用：虚线框 + 降饱和，一眼看出"这个现在动不了" */
+input:disabled,select:disabled,textarea:disabled{
+  background:var(--paper-2);color:var(--ink-4);border-style:dashed;cursor:not-allowed}
+
+/* ============================ 21. 无障碍 / 降级 ============================ */
 button,[data-action],.lnk,.agree,.chip,.chip-sm,.pill,.tabbar button,.navi,.menu .mi,.cust-card,
 .juben .body .book{touch-action:manipulation}
 @media (prefers-reduced-motion:reduce){
