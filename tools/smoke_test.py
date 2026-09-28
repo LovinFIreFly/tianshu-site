@@ -442,10 +442,26 @@ check('SMTP 密码那栏是 password 类型（不明文显示）', 'name="smtpPa
 s, html = admin.post('/admin/mail/test', {'to': 'test@example.com'})
 check('没配 SMTP 时点测试邮件只给提示、不报错', '没发出去' in html or '还没配置' in html)
 check('发信配置不当成"已发送"骗人', '已发出' not in html or '没发出去' in html)
-# 没配 SMTP 时，本机要码还是照旧走"打印到黑窗口"这条路
+check('发信通道能选（Resend / SMTP / Webhook）',
+      'name="mailProvider"' in html and 'resend' in html and 'webhook' in html)
+check('Resend 的 Key 栏也在（老版的 MAIL_KEY 可抄过来）', 'name="mailKey"' in html)
+
+# 没配发信通道时，本机要码还是照旧走"打印到黑窗口"这条路
 # 注意：只认成功那句中文字 —— 之前用「黑窗口」当判据，500 错误页里也有这仨字，误判过一次
 s, html = guest.post('/code/send', {'email': 'someone@example.com', 'purpose': 'register'})
-check('没配发信邮箱时，本机要码仍可用（走控制台打印）', '验证码已生成' in html, 'HTTP %s' % s)
+check('没配发信通道时，本机要码仍可用（走控制台打印）', '验证码已生成' in html, 'HTTP %s' % s)
+# 防轰炸：同一邮箱 60 秒内只能要一次（照老版的规矩）
+s, html = guest.post('/code/send', {'email': 'someone@example.com', 'purpose': 'register'})
+check('同一邮箱 60 秒内不能重复要码', '秒后再点' in html or '刚发过' in html, 'HTTP %s' % s)
+# 防暴力猜：同一个码试满 5 次就作废
+_mail = 'tries@example.com'
+guest.post('/code/send', {'email': _mail, 'purpose': 'register'})
+for _ in range(6):
+    guest.post('/register', {'phone': '13900009999', 'username': '猜码测试号', 'password': '123456',
+                             'password2': '123456', 'code': '000000', 'agree': '1', 'email': _mail})
+_codes = [c for c in jread('codes') if str(c.get('target')) == _mail]
+check('同一个码试满 5 次会作废', _codes and _codes[-1].get('used') is True,
+      'tries=%s used=%s' % ((_codes or [{}])[-1].get('tries'), (_codes or [{}])[-1].get('used')))
 
 # 仓库卫生：该进仓库的代码文件不能被 .gitignore 吞掉
 # 2026-09 踩过：.gitignore 里的 `_*.py` 把 tianshu/__init__.py 也忽略了 ——

@@ -565,32 +565,117 @@ def save_upload(file_storage, sub='misc'):
 # ---------------------------------------------------------------- 验证码（只走邮箱）
 # 咱们没有短信通道，验证码一律发到邮箱：注册、找回密码都是往邮箱发。
 # 手机号只当账号用（登录名），别拿它收码 —— 发不出去的。
-def mail_ready(st=None):
-    """发信邮箱配好了没？（后台「门店设置 → 验证码发信」里填）"""
+# 验证码的规矩（照抄老版 legacy/functions/api 的那几个常量，防的是"被人拿去轰炸邮箱"）
+CODE_TTL = 5 * 60 * 1000       # 5 分钟有效
+CODE_MAX_TRY = 5               # 同一个码最多让人试 5 次，超了作废（防暴力猜）
+CODE_SEND_GAP = 60 * 1000      # 同一个邮箱 60 秒内只能要一次
+CODE_DAY_LIMIT = 10            # 同一个邮箱每天最多要 10 次
+
+
+def mail_provider(st=None):
+    """当前用哪条发信通道。没显式选的话：谁配好了就用谁（resend 优先，其次 smtp）。"""
     st = st or get_settings()
-    return bool(str(st.get('smtpHost') or '').strip() and str(st.get('smtpUser') or '').strip()
-                and str(st.get('smtpPass') or '').strip())
+    p = str(st.get('mailProvider') or '').strip().lower()
+    if p in ('resend', 'smtp', 'webhook'):
+        return p
+    if str(st.get('mailKey') or '').strip():
+        return 'resend'
+    if st.get('smtpHost') and st.get('smtpUser') and st.get('smtpPass'):
+        return 'smtp'
+    return ''
 
 
-def send_mail(to, subject, body, st=None):
-    """发一封邮件（SMTP 直连）。返回 (成功吗, 错误说明)。
+def mail_ready(st=None):
+    """发信通道配好了没？（后台「门店设置 → 验证码发信」里填）"""
+    st = st or get_settings()
+    p = mail_provider(st)
+    if p == 'resend':
+        return bool(str(st.get('mailKey') or '').strip())
+    if p == 'webhook':
+        return bool(str(st.get('mailWebhook') or '').strip())
+    if p == 'smtp':
+        return bool(str(st.get('smtpHost') or '').strip() and str(st.get('smtpUser') or '').strip()
+                    and str(st.get('smtpPass') or '').strip())
+    return False
 
-    · 465 端口走 SSL（阿里云邮件推送推荐这个）
-    · 587 端口走 STARTTLS
-    · 25 端口不要用 —— 阿里云默认封 25，全世界的云厂商也基本都封（防垃圾邮件）
-    收件人、发信人、密码都从「门店设置」里取，不写在代码里。
+
+def code_mail_html(code, shop='甜薯剧本杀', minutes=5):
+    """验证码邮件的 HTML（照老版那封改的，配色换成现在这套朱红）"""
+    return ('<div style="font-family:-apple-system,\'PingFang SC\',sans-serif;padding:24px">'
+            '<h2 style="margin:0 0 12px">%s</h2>'
+            '<p>你的验证码是：</p>'
+            '<div style="font-size:32px;font-weight:800;letter-spacing:6px;color:#C8321E">%s</div>'
+            '<p style="color:#666">%d 分钟内有效，请勿泄露给他人。</p></div>'
+            % (shop, code, minutes))
+
+
+def _post_json(url, payload, headers=None, timeout=15):
+    """POST 一个 JSON（标准库，不引第三方 requests）。返回 (状态码, 响应文本)"""
+    import json as _json
+    import urllib.request
+    data = _json.dumps(payload, ensure_ascii=False).encode('utf-8')
+    hdr = {'Content-Type': 'application/json'}
+    hdr.update(headers or {})
+    req = urllib.request.Request(url, data=data, method='POST', headers=hdr)
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.status, r.read().decode('utf-8', 'replace')
+
+
+def send_mail(to, subject, body, st=None, code=''):
+    """按后台选的通道发一封邮件。返回 (成功吗, 错误说明)。
+
+    三条通道（和老版 legacy/functions/api 那套一致，老版用的是 Resend）：
+      · resend  —— POST https://api.resend.com/emails
+      · webhook —— 往你自己的接口 POST（想接哪个服务都接得进来）
+      · smtp    —— 直连 SMTP：465 走 SSL、587 走 STARTTLS
+                   （别用 25，阿里云和几乎所有云厂商都封 25，防垃圾邮件）
+    发信人、密钥这些全从「门店设置」取，不写在代码里。
     """
+    st = st or get_settings()
+    shop = st.get('shopName') or '甜薯剧本杀'
+    provider = mail_provider(st)
+    sender = str(st.get('mailFrom') or st.get('smtpFrom') or st.get('smtpUser') or '').strip()
+
+    if provider == 'resend':
+        key = str(st.get('mailKey') or '').strip()
+        if not key:
+            return False, '没填 Resend API Key'
+        payload = {'from': sender or 'onboarding@resend.dev', 'to': [to],
+                   'subject': subject, 'text': body}
+        if code:
+            payload['html'] = code_mail_html(code, shop)
+        try:
+            status, resp = _post_json('https://api.resend.com/emails', payload,
+                                      {'Authorization': 'Bearer ' + key})
+            if 200 <= status < 300:
+                return True, ''
+            return False, 'Resend 返回 %s：%s' % (status, resp[:140])
+        except Exception as e:
+            return False, '连不上 Resend：%s' % str(e)[:140]
+
+    if provider == 'webhook':
+        url = str(st.get('mailWebhook') or '').strip()
+        if not url:
+            return False, '没填 Webhook 地址'
+        try:
+            status, resp = _post_json(url, {'to': to, 'code': code, 'subject': subject,
+                                            'from': sender, 'text': body})
+            if 200 <= status < 300:
+                return True, ''
+            return False, 'Webhook 返回 %s：%s' % (status, resp[:120])
+        except Exception as e:
+            return False, 'Webhook 没通：%s' % str(e)[:140]
+
     import smtplib
     from email.header import Header
     from email.mime.text import MIMEText
     from email.utils import formataddr
 
-    st = st or get_settings()
     host = str(st.get('smtpHost') or '').strip()
     user = str(st.get('smtpUser') or '').strip()
     pw = str(st.get('smtpPass') or '').strip()
     if not (host and user and pw):
-        return False, '还没配置发信邮箱（后台「概览 → 门店设置 → 验证码发信」里填上）'
+        return False, '还没配置发信通道（后台「概览 → 门店设置 → 验证码发信」里选一条）'
     try:
         port = int(st.get('smtpPort') or 465)
     except Exception:
@@ -632,25 +717,37 @@ def send_code(email, purpose):
        区别是现在线上必须真发，因为没人看得到服务器那个黑窗口。
     """
     st = get_settings()
-    code = '%06d' % secrets.randbelow(1000000)
-    rows = [c for c in db.rows('codes') if (c.get('exp') or 0) > now_ms()]      # 先清掉过期的
-    rows.append({'id': now_ms(), 'target': str(email).strip().lower(), 'purpose': purpose, 'code': code,
-                 'exp': now_ms() + 300000, 'used': False})
-    db.write('codes', rows[-50:])
+    now = now_ms()
     to = str(email).strip().lower()
+
+    # ---- 限频（照老版的规矩：同邮箱 60 秒一次、每天 10 次，防被人拿去轰炸邮箱）----
+    keep = [c for c in db.rows('codes') if (c.get('exp') or 0) + 86400000 > now]   # 留一天，用来算限频
+    mine = [c for c in keep if str(c.get('target')) == to]
+    last = max([c.get('at') or c.get('id') or 0 for c in mine] or [0])
+    if now - last < CODE_SEND_GAP:
+        return None, False, '刚发过一条，%d 秒后再点' % max(1, (CODE_SEND_GAP - (now - last)) // 1000)
+    if len([c for c in mine if now - (c.get('at') or c.get('id') or 0) < 86400000]) >= CODE_DAY_LIMIT:
+        return None, False, '这个邮箱今天要的验证码有点多，明天再试吧'
+
+    code = '%06d' % secrets.randbelow(1000000)
+    keep.append({'id': now, 'at': now, 'target': to, 'purpose': purpose, 'code': code,
+                 'exp': now + CODE_TTL, 'used': False, 'tries': 0})
+    db.write('codes', keep[-200:])
+
     if mail_ready(st):
         shop = st.get('shopName') or '甜薯剧本杀'
+        subject = str(st.get('mailSubject') or '').strip() or '【%s】验证码' % shop
         body = ('你的验证码是：%s\n\n'
                 '5 分钟内有效，请别转发给别人。\n'
                 '如果不是你本人操作，忽略这封邮件就行。\n\n'
                 '—— %s' % (code, shop))
-        ok, err = send_mail(to, '【%s】验证码 %s' % (shop, code), body, st)
-        print('[邮箱验证码] 发往 %s（%s）：%s  →  %s'
-              % (to, purpose, code, '已发送' if ok else ('发送失败：%s' % err)))
+        ok, err = send_mail(to, subject, body, st, code=code)
+        print('[验证码] 发往 %s（%s）：%s  →  %s（通道 %s）'
+              % (to, purpose, code, '已发送' if ok else '发送失败', mail_provider(st) or '未配置'))
         return code, ok, err
-    print('[邮箱验证码] %s（%s）：%s%s'
+    print('[验证码] %s（%s）：%s%s'
           % (to, purpose, code, ('    也可以直接用 %s' % DEMO_CODE) if is_dev_request() else ''))
-    return code, False, '还没配置发信邮箱'
+    return code, False, '还没配置发信通道'
 
 
 def is_dev_request():
@@ -692,12 +789,22 @@ def use_code(email, purpose, code):
         return is_dev_request()
     target = str(email or '').strip().lower()
     rows = db.rows('codes')
+    dirty = False
     for c in rows:
         if (str(c.get('target')) == target and c.get('purpose') == purpose
                 and str(c.get('code')) == code and not c.get('used') and (c.get('exp') or 0) > now_ms()):
             c['used'] = True
             db.write('codes', rows)
             return True
+        # 码对不上：给这条码记一次"猜错"，猜满 CODE_MAX_TRY 次就作废（照老版的规矩，防暴力猜）
+        if (str(c.get('target')) == target and c.get('purpose') == purpose
+                and not c.get('used') and (c.get('exp') or 0) > now_ms()):
+            c['tries'] = int(c.get('tries') or 0) + 1
+            if c['tries'] >= CODE_MAX_TRY:
+                c['used'] = True
+            dirty = True
+    if dirty:
+        db.write('codes', rows)
     return False
 
 

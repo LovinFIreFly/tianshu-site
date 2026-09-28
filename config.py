@@ -35,8 +35,17 @@ SETTINGS_DEFAULT = {
     "depositRatio": 0.30,      # 定金比例（包车用这个算）
     "carDeposit": 50,          # 拼车定金：一口价（元），跟人数无关
     "inviteCoupon": 10,        # 邀请返利：填了邀请码注册，双方各得一张券（元）
-    # ---- 验证码发信（阿里云「邮件推送」等 SMTP 服务）----
-    # 留空 = 不真发，验证码只打印在运行服务的黑窗口里（本机开发够用；线上必须配，不然客人收不到码）
+    # ---- 验证码发信 ----
+    # 三条通道任选一条（后台「门店设置 → 验证码发信」里选）；留空 = 不真发，
+    # 验证码只打印在跑服务的黑窗口里（本机开发够用；线上必须配一条，不然客人收不到码）
+    #   ① resend  —— 和老版（legacy/functions/api）用的同一个服务，免费 3000 封/月
+    #   ② smtp    —— 阿里云邮件推送 / QQ 邮箱等，直连 SMTP
+    #   ③ webhook —— 往你自己的接口 POST，爱接啥接啥
+    "mailProvider": "",        # '' / 'resend' / 'smtp' / 'webhook'
+    "mailKey": "",             # Resend API Key（re_ 开头）
+    "mailFrom": "",            # 发件人，例：noreply@lovinfirefly.cn（Resend 里验证过的域名）
+    "mailSubject": "",         # 主题，留空 = 【店名】验证码
+    "mailWebhook": "",         # 自定义 Webhook 地址
     "smtpHost": "",            # 例：smtpdm.aliyun.com
     "smtpPort": 465,           # 465 = SSL（推荐）；587 = STARTTLS。别用 25，云厂商默认封
     "smtpUser": "",            # 发信账号，例：noreply@lovinfirefly.cn

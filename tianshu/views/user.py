@@ -184,12 +184,14 @@ def code_send():
         flash('先填个有效的邮箱，验证码是发到邮箱的', 'warn')
     else:
         code, sent, err = business.send_code(email, purpose)
-        if sent:
+        if code is None:                       # 被限频了（60 秒一次 / 每天 10 次）
+            flash(err or '要码太频繁了，等一会儿再试', 'warn')
+        elif sent:
             flash('验证码已发到 %s，5 分钟内有效（收不到就翻翻垃圾邮件箱）' % email, 'ok')
         elif business.is_dev_request():
             flash('验证码已生成：去看运行服务的那个黑窗口（本机测试也可以直接填 1234）', 'ok')
         else:
-            flash('店里的发信邮箱还没配好，邮件发不出去（%s）—— 请先联系门店' % (err or '未配置'), 'warn')
+            flash('店里的发信通道还没配好，邮件发不出去（%s）—— 请先联系门店' % (err or '未配置'), 'warn')
     return redirect(request.referrer or url_for('user.me'))
 
 

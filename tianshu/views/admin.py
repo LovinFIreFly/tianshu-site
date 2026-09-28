@@ -483,7 +483,14 @@ def settings():
     # 小客服微信号：客人点「支付定金」那页上显示的就是它
     if f.get('serviceWechat') is not None:
         rows['serviceWechat'] = business.clean(f.get('serviceWechat'), 40)
-    # 验证码发信（阿里云邮件推送等 SMTP）：密码这类不做长度截断以外处理，原样存
+    # 验证码发信：先定通道，再存各通道的凭据
+    if f.get('mailProvider') in ('', 'resend', 'smtp', 'webhook'):
+        rows['mailProvider'] = f.get('mailProvider')
+    for k in ('mailFrom', 'mailSubject', 'mailWebhook'):
+        if f.get(k) is not None:
+            rows[k] = business.clean(f.get(k), 120)
+    if f.get('mailKey') is not None:
+        rows['mailKey'] = business.clean(f.get('mailKey'), 120)
     for k in ('smtpHost', 'smtpUser', 'smtpFrom'):
         if f.get(k) is not None:
             rows[k] = business.clean(f.get(k), 80)
