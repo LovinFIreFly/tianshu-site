@@ -449,6 +449,21 @@ s, html = admin.get('/admin')
 check('门店设置里有「验证码发信（邮箱）」这几栏', 'smtpHost' in html and 'smtpdm.aliyun.com' in html)
 check('有「发一封测试邮件」入口', '发一封测试邮件' in html)
 check('SMTP 密码那栏是 password 类型（不明文显示）', 'name="smtpPass" type="password"' in html)
+check('有「发件人昵称」这一栏（客人收件箱里显示店名）', 'name="mailFromName"' in html)
+# 直接测拼出来的 From（脚本从 tools/ 跑，repo 根目录要自己加进 sys.path）
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+from tianshu import business as _bs
+_chk = dict(_bs.get_settings(), mailFrom='noreply@lovinfirefly.cn', mailFromName='甜薯剧本杀')
+check('发件人拼成「甜薯剧本杀 <noreply@lovinfirefly.cn>」',
+      _bs.mail_sender(_chk) == '甜薯剧本杀 <noreply@lovinfirefly.cn>', _bs.mail_sender(_chk))
+_bad = dict(_chk, mailFromName='坏\n名字\r\nBcc: x@y.com')
+check('昵称里的换行被掐掉（防邮件头注入）',
+      '\n' not in _bs.mail_sender(_bad) and '\r' not in _bs.mail_sender(_bad),
+      repr(_bs.mail_sender(_bad)))
+check('昵称留空 = 只显示地址（不强加店名）',
+      _bs.mail_sender(dict(_chk, mailFromName='')) == 'noreply@lovinfirefly.cn')
 s, html = admin.post('/admin/mail/test', {'to': 'test@example.com'})
 check('没配 SMTP 时点测试邮件只给提示、不报错', '没发出去' in html or '还没配置' in html)
 check('发信配置不当成"已发送"骗人', '已发出' not in html or '没发出去' in html)

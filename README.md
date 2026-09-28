@@ -176,6 +176,8 @@ python tools/smoke_test.py     # 另一个窗口跑自检
 **线上现状（2026-09 通的）**：通道 = Resend，发件人 = `noreply@lovinfirefly.cn`
 （域名 `lovinfirefly.cn` 已在 Resend 验证，状态 Verified），Key 是"**仅发送**"权限 —— 发信够用，不用换。
 （这种 Key 去查 `/domains` 会得到 `401 restricted_api_key`，属正常，别当故障修。）
+发件人昵称（客人收件箱里显示的名字）在「门店设置 → 发件人昵称」改，默认是店名；
+留空就只显示邮箱地址 ✓
 
 > 🔑 **Key 一旦贴进聊天/截图就等于泄露**：登 resend.com → API Keys 建一把新的、把旧的删掉，
 > 再填回后台，点「发一封测试邮件」验一下就行。

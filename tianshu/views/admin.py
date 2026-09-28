@@ -491,6 +491,9 @@ def settings():
             rows[k] = business.clean(f.get(k), 120)
     if f.get('mailKey') is not None:
         rows['mailKey'] = business.clean(f.get('mailKey'), 120)
+    # 发件人昵称：客人收件箱里显示的名字（留空 = 只显示地址），见 business.mail_from_name
+    if f.get('mailFromName') is not None:
+        rows['mailFromName'] = business.clean(f.get('mailFromName'), 40)
     for k in ('smtpHost', 'smtpUser', 'smtpFrom'):
         if f.get(k) is not None:
             rows[k] = business.clean(f.get(k), 80)

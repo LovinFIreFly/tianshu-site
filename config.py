@@ -44,6 +44,7 @@ SETTINGS_DEFAULT = {
     "mailProvider": "",        # '' / 'resend' / 'smtp' / 'webhook'
     "mailKey": "",             # Resend API Key（re_ 开头）
     "mailFrom": "",            # 发件人，例：noreply@lovinfirefly.cn（Resend 里验证过的域名）
+    "mailFromName": "甜薯剧本杀",   # 发件人昵称（收件箱里显示的名字）；留空 = 只显示邮箱地址
     "mailSubject": "",         # 主题，留空 = 【店名】验证码
     "mailWebhook": "",         # 自定义 Webhook 地址
     "smtpHost": "",            # 例：smtpdm.aliyun.com

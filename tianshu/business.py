@@ -672,6 +672,32 @@ def mail_error_hint(status, text):
     return '%s：%s' % (status, t)
 
 
+def mail_from_name(st=None):
+    """发件人昵称（客人收件箱里显示的名字，例「甜薯剧本杀」）。留空 = 只显示邮箱地址。
+
+    ⚠️ 必须掐掉换行/制表：邮件头里一旦能塞进 \\r\\n，就能伪造出别的头（**头注入**）。
+    这个值只有店主能填，但发信是最不该图省事的地方 —— clean() 不删 \\r\\n\\t，所以这里单独删。
+    """
+    import re
+    st = st or get_settings()
+    return re.sub(r'[\r\n\t]+', ' ', str(st.get('mailFromName') or '')).strip()[:40]
+
+
+def mail_sender(st=None):
+    """拼成 `昵称 <地址>` —— 收件箱里就显示店名而不是光秃秃一个地址。
+
+    只有 Resend 这种 JSON 接口需要自己拼（它不认 Python formataddr 那套编码）；
+    SMTP 那边用 formataddr(Header(...)) 自己处理中文 ✓
+    """
+    st = st or get_settings()
+    addr = str(st.get('mailFrom') or st.get('smtpFrom') or st.get('smtpUser') or '').strip()
+    name = mail_from_name(st)
+    # 昵称/地址里带尖括号就别拼了：拼出来是坏的 From，宁可退回纯地址
+    if name and addr and '<' not in addr and '<' not in name:
+        return '%s <%s>' % (name, addr)
+    return addr
+
+
 def send_mail(to, subject, body, st=None, code=''):
     """按后台选的通道发一封邮件。返回 (成功吗, 错误说明)。
 
@@ -691,7 +717,8 @@ def send_mail(to, subject, body, st=None, code=''):
         key = str(st.get('mailKey') or '').strip()
         if not key:
             return False, '没填 Resend API Key'
-        payload = {'from': sender or 'onboarding@resend.dev', 'to': [to],
+        # From 用「昵称 <地址>」：客人收件箱里显示的是店名，不是一个光秃秃的邮箱
+        payload = {'from': mail_sender(st) or 'onboarding@resend.dev', 'to': [to],
                    'subject': subject, 'text': body}
         if code:
             payload['html'] = code_mail_html(code, shop)
@@ -710,8 +737,10 @@ def send_mail(to, subject, body, st=None, code=''):
         if not url:
             return False, '没填 Webhook 地址'
         try:
+            # 同时给地址和昵称：接的那头爱拼就自己拼（老版只给了 from 地址，这里只加不删）
             status, resp = _post_json(url, {'to': to, 'code': code, 'subject': subject,
-                                            'from': sender, 'text': body})
+                                            'from': sender, 'fromName': mail_from_name(st),
+                                            'text': body})
             if 200 <= status < 300:
                 return True, ''
             return False, 'Webhook 返回 %s：%s' % (status, resp[:120])
@@ -737,7 +766,8 @@ def send_mail(to, subject, body, st=None, code=''):
 
     msg = MIMEText(body, 'plain', 'utf-8')
     msg['Subject'] = Header(subject, 'utf-8')
-    msg['From'] = formataddr((str(Header(shop, 'utf-8')), sender))
+    # 昵称优先用后台设置里的（默认就是店名），留空则只写地址
+    msg['From'] = formataddr((str(Header(mail_from_name(st) or shop, 'utf-8')), sender))
     msg['To'] = to
     try:
         if port == 587:
