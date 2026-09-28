@@ -62,9 +62,9 @@ class Client:
         except urllib.error.HTTPError as e:
             return e.code, e.read().decode('utf-8', 'replace')
 
-    def post(self, path, data=None):
+    def post(self, path, data=None, headers=None):
         body = urllib.parse.urlencode(data or {}).encode('utf-8')
-        req = urllib.request.Request(BASE + path, data=body, method='POST')
+        req = urllib.request.Request(BASE + path, data=body, method='POST', headers=headers or {})
         try:
             with self.op.open(req, timeout=15) as r:
                 return r.status, r.read().decode('utf-8', 'replace')
@@ -586,6 +586,19 @@ if rv_mine:
     check('追评加上了', any('补一句' in str(f.get('text')) for f in (rv_fu.get('followUps') or [])))
 else:
     check('追评加上了', False, '没找到自己的评价')
+
+# 「获取验证码」：必须是普通按钮 + 接口给 fetch 回 JSON
+# （以前它 type=submit + formaction，浏览器先跑整表校验 → 弹"请填写此字段"，码根本没发出去）
+s, html = guest.get('/register')
+check('注册页的「获取验证码」不再是提交按钮（点了不会再弹"请填写此字段"）',
+      'data-code-btn' in html and 'type="button" data-code-btn' in html)
+s, html = guest.get('/forgot')
+check('找回密码页的「获取验证码」也一起修了',
+      'data-code-btn' in html and 'data-purpose="reset"' in html)
+s, body = guest.post('/code/send', {'email': 'check-codebox@example.com', 'purpose': 'register'},
+                     headers={'X-Requested-With': 'fetch', 'Accept': 'application/json'})
+check('取验证码接口给 fetch 回 JSON（页面不刷新，填过的密码不会丢）',
+      s == 200 and '"ok"' in body, body[:70])
 
 # 邀请返利：填好友的邀请码，双方各得一张抵扣券（金额 = 门店设置里的 inviteCoupon，默认 10 元）
 inv_code = next((x.get('invite') for x in jread('users') if x.get('phone') == '13900001111'), None)

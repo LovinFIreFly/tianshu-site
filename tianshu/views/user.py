@@ -8,7 +8,7 @@
 import re
 import secrets
 
-from flask import (Blueprint, flash, redirect, render_template, request, session, url_for)
+from flask import (Blueprint, flash, jsonify, redirect, render_template, request, session, url_for)
 
 from tianshu import business
 from tianshu.db import db
@@ -180,18 +180,24 @@ def code_send():
     """
     email = (request.form.get('email') or '').strip()
     purpose = request.form.get('purpose') or 'reset'
+    ok, msg = True, ''
     if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
-        flash('先填个有效的邮箱，验证码是发到邮箱的', 'warn')
+        ok, msg = False, '先填个有效的邮箱，验证码是发到邮箱的'
     else:
         code, sent, err = business.send_code(email, purpose)
         if code is None:                       # 被限频了（60 秒一次 / 每天 10 次）
-            flash(err or '要码太频繁了，等一会儿再试', 'warn')
+            ok, msg = False, (err or '要码太频繁了，等一会儿再试')
         elif sent:
-            flash('验证码已发到 %s，5 分钟内有效（收不到就翻翻垃圾邮件箱）' % email, 'ok')
+            ok, msg = True, '验证码已发到 %s，5 分钟内有效（收不到就翻翻垃圾邮件箱）' % email
         elif business.is_dev_request():
-            flash('验证码已生成：去看运行服务的那个黑窗口（本机测试也可以直接填 1234）', 'ok')
+            ok, msg = True, '验证码已生成：去看运行服务的那个黑窗口（本机测试也可以直接填 1234）'
         else:
-            flash('店里的发信通道还没配好，邮件发不出去（%s）—— 请先联系门店' % (err or '未配置'), 'warn')
+            ok, msg = False, '店里的发信通道还没配好，邮件发不出去（%s）—— 请先联系门店' % (err or '未配置')
+    # 页面上那颗「获取验证码」是 fetch 调的：回 JSON，**不刷页面** ——
+    # 刷页面会把用户已经填好的密码冲掉，还得重填一遍（以前就是这么难用）。
+    if (request.headers.get('X-Requested-With') or '') == 'fetch':
+        return jsonify(ok=ok, msg=msg)
+    flash(msg, 'ok' if ok else 'warn')
     return redirect(request.referrer or url_for('user.me'))
 
 

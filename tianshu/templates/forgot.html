@@ -18,9 +18,11 @@
     <div class="code-row">
       <div class="field"><span class="ico" aria-hidden="true">🔑</span>
         <input name="code" type="tel" maxlength="6" placeholder="验证码" aria-label="验证码" required></div>
-      <button class="btn-code" type="submit" formaction="{{ url_for('user.code_send') }}" formmethod="post"
-              onclick="this.form.purpose.value='reset'">获取验证码</button>
+      {# type=button（不是 submit）：点它只发验证码，不该触发整表校验 —— 见 auth_base.html 里的脚本 #}
+      <button class="btn-code" type="button" data-code-btn data-purpose="reset"
+              data-url="{{ url_for('user.code_send') }}">获取验证码</button>
     </div>
+    <p class="code-tip" data-code-tip hidden></p>
     <input type="hidden" name="purpose" value="reset">
     {% if dev_env %}
     <p class="hint-dev" style="text-align:left">本地开发：验证码打印在运行服务的黑窗口里，也可以直接填 1234</p>
