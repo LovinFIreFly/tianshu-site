@@ -51,6 +51,16 @@ if [ -d "$DIR/.git" ]; then
   git -C "$DIR" checkout -q "$BRANCH"
   git -C "$DIR" pull -q
   echo "   已更新到最新：$(git -C "$DIR" --no-pager log --oneline -1)"
+elif [ -d "$DIR" ] && [ -n "$(ls -A "$DIR" 2>/dev/null)" ]; then
+  # 目录已经存在、但还不是 git 仓库 —— 常见于"先把 data 传上来了"。
+  # 就地初始化：data/ 在 .gitignore 里，不会被覆盖，放心。
+  echo "   $DIR 已有东西（可能是你先前传的 data），就地初始化…"
+  git -C "$DIR" init -q
+  git -C "$DIR" remote remove origin 2>/dev/null || true
+  git -C "$DIR" remote add origin "$REPO"
+  git -C "$DIR" fetch -q origin "$BRANCH"
+  git -C "$DIR" checkout -q -B "$BRANCH" "origin/$BRANCH"
+  echo "   已拉取：$(git -C "$DIR" --no-pager log --oneline -1)"
 else
   git clone -q -b "$BRANCH" "$REPO" "$DIR"
   echo "   已拉取：$(git -C "$DIR" --no-pager log --oneline -1)"
