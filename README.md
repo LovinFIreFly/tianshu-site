@@ -165,8 +165,14 @@ python tools/smoke_test.py     # 另一个窗口跑自检
 | 代码（老）+ **现在的线上站** | 同仓库 `main` 分支 → Cloudflare **Pages** 项目 `tianshu-co8` → 域名 `lovinfirefly.cn` | 老的单文件 `index.html` + `functions/`，数据存在 `LovinFireFly/tianshu-data` | ❌ Pages 只能跑静态文件 + JS，跑不了 Python |
 | 公网入口（新） | 本机 `cloudflared` 隧道 → 自己的域名 | 这套 Python 版 | ✅ |
 
-所以：**新版上线走隧道**（不用买服务器、也不用动 Cloudflare Pages 那套）；老的 Pages 站留在那儿当备份，
-哪天不想留了，去 Cloudflare 把 `tianshu-co8` 那个项目停掉就行。
+所以新版上线有两条路，**别的都别考虑**：
+
+| | 适合谁 | 代价 |
+|---|---|---|
+| **云服务器（第 3 节）★ 现在用的** | 想 24 小时在线、不用管电脑 | 一年 ¥200–400 |
+| **本机隧道（第 1 节）** | 先试水 / 临时给朋友看 | 家里电脑得一直开着 |
+
+老的 Pages 站（`main` 分支）留在那儿当备份；哪天不想留了，去 Cloudflare 把 `tianshu-co8` 项目停掉就行。
 
 > 别把 `python-rewrite` 合并进 `main` —— 那会触发 Pages 用老架构重新部署，两边对不上。
 
@@ -214,11 +220,49 @@ ingress:
 监听端口读环境变量（现在写死 8000，改 `config.py` 可以从环境变量取）。
 免费档会休眠，被访问时唤醒来着就要等几秒。
 
-### 3. 云服务器（最稳，一年几十到几百块）
+### 3. 云服务器（最稳，24 小时在线）★ 现在用这套
 
-买台小机器（1核1G 够了），装 Python，`git clone` 下来跑
-`nohup python app.py --no-browser &`，前面挂 Nginx + HTTPS。
-数据就在 `data/` 里，定时 `python app.py --backup` 再同步走就行。
+**为什么选它**：不用管家里电脑开没开、不用改 `LAN_MODE`；香港/新加坡机房**免备案**，
+国内访问比 Cloudflare 免费节点稳。一年约 ¥200–400（轻量 2核2G）。
+
+**① 买机器**（阿里云 / 腾讯云的「轻量应用服务器」，5 分钟）
+- 地域：**香港**或**新加坡**（免备案）；镜像选 **Ubuntu 22.04 / 24.04**
+- 配置：1核1G 也够用（一天几十单），2核2G 更宽松
+- **安全组 / 防火墙放行**：`22`（SSH）、`80`、`443` —— **不要**开放 8000
+- 记下**公网 IP** 和 root 密码
+
+**② 把本机数据搬上去**（想保留现有的剧本/账号/预约就做这步）
+
+```
+图形化最省事：WinSCP 连上服务器，把本机 data 文件夹拖到 /opt/tianshu/
+或者命令行（在本机 PowerShell 里跑）：
+scp -r "C:\Users\junbo\Desktop\网站\data" root@<公网IP>:/opt/tianshu/
+```
+
+**③ 服务器上跑一键脚本**（用阿里云控制台的「远程连接」网页终端也行）
+
+```bash
+apt update && apt install -y git
+git clone -b python-rewrite https://github.com/LovinFireFly/tianshu-site.git /opt/tianshu
+bash /opt/tianshu/deploy/install.sh tianshu.lovinfirefly.cn
+```
+
+这个脚本会把该做的都做完：装依赖 → 拉代码 → 建虚拟环境 → 装 **Caddy**（自动 HTTPS、自动续期）
+→ 写 systemd（崩溃自启、开机自启）→ 加每天 4:10 自动备份、4:40 清 14 天前旧备份。
+跑完它会打印本机自测结果和"下一步要做什么"。
+
+**④ 阿里云 DNS 加一条 A 记录**
+
+控制台 → 域名 → `lovinfirefly.cn` → 解析设置 → 添加记录：
+`主机记录 = tianshu`、`类型 = A`、`记录值 = 服务器公网 IP`
+
+> **不用改 NS** —— 域名继续留在阿里云，以后要拿它发验证码邮件也不受影响（在阿里云 DNS 里加 SPF/DKIM 就行）。
+
+**⑤ 手机流量打开 `https://tianshu.lovinfirefly.cn`** —— 证书是 Caddy 自动申请的，第一次打开等 10 秒左右。
+
+**以后怎么更新网站**：本机改完 → `git push` → 服务器上再跑一次
+`bash /opt/tianshu/deploy/install.sh tianshu.lovinfirefly.cn`
+（这条命令重复跑没事，等于"拉最新代码 + 重启服务"）
 
 > 不管哪种：**数据都在 `data/`**，整个文件夹拷走就是完整备份。
 
