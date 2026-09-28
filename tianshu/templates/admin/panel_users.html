@@ -30,7 +30,7 @@
   <button type="button" class="cust-card" title="点开看档案"
           data-cust='{{ {
             'name': nick, 'phone': u.phone, 'credit': cr,
-            'role': r.role, 'roleName': r.roleName, 'canEditRole': r.canEditRole,
+            'role': r.role, 'roles': r.roles, 'roleName': r.roleName, 'canEditRole': r.canEditRole,
             'visits': r.visits, 'spent': r.spent,
             'banned': (u.banned or False), 'banReason': u.banReason or '',
             'logs': (u.creditLogs or [])[:6],
@@ -98,21 +98,25 @@
          以后想恢复，把这块和下面的 JS 赋值加回来就行） #}
 
       <div class="adm-panel">
-        <h3>② 角色 / 权限</h3>
+        <h3>② 角色 / 权限（可多选）</h3>
         <form id="f-role" method="post">
-          <div class="row" style="gap:6px;margin-bottom:10px">
-            <button type="button" class="chip-sm" data-role="user">普通用户</button>
-            <button type="button" class="chip-sm" data-role="dm">DM（能进工作台）</button>
-            <button type="button" class="chip-sm" data-role="admin">管理员（能进后台）</button>
+          {# 可多选：一个人能**同时**是 DM 和管理员（店主自己带本很常见）——
+             勾几个算几个；一个都不勾 = 普通用户。 #}
+          <div class="row" style="gap:8px;margin-bottom:10px">
+            <label class="chip-check"><input type="checkbox" name="roles" value="user"
+                   data-role="user"><span>普通用户</span></label>
+            <label class="chip-check"><input type="checkbox" name="roles" value="dm"
+                   data-role="dm"><span>DM（能进工作台）</span></label>
+            <label class="chip-check"><input type="checkbox" name="roles" value="admin"
+                   data-role="admin"><span>管理员（能进后台）</span></label>
           </div>
-          <input type="hidden" name="role" id="f-role-val" value="user">
           <div class="row" style="gap:var(--sp-4);align-items:center">
             <button class="btn btn-sm btn-primary" type="submit" id="f-role-btn">保存角色</button>
             <span class="sub" id="c-role-tip"></span>
           </div>
         </form>
         <p class="sub" style="margin-top:var(--sp-3)">
-          DM 能进 DM 工作台；管理员能进后台（后台所有面板都能看）。<br>
+          可以同时勾多个：既 DM 又管理员的人，DM 工作台和管理后台都能进。<br>
           超级管理员的角色改不了；想调管理员，得由超级管理员来操作。
         </p>
       </div>
@@ -175,10 +179,10 @@
     byId('f-role').action = url('role');
     byId('f-detail').href = url('detail');
 
-    // 角色区：亮起他现在那颗；不能改的时候说明原因，别让他点了才被拒
-    setRole(c.role);
+    // 角色区：勾上他现在有的身份（可多选）；不能改的时候整块禁用并写明原因，别让人点了才被拒
+    setRoles(c.roles || [c.role]);
     var btns = mask.querySelectorAll('[data-role]');
-    for (var i = 0; i < btns.length; i++) btns[i].disabled = !c.canEditRole;
+    for (var i = 0; i < btns.length; i++) { btns[i].disabled = !c.canEditRole; syncChip(btns[i]); }
     byId('f-role-btn').disabled = !c.canEditRole;
     byId('c-role-tip').textContent = c.canEditRole ? ''
       : (c.role === 'super' ? '超级管理员不可改' : '这是你自己的账号 / 或只有超管能调整管理员');
@@ -209,11 +213,23 @@
     }
     mask.classList.add('show');
   }
-  function setRole(role) {
-    byId('f-role-val').value = role;
-    var btns = mask.querySelectorAll('[data-role]');
-    for (var i = 0; i < btns.length; i++) {
-      btns[i].classList.toggle('on', btns[i].getAttribute('data-role') === role);
+  // 角色是多选：勾上 = 有这个身份（勾几个算几个，全不勾 = 普通用户）
+  function syncChip(box) {
+    var label = box.parentNode;
+    label.className = 'chip-check' + (box.checked ? ' on' : '') + (box.disabled ? ' off' : '');
+  }
+  function checkedRoles() {
+    var out = [];
+    Array.prototype.forEach.call(mask.querySelectorAll('[data-role]'), function (x) {
+      if (x.checked) out.push(CHIP[x.getAttribute('data-role')]);
+    });
+    return out;
+  }
+  function setRoles(list) {
+    var boxes = mask.querySelectorAll('[data-role]');
+    for (var i = 0; i < boxes.length; i++) {
+      boxes[i].checked = (list || []).indexOf(boxes[i].getAttribute('data-role')) >= 0;
+      syncChip(boxes[i]);
     }
   }
   Array.prototype.forEach.call(document.querySelectorAll('.cust-card'), function (btn) {
@@ -222,10 +238,12 @@
     });
   });
   Array.prototype.forEach.call(mask.querySelectorAll('[data-role]'), function (b) {
-    b.addEventListener('click', function () {
-      if (b.disabled) return;
-      setRole(b.getAttribute('data-role'));
-      byId('c-role-tip').textContent = '点「保存角色」才生效 → ' + CHIP[b.getAttribute('data-role')];
+    b.addEventListener('change', function () {
+      syncChip(b);
+      var now = checkedRoles();
+      byId('c-role-tip').textContent = now.length
+        ? '点「保存角色」才生效 → ' + now.join(' + ')
+        : '一个都不勾 = 普通用户，点「保存角色」才生效';
     });
   });
   byId('cust-close').addEventListener('click', function () { mask.classList.remove('show'); });

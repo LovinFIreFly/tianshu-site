@@ -117,18 +117,22 @@ def users():
     rows = []
     counts = {'user': 0, 'dm': 0, 'admin': 0, 'super': 0}
     for u in db.rows('users'):
-        r = business.role_of(u)
-        counts[r] = counts.get(r, 0) + 1
-        if role_filter and r != role_filter:
+        rs = business.roles_of(u)                 # 可能挂着好几个：既 DM 又管理员是很正常的
+        r = business.role_of(u)                   # 主角色（卡片上那个徽章 / 排序用它）
+        for x in rs:
+            counts[x] = counts.get(x, 0) + 1      # 一人多角色就同时计入几个筛选，别漏
+        if role_filter and role_filter not in rs:
             continue
         if kw and kw not in str(u.get('username')) and kw not in str(u.get('phone')):
             continue
         mine = [b for b in bookings if str(b.get('phone')) == str(u.get('phone')) and b.get('status') != 'cancelled']
-        # 能不能改他的角色（跟 business.set_role 里的护栏保持一致，前端才好禁用）
-        can_edit = (r != 'super' and u.get('super') is not True
+        # 能不能改他的角色（跟 business.set_roles 的三条护栏保持一致，前端才好禁用）
+        can_edit = (u.get('super') is not True and r != 'super'
                     and str(u.get('phone')) != str(me.get('phone'))
-                    and (r != 'admin' or business.role_of(me) == 'super'))
-        rows.append({'u': u, 'role': r, 'roleName': business.ROLE_NAMES.get(r, r),
+                    and ('admin' not in rs or 'super' in business.roles_of(me)))
+        rows.append({'u': u, 'role': r, 'roles': rs,
+                     'roleName': business.roles_text(rs),           # 例：普通用户、DM
+                     'roleNames': [business.ROLE_NAMES.get(x, x) for x in rs],
                      'canEditRole': can_edit,
                      'visits': len(mine), 'spent': sum(int(b.get('amount') or 0) for b in mine),
                      'last': max([b.get('createdAt') or 0 for b in mine] or [0]),
@@ -154,8 +158,14 @@ def set_credit(phone):
 @bp.post('/users/<phone>/role')
 @staff_required
 def user_role(phone):
-    """改角色：普通用户 / DM / 管理员（护栏都在 business.set_role 里，这里只管跳回来）"""
-    ok, msg = business.set_role(phone, request.form.get('role'), current_user())
+    """改角色：普通用户 / DM / 管理员 —— **可多选**（护栏都在 business.set_roles 里，这里只管跳回来）
+
+    认两种交法：roles=[user,dm,admin]（新表单，多选）和 role=dm（老表单/老自检，单值）
+    """
+    roles = request.form.getlist('roles')
+    if not roles and request.form.get('role'):
+        roles = [request.form.get('role')]
+    ok, msg = business.set_roles(phone, roles, current_user())
     flash(msg, 'ok' if ok else 'warn')
     return redirect(url_for('admin.dashboard') + '#users')
 
@@ -214,7 +224,7 @@ def coupon():
     bookings = db.rows('bookings')
     picked = []
     for u in db.rows('users'):
-        if business.role_of(u) != 'user':
+        if not business.has_role(u, 'dm', 'admin'):   # 多角色：员工（DM/管理员）不算普通用户
             continue
         if scope == 'all':
             picked.append(u)
@@ -415,7 +425,7 @@ def growth():
     sessions, bookings = db.rows('sessions'), db.rows('bookings')
     rows = []
     for u in db.rows('users'):
-        if business.role_of(u) != 'dm':
+        if not business.has_role(u, 'dm'):           # 挂着 dm 就算（同时是管理员也算）
             continue
         phone = str(u.get('phone'))
         g = business.dm_growth(phone)
@@ -536,7 +546,7 @@ def sessions():
         ts = int(request.args.get('ts') or business.midnight())
     except ValueError:
         ts = business.midnight()
-    dms = [u for u in db.rows('users') if business.role_of(u) == 'dm']
+    dms = [u for u in db.rows('users') if business.has_role(u, 'dm')]
     view = request.args.get('view') or 'day'
     week = []
     if view == 'week':                       # 周视图：一眼看整周，撞没撞房立刻看出来
@@ -909,7 +919,7 @@ def dm_page():
     """DM 结算：这个月每个 DM 分成多少（分成 = 营业额 × 比例，指定加价另算）"""
     month = request.args.get('month') or __import__('time').strftime('%Y-%m')
     return render_template('admin/panel_dm.html', data=business.dm_settlement(month),
-                           dms=[u for u in db.rows('users') if business.role_of(u) == 'dm'])
+                           dms=[u for u in db.rows('users') if business.has_role(u, 'dm')])
 
 
 @bp.post('/dm/settle')

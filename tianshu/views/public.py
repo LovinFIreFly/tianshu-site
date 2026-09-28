@@ -161,7 +161,7 @@ def script_detail(sid):
     reviews = [r for r in db.rows('reviews') if str(r.get('sid')) == str(sid) and not r.get('hidden')]
     dms = db.rows('users')
     dms = [{'phone': d.get('phone'), 'name': (d.get('profile') or {}).get('nick') or d.get('username')}
-           for d in dms if business.role_of(d) == 'dm' and (d.get('dmProfile') or {}).get('canOpen', True)]
+           for d in dms if business.has_role(d, 'dm') and (d.get('dmProfile') or {}).get('canOpen', True)]
 
     # 拼车：「加入已有的车」那个下拉里列出来的车（别人开的、还没满、还没过日期）
     open_cars = [c for c in business.car_pool() if str(c.get('sid')) == str(sid) and not c.get('full')]
@@ -235,7 +235,7 @@ def dm_page(phone):
     注意路由顺序：/dm/credit 这类静态路径优先于 /dm/<phone>，不会被吃掉。
     """
     u = db.one('users', phone=phone)
-    if not u or business.role_of(u) not in ('dm', 'admin', 'super'):
+    if not u or not business.has_role(u, 'dm', 'admin'):
         flash('没找到这位 DM', 'warn')
         return redirect(url_for('public.scripts'))
     st = business.dm_growth(phone)
@@ -309,7 +309,7 @@ def user_profile(username):
         return render_template('error.html', code=404, msg='没有这个人'), 404
     me = _cu()
     following = me and str(username) in [str(x) for x in (me.get('following') or [])]
-    return render_template('profile.html', who=u, role_name=business.role_of(u),
+    return render_template('profile.html', who=u, role_name=business.roles_text(u),
                            following=following, scripts=db.rows('scripts'),
                            reviews=[r for r in business.reviews_of() if str(r.get('username')) == str(username)],
                            followers=len(u.get('followers') or []))

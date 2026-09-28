@@ -23,6 +23,11 @@ BASE = os.environ.get('BASE', 'http://127.0.0.1:8000')
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, 'data')
 
+# 有些检查要直接调后端函数（角色判定、发件人拼接这类纯函数，走 HTTP 验不出来），
+# 脚本是从 tools/ 跑的，所以得把仓库根目录塞进 sys.path 才能 import tianshu。
+sys.path.insert(0, ROOT)
+from tianshu import business as _bs            # noqa: E402
+
 # 中文控制台（GBK）里 ✓ 这种符号会报错，兜底成问号，别让自检自己先挂了
 for _s in (sys.stdout, sys.stderr):
     try:
@@ -294,6 +299,42 @@ check('超级管理员的角色改不动', sup2.get('super') is True and sup2.ge
 admin.post('/admin/users/%s/role' % sup.get('phone'), {'role': 'user'})
 sup3 = next((x for x in jread('users') if x.get('phone') == sup.get('phone')), {})
 check('不能改自己的角色（防把自己锁在门外）', sup3.get('super') is True and sup3.get('role') != 'user')
+
+# 一人多角色：既 DM 又管理员 —— 两个工作台都能进，顶栏两个入口都露出来
+admin.post('/admin/users/13900001111/role', [('roles', 'dm'), ('roles', 'admin')])
+u_r = next((x for x in jread('users') if x.get('phone') == '13900001111'), {})
+check('能给人同时挂上 DM + 管理员',
+      set(u_r.get('roles') or []) == {'dm', 'admin'} and u_r.get('role') == 'admin',
+      'roles=%s role=%s' % (u_r.get('roles'), u_r.get('role')))
+s, _h = cus2.get('/dm')
+check('既 DM 又管理员的人，DM 工作台能进', s == 200, 'HTTP %s' % s)
+s, _h = cus2.get('/admin')
+check('既 DM 又管理员的人，管理后台也能进', s == 200, 'HTTP %s' % s)
+s, _h = cus2.get('/')
+check('顶栏同时露出两个入口（以前是二选一，只能露一个）',
+      '>DM 工作台</a>' in _h and '>管理后台</a>' in _h)
+admin.post('/admin/users/13900001111/role', {'roles': ''})
+u_r = next((x for x in jread('users') if x.get('phone') == '13900001111'), {})
+check('一个角色都不勾 = 退回普通用户',
+      (u_r.get('roles') or []) == ['user'] and u_r.get('role') == 'user', 'roles=%s' % u_r.get('roles'))
+s, _h = cus2.get('/admin')
+check('退回普通用户后进不去后台（403）', s == 403, 'HTTP %s' % s)
+s, _h = cus2.get('/dm')
+check('也进不去 DM 工作台了', s == 403, 'HTTP %s' % s)
+admin.post('/admin/users/13900001111/role', {'role': 'dm'})     # 老写法（单值）也要管用
+u_r = next((x for x in jread('users') if x.get('phone') == '13900001111'), {})
+check('老写法 role=dm 仍然管用（兼容老表单/老脚本）',
+      u_r.get('role') == 'dm' and (u_r.get('roles') or []) == ['dm'])
+admin.post('/admin/users/13900001111/role', {'role': 'user'})
+
+# 群发「只发普通用户」：员工（DM / 管理员 / 超管）不该收到 —— 多角色之后这条按角色集合判
+admin.post('/admin/notice/send', {'title': '群发自检', 'text': '正文', 'scope': 'customers'})
+_bc = next((x for x in jread('notices') if x.get('title') == '群发自检'), {})
+_tos = {str(p) for p in (_bc.get('to') or [])}
+_staff_phones = [str(x.get('phone')) for x in jread('users') if _bs.has_role(x, 'dm', 'admin')]
+check('群发「只发普通用户」不会落到 DM / 管理员头上',
+      bool(_tos) and all(p not in _tos for p in _staff_phones),
+      '发给了 %d 人（其中员工 %d 人）' % (len(_tos), len([p for p in _staff_phones if p in _tos])))
 s, _ = admin.post('/admin/users/13800000000/credit', {'delta': '-10', 'reason': '自检扣分'})
 u = next((x for x in jread('users') if x.get('phone') == '13800000000'), {})
 check('信用分改动生效并留了流水', int(u.get('credit') or 100) <= 90 and u.get('creditLogs'))
@@ -468,11 +509,7 @@ check('门店设置里有「验证码发信（邮箱）」这几栏', 'smtpHost'
 check('有「发一封测试邮件」入口', '发一封测试邮件' in html)
 check('SMTP 密码那栏是 password 类型（不明文显示）', 'name="smtpPass" type="password"' in html)
 check('有「发件人昵称」这一栏（客人收件箱里显示店名）', 'name="mailFromName"' in html)
-# 直接测拼出来的 From（脚本从 tools/ 跑，repo 根目录要自己加进 sys.path）
-import os as _os
-import sys as _sys
-_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
-from tianshu import business as _bs
+# 直接测拼出来的 From（_bs 在文件开头已经导入）
 _chk = dict(_bs.get_settings(), mailFrom='noreply@lovinfirefly.cn', mailFromName='甜薯剧本杀')
 check('发件人拼成「甜薯剧本杀 <noreply@lovinfirefly.cn>」',
       _bs.mail_sender(_chk) == '甜薯剧本杀 <noreply@lovinfirefly.cn>', _bs.mail_sender(_chk))
@@ -482,6 +519,16 @@ check('昵称里的换行被掐掉（防邮件头注入）',
       repr(_bs.mail_sender(_bad)))
 check('昵称留空 = 只显示地址（不强加店名）',
       _bs.mail_sender(dict(_chk, mailFromName='')) == 'noreply@lovinfirefly.cn')
+# 多角色（纯函数，不经过 HTTP）：角色是可多选的，老数据只有单值 role
+check('roles_of 认老的单值 role（老账号不用迁移）', _bs.roles_of({'role': 'dm'}) == ['dm'])
+check('roles_of 认新的 roles 列表', _bs.roles_of({'roles': ['dm', 'admin']}) == ['dm', 'admin'])
+check('超管算管理员（不然初始账号反而进不去后台）', _bs.has_role({'role': 'super'}, 'admin'))
+check('同时挂着 dm + admin，两种身份都判真',
+      _bs.has_role({'roles': ['dm', 'admin']}, 'dm')
+      and _bs.has_role({'roles': ['dm', 'admin']}, 'admin'))
+check('普通用户既不是 DM 也不是管理员',
+      not _bs.has_role({'role': 'user'}, 'dm', 'admin'))
+check('主角色取最高的那个（显示用）', _bs.role_of({'roles': ['dm', 'admin']}) == 'admin')
 s, html = admin.post('/admin/mail/test', {'to': 'test@example.com'})
 check('没配 SMTP 时点测试邮件只给提示、不报错', '没发出去' in html or '还没配置' in html)
 check('发信配置不当成"已发送"骗人', '已发出' not in html or '没发出去' in html)

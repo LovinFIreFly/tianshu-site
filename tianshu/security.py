@@ -99,19 +99,31 @@ def current_user():
     return g._user
 
 
+def _biz():
+    """延迟导入：security 是底层模块，business 又会用到它 —— 顶部互相 import 会成环"""
+    from tianshu import business
+    return business
+
+
 def role():
-    u = current_user()
-    if not u:
+    """主角色（显示 / 日志用）—— 判权限用 is_staff() / is_dm()，别拿它比等号"""
+    if not current_user():
         return 'guest'
-    return 'super' if (u.get('super') is True or u.get('role') == 'super') else (u.get('role') or 'user')
+    return _biz().role_of(current_user())
+
+
+def roles():
+    """这人有哪些角色（可多选：既 DM 又管理员是允许的）"""
+    return _biz().roles_of(current_user())
 
 
 def is_staff():
-    return role() in ('admin', 'super')
+    return _biz().has_role(current_user(), 'admin')
 
 
 def is_dm():
-    return role() in ('dm', 'admin', 'super')
+    """DM 工作台：真正挂着 dm 角色的人；管理员也能进（方便代班，老规矩）"""
+    return _biz().has_role(current_user(), 'dm', 'admin')
 
 
 def login_required(view):

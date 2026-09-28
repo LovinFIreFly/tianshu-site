@@ -440,6 +440,15 @@ tbody tr:last-child td{border-bottom:0}
 /* 「获取验证码」下面那行小提示（发没发出去、几秒后可重发） */
 .code-tip{margin:var(--sp-3) 0 0;font-size:var(--fs-xs);color:var(--ink-4);text-align:left}
 .code-tip.bad{color:var(--vermilion)}
+
+/* 角色多选：把复选框做成"勾上就变色的胶囊"（后台用户面板的 ② 角色/权限） */
+.chip-check{position:relative;display:inline-flex;align-items:center;gap:var(--sp-2);
+  padding:8px var(--sp-4);border:1px solid var(--rule-strong);background:var(--paper);
+  font-size:14px;color:var(--ink-2);cursor:pointer;user-select:none}
+.chip-check input{position:absolute;opacity:0;width:0;height:0}
+.chip-check:hover{border-color:var(--ink-4)}
+.chip-check.on{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.chip-check.off{opacity:.45;cursor:not-allowed}
 .auth-card .btn{width:100%;height:48px;font-size:15.5px;margin-top:var(--sp-4)}
 .auth-card .field .ico{display:none}
 .auth-card .foot-line{text-align:center;font-size:var(--fs-sm);color:var(--ink-3);margin-top:var(--sp-6)}

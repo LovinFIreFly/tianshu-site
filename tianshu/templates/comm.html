@@ -63,7 +63,7 @@
       <input type="hidden" name="reason" value="">
       <button class="btn btn-sm" type="submit">举报</button>
     </form>
-    {% if my_role in ('admin', 'super') %}
+    {% if my_admin %}
     <form method="post" action="{{ url_for('admin.post_del', pid=p.id) }}"
           onsubmit="return confirm('删掉这条帖子？')">
       <button class="btn btn-sm btn-danger" type="submit">删除</button>

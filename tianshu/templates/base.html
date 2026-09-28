@@ -19,11 +19,9 @@
     <span>{{ year }} · {{ settings.shopName }}</span>
     {% if settings.notice %}<span>· {{ settings.notice }}</span>{% endif %}
     <span class="sp"></span>
-    {% if me and my_role in ('admin', 'super') %}
-    <a href="{{ url_for('admin.dashboard') }}">管理后台</a>
-    {% elif me and my_role == 'dm' %}
-    <a href="{{ url_for('dm.index') }}">DM 工作台</a>
-    {% endif %}
+    {# 角色可以同时挂几个：既 DM 又管理员的话，两个入口都露出来（以前是 elif，只显示一个） #}
+    {% if my_admin %}<a href="{{ url_for('admin.dashboard') }}">管理后台</a>{% endif %}
+    {% if my_dm %}<a href="{{ url_for('dm.index') }}">DM 工作台</a>{% endif %}
     <a href="{{ url_for('user.me') }}">我的</a>
   </div>
 
@@ -58,9 +56,10 @@
     <a href="{{ url_for('public.car') }}" class="{{ 'on' if request.endpoint == 'public.car' }}">拼车大厅</a>
     <a href="{{ url_for('public.comm') }}" class="{{ 'on' if request.endpoint == 'public.comm' }}">社区</a>
     <a href="{{ url_for('user.me') }}" class="{{ 'on' if request.endpoint == 'user.me' }}">我的</a>
-    {% if my_role in ('admin', 'super') %}
+    {% if my_admin %}
     <a href="{{ url_for('admin.dashboard') }}" class="{{ 'on' if request.endpoint and request.endpoint.startswith('admin.') }}">管理后台</a>
-    {% elif my_role == 'dm' %}
+    {% endif %}
+    {% if my_dm %}
     <a href="{{ url_for('dm.index') }}" class="{{ 'on' if request.endpoint and request.endpoint.startswith('dm.') }}">DM 工作台</a>
     {% endif %}
   </nav>

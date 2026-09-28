@@ -60,53 +60,114 @@ def clean(t, max_len=200):
     return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', str(t or ''))[:max_len]
 
 
-def role_of(u):
-    if not u:
-        return 'guest'
-    return 'super' if (u.get('super') is True or u.get('role') == 'super') else (u.get('role') or 'user')
-
-
-# ---------------------------------------------------------------- 角色管理
+# ---------------------------------------------------------------- 角色（可以同时有多个）
+# 一个人可以**同时**是 DM + 管理员（店主自己带本很常见），所以角色存成一个列表：
+#     user['roles'] = ['user', 'dm', 'admin']
+# 老数据只有单值 user['role']（'user'/'dm'/'admin'）、超管另有一个 user['super']=True ——
+# roles_of() 两边都认，**不用写迁移脚本**；保存时两个字段一起写（role = 最高的那个，日志还在读它）。
 ROLE_NAMES = {'user': '普通用户', 'dm': 'DM', 'admin': '管理员', 'super': '超级管理员'}
 ROLE_RANK = {'user': 0, 'dm': 1, 'admin': 2, 'super': 3}
+ROLE_PICK = ('user', 'dm', 'admin')          # 后台能勾的三个（super 不给勾，它是初始账号的标记）
 
 
-def set_role(phone, new_role, by_user):
-    """改一个人的角色（普通用户 / DM / 管理员）。
+def roles_of(u):
+    """这个人拥有哪些角色（列表，按级别从低到高）。
 
-    三条护栏，都是防"手一抖把店弄瘫"：
-      ① 不能改自己的角色 —— 不然管理员一点就把自己变回普通用户，后台当场进不去
+    · 超管（初始那个账号）：就是 ['super'] —— 它天然算管理员，见 has_role()
+    · 老数据只有单值 role → 包成只有一个元素的列表
+    """
+    if not u:
+        return []
+    if u.get('super') is True or u.get('role') == 'super':
+        return ['super']
+    rs = u.get('roles')
+    if isinstance(rs, (list, tuple)) and rs:
+        out = sorted({str(r) for r in rs if str(r) in ROLE_PICK},
+                     key=lambda r: ROLE_RANK.get(r, 0))
+        return out or ['user']
+    r = str(u.get('role') or 'user')
+    return [r if r in ROLE_PICK else 'user']
+
+
+def has_role(u, *want):
+    """有没有其中任意一个角色 —— **判权限统一用它**，别再写 role_of(u) == 'dm' 那种。
+
+    超管算管理员：'super' 的账号 has_role(u, 'admin') 为真
+    （不然初始那个账号反而进不去后台）。
+    """
+    rs = set(roles_of(u))
+    if rs & set(want):
+        return True
+    return 'super' in rs and 'admin' in want
+
+
+def role_of(u):
+    """**主角色**（最高的那个）—— 只用来显示和写日志；判权限请用 has_role()。
+
+    名字没改是因为调用它的地方太多（日志、通知、资料页…），换语义比换名字划算。
+    """
+    if not u:
+        return 'guest'
+    rs = roles_of(u)
+    for r in ('super', 'admin', 'dm', 'user'):
+        if r in rs:
+            return r
+    return 'user'
+
+
+def roles_text(u_or_roles):
+    """角色列表 → 中文串（例："普通用户、DM、管理员"），通知/日志里用"""
+    rs = u_or_roles if isinstance(u_or_roles, (list, tuple, set)) else roles_of(u_or_roles)
+    return '、'.join(ROLE_NAMES.get(r, r) for r in sorted(rs, key=lambda r: ROLE_RANK.get(r, 0))) \
+        or '普通用户'
+
+
+def set_roles(phone, new_roles, by_user):
+    """给一个人设置角色组合（普通用户 / DM / 管理员，可多选）。
+
+    三条护栏跟以前一样（都是防"手一抖把店弄瘫"）：
+      ① 不能改自己的角色 —— 不然管理员一点就把自己降权，后台当场进不去
       ② 超级管理员（初始那个账号）不可改 —— 它是最后的保险
       ③ 只有超管能调整"已经是管理员"的人 —— 避免两个管理员互相降权
     """
     me = by_user or {}
-    new_role = str(new_role or '').strip()
-    if new_role not in ('user', 'dm', 'admin'):
-        return False, '只能设成 普通用户 / DM / 管理员'
+    want = {str(r).strip() for r in (new_roles or []) if str(r).strip() in ROLE_PICK}
+    if not want:
+        want = {'user'}                      # 一个都不勾 = 退回普通用户（而不是"没有任何角色"）
     users = db.rows('users')
     hit = next((x for x in users if str(x.get('phone')) == str(phone)), None)
     if not hit:
         return False, '没这个人'
-    old = role_of(hit)
+    old = set(roles_of(hit))
     if str(hit.get('phone')) == str(me.get('phone')):
         return False, '不能改自己的角色（想改让另一个管理员来）'
-    if old == 'super' or hit.get('super') is True:
+    if hit.get('super') is True or hit.get('role') == 'super':
         return False, '超级管理员不能改'
-    if old == 'admin' and role_of(me) != 'super':
+    if 'admin' in old and 'super' not in roles_of(me):
         return False, '只有超级管理员能调整管理员'
-    if old == new_role:
-        return False, '他本来就是%s' % ROLE_NAMES.get(new_role, new_role)
+    if old == want:
+        return False, '他本来就是%s' % roles_text(old)
+    # 单值 role 跟着"最高的那个"走：老代码、日志、排序都还在读它
+    primary = 'admin' if 'admin' in want else ('dm' if 'dm' in want else 'user')
     for x in users:
         if str(x.get('phone')) == str(phone):
-            x['role'] = new_role
-            x['super'] = False                      # 明确不是超管，免得 role 和 super 打架
+            x['roles'] = sorted(want, key=lambda r: ROLE_RANK.get(r, 0))
+            x['role'] = primary
+            x['super'] = False                   # 明确不是超管，免得 role 和 super 打架
     db.write('users', users)
-    audit(me.get('username'), role_of(me), '把 %s 的角色从 %s 改成 %s'
-          % (hit.get('username'), ROLE_NAMES.get(old, old), ROLE_NAMES.get(new_role, new_role)))
-    msg = '%s 现在是%s' % (hit.get('username'), ROLE_NAMES.get(new_role, new_role))
-    if new_role == 'dm':
+    audit(me.get('username'), role_of(me), '把 %s 的角色从「%s」改成「%s」'
+          % (hit.get('username'), roles_text(old), roles_text(want)))
+    msg = '%s 现在是：%s' % (hit.get('username'), roles_text(want))
+    if 'dm' in want:
         msg += '（他登进去会看到 DM 工作台；记得去「排期」把场次排给他）'
+    if 'admin' in want:
+        msg += '（他也能进管理后台了）'
     return True, msg
+
+
+def set_role(phone, new_role, by_user):
+    """老的单角色接口（留着兼容）：等价于 set_roles([new_role])"""
+    return set_roles(phone, [new_role], by_user)
 
 
 def ensure_invite(user):
@@ -146,7 +207,7 @@ def notify_staff(title, text, kind='system'):
     """给所有管理员 / 超管各发一条站内通知
     （"客人说定金付了"这种得有人去确认，所以别只发给客人自己）"""
     for u in db.rows('users'):
-        if role_of(u) in ('admin', 'super'):
+        if has_role(u, 'admin'):                 # 多角色：只要挂着管理员就算（含超管）
             notify(u.get('phone'), title, text, kind)
 
 
@@ -493,13 +554,15 @@ def broadcast(title, text, scope='all'):
     bookings = db.rows('bookings')
     hit = []
     for u in users:
-        r = role_of(u)
-        if scope == 'customers' and r != 'user':
+        # 多角色之后，"是不是员工"不能再看单个 role 了：
+        # 一个人可以既 DM 又管理员 —— 群发普通用户时这类账号一样要跳过。
+        staffish = has_role(u, 'dm', 'admin')
+        if scope == 'customers' and staffish:
             continue
-        if scope == 'dm' and r != 'dm':
+        if scope == 'dm' and not has_role(u, 'dm'):
             continue
         if scope == 'sleeping':
-            if r != 'user':
+            if staffish:
                 continue
             last = max([b.get('createdAt') or 0 for b in bookings
                         if str(b.get('phone')) == str(u.get('phone'))] or [u.get('first') or 0])

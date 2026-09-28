@@ -57,7 +57,11 @@ def create_app():
 
         from flask import request as _req
         u = current_user()
-        return {'me': u, 'my_role': role(), 'settings': business.get_settings(),
+        # my_role 是"主角色"（显示用）；能不能进后台/工作台看 my_admin / my_dm
+        # （一个人可以同时是 DM + 管理员，所以是三个独立的量，不是一个 my_role）
+        return {'me': u, 'my_role': role(), 'my_roles': business.roles_of(u),
+                'my_admin': business.has_role(u, 'admin'), 'my_dm': business.has_role(u, 'dm'),
+                'settings': business.get_settings(),
                 'unread': business.unread_count(u) if u else 0,
                 'dev_env': business.is_dev_request(),      # 本机开发才显示"通用码 1234"这类提示
                 'day_label': business.day_label, 'year': _t.strftime('%Y'),
