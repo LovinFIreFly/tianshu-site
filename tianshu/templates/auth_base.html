@@ -35,8 +35,15 @@
     {% block card %}{% endblock %}
 
     {# 登录/注册页的页脚：同样是客人看的，不写"数据都在 data/ 里"这类实现细节 #}
-    <p class="auth-foot">{{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}
-      <button id="install-btn" class="btn btn-sm btn-ghost" style="margin-left:8px">📱 装到桌面</button></p>
+    {# 装 App 的入口：浏览器里 = 直接下载安装包；我们 App 里（UA 带 TianshuApp/1.0）不渲染 #}
+    {% if 'TianshuApp' not in (request.headers.get('User-Agent') or '') %}
+    <p class="auth-foot js-install">{{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}
+      <a class="btn btn-sm btn-ghost" style="margin-left:8px"
+         href="{{ url_for('static', filename='app/tianshu.apk', v=static_v('app/tianshu.apk')) }}"
+         download="甜薯剧本杀.apk">📱 装 App</a></p>
+    {% else %}
+    <p class="auth-foot">{{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}</p>
+    {% endif %}
   </div>
 
   <script src="{{ url_for('static', filename='js/csrf.js') }}"></script>

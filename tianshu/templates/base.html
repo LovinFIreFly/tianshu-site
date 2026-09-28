@@ -79,11 +79,17 @@
    可以把 main_class 覆盖成空，自己用 <div class="wrap"> 控制每一段的内容宽度。 #}
 <main class="{% block main_class %}wrap{% endblock %}">{% block body %}{% endblock %}</main>
 
+{# 「装App」的统一开关：在我们自己的 App 里（UA 带 TianshuApp/1.0）就不渲染任何装App入口 ——
+   服务端判断的好处是**根本不出现在 HTML 里**，不会有闪烁。页脚和底栏都用它。 #}
+{% set in_tianshu_app = 'TianshuApp' in (request.headers.get('User-Agent') or '') %}
+
 {# 页脚是给客人看的，别写实现细节（"纯 Python 版 / 数据都在 data/ 里"那套只有自己人看得懂） #}
 <footer class="foot">
   {{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}
-  {% if me %}<div style="margin-top:6px">像 App 一样用：
-    <button id="install-btn" class="btn btn-sm btn-ghost" style="margin-left:6px">📱 装到手机 / 电脑桌面</button></div>{% endif %}
+  {% if me and not in_tianshu_app %}<div class="js-install" style="margin-top:6px">像 App 一样用：
+    <a class="btn btn-sm btn-ghost" style="margin-left:6px"
+       href="{{ url_for('static', filename='app/tianshu.apk', v=static_v('app/tianshu.apk')) }}"
+       download="甜薯剧本杀.apk">📱 装 App</a></div>{% endif %}
 </footer>
 {# 手机端底部导航：只在窄屏出现（桌面端 CSS 里 display:none）。
    为什么再给一份：手机单手玩时，**底部才是大拇指够得着的地方** ——
@@ -97,83 +103,25 @@
     <span class="ico" aria-hidden="true">🚗</span><span>拼车</span></a>
   <a href="{{ url_for('user.me') }}" class="{{ 'on' if request.endpoint == 'user.me' }}">
     <span class="ico" aria-hidden="true">👤</span><span>我的</span></a>
-  {# 装App：点它弹出对应浏览器的安装步骤（夸克/UC/小米这些没有系统安装框，就教你去菜单里点）。
-     已经装过（独立窗口模式）会自动隐藏这格 —— 见下面脚本。 #}
-  <a id="install-btn" role="button" style="cursor:pointer">
+  {# 装App（智能识别，三种情况）：
+     ① 在我们自己的 App 里打开 → UA 带 TianshuApp/1.0，服务端直接不渲染这格
+     ② 浏览器里 → 显示，点一下**直接下载安装包**（自动弹出下载，下完点开就能装）
+     ③ 已经以独立窗口运行（添加过桌面/PWA）→ 下面的小脚本把它藏起来 #}
+  {% if not in_tianshu_app %}
+  <a id="install-btn" class="js-install"
+     href="{{ url_for('static', filename='app/tianshu.apk', v=static_v('app/tianshu.apk')) }}"
+     download="甜薯剧本杀.apk">
     <span class="ico" aria-hidden="true">📱</span><span>装App</span></a>
+  {% endif %}
 </nav>
 
-{# 装到桌面的引导弹窗：任何浏览器都能装 —— Chrome/Edge 直接弹系统安装框，
-   国产浏览器（夸克/UC/小米/vivo…）教你去菜单里找「添加到桌面」，iPhone 教你用 Safari 分享。 #}
-<div class="mask" id="install-mask">
-  <div class="modal small">
-    <div class="m-head">
-      <div><h2 style="font-size:20px;margin:0">📱 装到桌面</h2></div>
-      <button class="m-close" type="button" id="install-close" aria-label="关闭">✕</button>
-    </div>
-    <div class="m-body">
-      <p id="install-steps" style="margin:0;line-height:1.8">…</p>
-      <p class="sub" style="margin-top:var(--sp-3)">装完桌面就有甜薯图标，打开是全屏独立窗口，
-        和 App 一样；网站更新了它也自动是新版。</p>
-    </div>
-  </div>
-</div>
-
 <script>
-  /* 「装到桌面」：Chrome/Edge 能直接弹系统安装框（beforeinstallprompt）；
-     其它浏览器（夸克/UC/小米/vivo/QQ/iPhone）按 UA 给出对应的菜单步骤。 */
-  (function () {
-    var btn = document.getElementById('install-btn');
-    var mask = document.getElementById('install-mask');
-    var steps = document.getElementById('install-steps');
-    if (!btn || !mask || !steps) return;
-    var evt = null;
-    // 已经装过（正在以独立窗口运行）就把「装App」那格藏起来，别占地方
-    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
-      btn.style.display = 'none';
-    }
-
-    function guide() {
-      var ua = navigator.userAgent;
-      if (/iPhone|iPad|iPod/i.test(ua)) {
-        steps.textContent = 'iPhone：用 Safari 打开本站 → 点底部中间的「分享」按钮 → 选「添加到主屏幕」。'
-          + '（用其它浏览器的话，在它们的菜单里找「添加到主屏幕」）';
-      } else if (/Via/i.test(ua)) {
-        steps.textContent = 'Via 浏览器：点右下角「⋯ 菜单」→「添加到桌面」（有的版本叫「创建快捷方式」）→ 桌面出现甜薯图标。'
-          + '（Via 不支持网页自己弹安装框，只能走它自己的菜单 —— 效果一样）';
-      } else if (/Quark|UCBrowser|MiuiBrowser|VivoBrowser|HeyTapBrowser|MQQBrowser|Baidu|OppoBrowser/i.test(ua)) {
-        steps.textContent = '你这台用的是国产浏览器：点浏览器底部中间的「☰ 菜单」→ 找「添加到桌面」'
-          + '（有的叫「收藏到桌面 / 加到桌面」）→ 桌面出现甜薯图标，点开就能用。';
-      } else if (/Edg\//i.test(ua)) {
-        steps.textContent = '电脑 Edge：地址栏右侧有个「安装」小图标，点一下就好；'
-          + '手机 Edge：底部菜单 → 「添加到主屏幕」。';
-      } else if (/Chrome|SamsungBrowser/i.test(ua)) {
-        steps.textContent = '安卓 Chrome：点浏览器右上角 ⋮ → 「安装应用 / 添加到主屏幕」。'
-          + '电脑 Chrome：地址栏右侧的「安装」图标。';
-      } else {
-        steps.textContent = '通用做法：打开浏览器的「菜单」，找「添加到桌面 / 添加到主屏幕」，'
-          + '装完桌面就有甜薯图标。';
-      }
-      mask.classList.add('show');
-    }
-
-    window.addEventListener('beforeinstallprompt', function (e) {
-      e.preventDefault();
-      evt = e;                                  // Chrome/Edge：记住它，点按钮直接弹系统安装框
-    });
-    btn.addEventListener('click', function () {
-      if (evt) {
-        evt.prompt();
-        evt = null;
-        return;
-      }
-      guide();
-    });
-    document.getElementById('install-close').addEventListener('click', function () {
-      mask.classList.remove('show');
-    });
-    mask.addEventListener('click', function (e) { if (e.target === mask) mask.classList.remove('show'); });
-  })();
+  /* 已经以独立窗口运行（添加过桌面）就不显示「装App」，别占地方；
+     在我们 App 里则由服务端按 UA 直接不渲染（见上面 Jinja 判断）。 */
+  if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+    var _els = document.querySelectorAll('.js-install');
+    for (var _i = 0; _i < _els.length; _i++) _els[_i].style.display = 'none';
+  }
 </script>
 
 <script src="{{ url_for('static', filename='js/csrf.js') }}" defer></script>

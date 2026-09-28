@@ -11,6 +11,8 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 
 /**
@@ -42,6 +44,15 @@ class MainActivity : AppCompatActivity() {
 
         swipe = findViewById(R.id.swipe)
         web = findViewById(R.id.web)
+
+        // 安卓 15（targetSdk 35）强制"全面屏"：网页会一直铺到状态栏底下，
+        // 网站顶栏就跟时间/电量重叠了。给根容器让出系统栏的空间——
+        // 顶部让出状态栏、底部让出手势条，网页从状态栏下面开始。
+        ViewCompat.setOnApplyWindowInsetsListener(swipe) { v, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(0, bars.top, 0, bars.bottom)
+            insets
+        }
 
         web.settings.apply {
             javaScriptEnabled = true          // 网站是服务端渲染 + 少量 JS，必须开
