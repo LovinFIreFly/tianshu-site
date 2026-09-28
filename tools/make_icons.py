@@ -74,6 +74,27 @@ def draw(variant, size):
     return img
 
 
+# 安卓启动图标的密度档（mdpi 是 48px 基准，其余按倍数）
+_MIPMAP = {'mipmap-mdpi': 48, 'mipmap-hdpi': 72, 'mipmap-xhdpi': 96,
+           'mipmap-xxhdpi': 144, 'mipmap-xxxhdpi': 192}
+
+
+def android_icons(variant='stamp'):
+    """给安卓壳工程出启动图标（android/app/src/main/res/mipmap-*）。
+
+    圆图标（ic_launcher_round）跟方图标用同一张：我们的图标本身就是"纸底 + 印章"，
+    边角没有关键内容，被系统裁成圆形也不会缺一块。
+    """
+    base = os.path.join(ROOT, 'android', 'app', 'src', 'main', 'res')
+    for folder, px in _MIPMAP.items():
+        d = os.path.join(base, folder)
+        os.makedirs(d, exist_ok=True)
+        img = draw(variant, px)
+        img.save(os.path.join(d, 'ic_launcher.png'))
+        img.save(os.path.join(d, 'ic_launcher_round.png'))
+        print('  %-16s %d×%d' % (folder, px, px))
+
+
 def main():
     icons = os.path.join(ROOT, 'tianshu', 'static', 'icons')
     prev = os.path.join(ROOT, '_icon-preview')
@@ -103,6 +124,9 @@ def main():
               encoding='utf-8', newline='\n') as f:
         f.write(svg)
     print('  icon.svg                矢量 favicon（已重写）')
+
+    print('  安卓启动图标：')
+    android_icons('stamp')
 
 
 if __name__ == '__main__':

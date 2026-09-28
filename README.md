@@ -346,6 +346,17 @@ bash /opt/tianshu/deploy/install.sh tianshu.lovinfirefly.cn
 
 > 不管哪种：**数据都在 `data/`**，整个文件夹拷走就是完整备份。
 
+## 打包成安卓 App（可选）
+
+`android/` 是一个完整的**壳 App 工程**（WebView 包壳）：打开 App 直接进网站，
+网站改版、上剧本、改价格，App 里立刻是新的 —— **不用重新打包、不用重新装**。
+
+用 Android Studio 打开 `android/` 文件夹 → `Build → Build APK(s)` 就能拿到 apk，
+详细步骤（含签名、换域名、换图标）见 [`android/README.md`](android/README.md)。
+
+> iOS 不用打包：用 Safari 打开网站 → 分享 → 「添加到主屏幕」，效果一样（图标走
+> `static/icons/apple-touch-icon.png`）。安卓不装 App 也是同样的路子：浏览器菜单 → 「添加到桌面」。
+
 ## License
 
 MIT，见 [LICENSE](LICENSE)

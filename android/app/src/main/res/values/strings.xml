@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">甜薯剧本杀</string>
+    <!-- 换域名只改这一行 -->
+    <string name="home_url">https://tianshu.lovinfirefly.cn/</string>
+</resources>

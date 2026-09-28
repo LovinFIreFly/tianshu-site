@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 跟网站设计系统里的令牌一一对应，别自创颜色 -->
+    <color name="paper">#F4F1EA</color>       <!-- 纸：页面底 -->
+    <color name="vermilion">#C8321E</color>   <!-- 朱：唯一强调色 -->
+    <color name="ink">#141312</color>         <!-- 墨：正文 -->
+</resources>

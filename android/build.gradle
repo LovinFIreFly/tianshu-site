@@ -1,0 +1,6 @@
+// 甜薯剧本杀 · 安卓壳 App（WebView 包壳）
+// 只做一件事：打开 App 直接进网站。网站改了 App 就是新的，不用重新打包。
+plugins {
+    id("com.android.application") version "8.7.3" apply false
+    id("org.jetbrains.kotlin.android") version "1.9.24" apply false
+}

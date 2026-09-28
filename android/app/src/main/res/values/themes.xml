@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Tianshu" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/paper</item>
+        <item name="android:statusBarColor">@color/paper</item>
+        <item name="android:windowLightStatusBar">true</item>   <!-- 纸色底上状态栏文字用深色 -->
+    </style>
+
+    <!-- 启动画面：网页加载要一两秒，先显示纸底 + 图标，别白屏 -->
+    <style name="Theme.Tianshu.Launch" parent="Theme.Tianshu">
+        <item name="android:windowBackground">@drawable/launch_screen</item>
+    </style>
+</resources>
