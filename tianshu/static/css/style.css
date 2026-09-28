@@ -691,11 +691,20 @@ details.spoiler[open] > summary{color:var(--ink);margin-bottom:var(--sp-5)}
   .juben .cover{aspect-ratio:1/1;padding:var(--sp-4);font-size:52px}
   .juben .body h4{font-size:18px}
   .masthead .util{display:none}
-  .masthead .top{padding:var(--sp-3) var(--sp-4);gap:var(--sp-3)}
-  .masthead .wordmark{font-size:20px}
-  .masthead .wordsmall{display:none}
-  .masthead .search{max-width:none}
+  /* 手机上刊头排两行：① 字标 + 右侧按钮  ② 一整条搜索框。
+     以前全挤在一行，搜索被压成 logo 旁边一个小点，根本点不到（2026-09 用户报的）。 */
+  .masthead .top{flex-wrap:wrap;row-gap:var(--sp-3);padding:var(--sp-3) var(--sp-4) var(--sp-2);gap:var(--sp-3)}
+  .masthead .wordmark{order:1;flex:none;font-size:20px}
+  .masthead .acts{order:2;flex:none}
+  .masthead .search{order:3;flex:1 1 100%;max-width:none;height:42px}
+  .masthead .search input{height:40px;font-size:16px}       /* ≥16px：iOS 聚焦时不会把整页放大 */
+  .masthead .search .ico{font-size:16px;margin-left:var(--sp-3)}
+  .masthead .who{max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .masthead .icon-btn{width:40px;height:40px}               /* 手指点得中（Apple 建议 ≥44，40 够用） */
+  .masthead .acts .btn-sm{height:36px;padding:0 var(--sp-3)}
   .masthead .links{padding:0 var(--sp-4);gap:var(--sp-5)}
+  /* iOS 上输入框字号 <16px 时，一聚焦就会把整页放大一下（跳一下很烦）—— 手机上统一 16px */
+  input,select,textarea{font-size:16px}
   .hero{padding:var(--sp-9) var(--sp-4) var(--sp-8)}
   .hero .stats{border-top:0}
   .hero .stats div{border-top:1px solid var(--stage-hair);padding-top:var(--sp-4)}
