@@ -77,7 +77,13 @@ Acquire::Retries "2";
 APT
 rm -f /etc/apt/sources.list.d/caddy-stable.list     # 清掉上次被打断留下的源，它连不上就会拖死 apt
 
-timeout 300 apt-get update -qq || echo "   （apt update 超时或失败，先继续往下试）"
+# apt 索引如果是新的（2 小时内更新过）就别再重复下载那 40MB —— 重启后索引还在，能省 1–3 分钟
+if ls /var/lib/apt/lists/*Packages* >/dev/null 2>&1 && \
+   ! find /var/lib/apt/lists -name '*Packages*' -mmin +120 -print -quit 2>/dev/null | grep -q .; then
+  echo "   apt 索引还是新的，跳过 update（省 1–3 分钟）"
+else
+  timeout 300 apt-get update -qq || echo "   （apt update 超时或失败，先继续往下试）"
+fi
 timeout 900 apt-get install -y -qq python3 python3-venv python3-pip git curl gnupg \
   debian-keyring debian-archive-keyring apt-transport-https || true
 if ! command -v python3 >/dev/null 2>&1 || ! command -v curl >/dev/null 2>&1; then
@@ -109,8 +115,12 @@ fi
 
 echo "③ 装 Python 依赖（虚拟环境 $DIR/.venv）…"
 [ -d "$DIR/.venv" ] || python3 -m venv "$DIR/.venv"
-"$DIR/.venv/bin/pip" install -q --upgrade pip
-"$DIR/.venv/bin/pip" install -q -r "$DIR/requirements.txt"
+# pip 走国内镜像：比直连 pypi.org 快，也不容易中断（连不上就退回默认源）
+PIP_MIRROR="${PIP_MIRROR:-https://mirrors.aliyun.com/pypi/simple/}"
+"$DIR/.venv/bin/pip" install -q -i "$PIP_MIRROR" --upgrade pip \
+  || "$DIR/.venv/bin/pip" install -q --upgrade pip
+"$DIR/.venv/bin/pip" install -q -i "$PIP_MIRROR" -r "$DIR/requirements.txt" \
+  || "$DIR/.venv/bin/pip" install -q -r "$DIR/requirements.txt"
 
 echo "④ 装 Caddy（自动 HTTPS）…"
 if ! command -v caddy >/dev/null 2>&1; then
@@ -118,10 +128,11 @@ if ! command -v caddy >/dev/null 2>&1; then
   OK=0
   # 先试官方 apt 源（好处：以后跟系统一起升级）
   # —— 所有下载都带 --connect-timeout/--max-time：境外源连不上时是"失败"而不是"永远卡住"
-  if curl -fsSL --connect-timeout 10 --max-time 60 -o /tmp/caddy.key \
+  # 时间给短一点：连不上就别耗着（香港机器连 cloudsmith 很慢/不通，最多等 25 秒就切 GitHub）
+  if curl -fsSL --connect-timeout 6 --max-time 25 -o /tmp/caddy.key \
        'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' 2>/dev/null; then
     gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg /tmp/caddy.key 2>/dev/null || true
-    if curl -fsSL --connect-timeout 10 --max-time 60 -o /etc/apt/sources.list.d/caddy-stable.list \
+    if curl -fsSL --connect-timeout 6 --max-time 25 -o /etc/apt/sources.list.d/caddy-stable.list \
          'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' 2>/dev/null; then
       timeout 300 apt-get update -qq 2>/dev/null || true
       timeout 600 apt-get install -y -qq caddy 2>/dev/null && OK=1
