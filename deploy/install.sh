@@ -40,7 +40,23 @@ echo " 甜薯剧本杀 · 部署到这台服务器"
 echo " 域名：$DOMAIN    目录：$DIR    分支：$BRANCH"
 echo "=============================================="
 
-echo "① 装系统依赖…"
+echo "① 先做准备（内存小就加 swap），再装系统依赖…"
+# 便宜的轻量服务器常见 0.5G 内存 —— 不加 swap 的话 apt/pip 很容易被 OOM 杀掉
+MEM_MB=$(awk '/MemTotal/{print int($2/1024)}' /proc/meminfo 2>/dev/null || echo 0)
+SWAP_MB=$(awk '/SwapTotal/{print int($2/1024)}' /proc/meminfo 2>/dev/null || echo 0)
+if [ "$MEM_MB" -lt 1500 ] && [ "$SWAP_MB" -lt 512 ]; then
+  if [ ! -f /swapfile ]; then
+    fallocate -l 1G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=1024 status=none
+    chmod 600 /swapfile
+    mkswap /swapfile >/dev/null
+  fi
+  swapon /swapfile 2>/dev/null || true
+  grep -q '^/swapfile' /etc/fstab 2>/dev/null || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  echo "   内存 ${MEM_MB}MB，已启用 1G swap（重启也生效）"
+else
+  echo "   内存 ${MEM_MB}MB / swap ${SWAP_MB}MB，够用，跳过"
+fi
+
 apt-get update -qq
 apt-get install -y -qq python3 python3-venv python3-pip git curl gnupg \
   debian-keyring debian-archive-keyring apt-transport-https
