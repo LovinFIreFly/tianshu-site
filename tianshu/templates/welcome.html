@@ -1,32 +1,25 @@
-{# 进站第一屏（欢迎页）—— 对应老版 legacy/index.html 里的 page-welcome。
-   没登录的人打开 / 先看到这一页：点「登 录」才进登录页；想先看看的可以走「先随便逛逛」。
-   登录之后这页就不再出现（/ 直接是门店首页）。 #}
-{% extends 'auth_base.html' %}
+{# 进站第一屏（欢迎页）：没登录的人打开 / 先看到这一页。
+   继承 base.html → 顶部就是新玻璃导航，全站骨架一致；中央是全屏欢迎 hero。
+   点「登录」进登录页；「先随便逛逛」走门店首页（之后这页便不再出现）。 #}
+{% extends 'base.html' %}
 {% block title %}{{ settings.shopName }}{% endblock %}
+{% block main_class %}{% endblock %}
+{% block body %}
 
-{% block top %}
-{# 左上角原来写着「桌面演示版」—— 那是给自己看的备注，客人进来第一眼看到它，
-   会觉得这网站还没做完（2026-09 用户要求删掉这类字）。欢迎页本身就是首页，
-   不需要「‹ 门店首页」，所以这一行只留右上角的深浅色开关。 #}
-<div class="auth-top">
-  <a class="theme-btn" href="{{ url_for('public.toggle_theme') }}" style="margin-left:auto"
-     title="切换深浅色" aria-label="切换深浅色">
-    {% if theme == 'light' %}🌙{% else %}☀️{% endif %}</a>
-</div>
-{% endblock %}
+<section class="hero welcome-hero">
+  <div class="wrap hero-inner">
+    <span class="welcome-logo" aria-hidden="true">🍠</span>
+    <h1 class="hero-title">{{ settings.shopName }}</h1>
+    <p class="slogan">沉浸式剧本体验 · 一场好戏从甜薯开始</p>
 
-{% block card %}
-<div class="welcome-card">
-  <span class="logo" aria-hidden="true">🍠</span>
-  <h1>{{ settings.shopName }}</h1>
-  <p class="slogan">沉浸式剧本体验 · 一场好戏从甜薯开始</p>
+    <div class="btns">
+      <a class="btn btn-primary btn-cta" href="{{ url_for('user.login') }}">登 录</a>
+      <a class="btn btn-ghost" href="{{ url_for('user.register') }}">注册新账号</a>
+    </div>
 
-  <div class="btns">
-    <a class="btn btn-primary" href="{{ url_for('user.login') }}">登 录</a>
-    <a class="btn" href="{{ url_for('user.register') }}">注册新账号</a>
+    <p class="more"><a class="lnk" href="{{ url_for('public.home', browse=1) }}">先随便逛逛 →</a></p>
+    <p class="meta">已上架 {{ meta.scripts }} 部剧本 · 今天 {{ meta.today }} 场 · 支持拼车和包车</p>
   </div>
+</section>
 
-  <p class="more"><a class="lnk" href="{{ url_for('public.home', browse=1) }}">先随便逛逛 →</a></p>
-  <p class="meta">已上架 {{ meta.scripts }} 部剧本 · 今天 {{ meta.today }} 场 · 支持拼车和包车</p>
-</div>
 {% endblock %}
