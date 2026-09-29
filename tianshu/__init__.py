@@ -208,7 +208,8 @@ def create_app():
         is_mobile = ('TianshuApp' in ua) or bool(
             _re.search(r'(?:iPhone|iPod|Android|Mobile|BlackBerry|IEMobile|Opera Mini|Windows Phone)', ua or '', _re.I))
         if is_mobile and not p.startswith('/m'):
-            return redirect('/m')
+            # 跳 /m/（末尾斜杠）让浏览器的相对路径基准落在 /m/ 目录下
+            return redirect('/m/')
 
     @app.before_request
     def csrf_guard():
