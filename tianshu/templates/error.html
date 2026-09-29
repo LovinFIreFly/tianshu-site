@@ -1,15 +1,38 @@
 {% extends 'base.html' %}
 {% block title %}{{ code }} · {{ settings.shopName }}{% endblock %}
-{# 错误页 3.0：像剧院的"此门不通"告示 —— 大号码 + 一句人话 + 两个出口。 #}
+{# 错误页 3.0（去 AI 味）：像老板在门口贴了张手写告示 —— 手绘小场景 + 口语 + 两个出口。 #}
 {% block body %}
 
-<section class="dsec" style="border-bottom:0;padding:calc(var(--d-nav-h) + clamp(40px,8vw,110px)) 0 clamp(60px,10vw,140px)">
+<section class="dsec" style="border-bottom:0;padding:calc(var(--d-nav-h) + clamp(36px,7vw,90px)) 0 clamp(56px,9vw,120px)">
   <div class="wrap3 wrap3--tight" style="text-align:center">
-    <p class="copy-mono" style="color:var(--d-ink-4);margin:0">
+
+    {# 手绘小场景：一本被借走的空书架 / 借书卡 #}
+    <svg width="150" height="120" viewBox="0 0 150 120" fill="none" style="margin:0 auto;display:block" aria-hidden="true">
+      <path d="M24 30 L120 24 L126 96 L30 102 Z" stroke="var(--d-ink)" stroke-width="2.4" stroke-linejoin="round"/>
+      <path d="M30 44 L124 39 M30 58 L125 53 M30 72 L126 67" stroke="var(--d-rule-2)" stroke-width="1.6"/>
+      <path d="M70 30 L74 102" stroke="var(--d-rule)" stroke-width="1.6"/>
+      <path d="M40 22 q8 -12 22 -6 q6 -10 20 -2 q10 -8 22 0" stroke="var(--d-vermilion,#B2301C)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+      <text x="96" y="84" font-family="STKaiti,KaiTi,楷体,serif" font-size="13" fill="var(--d-vermilion,#B2301C)" transform="rotate(-8 96 84)">借走啦</text>
+    </svg>
+
+    <p class="copy-mono" style="color:var(--d-ink-4);margin:18px 0 0">
       {{ '页面走丢了' if code == 404 else ('这里不让你进' if code == 403 else '出了一点问题') }}
     </p>
-    <div class="heading-hero" style="font-size:clamp(72px,16vw,180px);margin-top:var(--d-s3)">{{ code }}</div>
-    <p class="body-large" style="max-width:46ch;margin:var(--d-s5) auto 0">{{ msg }}</p>
+    <div class="heading-hero" style="font-family:var(--d-serif);font-size:clamp(64px,15vw,160px);margin-top:var(--d-s3)">{{ code }}</div>
+
+    {# 口语化提示（九·交互细节） #}
+    <p class="body-large hand" style="max-width:42ch;margin:var(--d-s5) auto 0;font-size:19px;color:var(--d-ink-2)">
+      {% if code == 404 %}这本子被人借走啦，页面没找着。换个别的看看？
+      {% elif code == 403 %}这扇门只给店里人开，你先在门外等等～
+      {% else %}正帮你翻本子呢，稍等下再来试试。
+      {% endif %}
+    </p>
+
+    {# 老板手写寄语（九·页脚/告示的人味） #}
+    <p class="hand" style="margin:14px auto 0;color:var(--d-ink-4);font-size:15px">
+      —— {{ settings.shName if settings.get('shopName') else '老板' }} 留
+    </p>
+
     <div class="row" style="justify-content:center;margin-top:clamp(24px,3.4vw,38px);gap:12px">
       <a class="b3 b3--solid" href="{{ url_for('public.home') }}">回首页</a>
       <a class="b3" href="{{ url_for('public.scripts') }}">去剧本库</a>

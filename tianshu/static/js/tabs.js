@@ -25,11 +25,12 @@
     each(root.querySelectorAll('.tabpane'), function (p) {
       var on = p.getAttribute('data-tab') === key;
       p.classList.toggle('on', on);
-      // 切出来时播一段淡入 + 轻微上移（精美但不抢戏），用 WAAPI 不污染 CSS、每次都重播
+      // 切出来时像"翻纸片"错位（去 AI 味：不是平滑滑动），用 WAAPI 每次重播
       if (on && p.animate) {
         p.animate(
-          [{opacity: 0, transform: 'translateY(10px)'}, {opacity: 1, transform: 'none'}],
-          {duration: 340, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'both'});
+          [{opacity: 0, transform: 'rotateX(-9deg) translateY(12px)'},
+           {opacity: 1, transform: 'none'}],
+          {duration: 420, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'both'});
       }
       hit = hit || on;
     });
@@ -58,8 +59,14 @@
           btn.classList.toggle('on', on);
           btn.textContent = on ? '❤' : '♡';
           btn.title = on ? '取消收藏' : '收藏这个本';
-          if (btn.animate) btn.animate([{transform: 'scale(1)'}, {transform: 'scale(1.35)'}, {transform: 'scale(1)'}],
-            {duration: 220, easing: 'ease-out'});
+          if (on) {                       /* ⑤ 收藏 = 盖章：咚一下 + 红印 */
+            btn.classList.remove('is-stamp');
+            void btn.offsetWidth;          /* 强制重排，动画每次重播 */
+            btn.classList.add('is-stamp');
+          } else if (btn.animate) {
+            btn.animate([{transform: 'scale(1)'}, {transform: 'scale(.85)'}, {transform: 'scale(1)'}],
+              {duration: 180, easing: 'ease-out'});
+          }
         }
       })
       .catch(function () { f.submit(); });
