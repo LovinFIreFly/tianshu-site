@@ -395,11 +395,21 @@ img{max-width:100%}
              linear-gradient(160deg,var(--d-paper-2),var(--d-paper-3) 72%)}
 .pcard3__cover img{width:100%;height:100%;object-fit:cover;transition:transform .8s var(--d-ease);display:block}
 .pcard3:hover .pcard3__cover img{transform:scale(1.055)}
-/* 没剧照时的占位：斜纹底 + 大字徽记 + 一行等宽小字 —— 不是一块空白灰 */
-.pcard3__ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:9px;font-size:38px;line-height:1;background:transparent}
-.pcard3__ph em{font-style:normal;font-family:var(--d-mono);font-size:9px;letter-spacing:.22em;
-  text-transform:uppercase;color:var(--d-ink-4)}
+/* 没剧照时的占位：**现印一张小海报**（和详情页 .poster3 同一套语言）
+   斜纹底 + 巨字水印 + 一句简介 + 规格行（难度点阵 / 人数 / 时长）。
+   原来是"居中一个 emoji + 无剧照"——等于告诉客人"图没加载出来"；现在这块本身就有的读。 */
+.pcard3__ph{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;
+  gap:7px;padding:clamp(9px,1.1vw,13px);background:transparent;text-align:left}
+.pcard3__wm{position:absolute;right:-.06em;top:44%;transform:translateY(-58%);
+  font-size:clamp(64px,7.4vw,98px);line-height:.78;opacity:.16;pointer-events:none;user-select:none}
+.pcard3__d{position:relative;margin:0;font-size:11px;line-height:1.55;color:var(--d-ink-3);
+  display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pcard3__m{position:relative;display:flex;align-items:center;gap:8px;padding-top:7px;
+  border-top:1px solid var(--d-rule);font-family:var(--d-mono);font-size:9.5px;
+  letter-spacing:.04em;color:var(--d-ink-4);white-space:nowrap;overflow:hidden}
+.pcard3__mm{margin-left:auto}
+/* 手机两列时卡片很窄：点阵让位给人数/时长（难度下面正文里还有） */
+@media(max-width:600px){.pcard3__m .dots3{display:none}}
 .pcard3__type{position:absolute;top:0;left:0;z-index:2;padding:3px 8px;background:var(--d-ink);color:var(--d-paper-3);
   font-family:var(--d-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase}
 .pcard3__fav{position:absolute;top:0;right:0;z-index:3}

@@ -1,0 +1,14 @@
+{# 没剧照时的封面占位：**现印一张小海报**（和详情页的 .poster3 同一套语言）。
+   巨字水印（emoji）+ 一句简介 + 规格行（难度点阵 / 人数 / 时长）。
+   两处用：剧本库网格 _scripts_grid.html、首页海报轨 home.html —— 所以抽成片段，
+   免得两边各写一份、改一处漏一处。
+   需要外层有个变量 s（当前这本剧本）。 #}
+{% set _d = (s.diff or 3)|int %}
+<span class="pcard3__ph">
+  <span class="pcard3__wm">{{ s.emoji or '🎭' }}</span>
+  <span class="pcard3__d">{{ s.desc or (s.tags|join(' · ') if s.tags else '门店还没写简介') }}</span>
+  <span class="pcard3__m">
+    <span class="dots3">{% for i in range(5) %}<i class="{{ 'on' if i < _d }}"></i>{% endfor %}</span>
+    <span class="pcard3__mm">{{ s.players or '—' }} 人 · {{ s.dur or '待定' }}</span>
+  </span>
+</span>
