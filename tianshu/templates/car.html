@@ -1,61 +1,56 @@
 {% extends 'base.html' %}
 {% block title %}拼车大厅 · {{ settings.shopName }}{% endblock %}
+{% block main_class %}wrap{% endblock %}
 {% block body %}
 
-{# 拼车大厅：一车一行，细线分隔（报纸列表的做法）。
-   一屏能扫完十几车，比一堆卡片快得多。车上的人折在"可选"里。 #}
-<div class="between" style="align-items:flex-end">
-  <div>
-    <span class="kicker">拼车 / Carpool</span>
-    <h1 style="font-size:40px;margin:var(--sp-3) 0 0">拼车大厅</h1>
-    <p class="sub" style="margin-top:var(--sp-2)">同一本、同一时段的凑一车；满员可以排候补，有人退就喊你</p>
-  </div>
+<header class="sec-head">
+  <span class="sec-no">拼</span>
+  <h2>拼车大厅</h2>
   <a class="btn btn-ghost" href="{{ url_for('public.scripts') }}">我要开一车</a>
-</div>
+</header>
+<p class="sub">同一本、同一时段凑一车；满员可排候补，有人退就喊你</p>
 
 {% if cars %}
-<div style="margin-top:var(--sp-7)">
+<div class="car-list">
   {% for c in cars %}
-  <div style="padding:var(--sp-5) 0;{% if not loop.first %}border-top:1px solid var(--rule){% endif %}">
-    <div class="between" style="align-items:flex-start">
-      <div style="min-width:0;flex:1">
-        <div class="row" style="gap:var(--sp-3);align-items:baseline">
-          <span class="serif" style="font-size:24px;font-weight:700">{{ c.title }}</span>
-          {% if c.full %}<span class="badge bad">满员</span>
-          {% elif c.need %}<span class="badge new">还差 {{ c.need }} 人</span>
-          {% else %}<span class="badge ok">已成局</span>{% endif %}
-          {% for t in c.tags %}<span class="badge">{{ t }}</span>{% endfor %}
-        </div>
-        <p class="sub" style="margin-top:6px">
-          {{ c.day }} {{ c.time }} · 车主 {{ c.owner }} · <b>{{ c.joined }}/{{ c.cap }}</b> 人
-          {% if c.reserved %} · 车主留了 {{ c.reserved }} 个熟人位{% endif %}
-        </p>
-        <div class="car-bar" style="max-width:340px;margin-top:var(--sp-3)">
-          <i style="width:{{ (c.joined * 100 / (c.cap or 8))|round|int }}%"></i>
-        </div>
+  <article class="car-row">
+    <div class="car-main">
+      <div class="car-title-row">
+        <span class="serif car-name">{{ c.title }}</span>
+        {% if c.full %}<span class="badge bad">满员</span>
+        {% elif c.need %}<span class="badge new">还差 {{ c.need }} 人</span>
+        {% else %}<span class="badge ok">已成局</span>{% endif %}
+        {% for t in c.tags %}<span class="badge">{{ t }}</span>{% endfor %}
       </div>
-
-      <div class="row" style="gap:var(--sp-4);align-items:center;flex:none">
-        {% if not me %}
-          <a class="btn btn-sm btn-primary" href="{{ url_for('user.login', next=request.path) }}">登录后上车</a>
-        {% elif c.mine %}
-          <span class="badge ok">你在这车上</span>
-          {% if not c.owner == (me.username) %}
-          <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='quit') }}">
-            <button class="btn btn-sm btn-danger" type="submit">下车</button></form>
-          {% endif %}
-        {% elif c.full %}
-          <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='wait') }}">
-            <button class="btn btn-sm btn-ghost" type="submit">排候补</button></form>
-        {% else %}
-          <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='join') }}">
-            <button class="btn btn-sm btn-primary" type="submit">上车</button></form>
-        {% endif %}
-        <a class="lnk" href="{{ url_for('public.car_detail', cid=c.id) }}">进车队 →</a>
+      <p class="sub" style="margin-top:6px">
+        {{ c.day }} {{ c.time }} · 车主 {{ c.owner }} · <b>{{ c.joined }}/{{ c.cap }}</b> 人
+        {% if c.reserved %} · 车主留了 {{ c.reserved }} 个熟人位{% endif %}
+      </p>
+      <div class="car-bar" style="max-width:340px;margin-top:var(--sp-3)">
+        <i style="width:{{ (c.joined * 100 / (c.cap or 8))|round|int }}%"></i>
       </div>
     </div>
 
-    <details class="spoiler">
+    <div class="car-act">
+      {% if not me %}
+        <a class="btn btn-sm btn-primary" href="{{ url_for('user.login', next=request.path) }}">登录后上车</a>
+      {% elif c.mine %}
+        <span class="badge ok">你在这车上</span>
+        {% if not c.owner == (me.username) %}
+        <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='quit') }}">
+          <button class="btn btn-sm btn-danger" type="submit">下车</button></form>
+        {% endif %}
+      {% elif c.full %}
+        <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='wait') }}">
+          <button class="btn btn-sm btn-ghost" type="submit">排候补</button></form>
+      {% else %}
+        <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='join') }}">
+          <button class="btn btn-sm btn-primary" type="submit">上车</button></form>
+      {% endif %}
+      <a class="lnk" href="{{ url_for('public.car_detail', cid=c.id) }}">进车队 →</a>
+    </div>
+
+    <details class="spoiler" style="grid-column:1 / -1">
       <summary>车上的人（{{ c.members|length }}）</summary>
       <div class="chips">
         {% for m in c.members %}
@@ -64,7 +59,7 @@
       </div>
       <p class="sub mt">只显示昵称、性别、年龄段 —— 电话这类信息车上看不到，保护隐私。</p>
     </details>
-  </div>
+  </article>
   {% endfor %}
 </div>
 {% else %}

@@ -1,15 +1,12 @@
 {% extends 'base.html' %}
 {% block title %}玩家社区 · {{ settings.shopName }}{% endblock %}
+{% block main_class %}wrap{% endblock %}
 {% block body %}
 {% set TYPE_NAME = {'chat': '动态', 'diary': '日记', 'guide': '攻略', 'ask': '组队'} %}
-<div class="between">
-  <div>
-    <h1>玩家社区</h1>
-    <p class="sub">动态、日记、攻略、组队 —— 别剧透不标注就行（会被删）</p>
-  </div>
-</div>
+<header class="sec-head"><span class="sec-no">社</span><h2>玩家社区</h2></header>
+<p class="sub">动态、日记、攻略、组队 —— 别剧透不标注就行（会被删）</p>
 
-{# 分类筛选（老版的动态/日记/攻略三分法，这里多了个「组队」） #}
+{# 分类筛选（动态/日记/攻略/组队） #}
 <nav class="tabbar" style="margin-top:var(--sp-4)">
   <a href="{{ url_for('public.comm') }}" class="{{ 'on' if not t }}">全部</a>
   {% for k, n in TYPE_NAME.items() %}
@@ -43,8 +40,7 @@
 </div>
 {% endif %}
 
-{% for p in posts %}
-<div class="panel">
+{% for p in posts %}<article class="post-card">
   <div class="between">
     <div>
       <b>{{ p.title or TYPE_NAME.get(p.type, '动态') }}</b>
@@ -64,13 +60,12 @@
       <button class="btn btn-sm" type="submit">举报</button>
     </form>
     {% if my_admin %}
-    <form method="post" action="{{ url_for('admin.post_del', pid=p.id) }}"
-          onsubmit="return confirm('删掉这条帖子？')">
+    <form method="post" action="{{ url_for('admin.post_del', pid=p.id) }}" onsubmit="return confirm('删掉这条帖子？')">
       <button class="btn btn-sm btn-danger" type="submit">删除</button>
     </form>
     {% endif %}
   </div>
-</div>
+</article>
 {% else %}
 <div class="panel empty">还没人发帖，你可以来发第一条</div>
 {% endfor %}
