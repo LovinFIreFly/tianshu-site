@@ -775,6 +775,7 @@ SKINS = {
     'monolith':  '石碑 · 灰岩（灰底 / 单点正红 / 巨字）',
     'film':      '胶片 · 做旧（暖棕颗粒 / 手绘朱线 / 纸张噪点）',
     'ledger':    '柜台 · 手写账本（虚线框 / 等宽数字 / 印章红）',
+    'symphony':  'Symphony · 暗色剧场（去模板化 / 高质感暗色 SaaS）',
 }
 DEFAULT_SKIN = 'playbill'
 
