@@ -162,7 +162,9 @@ for _sk in ('noir', 'riso', 'swiss'):
     check('皮肤 %s 能加载（覆盖层叠在主样式之上）' % _sk,
           _ss == 200 and ('skin-%s.css' % _sk) in _sh and 'skin-bar' in _sh)
 _ss, _sh = guest.get('/car')
-check('不指定皮肤时不叠任何皮肤表（默认戏单）', 'skin-' not in _sh and 'skin-bar' in _sh)
+# 判据要写全文件名：'skin-bar' 里也含 'skin-'，只判子串会永远为真（踩过一次）
+check('不指定皮肤时不叠任何皮肤表（默认戏单）',
+      all(('skin-%s.css' % k) not in _sh for k in ('noir', 'riso', 'swiss')) and 'skin-bar' in _sh)
 for path, want in (('/scripts', '剧本库'), ('/car', '拼车'), ('/login', '登录'), ('/register', '注册')):
     s, html = guest.get(path)
     check('打开 %s' % path, s == 200 and want in html, 'HTTP %s' % s)
