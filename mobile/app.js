@@ -28,12 +28,19 @@
       fetch(url).then((r) => (r.ok ? r.json() : Promise.reject()))
         .then((d) => { D[key] = d; })
         .catch(() => { D[key] = fb; });
-    _dataP = Promise.allSettled([
+    const dataPromise = Promise.allSettled([
       get("/m/api/scripts", "scripts", FALLBACK.scripts || []),
       get("/m/api/sessions", "sessions", FALLBACK.sessions || []),
       get("/m/api/cars", "cars", FALLBACK.cars || []),
       get("/m/api/me", "me", FALLBACK.me || { guest: true }),
     ]).then(() => { if (!D.me) D.me = FALLBACK.me || { guest: true }; });
+    // 移动端网络可能抖动：2 秒还没回来先用本地兜底把界面撑出来
+    const timeout = new Promise((resolve) => setTimeout(() => {
+      ["scripts", "sessions", "cars", "me"].forEach((k) => { if (!(k in D) || D[k] == null) D[k] = FALLBACK[k] || []; });
+      if (!D.me) D.me = FALLBACK.me || { guest: true };
+      resolve();
+    }, 1800));
+    _dataP = Promise.race([dataPromise, timeout]).then(() => dataPromise);
     return _dataP;
   }
 
@@ -86,9 +93,18 @@
   function load(view, build) {
     const node = $("#view-" + view);
     if (node.dataset.loaded) return;
-    node.innerHTML = '<div class="hero-pad"></div>' +
-      '<div class="waterfall">' + skelCard() + skelCard() + skelCard() + skelCard() + "</div>";
-    ensureData().then(() => { node.innerHTML = build(); node.dataset.loaded = "1"; reveal(node); });
+    // 先用本地兜底数据把内容撑出来，避免白屏；再静默刷新真实数据
+    try {
+      node.innerHTML = build();
+      node.dataset.loaded = "1";
+      reveal(node);
+    } catch (e) {
+      if (typeof showErr === "function") showErr("build " + view + " 失败: " + (e && e.message || e));
+      node.innerHTML = '<div class="hero-pad"></div>' +
+        '<div class="waterfall">' + skelCard() + skelCard() + skelCard() + skelCard() + "</div>";
+      throw e;
+    }
+    ensureData().then(() => { try { mount(view, build()); } catch (e) {} });
   }
   // 已加载的视图需要原地刷新（如筛选）
   function mount(view, html) { const n = $("#view-" + view); n.innerHTML = html; reveal(n); }
@@ -231,8 +247,8 @@
       '<span class="emoji">' + (s.emoji || "🎭") + "</span>" +
       '<div class="detail__title">' + esc(s.title) + "</div></div>" +
       '<div class="detail__body"><div class="detail__meta">' +
-      '<div>人数<b>' + s.players + "</b></div><div>时长<b>' + esc(s.duration) + "</b></div>" +
-      '<div>难度<b>' + esc(s.difficulty) + "</b></div><div>单价<b>¥' + s.price + "</b></div></div>" +
+      '<div>人数<b>' + s.players + '</b></div><div>时长<b>' + esc(s.duration) + '</b></div>' +
+      '<div>难度<b>' + esc(s.difficulty) + '</b></div><div>单价<b>¥' + s.price + '</b></div></div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:var(--s4)">' +
       (s.tags || []).map((t) => '<span class="tag">#' + esc(t) + "</span>").join("") + "</div>" +
       '<div class="detail__desc">' + esc(s.desc) + "</div></div>" +
@@ -315,6 +331,11 @@
     route();
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
-  else init();
+  try {
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+    else init();
+  } catch (e) {
+    if (typeof showErr === "function") showErr("init 失败: " + (e && e.message || e) + "\n" + (e && e.stack || ""));
+    throw e;
+  }
 })();

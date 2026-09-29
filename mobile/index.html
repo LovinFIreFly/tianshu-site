@@ -7,7 +7,13 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>甜薯剧本杀</title>
-  <link rel="stylesheet" href="/m/styles.css">
+  <link rel="stylesheet" href="/m/styles.css?v=3">
+  <script>
+    window.__mobileErrors = [];
+    function showErr(msg){ window.__mobileErrors.push(msg); var b=document.getElementById('jsError'); if(!b){b=document.createElement('div');b.id='jsError';b.style='position:fixed;inset:0;z-index:9999;background:#0B0B0F;color:#F0593F;padding:18px;white-space:pre-wrap;overflow:auto;font-size:13px;line-height:1.5';document.body.appendChild(b);} b.textContent+=msg+'\n---\n';}
+    window.onerror=function(msg,url,line,col,err){ showErr((url||'')+':'+(line||0)+':'+(col||0)+' '+msg+'\n'+(err&&err.stack||'')); };
+    window.addEventListener('error',function(e){ if(e.target && (e.target.tagName==='SCRIPT'||e.target.tagName==='LINK')) showErr('资源加载失败: '+(e.target.src||e.target.href||'')); });
+  </script>
 </head>
 <body>
   <div id="app">
@@ -37,7 +43,13 @@
     </button>
 
     <!-- 底部 Tab 主导航 -->
-    <nav class="tabbar" id="tabbar"></nav>
+    <nav class="tabbar" id="tabbar">
+      <button class="tab on" data-key="home"><span>首页</span></button>
+      <button class="tab" data-key="scripts"><span>挑本</span></button>
+      <button class="tab" data-key="car"><span>拼车</span></button>
+      <button class="tab" data-key="group"><span>组局</span></button>
+      <button class="tab" data-key="me"><span>我的</span></button>
+    </nav>
   </div>
 
   <!-- 底部弹层 -->
@@ -56,7 +68,7 @@
     <div id="detailContent"></div>
   </div>
 
-  <script src="/m/data.js"></script>
-  <script src="/m/app.js"></script>
+  <script src="/m/data.js?v=3"></script>
+  <script src="/m/app.js?v=3"></script>
 </body>
 </html>
