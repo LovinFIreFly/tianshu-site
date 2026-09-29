@@ -1029,9 +1029,10 @@ html.ts-leaving body{opacity:0;transform:translateY(-10px) scale(.995);
 @media(max-width:900px){.me-wrap{grid-template-columns:1fr}}
 .me-card{border:1px solid var(--d-rule);border-radius:var(--d-r);background:var(--d-paper-3);
   padding:var(--d-s5)}
-.me-card .avatar{width:56px;height:56px;border-radius:var(--d-round);overflow:hidden;display:grid;
+.me-card .avatar,.avatar-circle{width:56px;height:56px;border-radius:var(--d-round);overflow:hidden;display:grid;
   place-items:center;background:var(--d-ink);color:var(--d-paper-3);
   font-family:var(--d-serif);font-size:22px}
+.avatar-circle{font-size:20px;flex:0 0 auto}
 .me-card h3{margin:var(--d-s4) 0 4px;font-family:var(--d-serif);font-size:19px;font-weight:700}
 .me-booking-title{font-family:var(--d-serif);font-size:16px;font-weight:700}
 .p-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--d-rule);
@@ -1157,6 +1158,11 @@ h2.heading-section{margin:0 0 var(--d-s3)}
   color:var(--d-stage-ink);overflow-wrap:anywhere}
 .poster3__d{margin:.55em 0 0;font-size:12.5px;line-height:1.62;color:var(--d-stage-2);
   display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.script-desc{max-width:60ch;color:var(--d-stage-2);line-height:1.8;font-size:16px;margin-top:18px}
+.script-desc p{margin:0 0 .8em}
+.script-desc p:last-child{margin-bottom:0}
+.poster3__d p{display:inline}
+.poster3__d p+p{margin-left:.4em}
 .poster3__row{display:flex;align-items:center;justify-content:space-between;gap:12px;
   margin-top:clamp(12px,1.6vw,18px);padding-top:clamp(10px,1.4vw,14px);
   border-top:1px solid var(--d-hair)}
@@ -1275,7 +1281,7 @@ h2.heading-section{margin:0 0 var(--d-s3)}
   /* ---------- 我的页面 ---------- */
   .me-wrap{gap:14px}
   .me-card{padding:14px}
-  .me-card .avatar{width:46px;height:46px;font-size:18px}
+  .me-card .avatar,.avatar-circle{width:46px;height:46px;font-size:18px}
   .me-card h3{font-size:16px}
   .me-card .copy-mono{font-size:11px}
   .p-stats b{font-size:14px}

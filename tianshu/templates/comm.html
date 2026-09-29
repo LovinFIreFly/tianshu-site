@@ -38,7 +38,7 @@
               {% if p.avatar and p.avatar.startswith('/img/') %}
               <img src="{{ p.avatar }}" alt="">
               {% else %}
-              <span>{{ (p.nick or p.username or '玩家')[0] }}</span>
+              <span>{{ p.avatar or (p.nick or p.username or '玩家')[0] }}</span>
               {% endif %}
             </div>
             <span class="rev3__name">{{ p.nick or p.username or '玩家' }}</span>

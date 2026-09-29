@@ -73,6 +73,15 @@ def create_app():
     # 模板目录：一代 / 二代由 UiLoader 现挑（见类说明）
     app.jinja_loader = UiLoader([os.path.join(app.root_path, app.template_folder or 'templates')])
     app.secret_key = session_secret()
+
+    @app.template_filter('nl2p')
+    def nl2p_filter(text):
+        """把纯文本按空行拆成 <p> 段落，用于剧本简介这类长文本。"""
+        from markupsafe import escape
+        paragraphs = [p.strip() for p in str(text or '').split('\n\n') if p.strip()]
+        if not paragraphs:
+            return ''
+        return '<p>' + '</p><p>'.join(escape(p).replace('\n', '<br>\n') for p in paragraphs) + '</p>'
     app.config.update(
         PERMANENT_SESSION_LIFETIME=timedelta(days=SESSION_DAYS),
         MAX_CONTENT_LENGTH=4 * 1024 * 1024,          # 表单别传太大（图片走单独上传）

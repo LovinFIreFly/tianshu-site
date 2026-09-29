@@ -22,7 +22,7 @@
         <div style="display:flex;align-items:center;gap:14px">
           <div class="avatar">
             {% if av.startswith('/img/') %}<img src="{{ av }}" alt="" style="width:100%;height:100%;object-fit:cover">
-            {% else %}{{ (me.profile.nick or me.username)[0] }}{% endif %}
+            {% else %}{{ av or (me.profile.nick or me.username)[0] }}{% endif %}
           </div>
           <div style="min-width:0">
             <h3 style="margin:0">{{ me.profile.nick or me.username }}</h3>

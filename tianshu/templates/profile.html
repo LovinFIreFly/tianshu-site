@@ -12,8 +12,10 @@
           {% set av = who.profile.avatar or '' %}
           {% if av.startswith('/img/') %}
           <img src="{{ av }}" alt="" style="width:56px;height:56px;border-radius:var(--d-round);object-fit:cover;border:1px solid var(--d-rule)">
-          {% else %}<span>{{ who.profile.nick or who.username }}</span>{% endif %}
-          {% if av.startswith('/img/') %}<span style="font-size:.72em">{{ who.profile.nick or who.username }}</span>{% endif %}
+          {% else %}
+          <span class="avatar-circle" style="width:56px;height:56px">{{ av or (who.profile.nick or who.username)[0] }}</span>
+          {% endif %}
+          <span>{{ who.profile.nick or who.username }}</span>
         </h1>
         <div class="row" style="margin-top:14px;gap:10px">
           {% if role_name == 'dm' %}<span class="tag3 tag3--accent">🗡 DM</span>
@@ -60,7 +62,7 @@
             {% if r.avatar and r.avatar.startswith('/img/') %}
             <img src="{{ r.avatar }}" alt="">
             {% else %}
-            <span>{{ (r.nick or r.username or '玩家')[0] }}</span>
+            <span>{{ r.avatar or (r.nick or r.username or '玩家')[0] }}</span>
             {% endif %}
           </div>
           <span class="rev3__name">{{ r.nick or r.username or '玩家' }}</span>

@@ -170,7 +170,7 @@ def script_detail(sid):
     taken_roles = {str(b.get('role')) for b in db.rows('bookings')
                    if str(b.get('sid')) == str(sid) and b.get('status') != 'cancelled' and b.get('role')}
 
-    reviews = [r for r in db.rows('reviews') if str(r.get('sid')) == str(sid) and not r.get('hidden')]
+    reviews = business.reviews_of(sid, only_visible=True)
     dms = db.rows('users')
     dms = [{'phone': d.get('phone'), 'name': (d.get('profile') or {}).get('nick') or d.get('username')}
            for d in dms if business.has_role(d, 'dm') and (d.get('dmProfile') or {}).get('canOpen', True)]
