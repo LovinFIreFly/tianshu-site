@@ -222,6 +222,12 @@ def car():
                            tags=business.get_settings()['carTags'])
 
 
+@bp.get('/group')
+def group():
+    """组局：今天在开的局一览 + 自己开一桌的入口（去挑本选拼车/包车即发车）"""
+    return render_template('group.html', sessions=business.today_sessions())
+
+
 @bp.get('/car/<int:cid>')
 def car_detail(cid):
     """车队详情：看成员、聊两句；车主还能贴标签、留熟人位"""

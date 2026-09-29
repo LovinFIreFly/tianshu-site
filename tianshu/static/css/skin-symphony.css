@@ -270,3 +270,29 @@ section.dsec > .wrap3 > svg{transform:none}
 .pcard3,.ccard3,.rev3,.me-card{transition:transform .2s var(--d-ease),box-shadow .2s var(--d-ease),border-color .2s}
 .pcard3:hover,.ccard3:hover{transform:translateY(-2px) scale(1.02)}
 
+/* 三·Hero 第三个入口「去组局」—— 文字箭头幽灵链接，与前两个形态明显不同 */
+.dhero__cta a:nth-child(3){background:transparent;border:none;color:var(--ink-2);
+  padding:0 6px;font-weight:500;border-radius:0}
+.dhero__cta a:nth-child(3):hover{background:transparent;color:var(--accent);transform:none}
+
+/* ============================================================================
+   P3 · 滚动视差 + 入场节奏（按建议继续）
+   ========================================================================== */
+
+/* 滚动驱动视差：背景缓移、右侧海报轻微上浮，做出纵深；不支持的浏览器静默忽略 */
+@supports (animation-timeline: scroll()){
+  .dhero::before{animation:sym-parallax linear both;animation-timeline:scroll(root)}
+  .dhero__side{animation:sym-float linear both;animation-timeline:scroll(root);will-change:transform}
+}
+@keyframes sym-parallax{to{transform:translateY(14vh) scale(1.06)}}
+@keyframes sym-float{to{transform:translateY(-26px)}}
+
+/* 入场：区块级 .rv 已在 design3 里定义（JS 加 .in 触发），这里只补一点节奏 */
+.dsec.rv{will-change:transform,opacity}
+/* 极简降噪：尊重系统「减少动态效果」 */
+@media (prefers-reduced-motion: reduce){
+  @supports (animation-timeline: scroll()){
+    .dhero::before,.dhero__side{animation:none}
+  }
+}
+
