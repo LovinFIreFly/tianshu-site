@@ -478,18 +478,22 @@ body.auth-body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:co
 
 /* ============================ 12. 后台 / DM ============================ */
 .adm{display:flex;min-height:100vh;align-items:stretch}
-.adm-side{width:230px;flex:none;background:var(--paper-2);border-right:2px solid var(--ink);
-  padding:var(--sp-4) 0;position:sticky;top:0;height:100vh;overflow-y:auto}
+.adm-side{width:240px;flex:none;background:linear-gradient(180deg,#161310,#0E0D0C);color:rgba(244,241,234,.62);
+  border-right:1px solid var(--rule);padding:0;position:sticky;top:0;height:100vh;overflow-y:auto;
+  display:flex;flex-direction:column}
 .adm-side::-webkit-scrollbar{width:6px}
-.adm-side .brand{display:flex;align-items:center;gap:var(--sp-2);padding:0 var(--sp-4) var(--sp-4);
-  border-bottom:1px solid var(--rule);font-family:var(--serif);font-size:19px;font-weight:700}
-.adm-side .brand,.adm-side .sp{margin-bottom:var(--sp-2)}
-.adm-side .brand .ic{font-size:18px}
-.adm-side .sp{height:1px;background:var(--rule);margin:var(--sp-2) var(--sp-4)}
-.adm-side .navi{display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-2) var(--sp-4);
-  border-left:3px solid transparent;font-size:14px;color:var(--ink-3)}
-.adm-side .navi:hover{color:var(--ink);background:var(--paper-3);border-left-color:var(--rule-strong)}
-.adm-side .navi.on{color:var(--ink);font-weight:700;background:var(--paper-3);border-left-color:var(--vermilion)}
+.adm-brand{display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-5) var(--sp-4);
+  border-bottom:1px solid rgba(255,255,255,.07);font-family:var(--serif);font-size:18px;font-weight:700;color:var(--ink)}
+.adm-brand-ic{font-size:20px}
+.adm-navi{display:flex;flex-direction:column;padding:var(--sp-3) 0;flex:1}
+.adm-side .navi{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) var(--sp-4);
+  border:0;border-left:3px solid transparent;font-size:14px;color:rgba(244,241,234,.62);
+  background:none;text-align:left;cursor:pointer;font-family:inherit;width:100%}
+.adm-side .navi:hover{color:var(--ink);background:rgba(255,255,255,.04)}
+.adm-side .navi.on{color:#fff;font-weight:700;background:rgba(228,80,58,.14);border-left-color:var(--vermilion)}
+.adm-side .navi-no{font-family:var(--mono);font-size:11px;color:var(--ink-4);width:18px;flex:none}
+.adm-side .navi.on .navi-no{color:var(--vermilion)}
+.adm-foot{padding:var(--sp-3) var(--sp-4) var(--sp-5);border-top:1px solid rgba(255,255,255,.07)}
 .adm-main{flex:1;min-width:0;padding:var(--sp-6) var(--sp-7) var(--sp-8)}
 .adm-main > .tabpane > h1{font-size:var(--fs-h2);margin-bottom:var(--sp-2);padding-bottom:var(--sp-2);
   border-bottom:3px double var(--rule-strong)}
