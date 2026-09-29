@@ -98,29 +98,33 @@
   {% if s.roles %}
   <details class="spoiler">
     <summary>角色图片（可选 · 给每个角色配一张头像，客人挑角色主要看脸）</summary>
-    <div class="row mt" style="gap:var(--sp-4);flex-wrap:wrap;align-items:flex-start">
-      {% for r in s.roles %}
-      <div class="role-up">
-        {% if r.img %}<img class="up-prev sm" src="{{ r.img }}" alt="{{ r.name }}">
-        {% else %}<span class="up-ph sm">{{ r.name[0] }}</span>{% endif %}
-        <b>{{ r.name }}</b>
-        {# 选好文件就自动提交，不用再点按钮（这格是独立的 form，不能套在外层 form 里） #}
-        <form method="post" enctype="multipart/form-data" style="margin:0"
-              action="{{ url_for('admin.script_role_img', sid=s.id) }}">
-          <input type="hidden" name="idx" value="{{ loop.index0 }}">
-          <input type="file" name="img" accept="image/*" style="font-size:11px;width:100px"
-                 onchange="tianshuSmartSubmit(this)">
-        </form>
-        {% if r.img %}
-        <form method="post" style="margin:0" action="{{ url_for('admin.script_role_img', sid=s.id) }}">
-          <input type="hidden" name="idx" value="{{ loop.index0 }}">
-          <button class="btn btn-sm btn-ghost" type="submit" name="remove" value="1">删图</button>
-        </form>
-        {% endif %}
+    <form method="post" enctype="multipart/form-data" class="mt"
+          action="{{ url_for('admin.script_role_img', sid=s.id) }}"
+          onsubmit="return window.tianshuBatchUpload ? tianshuBatchUpload(this) : true"
+          id="role-batch-form-{{ s.id }}">
+      <div class="row" style="gap:var(--sp-4);flex-wrap:wrap;align-items:flex-start">
+        {% for r in s.roles %}
+        <div class="role-up">
+          {% if r.img %}<img class="up-prev sm" src="{{ r.img }}" alt="{{ r.name }}">
+          {% else %}<span class="up-ph sm">{{ r.name[0] }}</span>{% endif %}
+          <b>{{ r.name }}</b>
+          <input type="file" name="img_{{ loop.index0 }}" accept="image/*" style="font-size:11px;width:100px"
+                 data-role="{{ r.name }}">
+          {% if r.img %}
+          <form method="post" style="margin:0" action="{{ url_for('admin.script_role_img', sid=s.id) }}">
+            <input type="hidden" name="idx" value="{{ loop.index0 }}">
+            <button class="btn btn-sm btn-ghost" type="submit" name="remove" value="1">删图</button>
+          </form>
+          {% endif %}
+        </div>
+        {% endfor %}
       </div>
-      {% endfor %}
-    </div>
-    <p class="sub" style="margin-top:var(--sp-2)">大图会自动压缩（手机拍的直接传就行）。传完前台立刻生效。
+      <div class="mt" style="padding-top:12px;border-top:1px dashed var(--d-rule)">
+        <button class="btn btn-primary" type="submit">上传选中的角色图片</button>
+        <span class="caption" id="role-batch-status-{{ s.id }}" style="margin-left:10px"></span>
+      </div>
+    </form>
+    <p class="sub" style="margin-top:var(--sp-2)">大图会自动压缩（手机拍的直接传就行）。选好所有角色图后点一次「上传选中的角色图片」统一传，传完前台立刻生效。
       角色的名字和顺序在上面的「角色」那栏改 —— 改完记得回上面点「保存」，图不会丢。</p>
   </details>
   {% endif %}

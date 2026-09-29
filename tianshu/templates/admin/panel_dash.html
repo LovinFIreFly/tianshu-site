@@ -54,15 +54,35 @@
     <div class="panel">
       <form method="post" action="{{ url_for('admin.coupon') }}">
         <div class="field"><label>发给谁</label>
-          <select name="scope">
+          <select name="scope" id="coupon-scope">
             <option value="sleeping">好久没来的客人</option>
             <option value="all">全部客户</option>
+            <option value="specific">指定用户</option>
           </select></div>
-        <div class="field"><label>多久没来算"好久"（天）</label><input name="sleepDays" type="number" value="30"></div>
+        <div class="field" id="coupon-target-field" style="display:none">
+          <label>用户名 / 手机号</label>
+          <input name="target" id="coupon-target" placeholder="例如 FireFly 或 13800138000">
+        </div>
+        <div class="field" id="coupon-sleep-field"><label>多久没来算"好久"（天）</label><input name="sleepDays" type="number" value="30"></div>
         <div class="field"><label>券面额（元）</label><input name="amount" type="number" value="20"></div>
         <div class="field"><label>有效期（天）</label><input name="days" type="number" value="30"></div>
         <button class="btn btn-primary btn-block" type="submit">发出去</button>
       </form>
+      <script>
+        (function(){
+          var s = document.getElementById('coupon-scope');
+          var t = document.getElementById('coupon-target-field');
+          var f = document.getElementById('coupon-sleep-field');
+          function onChange(){
+            var isSpecific = s.value === 'specific';
+            t.style.display = isSpecific ? 'block' : 'none';
+            if (f) f.style.display = isSpecific ? 'none' : 'block';
+            if (isSpecific) document.getElementById('coupon-target').focus();
+          }
+          s.addEventListener('change', onChange);
+          onChange();
+        })();
+      </script>
     </div>
   </div>
 </div>

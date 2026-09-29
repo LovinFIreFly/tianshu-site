@@ -218,31 +218,46 @@ def recharge(phone):
 @bp.post('/coupon')
 @staff_required
 def coupon():
-    """发券：默认发给"好久没来"的客人（sleepDays 天没消费），也可以选全员"""
+    """发券：默认发给"好久没来"的客人（sleepDays 天没消费），也可以选全员或指定用户"""
     scope = request.form.get('scope') or 'sleeping'
     amount = int(request.form.get('amount') or 20)
     days = int(request.form.get('days') or 30)
     sleep_days = int(request.form.get('sleepDays') or 30)
-    cut = business.now_ms() - sleep_days * 86400000
     bookings = db.rows('bookings')
+    users = db.rows('users')
     picked = []
-    for u in db.rows('users'):
-        if not business.has_role(u, 'dm', 'admin'):   # 多角色：员工（DM/管理员）不算普通用户
-            continue
-        if scope == 'all':
-            picked.append(u)
-            continue
-        last = max([b.get('createdAt') or 0 for b in bookings if str(b.get('phone')) == str(u.get('phone'))]
-                   or [u.get('first') or 0])
-        if last < cut:
-            picked.append(u)
+
+    if scope == 'specific':
+        target = (request.form.get('target') or '').strip()
+        if not target:
+            flash('指定用户需要填用户名或手机号', 'warn')
+            return redirect(url_for('admin.dashboard'))
+        u = next((x for x in users
+                  if str(x.get('username')) == target or str(x.get('phone')) == target), None)
+        if not u:
+            flash('没找到这个用户（按用户名或手机号）', 'warn')
+            return redirect(url_for('admin.dashboard'))
+        picked.append(u)
+    else:
+        cut = business.now_ms() - sleep_days * 86400000
+        for u in users:
+            if not business.has_role(u, 'dm', 'admin'):   # 多角色：员工（DM/管理员）不算普通用户
+                continue
+            if scope == 'all':
+                picked.append(u)
+                continue
+            last = max([b.get('createdAt') or 0 for b in bookings if str(b.get('phone')) == str(u.get('phone'))]
+                       or [u.get('first') or 0])
+            if last < cut:
+                picked.append(u)
+
     for u in picked:
         db.update('coupons', lambda rows: rows + [{
             'id': business.now_ms() + len(picked), 'phone': u.get('phone'), 'amount': amount,
             'minAmount': 0, 'used': False, 'from': '门店回访',
             'exp': business.now_ms() + days * 86400000}])
         business.notify(u.get('phone'), '送你一张券 🎁',
-                        '好久不见，送你 %d 元定金抵扣券（%d 天内有效）' % (amount, days), 'coupon')
+                        '送你 %d 元游玩费抵扣券（%d 天内有效）' % (amount, days), 'coupon')
     flash('发出 %d 张券' % len(picked) if picked else '没有符合条件的客人', 'ok' if picked else 'warn')
     return redirect(url_for('admin.dashboard'))
 
@@ -375,7 +390,11 @@ def script_img(sid):
 @bp.post('/scripts/<int:sid>/role-img')
 @staff_required
 def script_role_img(sid):
-    """给某个角色传头像图 / 删图（按 roles 列表里的**下标**定位）
+    """给角色传头像图 / 删图（按 roles 列表里的**下标**定位）。
+
+    现在支持两种提交方式：
+      1. 单格旧表单：name="img" + idx=下标（删图也走这里）。
+      2. 批量新表单：每个角色一个 input，name="img_0", "img_1"... 一起上传。
 
     为什么用下标不用角色名：名字随时可能改，图得跟着那一格走 ——
     用名字配对的话，改个名图就串到别人头上。表单里带 remove=1 就是删图。
@@ -386,24 +405,62 @@ def script_role_img(sid):
         flash('没这个剧本', 'warn')
         return redirect(url_for('admin.dashboard') + '#scripts')
     roles = hit.get('roles') or []
+
+    # ① 删图或单图上传（兼容旧入口）
     try:
         idx = int(request.form.get('idx') or -1)
     except ValueError:
         idx = -1
-    if idx < 0 or idx >= len(roles):
-        flash('角色对不上（可能刚改过角色名，刷新页面再传一次）', 'warn')
-        return redirect(url_for('admin.dashboard') + '#scripts')
-    who = roles[idx].get('name')
     if request.form.get('remove'):
+        if idx < 0 or idx >= len(roles):
+            flash('角色对不上（可能刚改过角色名，刷新页面再传一次）', 'warn')
+            return redirect(url_for('admin.dashboard') + '#scripts')
+        who = roles[idx].get('name')
         roles[idx]['img'] = ''
         flash('「%s」的图删了' % who, 'ok')
-    else:
-        url, err = business.save_upload(request.files.get('img'), 'role')
+        hit['roles'] = roles
+        db.write('scripts', rows)
+        return redirect(url_for('admin.dashboard') + '#scripts')
+
+    single = request.files.get('img')
+    if single:
+        if idx < 0 or idx >= len(roles):
+            flash('角色对不上（可能刚改过角色名，刷新页面再传一次）', 'warn')
+            return redirect(url_for('admin.dashboard') + '#scripts')
+        url, err = business.save_upload(single, 'role')
         if not url:
             flash('图没传上：%s' % err, 'warn')
             return redirect(url_for('admin.dashboard') + '#scripts')
         roles[idx]['img'] = url
-        flash('「%s」的图换好了（前台立刻能看到）' % who, 'ok')
+        flash('「%s」的图换好了（前台立刻能看到）' % roles[idx].get('name'), 'ok')
+        hit['roles'] = roles
+        db.write('scripts', rows)
+        return redirect(url_for('admin.dashboard') + '#scripts')
+
+    # ② 批量上传：img_0, img_1, ...
+    updated = []
+    for key in sorted(request.files.keys()):
+        if not key.startswith('img_'):
+            continue
+        try:
+            idx = int(key.split('_', 1)[1])
+        except (ValueError, IndexError):
+            continue
+        if idx < 0 or idx >= len(roles):
+            continue
+        f = request.files[key]
+        if not f or not f.filename:
+            continue
+        url, err = business.save_upload(f, 'role')
+        if not url:
+            flash('「%s」的图没传上：%s' % (roles[idx].get('name'), err), 'warn')
+            continue
+        roles[idx]['img'] = url
+        updated.append(roles[idx].get('name'))
+    if updated:
+        flash('已上传 %d 个角色图：%s' % (len(updated), '、'.join(updated)), 'ok')
+    else:
+        flash('没有选中的角色图片需要上传', 'warn')
     hit['roles'] = roles
     db.write('scripts', rows)
     return redirect(url_for('admin.dashboard') + '#scripts')

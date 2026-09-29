@@ -9,7 +9,8 @@
     <div style="max-width:600px;margin:0 auto">
 
       <p class="pagehead3__k">支付{{ o.dueKind }} · Payment</p>
-      <h1 class="heading-hero" style="margin-top:var(--d-s3);font-size:clamp(44px,9vw,88px);color:var(--d-accent)">
+      <h1 class="heading-hero" id="due-display" style="margin-top:var(--d-s3);font-size:clamp(44px,9vw,88px);color:var(--d-accent)"
+          data-amount="{{ o.due }}">
         ¥{{ o.due }}
       </h1>
       <p class="body-large" style="margin-top:var(--d-s4)">
@@ -22,8 +23,27 @@
       </p>
       {% else %}
       <p class="sub" style="margin-top:10px">
-        玩完这一场再付游玩费（总价 ¥{{ o.amount }}，用券已抵掉的部分不算在内）。定金会另外退回。
+        玩完这一场再付游玩费（总价 ¥{{ o.amount }}）。定金会另外退回。
       </p>
+      {% endif %}
+
+      {% if o.dueKind == '游玩费' %}
+        {% if o.couponId %}
+          <p class="body-secondary" style="margin-top:var(--d-s4)">
+            已使用优惠券抵扣，应付 ¥{{ o.due }}
+          </p>
+        {% elif coupons %}
+        <div class="field" style="margin-top:var(--d-s4)">
+          <label>用优惠券抵扣游玩费</label>
+          <select name="couponId" id="coupon-select" form="pay-form">
+            <option value="0" data-amount="0">不使用优惠券</option>
+            {% for c in coupons %}
+            <option value="{{ c.id }}" data-amount="{{ c.amount }}">减 ¥{{ c.amount }}{% if c.minAmount %}（满 {{ c.minAmount }} 可用）{% endif %} · {{ c.from or '优惠券' }}</option>
+            {% endfor %}
+          </select>
+          <p class="caption" id="coupon-hint" style="margin-top:6px;display:none"></p>
+        </div>
+        {% endif %}
       {% endif %}
 
       <div class="note3" style="margin-top:clamp(20px,3vw,30px);border-left-color:var(--d-ink)">
@@ -51,7 +71,7 @@
       </div>
       {% endif %}
 
-      <form style="margin-top:var(--d-s5)" method="post" action="{{ url_for('user.order_act', oid=o.id, action=o.dueAct) }}">
+      <form id="pay-form" style="margin-top:var(--d-s5)" method="post" action="{{ url_for('user.order_act', oid=o.id, action=o.dueAct) }}">
         <button class="b3 b3--accent b3--wide" type="submit" style="height:52px">我已完成支付</button>
       </form>
 
@@ -74,4 +94,30 @@
     </div>
   </div>
 </section>
+
+{% if o.dueKind == '游玩费' and coupons %}
+<script>
+(function(){
+  var display = document.getElementById('due-display');
+  var select = document.getElementById('coupon-select');
+  var hint = document.getElementById('coupon-hint');
+  var base = parseInt(display.dataset.amount || '0', 10) || 0;
+  function fmt(n){ return '¥' + n; }
+  function update(){
+    var opt = select.options[select.selectedIndex];
+    var amt = parseInt(opt.dataset.amount || '0', 10) || 0;
+    var due = Math.max(0, base - amt);
+    display.textContent = fmt(due);
+    if (amt > 0){
+      hint.textContent = '原价 ' + fmt(base) + '，用券抵扣 ' + fmt(amt) + '，应付 ' + fmt(due);
+      hint.style.display = 'block';
+    } else {
+      hint.style.display = 'none';
+    }
+  }
+  select.addEventListener('change', update);
+  update();
+})();
+</script>
+{% endif %}
 {% endblock %}

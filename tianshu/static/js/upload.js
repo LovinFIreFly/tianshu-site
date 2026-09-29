@@ -43,4 +43,41 @@
     compress(f, function (blob) { swap(input, blob); input.form.submit(); });
     return false;                                           // 先别提交，压完自动交
   };
+
+  /* 批量上传：角色图片多选后统一提交 */
+  window.tianshuBatchUpload = function (form) {
+    var inputs = Array.from(form.querySelectorAll('input[type="file"]'));
+    var status = document.getElementById(form.id.replace('role-batch-form-', 'role-batch-status-'));
+    if (status) status.textContent = '';
+
+    var toCompress = [];
+    inputs.forEach(function (input) {
+      if (input.files && input.files[0]) {
+        var f = input.files[0];
+        if (f.size > MAX && /^image\//.test(f.type)) {
+          toCompress.push({ input: input, file: f });
+        }
+      }
+    });
+
+    if (toCompress.length === 0) return true;              // 不需要压缩，直接提交
+
+    if (status) status.textContent = '正在压缩 ' + toCompress.length + ' 张图…';
+    var i = 0;
+    function next() {
+      if (i >= toCompress.length) {
+        if (status) status.textContent = '压缩完成，正在上传…';
+        form.submit();
+        return;
+      }
+      var item = toCompress[i++];
+      if (status) status.textContent = '正在压缩 ' + i + '/' + toCompress.length + '…';
+      compress(item.file, function (blob) {
+        swap(item.input, blob);
+        next();
+      });
+    }
+    next();
+    return false;                                           // 先别提交，压完一起交
+  };
 })();

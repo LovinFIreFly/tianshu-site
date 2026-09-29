@@ -1234,16 +1234,8 @@ def create_booking(user, form):
                    and b.get('role') == role and b.get('status') != 'cancelled' for b in bookings):
                 return False, '角色「%s」已经被选走了，挑一个别的吧' % role, None
 
-    # ③ 优惠券
-    coupon = None
-    cid = str(form.get('couponId') or '')
-    if cid and cid != '0':
-        coupon = next((c for c in db.rows('coupons')
-                       if str(c.get('id')) == cid and not c.get('used')
-                       and (c.get('all') or str(c.get('phone')) == str(user.get('phone')))
-                       and (not c.get('exp') or c.get('exp') > now_ms())), None)
-        if not coupon:
-            return False, '这张券用不了（可能过期或已用过）', None
+    # ③ 优惠券：现在不在预约时扣，放到「支付游玩费」那一步让客人自己选。
+    #     这里先按全价记录游玩费，couponId 初始为 0。
 
     # ④ 算钱。拼车定金统一一口价（默认 50），包车按比例；都取整，别给客人报 229.6 这种数字
     if join_car:
@@ -1255,10 +1247,8 @@ def create_booking(user, form):
     #     没到场 / 中途跳车的，定金不退。
     #   · 游玩费：玩完再付（= 单价 × 人数），也走小客服确认那一步。
     #   · 优惠券抵的是游玩费（定金是要退回去的，抵它没意义）。
-    amount = round(price * players)                    # 游玩费（玩完再付）
+    amount = round(price * players)                    # 游玩费全价（玩完再付，届时可选券）
     deposit = deposit_per_person(st) * players         # 定金 = 一人 50 × 人数
-    if coupon:
-        amount = max(0, amount - int(coupon.get('amount') or 0))
 
     # ⑤ 会员余额抵扣：充过钱的客人可以直接用余额顶定金（顶完剩下的才需要付现）
     used = 0
@@ -1287,16 +1277,14 @@ def create_booking(user, form):
              'title': sc.get('title'), 'day': booking['day'], 'ts': ts, 'time': tm, 'players': players,
              'amount': amount, 'deposit': deposit, 'balanceUsed': used, 'payable': deposit - used,
              'status': 'unpaid', 'createdAt': now_ms(),
-             'couponId': coupon.get('id') if coupon else 0, 'paidAt': 0, 'refundAt': 0, 'claimedAt': 0}
+             'couponId': 0, 'paidAt': 0, 'refundAt': 0, 'claimedAt': 0}
 
     db.update('bookings', lambda rows: rows + [booking])
     db.update('pays', lambda rows: rows + [order])
     if used:
         adjust_balance(user.get('phone'), -used, '抵扣《%s》%s 的定金' % (sc.get('title'), booking['day']),
                        user.get('username'))
-    if coupon:
-        db.update('coupons', lambda rows: [dict(c, used=True, usedAt=now_ms()) if str(c.get('id')) == cid else c
-                                           for c in rows])
+
     if join_car:
         notify(join_car.get('phone'), '有人上你的车了',
                '%s 上了《%s》%s %s 这辆车，付定金的事店里会跟他确认。'
@@ -1318,7 +1306,7 @@ def create_booking(user, form):
 
 
 # ---------------------------------------------------------------- 订单 ★
-def order_action(user, order_id, action, is_staff=False, reason=''):
+def order_action(user, order_id, action, is_staff=False, reason='', coupon_id='0'):
     """付定金 / 退定金。能不能退、退多少、扣不扣信用分，全看这里"""
     st = get_settings()
     pays, bookings = db.rows('pays'), db.rows('bookings')
@@ -1363,9 +1351,26 @@ def order_action(user, order_id, action, is_staff=False, reason=''):
     # 客人点"我已完成支付" → claimed；客服 / DM 确认到账 → paid，
     # **这时定金按规矩退回，客人的点评也解锁**（玩完直接跑单的口子堵上）。
     if action == 'claim-bal':
-        bal = max(0, int(order.get('amount') or 0))
         if order.get('balStatus') == 'paid':
             return False, '游玩费已经确认过了，不用再交'
+
+        # 如果这单还没用券，客人可能在支付页选了一张券；在这里一次性应用并标记为已用。
+        # 老数据：couponId != 0 表示预约时已经抵过了（amount 已经是抵扣后的），直接沿用。
+        cid = str(coupon_id or '')
+        coupons = db.rows('coupons')
+        if not int(order.get('couponId') or 0) and cid and cid != '0':
+            coupon = next((c for c in coupons
+                           if str(c.get('id')) == cid and not c.get('used')
+                           and (c.get('all') or str(c.get('phone')) == str(user.get('phone')))
+                           and (not c.get('exp') or c.get('exp') > now_ms())), None)
+            if not coupon:
+                return False, '这张券用不了（可能过期、已用过或不属于你）'
+            order.update(couponId=cid,
+                         amount=max(0, int(order.get('amount') or 0) - int(coupon.get('amount') or 0)))
+            db.update('coupons', lambda rows: [dict(c, used=True, usedAt=now_ms())
+                                               if str(c.get('id')) == cid else c for c in rows])
+
+        bal = max(0, int(order.get('amount') or 0))
         if bal <= 0:
             return False, '这一单没有游玩费要交'
         order.update(balStatus='claimed', balClaimedAt=now_ms())

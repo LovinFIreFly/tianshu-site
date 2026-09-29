@@ -398,7 +398,8 @@ def cancel_booking(bid):
 @bp.post('/order/<int:oid>/<action>')
 @login_required
 def order_act(oid, action):
-    ok, msg = business.order_action(current_user(), oid, action)
+    ok, msg = business.order_action(current_user(), oid, action,
+                                    coupon_id=request.form.get('couponId'))
     flash(msg, 'ok' if ok else 'warn')
     return redirect(url_for('user.me'))
 
@@ -420,8 +421,15 @@ def pay_deposit(oid):
         return redirect(url_for('user.me'))
     # 这页两用：玩之前是"定金"（一人 50，玩完退回），玩完（核销）之后是"游玩费"（全价）
     b = next((x for x in db.rows('bookings') if str(x.get('id')) == str(o.get('bid'))), {})
+    coupons = []
     if str(b.get('status')) in ('arrived', 'done') and o.get('balStatus') != 'paid':
-        # 玩完付的是**游玩费全价**：定金是要退回的，不在这里抵
+        # 玩完付的是**游玩费全价**：定金是要退回的，不在这里抵。
+        # 优惠券也在这里选，没在预约时抵扣。
+        phone = str(u.get('phone'))
+        now = business.now_ms()
+        coupons = [c for c in db.rows('coupons')
+                   if not c.get('used') and (not c.get('exp') or c.get('exp') > now)
+                   and (c.get('all') or str(c.get('phone')) == phone)]
         o['due'] = max(0, int(o.get('amount') or 0))
         o['dueKind'] = '游玩费'
         o['dueAct'] = 'claim-bal'
@@ -429,7 +437,7 @@ def pay_deposit(oid):
         o['due'] = int(o.get('payable') if o.get('payable') is not None else o.get('deposit') or 0)
         o['dueKind'] = '定金'
         o['dueAct'] = 'claim'
-    return render_template('pay_deposit.html', o=o)
+    return render_template('pay_deposit.html', o=o, coupons=coupons)
 
 
 @bp.get('/notice')

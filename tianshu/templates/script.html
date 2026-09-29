@@ -294,17 +294,7 @@
           </div>
           {% endif %}
 
-          {% if me and coupons %}
-          <div class="field">
-            <label>用优惠券</label>
-            <select name="couponId">
-              <option value="0">不用</option>
-              {% for c in coupons %}
-              <option value="{{ c.id }}">减 ¥{{ c.amount }}{% if c.minAmount %}（满 {{ c.minAmount }} 可用）{% endif %}</option>
-              {% endfor %}
-            </select>
-          </div>
-          {% endif %}
+
 
           {% if me %}
           <button class="b3 b3--accent b3--wide" type="submit">提交预约</button>
