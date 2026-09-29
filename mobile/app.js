@@ -16,18 +16,20 @@
 
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => {
+    return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]);
+  });
   const el = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; };
 
   /* -------- 数据加载：优先接口，失败兜底（只跑一次） -------- */
   let _dataP = null;
   function ensureData() {
     if (_dataP) return _dataP;
-    const get = (url, key, fb) =>
-      fetch(url).then((r) => (r.ok ? r.json() : Promise.reject()))
+    const get = (url, key, fb) => {
+      return fetch(url).then((r) => (r.ok ? r.json() : Promise.reject()))
         .then((d) => { D[key] = d; })
         .catch(() => { D[key] = fb; });
+    };
     const dataPromise = Promise.allSettled([
       get("/m/api/scripts", "scripts", FALLBACK.scripts || []),
       get("/m/api/sessions", "sessions", FALLBACK.sessions || []),
@@ -111,14 +113,15 @@
 
   /* ====================== 视图：首页 ====================== */
   function buildHome() {
-    const nav = D.nav.map((n, i) =>
-      '<button class="grid-nav__item reveal" style="transition-delay:' + (i * 20) + 'ms">' +
-      '<span class="grid-nav__ic">' + n.icon + "</span><span class="grid-nav__lb">" + esc(n.label) + "</span></button>"
-    ).join("");
+    const nav = D.nav.map((n, i) => {
+      return '<button class="grid-nav__item reveal" style="transition-delay:' + (i * 20) + 'ms">' +
+        '<span class="grid-nav__ic">' + n.icon + "</span><span class="grid-nav__lb">" + esc(n.label) + "</span></button>";
+    }).join("");
 
     const sessions = D.sessions.map((s, i) => {
-      const pips = Array.from({ length: s.cap }, (_, k) =>
-        '<span class="pip' + (k < s.have ? " on" : "") + '"></span>').join("");
+      const pips = Array.from({ length: s.cap }, (_, k) => {
+        return '<span class="pip' + (k < s.have ? " on" : "") + '"></span>';
+      }).join("");
       return '<div class="card session reveal" data-session="' + s.id + '" style="transition-delay:' + (i * 40) + 'ms">' +
         '<div class="session__time">' + esc(s.time) + '</div>' +
         '<div class="session__name">' + esc(s.name) + "</div>" +
@@ -163,9 +166,10 @@
   let scriptFilters = { tag: "", q: "" };
   function buildScripts() {
     const tags = ["全部", "沉浸", "推理", "情感", "欢乐", "恐怖", "机制", "科幻", "新手"];
-    const chips = tags.map((t) =>
-      '<button class="chip' + (scriptFilters.tag === t || (t === "全部" && !scriptFilters.tag) ? " on" : "") +
-      '" data-tag="' + t + '">' + t + "</button>").join("");
+    const chips = tags.map((t) => {
+      return '<button class="chip' + (scriptFilters.tag === t || (t === "全部" && !scriptFilters.tag) ? " on" : "") +
+        '" data-tag="' + t + '">' + t + "</button>";
+    }).join("");
     const list = (D.scripts || []).filter((s) => {
       const okTag = !scriptFilters.tag || (s.tags || []).includes(scriptFilters.tag);
       const okQ = !scriptFilters.q || (s.title + (s.tags || []).join("") + (s.desc || "")).toLowerCase().includes(scriptFilters.q.toLowerCase());
@@ -199,8 +203,9 @@
   function buildGroup() {
     if (!D.sessions || !D.sessions.length) return emptyState("📅", "今天还没有开演的局", "挑个本自己开一桌");
     const rows = D.sessions.map((s) => {
-      const pips = Array.from({ length: s.cap }, (_, k) =>
-        '<span class="pip' + (k < s.have ? " on" : "") + '"></span>').join("");
+      const pips = Array.from({ length: s.cap }, (_, k) => {
+        return '<span class="pip' + (k < s.have ? " on" : "") + '"></span>';
+      }).join("");
       return '<div class="row reveal" data-session="' + s.id + '">' +
         '<div class="row__top"><div class="avatar" style="background:var(--brand-soft);color:var(--brand)">🎭</div>' +
         '<div class="row__who"><div class="row__name">' + esc(s.name) + "</div>" +
@@ -223,10 +228,11 @@
         '<a class="btn btn--primary btn--block" style="max-width:200px;margin:16px auto 0" href="/login">去登录</a></div>';
     }
     const st = m.stats || { bookings: 0, reviews: 0, spent: 0 };
-    const menu = D.menu.map((x, i) =>
-      '<button class="menu__item reveal" style="transition-delay:' + (i * 20) + 'ms">' +
-      '<span class="menu__ic">' + x.icon + "</span>" + esc(x.label) +
-      '<span class="arrow">' + svg("back").replace('class="" ', 'style="transform:rotate(180deg)" ') + "</span></button>").join("");
+    const menu = D.menu.map((x, i) => {
+      return '<button class="menu__item reveal" style="transition-delay:' + (i * 20) + 'ms">' +
+        '<span class="menu__ic">' + x.icon + "</span>" + esc(x.label) +
+        '<span class="arrow">' + svg("back").replace('class="" ', 'style="transform:rotate(180deg)" ') + "</span></button>";
+    }).join("");
     return '<div class="me-hero reveal"><div class="me-hero__top"><div class="me-hero__av">' + esc(m.initial) +
       '</div><div><div class="me-hero__name">' + esc(m.name) + "</div>" +
       '<div class="me-hero__id">' + esc(m.phone) + (m.id ? " · 会员号 " + esc(m.id) : "") + "</div></div></div>" +
@@ -294,8 +300,9 @@
   /* ====================== 初始化 ====================== */
   function init() {
     $("#brandName").textContent = (D.shop && D.shop.name) || "甜薯剧本杀";
-    $("#tabbar").innerHTML = TABS.map((t) =>
-      '<button class="tab" data-key="' + t.key + '">' + svg(t.icon) + "<span>" + t.label + "</span></button>").join("");
+    $("#tabbar").innerHTML = TABS.map((t) => {
+      return '<button class="tab" data-key="' + t.key + '">' + svg(t.icon) + "<span>" + t.label + "</span></button>";
+    }).join("");
     $$(".tab").forEach((b) => b.addEventListener("click", () => { location.hash = "#/" + b.dataset.key; }));
 
     document.addEventListener("click", (e) => {
