@@ -704,6 +704,34 @@ h1,h2,h3,h4,h5,h6,p{margin:0}
 }
 
 /* --------------------------------------------------------------------------
+   17c. 后台 / DM 面板：标题、表格、区块统一到新设计系统（纯样式，不动 HTML）
+   -------------------------------------------------------------------------- */
+.adm-main .adm-panel,
+.adm-panel{background:var(--surface);border:0;border-radius:var(--radius-xl);
+  padding:var(--space-5);box-shadow:var(--shadow-1);
+  transition:transform var(--duration-normal), box-shadow var(--duration-normal)}
+.adm-main .adm-panel:hover{transform:translateY(-4px);box-shadow:var(--shadow-2)}
+
+.adm-main h2{font-size:var(--fs-h2);font-weight:var(--fw-bold);line-height:1.1;letter-spacing:-.015em;margin:0 0 var(--space-4)}
+.adm-main h3{font-size:var(--fs-h4);font-weight:var(--fw-bold);line-height:1.25;margin:0 0 var(--space-3)}
+.adm-main .panel > h2:first-child,
+.adm-main .panel > h3:first-child,
+.adm-main .adm-panel > h2:first-child,
+.adm-main .adm-panel > h3:first-child{margin-top:0}
+.adm-main .two h2{margin-top:0}
+
+.adm-main table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+.adm-main table th,
+.adm-main table td{padding:var(--space-3) var(--space-4);text-align:left;border-bottom:1px solid var(--rule)}
+.adm-main table th{font-weight:var(--fw-medium);color:var(--ink-3);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.04em}
+.adm-main table tr:last-child td{border-bottom:0}
+
+.adm-main .stats{display:grid;grid-template-columns:repeat(auto-fit, minmax(120px, 1fr));gap:var(--space-4);margin:var(--space-4) 0}
+.adm-main .stats div{background:var(--surface-warm);border-radius:var(--radius-xl);padding:var(--space-4);text-align:center}
+.adm-main .stats b{display:block;font-size:var(--fs-h3);font-weight:var(--fw-bold)}
+.adm-main .stats span{font-size:var(--fs-xs);color:var(--ink-3)}
+
+/* --------------------------------------------------------------------------
    18. 登录/注册独立布局（auth_base）
    -------------------------------------------------------------------------- */
 .auth-body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);min-height:100vh}

@@ -1,84 +1,88 @@
 {% extends 'base.html' %}
 {% block title %}{{ u.username }} 的档案 · 后台{% endblock %}
 {% block body %}
-<div class="between">
-  <div>
-    <h1>{{ u.profile.nick or u.username }}</h1>
-    <p class="sub">{{ u.phone }} · 累计消费 ¥{{ spent }}
-      {% if u.banned %}<span class="badge bad">已拉黑</span>{% endif %}</p>
-  </div>
-  <a class="btn btn-sm" href="{{ url_for('admin.dashboard') + '#users' }}">← 回用户列表</a>
-</div>
+<section class="tile tile--warm" style="padding-top:calc(var(--site-nav-height) + var(--space-6));padding-bottom:var(--space-9)">
+  <div class="tile__inner">
 
-<div class="two mt">
-  <div>
-    <h2>预约记录（{{ bookings|length }}）</h2>
-    <div class="scroll panel">
-      <table>
-        <tr><th>日期</th><th>剧本</th><th>人数</th><th>金额</th><th>状态</th></tr>
-        {% for b in bookings %}
-        <tr>
-          <td>{{ b.day }} {{ b.time }}</td>
-          <td>{{ b.title }}</td>
-          <td>{{ b.players }}</td>
-          <td>¥{{ b.amount or 0 }}</td>
-          <td>{{ {'booked':'已订','arrived':'已到店','done':'已完成','cancelled':'已取消'}.get(b.status, b.status) }}</td>
-        </tr>
-        {% else %}
-        <tr><td colspan="5" class="empty">还没约过</td></tr>
+    <div class="between">
+      <div>
+        <h1 class="heading-title">{{ u.profile.nick or u.username }}</h1>
+        <p class="body-secondary mt-3">{{ u.phone }} · 累计消费 ¥{{ spent }}
+          {% if u.banned %}<span class="badge bad">已拉黑</span>{% endif %}</p>
+      </div>
+      <a class="btn btn--sm btn--ghost" href="{{ url_for('admin.dashboard') + '#users' }}">← 回用户列表</a>
+    </div>
+
+    <div class="two mt-6">
+      <div>
+        <h2 class="heading-section">预约记录（{{ bookings|length }}）</h2>
+        <div class="card scroll">
+          <table class="table">
+            <tr><th>日期</th><th>剧本</th><th>人数</th><th>金额</th><th>状态</th></tr>
+            {% for b in bookings %}
+            <tr>
+              <td>{{ b.day }} {{ b.time }}</td>
+              <td>{{ b.title }}</td>
+              <td>{{ b.players }}</td>
+              <td>¥{{ b.amount or 0 }}</td>
+              <td>{{ {'booked':'已订','arrived':'已到店','done':'已完成','cancelled':'已取消'}.get(b.status, b.status) }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="empty">还没约过</td></tr>
+            {% endfor %}
+          </table>
+        </div>
+
+        {% if reviews %}
+        <h2 class="heading-section mt-6">写过的评价（{{ reviews|length }}）</h2>
+        {% for r in reviews %}
+        <div class="card mt-4">
+          <div class="between">
+            <b>{{ r.title or '评价' }} <span class="badge ok">{{ r.rating }}/5</span></b>
+            <span class="sub">{{ day_label(r.createdAt) }}</span>
+          </div>
+          <p class="body-secondary mt-3">{{ r.text or '（只打了分）' }}</p>
+        </div>
         {% endfor %}
-      </table>
+        {% endif %}
+      </div>
+
+      <div>
+        <div class="card">
+          <h3 class="heading-section" style="font-size:var(--fs-h4)">账号信息</h3>
+          <div class="between"><span class="body-secondary">信用分</span><b>{{ u.credit or 100 }}</b></div>
+          <div class="between"><span class="body-secondary">注册时间</span><span class="sub">{{ day_label(u.first) }}</span></div>
+          <div class="between"><span class="body-secondary">最近活跃</span><span class="sub">{{ day_label(u.last) }}</span></div>
+          <div class="between"><span class="body-secondary">邀请码</span><span class="sub">{{ u.invite or '—' }}</span></div>
+        </div>
+
+        {% if u.creditLogs %}
+        <div class="card mt-4">
+          <h3 class="heading-section" style="font-size:var(--fs-h4)">信用分流水</h3>
+          {% for l in u.creditLogs[:8] %}
+          <div class="between" style="padding:3px 0">
+            <span class="sub">{{ l.reason }}</span>
+            <span>{{ '+' if l.delta > 0 }}{{ l.delta }} · {{ l.by }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if msgs %}
+        <div class="card mt-4">
+          <h3 class="heading-section" style="font-size:var(--fs-h4)">给店里的留言（{{ msgs|length }}）</h3>
+          {% for m in msgs[:6] %}
+          <div style="padding:4px 0;border-top:1px solid var(--rule)">
+            <div class="between"><span class="sub">{{ m.cat or '留言' }} · {{ day_label(m.createdAt) }}</span>
+              <span class="badge {{ 'ok' if m.reply else 'warn' }}">{{ '已回' if m.reply else '待回' }}</span></div>
+            <p class="sub">{{ m.text }}</p>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
     </div>
 
-    {% if reviews %}
-    <h2>写过的评价（{{ reviews|length }}）</h2>
-    {% for r in reviews %}
-    <div class="panel mt">
-      <div class="between">
-        <b>{{ r.title or '评价' }} <span class="badge ok">{{ r.rating }}/5</span></b>
-        <span class="sub">{{ day_label(r.createdAt) }}</span>
-      </div>
-      <p style="color:var(--text2)">{{ r.text or '（只打了分）' }}</p>
-    </div>
-    {% endfor %}
-    {% endif %}
   </div>
-
-  <div>
-    <div class="panel">
-      <h3>账号信息</h3>
-      <div class="between"><span>信用分</span><b>{{ u.credit or 100 }}</b></div>
-      <div class="between"><span>注册时间</span><span class="sub">{{ day_label(u.first) }}</span></div>
-      <div class="between"><span>最近活跃</span><span class="sub">{{ day_label(u.last) }}</span></div>
-      <div class="between"><span>邀请码</span><span class="sub">{{ u.invite or '—' }}</span></div>
-    </div>
-
-    {% if u.creditLogs %}
-    <div class="panel mt">
-      <h3>信用分流水</h3>
-      {% for l in u.creditLogs[:8] %}
-      <div class="between" style="padding:3px 0">
-        <span class="sub">{{ l.reason }}</span>
-        <span>{{ '+' if l.delta > 0 }}{{ l.delta }} · {{ l.by }}</span>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-
-    {# 余额流水撤掉了：目前不做充值/余额抵扣 #}
-
-    {% if msgs %}
-    <div class="panel mt">
-      <h3>给店里的留言（{{ msgs|length }}）</h3>
-      {% for m in msgs[:6] %}
-      <div style="padding:4px 0;border-top:1px solid var(--line)">
-        <div class="between"><span class="sub">{{ m.cat or '留言' }} · {{ day_label(m.createdAt) }}</span>
-          <span class="badge {{ 'ok' if m.reply else 'warn' }}">{{ '已回' if m.reply else '待回' }}</span></div>
-        <p class="sub">{{ m.text }}</p>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-  </div>
-</div>
+</section>
 {% endblock %}
