@@ -12,6 +12,13 @@
   <title>{% block title %}{{ settings.shopName }}{% endblock %}</title>
   {# v=文件修改时间：样式一改 URL 就变，手机上的旧缓存自动失效（不然"改了没变化"） #}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=static_v('css/style.css')) }}">
+{# 皮肤：?skin=noir / riso / swiss 直接换一整套设计语言（挑款式用，定下来就把其余删掉）。
+   它只是叠在主样式之上的一层覆盖，不改结构、不动功能。 #}
+{% set skin = request.args.get('skin') or request.cookies.get('skin') or '' %}
+{% if skin in ['noir', 'riso', 'swiss'] %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/skin-' ~ skin ~ '.css',
+                                   v=static_v('css/skin-' ~ skin ~ '.css')) }}">
+{% endif %}
 </head>
 <body>
 {# 刊头分三层（Straits Times 的做法）：细工具条 → 字标 + 搜索 → 栏目条。
@@ -86,6 +93,14 @@
 {# 页脚是给客人看的，别写实现细节（"纯 Python 版 / 数据都在 data/ 里"那套只有自己人看得懂） #}
 <footer class="foot">
   {{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}
+  {# 皮肤切换条：给店主挑款式用的（点一下换一套设计语言），定稿后删掉这段即可 #}
+  <div class="skin-bar">
+    <span>款式：</span>
+    <a href="{{ request.path }}" class="{{ 'on' if skin not in ['noir','riso','swiss'] }}">戏单</a>
+    <a href="{{ request.path }}?skin=noir" class="{{ 'on' if skin == 'noir' }}">墨·影院</a>
+    <a href="{{ request.path }}?skin=riso" class="{{ 'on' if skin == 'riso' }}">Riso 三色</a>
+    <a href="{{ request.path }}?skin=swiss" class="{{ 'on' if skin == 'swiss' }}">瑞士网格</a>
+  </div>
   {% if me and not in_tianshu_app %}<div class="js-install" style="margin-top:6px">像 App 一样用：
     <a class="btn btn-sm btn-ghost" style="margin-left:6px"
        href="{{ url_for('static', filename='app/tianshu.apk', v=static_v('app/tianshu.apk')) }}"

@@ -152,6 +152,12 @@ textarea{resize:vertical}
 .grid > .juben:first-child .body h4{font-size:26px}
 .foot{border-top:3px double var(--rule-strong);margin-top:var(--sp-7);
   padding:var(--sp-5) var(--sp-6);color:var(--ink-4);font-size:var(--fs-xs);text-align:center}
+/* 款式切换条（挑设计用，定稿后删）：就是页脚里一行小字，别做成大按钮喧宾夺主 */
+.skin-bar{margin-top:var(--sp-3);display:flex;gap:var(--sp-3);justify-content:center;flex-wrap:wrap;
+  font-family:var(--mono);font-size:var(--fs-num);letter-spacing:.06em}
+.skin-bar a{color:var(--ink-4);border-bottom:1px solid transparent;padding-bottom:1px}
+.skin-bar a:hover{color:var(--ink)}
+.skin-bar a.on{color:var(--vermilion);border-bottom-color:var(--vermilion);font-weight:700}
 hr,.rule{border:0;border-top:1px solid var(--rule);margin:var(--sp-6) 0}
 .mt{margin-top:var(--sp-5)}
 .mono{font-family:var(--mono);font-size:var(--fs-num);letter-spacing:.06em}

@@ -1,0 +1,104 @@
+/* ============================================================================
+   皮肤 B：Riso 三色套印（riso）
+   ----------------------------------------------------------------------------
+   出处：《30 站》15 Exat Typeface（米白 + 三原色高饱和、超大流式字号）+ 36 Feastables
+   （复古游戏化世界观）+ 27 Mailchimp（俏皮 + 硬投影）。
+
+   取舍：**只允许三种油墨**（朱红 / 群青 / 柠檬黄）+ 纸色，没有中间调；
+   标题大到占满一行（clamp 到 14vw），靠字号而不是装饰制造冲击；
+   卡片用**套印错位**（右下角叠一层偏移的纯色块），这是 Riso 印刷的招牌"不完美"。
+   ============================================================================ */
+:root{
+  --paper:#F2EFE6; --paper-2:#E7E1D2; --paper-3:#FBF8EF;
+  --ink:#181513; --ink-2:#2C2723; --ink-3:#5A5248; --ink-4:#8A8175;
+  --rule:rgba(24,21,19,.35); --rule-strong:rgba(24,21,19,.7);
+  /* 三原色（Riso 油墨）：朱红 / 群青 / 柠檬黄 */
+  --vermilion:#F03A24; --vermilion-600:#C62212; --vermilion-050:rgba(240,58,36,.12);
+  --gold:#F5B800; --gold-050:rgba(245,184,0,.18);
+  --blue:#1F3AFF;
+  --ok:#1F7A3D; --ok-bg:rgba(31,122,61,.14);
+  --bad:#C62212; --bad-bg:rgba(198,34,18,.12);
+  --warn:#8A5A00; --warn-bg:rgba(138,90,0,.14);
+  --info:#1F3AFF; --info-bg:rgba(31,58,255,.1);
+  /* 标题巨大：字号就是装饰（别再加光晕/渐变） */
+  --fs-display:clamp(52px,14vw,150px); --lh-display:.84; --track-display:-.045em;
+  --fs-title:clamp(28px,5.4vw,52px);
+  --fs-h2:clamp(21px,3vw,30px);
+  --sh-hard:6px 6px 0 var(--ink);
+  --sh-hard-sm:3px 3px 0 var(--ink);
+  --sh-hard-red:6px 6px 0 var(--vermilion);
+  --noise-opacity:.07;
+}
+
+/* 报头：黄底黑字的一条横幅（像老海报的天头） */
+.masthead{background:var(--gold);border-bottom:4px solid var(--ink)}
+.masthead .util{background:var(--ink);color:var(--paper);border-bottom:0}
+.masthead .util a{color:var(--gold)}
+.masthead .wordmark{color:var(--ink);font-size:clamp(26px,4.4vw,40px);letter-spacing:.06em}
+.masthead .links{border-top:2px solid var(--ink);background:var(--paper)}
+.masthead .links a.on{border-bottom-width:4px;border-bottom-color:var(--vermilion)}
+.masthead .search{border:3px solid var(--ink);background:var(--paper-3);height:40px}
+
+/* 分区靠**色块**切换（不用线）：纸 → 黄 → 墨，三段轮换 */
+.band.alt{background:var(--gold)}
+.band.ink{background:var(--ink);color:var(--paper)}
+.hero{background:var(--vermilion);color:#fff;padding:var(--sp-9) var(--sp-5)}
+.hero h1{color:#fff;text-shadow:4px 4px 0 var(--ink)}
+.hero .kicker{color:rgba(255,255,255,.75)}
+.hero .slogan{color:rgba(255,255,255,.9)}
+.hero .stats{border-top:3px solid var(--ink)}
+.hero .stats b{color:var(--gold)}
+
+/* 卡片：套印错位 —— 右下角叠一块偏移的纯色（Riso 的"没对准"） */
+.panel,.card,.adm-panel{background:var(--paper-3);border:3px solid var(--ink);box-shadow:var(--sh-hard)}
+.juben .cover{border:3px solid var(--ink)}
+.juben .cover::after{box-shadow:none}
+.juben::before{font-size:34px;color:var(--blue);opacity:1}
+.juben:nth-child(odd) .cover{border-color:var(--vermilion)}
+.juben:nth-child(even) .cover{border-color:var(--blue)}
+.juben .body h4{font-size:21px}
+.juben .body .book{background:var(--gold);color:var(--ink);border:0;padding:2px 8px}
+.juben:hover .body .book{background:var(--ink);color:var(--gold)}
+
+/* 栏目标签：黄底黑字方块（不是方括号） */
+.kicker,.label{background:var(--gold);color:var(--ink);padding:2px 8px;letter-spacing:.14em;font-weight:700}
+.kicker::before,.kicker::after{content:''}
+
+/* 按钮：粗黑边 + 大硬投影 + 黄底 */
+.btn{background:var(--paper-3);border:3px solid var(--ink);font-weight:800;letter-spacing:.04em}
+.btn-primary{background:var(--vermilion);border-color:var(--ink);color:#fff;box-shadow:var(--sh-hard)}
+.btn-primary:hover{transform:translate(-2px,-2px);box-shadow:8px 8px 0 var(--ink)}
+.btn-primary:active{transform:translate(6px,6px);box-shadow:none}
+.btn-ghost:hover{background:var(--ink);color:var(--gold)}
+.btn-cta{box-shadow:var(--sh-hard);border-width:3px}
+.btn-cta:hover{transform:translate(-2px,-2px);box-shadow:9px 9px 0 var(--ink)}
+.btn-cta:active{transform:translate(6px,6px);box-shadow:none}
+
+/* 表单：粗框 + 厚实手感 */
+.field > input,.field > select,.field > textarea{border:3px solid var(--ink);background:var(--paper-3);min-height:48px}
+.field > input:focus,.field > select:focus,.field > textarea:focus{box-shadow:var(--sh-hard-sm);border-color:var(--blue)}
+.field > label{color:var(--ink);font-weight:700}
+
+/* 徽章：三原色随机感（用 nth-child 让列表不单调） */
+.badge,.pill,.chip,.chip-sm,.st{border:2px solid var(--ink);font-weight:700}
+.badge.ok,.st.on{background:var(--gold);color:var(--ink);border-color:var(--ink)}
+.badge.new,.st.car{background:var(--vermilion);color:#fff}
+.badge.warn{background:var(--blue);color:#fff;border-color:var(--ink)}
+
+/* 收藏心：蓝底黄心，像贴纸 */
+.fav-btn{background:var(--gold);border:3px solid var(--ink);box-shadow:var(--sh-hard-sm)}
+.fav-btn.on{background:var(--vermilion);color:#fff}
+
+/* 我的资料卡 / 舞台块：墨底 + 黄字 */
+.profile{background:var(--ink);color:var(--paper);border:3px solid var(--ink);box-shadow:var(--sh-hard)}
+.profile h3{color:var(--gold)}
+.stat-card{border-right:3px solid var(--ink)}
+.stat-card b{color:var(--vermilion);font-size:38px}
+
+/* 底部导航：黄底粗黑边 */
+.mobtab{background:var(--gold);border-top:4px solid var(--ink)}
+.mobtab a{color:var(--ink);font-weight:700}
+.mobtab a.on{color:var(--vermilion)}
+
+/* 弹窗：硬投影 */
+.modal{border:3px solid var(--ink);box-shadow:12px 12px 0 var(--ink)}

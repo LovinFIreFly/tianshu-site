@@ -1,0 +1,75 @@
+/* ============================================================================
+   皮肤 A：墨 · 暗色影院（noir）
+   ----------------------------------------------------------------------------
+   出处：《30 站》21 Linear（暗色**分层灰阶**代替阴影/渐变）+ 29 Spotify（暗色分层
+   #000→#121212→#282828、品牌色克制点缀）+ 40 Runway（电影级暗色叙事）。
+
+   取舍：暗底上**不用阴影表达层级**（阴影在暗底根本看不见），改成"底色越浅 = 层级越高"
+   的四级灰阶；强调色只留朱红，且只给交互态（选中/价格/编号），面积 ≤3%。
+   ============================================================================ */
+:root{
+  --paper:#0C0C0C; --paper-2:#151515; --paper-3:#1B1B1B;
+  --ink:#F4F1EA; --ink-2:#E4DED2; --ink-3:#A9A39A; --ink-4:#7C766D;
+  --rule:rgba(244,241,234,.16); --rule-strong:rgba(244,241,234,.42);
+  --vermilion:#E4503A; --vermilion-600:#F26B54; --vermilion-050:rgba(228,80,58,.16);
+  --gold:#D8A94E; --gold-050:rgba(216,169,78,.16);
+  --ok:#7FBF8C; --ok-bg:rgba(127,191,140,.16);
+  --bad:#E8826B; --bad-bg:rgba(232,130,107,.16);
+  --warn:#D9AE5C; --warn-bg:rgba(217,174,92,.16);
+  --info:#8FB0DC; --info-bg:rgba(143,176,220,.16);
+  color-scheme:dark;
+  /* 暗底上硬投影失去意义：改用"实边 + 无投影"，层级靠灰阶 */
+  --sh-hard:0 0 0 1px var(--ink);
+  --sh-hard-sm:0 0 0 1px var(--ink);
+  --sh-hard-red:0 0 0 1px var(--vermilion);
+  --sh-2:0 10px 34px rgba(0,0,0,.7);
+  --sh-3:0 20px 60px rgba(0,0,0,.8);
+  --noise-opacity:.045;
+}
+html[data-theme="dark"]{--paper:#0C0C0C;--paper-2:#151515;--paper-3:#1B1B1B}
+
+/* 顶部报头：暗底 + 浅色双线（双线在暗底上改成一实一虚，更"影院"） */
+.masthead{background:var(--paper);border-bottom:1px solid var(--rule-strong)}
+.masthead .util{border-bottom:1px solid var(--rule)}
+.masthead .links{border-top:1px solid var(--rule)}
+.masthead .search{background:var(--paper-2);border-color:var(--rule-strong)}
+.masthead .wordmark{color:var(--ink)}
+
+/* 分区：暗底上不再用双线（看不清），改成**灰阶递变**分层 */
+.band.alt{background:var(--paper-2)}
+.hero{background:#080808;box-shadow:inset 0 -1px 0 var(--rule-strong)}
+.band.ink{background:#080808}
+.hero h1{color:var(--ink)}
+.hero .stats{border-top:1px solid var(--rule)}
+.hero .stats b{color:var(--vermilion)}
+
+/* 卡片 / 面板：靠 1px 亮边浮起来，不投阴影（Linear 的做法） */
+.panel,.card,.adm-panel{background:var(--paper-2);border:1px solid var(--rule-strong);box-shadow:none}
+.panel:hover,.card:hover{border-color:var(--ink-3)}
+.juben{border-top-color:var(--rule-strong)}
+.juben .cover{border-color:var(--rule-strong)}
+.juben::before{color:var(--vermilion)}
+.juben:hover .cover{border-color:var(--vermilion)}
+
+/* 按钮：暗底上用"亮边 + 朱红实底"，hover 变亮而不是变深 */
+.btn{background:var(--paper-2);border-color:var(--rule-strong);color:var(--ink)}
+.btn:hover{border-color:var(--ink)}
+.btn-primary{background:var(--vermilion);border-color:var(--vermilion);color:#111;box-shadow:none}
+.btn-primary:hover{background:var(--vermilion-600);transform:none}
+.btn-primary:active{transform:translateY(1px)}
+.btn-ghost:hover{background:var(--ink);color:var(--paper)}
+.btn-cta{box-shadow:none}
+.btn-cta:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(228,80,58,.35)}
+
+/* 表单：暗底输入框用更深的一档，聚焦亮边 */
+.field > input,.field > select,.field > textarea{background:var(--paper-3);border-color:var(--rule-strong);color:var(--ink)}
+.field > input:focus,.field > select:focus,.field > textarea:focus{border-color:var(--vermilion);box-shadow:none}
+
+/* 我的资料卡 / 舞台块：暗底上再压深一档，用边框区分 */
+.profile{background:var(--paper-2);box-shadow:none;border-color:var(--rule-strong)}
+.stat-card,.kv .cell,.cell,.room-card,.cust-card,.role-card,.dmpick-card{background:var(--paper-2);border-color:var(--rule)}
+
+/* 底部导航：暗底 + 顶部亮线 */
+.mobtab{background:var(--paper);border-top:1px solid var(--rule-strong);box-shadow:0 -8px 24px rgba(0,0,0,.6)}
+.mobtab a{color:var(--ink-3)}
+.mobtab a.on{color:var(--vermilion)}

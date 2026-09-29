@@ -156,6 +156,13 @@ _mt2 = _re.search(r'<nav class="mobtab".*?</nav>', _car, _re.S)
 _t2 = _re.findall(_pat, _mt2.group(0) if _mt2 else '')
 check('拼车页底部导航把「拼车」点亮',
       [t[3] for t in _t2 if t[1]] == ['拼车'], str([t[3] for t in _t2 if t[1]]))
+# 备选皮肤（挑款式用）：三套都能叠在主样式上加载，页脚有切换条
+for _sk in ('noir', 'riso', 'swiss'):
+    _ss, _sh = guest.get('/car?skin=' + _sk)
+    check('皮肤 %s 能加载（覆盖层叠在主样式之上）' % _sk,
+          _ss == 200 and ('skin-%s.css' % _sk) in _sh and 'skin-bar' in _sh)
+_ss, _sh = guest.get('/car')
+check('不指定皮肤时不叠任何皮肤表（默认戏单）', 'skin-' not in _sh and 'skin-bar' in _sh)
 for path, want in (('/scripts', '剧本库'), ('/car', '拼车'), ('/login', '登录'), ('/register', '注册')):
     s, html = guest.get(path)
     check('打开 %s' % path, s == 200 and want in html, 'HTTP %s' % s)

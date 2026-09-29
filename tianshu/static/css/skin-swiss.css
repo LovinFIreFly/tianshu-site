@@ -1,0 +1,133 @@
+/* ============================================================================
+   皮肤 C：瑞士信息网格（swiss）
+   ----------------------------------------------------------------------------
+   出处：《30 站》22 Vercel（Geist + 极简高对比排版）+ 32 Wikipedia（纯白大留白、
+   居中衬线字标、零装饰）+ 31 The Guardian（数据/列表驱动）+ 21 Linear（灰阶分层）。
+
+   取舍：**反装饰到底**——没有噪点、没有硬投影、没有套印、没有大圆角；
+   全部信息用**栅格 + 细线 + 等宽数字**表达，字号压小一档换取更高信息密度；
+   **去掉衬线**（这是最明显的区别），全站一个无衬线家族，标题靠字重和字号分级；
+   强调色从朱红换成**功能蓝**（链接/选中），朱红只保留给"价格"这一个语义。
+   ============================================================================ */
+:root{
+  --paper:#FFFFFF; --paper-2:#F6F6F6; --paper-3:#FAFAFA;
+  --ink:#111111; --ink-2:#333333; --ink-3:#5C5C5C; --ink-4:#8A8A8A;
+  --rule:#E4E4E4; --rule-strong:#C9C9C9;
+  --vermilion:#D62B0F;            /* 只给价格 */
+  --vermilion-600:#B02208; --vermilion-050:rgba(214,43,15,.07);
+  --gold:#7A6A20; --gold-050:rgba(122,106,32,.1);
+  --blue:#1A4FD8;                 /* 功能色：链接 / 选中 / 当前 */
+  --ok:#1A7F37; --ok-bg:rgba(26,127,55,.1);
+  --bad:#C22B17; --bad-bg:rgba(194,43,23,.1);
+  --warn:#8A5A00; --warn-bg:rgba(138,90,0,.1);
+  --info:#1A4FD8; --info-bg:rgba(26,79,216,.1);
+  /* 全站一个字族：衬线换成无衬线（这一版最"反装饰"） */
+  --serif:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Helvetica Neue",Arial,sans-serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Helvetica Neue",Arial,sans-serif;
+  /* 字号压小一档换密度：正文 15px、标题也跟着收 */
+  --fs-display:clamp(38px,7vw,72px); --lh-display:1.02; --track-display:-.028em;
+  --fs-title:clamp(24px,3.4vw,34px); --lh-title:1.18;
+  --fs-h2:clamp(19px,2.2vw,23px);
+  --fs-body:15px; --lh-body:1.62;
+  --fs-sm:13.5px; --fs-xs:12px;
+  --sp-6:20px; --sp-7:28px; --sp-8:36px;
+  /* 没有硬投影、没有噪点：层级只靠线和灰阶 */
+  --sh-hard:0 0 0 1px var(--ink);
+  --sh-hard-sm:0 0 0 1px var(--ink);
+  --sh-hard-red:0 0 0 1px var(--vermilion);
+  --noise-opacity:0;
+}
+/* 这一版不要纸的颗粒：body::after 直接关掉 */
+body::after{display:none}
+
+/* 报头：左对齐、细线、无双线 —— 像一份技术文档的表头 */
+.masthead{background:var(--paper);border-bottom:1px solid var(--rule-strong)}
+.masthead .util{border-bottom:1px solid var(--rule)}
+.masthead .top{grid-template-columns:auto 1fr auto;padding:var(--sp-3) var(--sp-5)}
+.masthead .wordmark{grid-column:1;justify-self:start;font-size:19px;letter-spacing:-.01em}
+.masthead .wordmark small{letter-spacing:.14em}
+.masthead .search{grid-column:2;justify-self:stretch;width:auto;max-width:420px;
+  border:1px solid var(--rule-strong);height:34px;background:var(--paper)}
+.masthead .acts{grid-column:3}
+.masthead .links{border-top:1px solid var(--rule)}
+.masthead .links a{font-size:13.5px}
+.masthead .links a.on{border-bottom-color:var(--blue);color:var(--blue)}
+
+/* 分区：靠 1px 细线 + 灰底，不用双线也不用大色块 */
+.band{padding:var(--sp-7) 0}
+.band.alt{background:var(--paper-2)}
+.band.ink{background:var(--ink);color:var(--paper)}
+.hero{background:var(--paper);color:var(--ink);padding:var(--sp-8) var(--sp-5);
+  border-bottom:1px solid var(--rule-strong)}
+.hero h1{color:var(--ink);font-size:var(--fs-display);letter-spacing:var(--track-display)}
+.hero .kicker{color:var(--ink-4)}
+.hero .slogan{color:var(--ink-3);font-size:16px}
+.hero .stats{border-top:1px solid var(--rule-strong)}
+.hero .stats b{color:var(--ink);font-family:var(--mono);font-size:26px}
+.hero .stats span{color:var(--ink-4)}
+
+/* 条目：表格式 —— 细线分隔、等宽编号、紧凑行高 */
+.juben{border-top:1px solid var(--rule-strong);padding-top:var(--sp-4)}
+.juben::before{font-size:15px;color:var(--ink-4);font-weight:600}
+.juben .cover{border:1px solid var(--rule-strong);aspect-ratio:3/4}
+.juben:hover .cover{border-color:var(--blue)}
+.juben .body{border-top:0;padding-top:var(--sp-2);margin-top:var(--sp-2)}
+.juben .body h4{font-size:16px;letter-spacing:-.01em}
+.juben .body .meta{font-size:11px}
+.juben .body .price{color:var(--vermilion);font-size:18px}
+.juben .body .book{color:var(--blue);border-bottom:1px solid var(--blue)}
+.juben:hover .body .book{background:var(--blue);color:#fff;border:0;padding:1px 4px}
+
+/* 卡片：只有 1px 边框 + 白底，无阴影 */
+.panel,.card,.adm-panel{background:var(--paper);border:1px solid var(--rule-strong);padding:var(--sp-4)}
+.panel:hover,.card:hover{border-color:var(--ink-3)}
+.stat-card{border-right:1px solid var(--rule)}
+.stat-card b{font-family:var(--mono);font-size:28px;letter-spacing:-.02em}
+.stat-card span{font-size:11px}
+
+/* 按钮：方形细边（不是粗黑边），hover 只有 1px 变化 —— 克制 */
+.btn{background:var(--paper);border:1px solid var(--rule-strong);color:var(--ink);
+  font-weight:600;height:36px;font-size:14px}
+.btn:hover{border-color:var(--ink)}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:none}
+.btn-primary:hover{background:#1746BE;transform:none;box-shadow:none}
+.btn-primary:active{transform:translateY(1px)}
+.btn-ghost:hover{background:var(--paper-2);color:var(--ink);border-color:var(--ink-3)}
+.btn-cta{height:46px;box-shadow:none}
+.btn-cta:hover{transform:none;box-shadow:none}
+.btn-cta:active{transform:translateY(1px)}
+
+/* 表单：细边 + 聚焦蓝框 */
+.field > input,.field > select,.field > textarea{min-height:38px;border:1px solid var(--rule-strong);background:var(--paper)}
+.field > input:focus,.field > select:focus,.field > textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(26,79,216,.12)}
+.field > label{font-size:11.5px}
+
+/* 徽章：淡灰底 + 细边，不做色块 */
+.badge,.pill,.chip,.chip-sm,.st{height:24px;border:1px solid var(--rule-strong);color:var(--ink-3);font-size:11px}
+.badge.ok,.st.on{color:var(--ok);border-color:#B9E0C4;background:var(--ok-bg)}
+.badge.new,.st.car{color:var(--blue);border-color:#BFD0F7;background:var(--info-bg)}
+.pill.on,.chip.on,.chip-sm.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* 链接用功能蓝（这版的"记忆点"） */
+.lnk{color:var(--blue);border-bottom:1px solid var(--blue)}
+.lnk:hover{background:var(--info-bg)}
+.kicker,.label{color:var(--ink-4)}
+.kicker::before,.kicker::after{color:var(--blue)}
+
+/* 表格：这一版的主角，加斑马纹提高可读性 */
+tbody tr:nth-child(even) td{background:var(--paper-2)}
+th{border-bottom:1px solid var(--ink);color:var(--ink-3)}
+
+/* 我的资料卡：白底细线（不是墨块） */
+.profile{background:var(--paper-2);color:var(--ink);border:1px solid var(--rule-strong);box-shadow:none}
+.profile p{color:var(--ink-4)}
+.profile .avatar{border-color:var(--ink)}
+
+/* 底部导航：白底细线 */
+.mobtab{background:var(--paper);border-top:1px solid var(--rule-strong)}
+.mobtab a{color:var(--ink-4)}
+.mobtab a.on{color:var(--blue)}
+.mobtab a .ico{font-size:17px}
+
+/* 弹窗：细边无投影 */
+.modal{border:1px solid var(--rule-strong);box-shadow:0 20px 60px rgba(0,0,0,.18)}
