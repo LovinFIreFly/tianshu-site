@@ -1,11 +1,11 @@
 {% extends 'auth_base.html' %}
-{% block title %}登录 · {{ settings.shopName }}{% endblock %}
+{% block title %}上车登记 · {{ settings.shopName }}{% endblock %}
 {# 登录 3.0：一张直角票据卡（细线 + 等宽小字），字段改成"标签在上"。
    表单字段名、remember 双写、忘记密码入口全部保留。 #}
 {% block card %}
 <div class="auth-card">
   <div class="auth-brand"><span class="logo">🍠</span><span>{{ settings.shopName }} · 入场</span></div>
-  <h2>账号登录</h2>
+  <h2>上车登记</h2>
   <p class="sub">使用手机号或用户名登录</p>
 
   <form method="post">
@@ -31,14 +31,14 @@
     </label>
 
     <p style="text-align:right;margin:0;font-size:13px">
-      <a class="lnk" href="{{ url_for('user.forgot') }}">忘记密码？</a></p>
+      <a class="lnk" href="{{ url_for('user.forgot') }}">忘密码了？</a></p>
 
-    <button class="b3 b3--accent b3--wide" type="submit">登 录</button>
+    <button class="b3 b3--accent b3--wide" type="submit">上车登记</button>
   </form>
 
-  <p class="foot-line">没有账号？<a class="lnk" href="{{ url_for('user.register') }}">前往注册 →</a>
+  <p class="foot-line">还没账号？<a class="lnk" href="{{ url_for('user.register') }}">去登记 →</a>
     <span style="opacity:.5">·</span>
-    <a class="lnk" href="{{ url_for('public.home', browse=1) }}">先随便逛逛</a></p>
+    <a class="lnk" href="{{ url_for('public.home', browse=1) }}">先瞅瞅有啥本</a></p>
   {# 这里的「演示账号 FireFly / 123123」已删：网站一上线，写出来就等于把钥匙挂门上 #}
 </div>
 {% endblock %}

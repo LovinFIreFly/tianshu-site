@@ -17,11 +17,11 @@
         {% if rating.get(s.id|string) %}<span class="tag3">★ {{ rating[s.id|string] }}</span>
         {% elif s.diff and s.diff <= 2 %}<span class="tag3 tag3--accent">新手友好</span>
         {% elif s.isNew %}<span class="tag3 tag3--accent">上新</span>
-        {% else %}<span class="tag3">{{ s.type or '开本' }}</span>{% endif %}
+        {% else %}<span class="tag3">{{ s.type or '可玩' }}</span>{% endif %}
       </div>
     </div>
     <form class="pcard3__fav" method="post" action="{{ url_for('public.fav', sid=s.id) }}" data-ajax-fav>
-      <button class="fav-btn {{ 'on' if s.id|string in favs }}" type="submit" aria-label="收藏">
+      <button class="fav-btn {{ 'on' if s.id|string in favs }}" type="submit" aria-label="想玩">
         {{ '❤' if s.id|string in favs else '♡' }}
       </button>
     </form>
@@ -31,7 +31,7 @@
 {% else %}
 <div class="empty3" data-anim data-count="0">
   <p class="empty3__k">No Match</p>
-  <h3 class="empty3__t">没找到本子</h3>
-  <p class="empty3__p">换个关键词，或者去掉几个标签再试。标签是多选：选得少，命中少；去掉一个就宽一点。</p>
+  <h3 class="empty3__t">没找着想冲的本</h3>
+  <p class="empty3__p">换个词，或者去掉几个类型再试试。类型选得越少，结果越宽。</p>
 </div>
 {% endif %}

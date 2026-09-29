@@ -43,14 +43,14 @@
       </span>
       <span class="tnav__names">
         <b>{{ settings.shopName }}</b>
-        <i>TIANSHU · 今晚换个人活一次</i>
+        <i>今日有本，等你入局</i>
       </span>
     </a>
 
     <span class="tnav__spacer"></span>
 
     <form class="tnav__search" method="get" action="{{ url_for('public.scripts') }}" role="search">
-      <input name="q" placeholder="搜剧本 / 类型 / 人数" aria-label="搜剧本" value="{{ request.args.get('q','') }}">
+      <input name="q" placeholder="找找你想冲的本" aria-label="搜剧本" value="{{ request.args.get('q','') }}">
       <button type="submit" aria-label="搜索">搜索 ↗</button>
     </form>
 
@@ -71,18 +71,18 @@
       <a class="b3 b3--sm b3--ghost" href="{{ url_for('user.logout') }}">退出</a>
       {% else %}
       <a class="b3 b3--sm b3--ghost" href="{{ url_for('user.register') }}">注册</a>
-      <a class="b3 b3--sm b3--solid" href="{{ url_for('user.login') }}">登录</a>
+      <a class="b3 b3--sm b3--solid" href="{{ url_for('user.login') }}">上车登记</a>
       {% endif %}
     </div>
   </div>
 
   {# 第二行：栏目条（等宽大写）+ 右侧期号；滚动时自动折叠，把版面还给内容 #}
   <nav class="wrap3 tnav__strip" aria-label="栏目">
-    <a href="{{ url_for('public.home') }}" class="{{ 'on' if request.endpoint == 'public.home' }}">首页</a>
-    <a href="{{ url_for('public.scripts') }}" class="{{ 'on' if (request.endpoint or '').startswith('public.script') }}">剧本库</a>
-    <a href="{{ url_for('public.car') }}" class="{{ 'on' if (request.endpoint or '').startswith('public.car') }}">拼车大厅</a>
-    <a href="{{ url_for('public.comm') }}" class="{{ 'on' if request.endpoint == 'public.comm' }}">玩家社区</a>
-    <a href="{{ url_for('user.me') }}" class="{{ 'on' if request.endpoint == 'user.me' }}">我的</a>
+    <a href="{{ url_for('public.home') }}" class="{{ 'on' if request.endpoint == 'public.home' }}">大厅</a>
+    <a href="{{ url_for('public.scripts') }}" class="{{ 'on' if (request.endpoint or '').startswith('public.script') }}">本本墙</a>
+    <a href="{{ url_for('public.car') }}" class="{{ 'on' if (request.endpoint or '').startswith('public.car') }}">拼车局</a>
+    <a href="{{ url_for('public.comm') }}" class="{{ 'on' if request.endpoint == 'public.comm' }}">唠嗑区</a>
+    <a href="{{ url_for('user.me') }}" class="{{ 'on' if request.endpoint == 'user.me' }}">我的打本记录</a>
     {% if my_dm %}<a href="{{ url_for('dm.index') }}" class="{{ 'on' if (request.endpoint or '').startswith('dm.') }}">DM 工作台</a>{% endif %}
     {% if my_admin %}<a href="{{ url_for('admin.dashboard') }}" class="{{ 'on' if (request.endpoint or '').startswith('admin.') }}">管理后台</a>{% endif %}
     <span class="tnav__meta" id="navMeta">{{ settings.shopName }}</span>
@@ -108,29 +108,29 @@
     <div class="dfoot__grid">
       <div>
         <div class="dfoot__brand">{{ settings.shopName }}</div>
-        <p class="dfoot__slogan">今晚换一个人活一次。挑本、开团、到店，剩下的交给我们。</p>
+        <p class="dfoot__slogan">藏在校园里的剧本社，陪你演完每一场青春。</p>
       </div>
       <div>
-        <h4>逛一逛</h4>
+        <h4>去挑本</h4>
         <ul>
-          <li><a href="{{ url_for('public.home') }}">首页</a></li>
-          <li><a href="{{ url_for('public.scripts') }}">剧本库</a></li>
-          <li><a href="{{ url_for('public.car') }}">拼车大厅</a></li>
-          <li><a href="{{ url_for('public.comm') }}">玩家社区</a></li>
+          <li><a href="{{ url_for('public.home') }}">大厅</a></li>
+          <li><a href="{{ url_for('public.scripts') }}">本本墙</a></li>
+          <li><a href="{{ url_for('public.car') }}">拼车局</a></li>
+          <li><a href="{{ url_for('public.comm') }}">唠嗑区</a></li>
         </ul>
       </div>
       <div>
-        <h4>我的</h4>
+        <h4>我的打本记录</h4>
         <ul>
           {% if me %}
-          <li><a href="{{ url_for('user.me') }}">我的主页</a></li>
+          <li><a href="{{ url_for('user.me') }}">我的打本生涯</a></li>
           <li><a href="{{ url_for('user.me') }}?tab=orders">订单 / 定金</a></li>
           <li><a href="{{ url_for('user.me') }}?tab=notices">消息与留言</a></li>
           <li><a href="{{ url_for('user.me') }}?tab=coupons">券 / 心愿单</a></li>
           {% else %}
-          <li><a href="{{ url_for('user.login') }}">登录</a></li>
+          <li><a href="{{ url_for('user.login') }}">上车登记</a></li>
           <li><a href="{{ url_for('user.register') }}">注册</a></li>
-          <li><a href="{{ url_for('user.forgot') }}">找回密码</a></li>
+          <li><a href="{{ url_for('user.forgot') }}">忘密码了？</a></li>
           {% endif %}
           {% if my_dm %}<li><a href="{{ url_for('dm.index') }}">DM 工作台</a></li>{% endif %}
           {% if my_admin %}<li><a href="{{ url_for('admin.dashboard') }}">管理后台</a></li>{% endif %}
@@ -138,19 +138,19 @@
       </div>
     </div>
 
-    <p class="dfoot__note hand">—— {{ settings.shopName }} 老板留：今晚的本都热乎着，来玩别客气。</p>
+    <p class="dfoot__note hand">—— {{ settings.shopName }} 社长碎碎念：这周新本都内测过了，无雷，放心冲。</p>
     <div class="dfoot__bar">
-      <span>{{ settings.shopName }} · 今晚换个人活一次 · © {{ year }}</span>
+      <span>© {{ year }} {{ settings.shopName }}・熬夜改本中</span>
       <span class="grow"></span>
-      {# 电脑上给「电脑版下载」（套壳的 exe，双击就是独立窗口）；
-         手机上不显示 —— 手机那边有底栏那颗「装App」（apk）。
+      {# 电脑上给「电脑端更爽」（套壳的 exe，双击就是独立窗口）；
+         手机上不显示 —— 手机那边有底栏那颗「揣兜里随时约本」（apk）。
          壳里（正在用客户端）的人也不显示。 #}
       {% if not in_app %}
       <span class="desk-dl">
         <a class="b3 b3--sm b3--ghost" style="border-color:var(--d-hair);color:inherit"
            href="{{ url_for('static', filename='app/tianshu-desktop.exe',
                             v=static_v('app/tianshu-desktop.exe')) }}"
-           download="甜薯剧本杀-电脑版.exe">💻 电脑版下载</a>
+           download="甜薯剧本杀-电脑版.exe">💻 电脑端更爽</a>
       </span>
       {% endif %}
       {# 版式/款式预览只在**电脑浏览器**里给管理员看；客户端壳里不要出现 #}
@@ -176,11 +176,11 @@
 {% endif %}
 
 <nav class="mobtab" aria-label="主要导航">
-  <a href="{{ url_for('public.home') }}" class="{{ 'on' if request.endpoint == 'public.home' }}"><span class="ico">🏠</span><span>首页</span></a>
-  <a href="{{ url_for('public.scripts') }}" class="{{ 'on' if (request.endpoint or '').startswith('public.script') }}"><span class="ico">📚</span><span>剧本库</span></a>
-  <a href="{{ url_for('public.car') }}" class="{{ 'on' if request.endpoint == 'public.car' }}"><span class="ico">🚗</span><span>拼车</span></a>
-  <a href="{{ url_for('user.me') }}" class="{{ 'on' if request.endpoint == 'user.me' }}"><span class="ico">👤</span><span>我的</span></a>
-  {% if not in_app %}<a id="install-btn" class="js-install" href="{{ url_for('static', filename='app/tianshu.apk', v=static_v('app/tianshu.apk')) }}" download="甜薯剧本杀.apk"><span class="ico">📱</span><span>装App</span></a>{% endif %}
+  <a href="{{ url_for('public.home') }}" class="{{ 'on' if request.endpoint == 'public.home' }}"><span class="ico">🏠</span><span>大厅</span></a>
+  <a href="{{ url_for('public.scripts') }}" class="{{ 'on' if (request.endpoint or '').startswith('public.script') }}"><span class="ico">📚</span><span>本本墙</span></a>
+  <a href="{{ url_for('public.car') }}" class="{{ 'on' if request.endpoint == 'public.car' }}"><span class="ico">🚗</span><span>拼车局</span></a>
+  <a href="{{ url_for('user.me') }}" class="{{ 'on' if request.endpoint == 'user.me' }}"><span class="ico">👤</span><span>我的打本记录</span></a>
+  {% if not in_app %}<a id="install-btn" class="js-install" href="{{ url_for('static', filename='app/tianshu.apk', v=static_v('app/tianshu.apk')) }}" download="甜薯剧本杀.apk"><span class="ico">📱</span><span>揣兜里随时约本</span></a>{% endif %}
 </nav>
 
 <script>

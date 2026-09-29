@@ -1,15 +1,14 @@
 {% extends 'base.html' %}
 {% block title %}剧本库 · {{ settings.shopName }}{% endblock %}
-{# 剧本库 3.0：页头 + 工具条 + 多选标签 chips + 网格。
+{# 剧本库 3.0：页头 + 工具条 + 多选类型 chips + 网格。
    筛选全走前端（fetch 只换网格那段），网址始终 /scripts，不整页跳。 #}
 {% block body %}
 
 <section class="pagehead3">
   <div class="wrap3">
-    <p class="pagehead3__k">剧本库 · Library</p>
-    <h1 class="pagehead3__t">全部本子</h1>
-    <p class="pagehead3__lead">标签<b>可以多选</b>：选中几个，就把这几类的本子一起摆上（命中任意一个即算）。
-      选好的条件会留在网址上，方便收藏、转发给搭子。</p>
+    <p class="pagehead3__k">本本墙 · Wall</p>
+    <h1 class="pagehead3__t">本本清单</h1>
+    <p class="pagehead3__lead">类型可以多选：选几个就摆几类。挑好了分享给搭子，网址里带条件。</p>
   </div>
 </section>
 
@@ -17,7 +16,7 @@
 
   <div class="toolbar3">
     <form class="sform3 sform3--wide spa-search" method="get" action="{{ url_for('public.scripts') }}" role="search">
-      <input class="sform3__in" name="q" value="{{ q }}" placeholder="名字 / 简介 / 类型" aria-label="搜剧本">
+      <input class="sform3__in" name="q" value="{{ q }}" placeholder="找找你想冲的本" aria-label="搜剧本">
       <button class="sform3__btn" type="submit">搜 ↗</button>
     </form>
     <div class="toolbar3__end">
@@ -29,7 +28,7 @@
   {# tag 栏不再吸顶跟随（用户嫌它在滚动时一直挂着影响观感）—— 就跟着页面走 #}
   <div class="toolbar3" style="border-bottom:0">
     <div class="chips3 spa-filters" id="filters">
-      <span class="chips3__lab">标签</span>
+      <span class="chips3__lab">类型</span>
       {% for t in tags %}
       <button type="button" class="chip3 {{ 'on' if (t in sel_tags) or tag == t }}"
               data-tag="{{ t }}" aria-pressed="{{ 'true' if (t in sel_tags) or tag == t else 'false' }}">{{ t }}</button>
@@ -43,7 +42,7 @@
       <button type="button" class="chip3 {{ 'on' if diff == '1' }}" data-flag="diff"
               aria-pressed="{{ 'true' if diff == '1' else 'false' }}">新手友好</button>
       <button type="button" class="chip3 {{ 'on' if only_fav }}" data-flag="fav"
-              aria-pressed="{{ 'true' if only_fav else 'false' }}">❤ 我的想玩</button>
+              aria-pressed="{{ 'true' if only_fav else 'false' }}">想玩清单</button>
     </div>
   </div>
 

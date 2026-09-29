@@ -12,7 +12,7 @@
     <div class="split3">
       <div>
         <a class="b3 b3--sm" style="margin-bottom:clamp(12px,1.6vw,20px)"
-           href="{{ url_for('public.scripts') }}">← 回剧本库</a>
+           href="{{ url_for('public.scripts') }}">← 回本本墙</a>
         <p class="pagehead3__k" style="color:var(--d-stage-2)">{{ sc.type or '剧本' }} / Script</p>
         <h1 class="heading-hero" style="margin-top:clamp(10px,1.6vw,16px)">{{ sc.title }}</h1>
 
@@ -33,10 +33,10 @@
           </span>
           <form method="post" action="{{ url_for('public.fav', sid=sc.id) }}" data-ajax-fav style="display:inline">
             <button class="b3 b3--sm fav-btn {{ 'on' if sc.id|string in favs }}" type="submit">
-              {{ '❤ 已收藏' if sc.id|string in favs else '♡ 加进想玩' }}
+              {{ '❤ 已想玩' if sc.id|string in favs else '♡ 想玩' }}
             </button>
           </form>
-          <a class="b3 b3--sm b3--accent" href="#book">直接预约 ↓</a>
+          <a class="b3 b3--sm b3--accent" href="#book">约这个本 ↓</a>
         </div>
 
         {# 费用口径说清楚：页面上这个价是"游玩费"，不是定金 —— 不然客人会以为 ¥100 就能占位 #}
@@ -89,13 +89,13 @@
   </div>
 </section>
 
-{# ============ 角色 + 可开本 DM ============ #}
+{# ============ 角色 + 能带这本 ============ #}
 {% if sc.roles or sc.dms %}
 <section class="dsec dsec--alt">
   <div class="wrap3">
     <header class="dsec__head rv">
       <span class="dsec__no">01</span>
-      <h2 class="dsec__title">{% if sc.roles %}角色卡（{{ sc.roles|length }} 个）{% else %}这本谁带{% endif %}</h2>
+      <h2 class="dsec__title">{% if sc.roles %}角色卡（{{ sc.roles|length }} 张）{% else %}这本谁带{% endif %}</h2>
       <p class="dsec__meta">
         {% if sc.roles %}{% if sc.allowRolePick %}可提前选角{% else %}到店随机分配{% endif %}{% endif %}
       </p>
@@ -127,7 +127,7 @@
 
     {% if sc.dms %}
     <div style="margin-top:clamp(22px,3vw,38px)">
-      <p class="sidehead3" style="max-width:340px">可开本 DM<span class="line"></span></p>
+      <p class="sidehead3" style="max-width:340px">能带这本<span class="line"></span></p>
       <div class="chips3">
         {% for d in sc.dms %}<a class="tag3" href="{{ url_for('public.dm_page', phone=d.phone) }}">🗡 {{ d.name }}</a>{% endfor %}
       </div>
@@ -137,13 +137,13 @@
 </section>
 {% endif %}
 
-{# ============ 玩家评价 ============ #}
+{# ============ 剧友评价 ============ #}
 {% if settings.reviewsEnabled and reviews %}
 <section class="dsec">
   <div class="wrap3">
     <header class="dsec__head rv">
       <span class="dsec__no">02</span>
-      <h2 class="dsec__title">玩家评价（{{ reviews|length }}）</h2>
+      <h2 class="dsec__title">剧友评价（{{ reviews|length }}）</h2>
       <p class="dsec__meta">玩过的人怎么说</p>
       <span class="dsec__rule"></span>
     </header>
@@ -165,14 +165,14 @@
             </div>
             <span class="caption">{% for i in range(r.rating or 5) %}★{% endfor %} · {{ day_label(r.createdAt) }}</span>
           </div>
-          <p class="rev3__t">{{ r.text or '（只打了分）' }}</p>
+          <p class="rev3__t">{{ r.text or '（只给了分）' }}</p>
           {% if r.dims %}
           <div class="rev3__d">
             {% for k, v in r.dims.items() %}<span class="tag3">{{ k }} {{ v }}/5</span>{% endfor %}
           </div>
           {% endif %}
           {% if r.followUps %}{% for f in r.followUps %}
-          <p class="rev3__q">追评（{{ day_label(f.at) }}）：{{ f.text }}</p>
+          <p class="rev3__q">补两句（{{ day_label(f.at) }}）：{{ f.text }}</p>
           {% endfor %}{% endif %}
           {% if r.reply %}<p class="rev3__q">门店回复：{{ r.reply }}</p>{% endif %}
           <div class="rev3__a">
@@ -184,8 +184,8 @@
           </div>
           {% if me and r.username == me.username %}
           <form class="row" style="margin-top:12px" method="post" action="{{ url_for('public.review_follow', rid=r.id) }}">
-            <input class="input" name="text" placeholder="玩完过几天想补两句？" style="flex:1;min-width:180px">
-            <button class="b3 b3--sm b3--solid" type="submit">追评</button>
+            <input class="input" name="text" placeholder="过几天想补两句？" style="flex:1;min-width:180px">
+            <button class="b3 b3--sm b3--solid" type="submit">补两句</button>
           </form>
           {% endif %}
         </article>
@@ -193,7 +193,7 @@
       </div>
       <div>
         <div class="note3 sticky3">
-          <b>评价怎么来的</b><br>
+          <b>评价从哪来</b><br>
           只有<b>核销到店、玩完这一场</b>的客人才能打分，所以这里没有水军。
           分数会算进上面那条「玩家评分」。
         </div>

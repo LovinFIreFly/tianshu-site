@@ -720,13 +720,17 @@ img{max-width:100%}
 .how3__pin > .wrap3{position:relative;z-index:1;width:100%}
 .how3__k{margin:0;font-family:var(--d-mono);font-size:10.5px;letter-spacing:.22em;
   text-transform:uppercase;color:var(--d-stage-2)}
-.how3__stage{position:relative;margin-top:clamp(18px,2.6vw,32px);min-height:clamp(210px,30vh,300px)}
-/* 换场：上一步**快速淡出**（.28s），下一步**晚 .14s 再起**（从下面升上来）。
-   两边先后错开 —— 之前两段同时以 .62s 交叉淡入，会看到两行字叠在一起（虚影） */
-.how3__step{position:absolute;inset:0;opacity:0;transform:translateY(16px);pointer-events:none;
-  transition:opacity .28s var(--d-ease),transform .38s var(--d-ease)}
+.how3__stage{position:relative;margin-top:clamp(18px,2.6vw,32px);min-height:clamp(210px,30vh,300px);
+  perspective:1200px;transform-style:preserve-3d}
+/* 换场：像翻账本页。
+   当前页向前翻走（rotateX 正 + 上移淡出），下一页从背面下方翻到正面（rotateX 负 + 上移淡入）。
+   两页始终有重叠，不会出现"黑屏"空档；背面不可见，防止文字镜像。 */
+.how3__step{position:absolute;inset:0;opacity:0;pointer-events:none;backface-visibility:hidden;
+  transform-origin:top center;transform:rotateX(-92deg) translateY(30px);
+  transition:opacity .42s var(--d-ease),transform .52s var(--d-ease)}
 .how3__step.is-on{opacity:1;transform:none;pointer-events:auto;
-  transition:opacity .5s .14s var(--d-ease),transform .6s .14s var(--d-ease)}
+  transition:opacity .45s .08s var(--d-ease),transform .55s .08s var(--d-ease)}
+.how3__step.is-out{opacity:0;transform:rotateX(78deg) translateY(-30px)}
 .how3__no{margin:0;font-family:var(--d-mono);font-size:11.5px;letter-spacing:.2em;color:var(--d-accent)}
 .how3__t{margin:clamp(10px,1.6vw,18px) 0 0;font-family:var(--d-serif);font-weight:700;
   line-height:1.06;letter-spacing:var(--d-track-display);
@@ -940,8 +944,9 @@ html.ts-leaving body{opacity:0;transform:translateY(-10px) scale(.995);
 .rev3__avatar img{width:100%;height:100%;object-fit:cover}
 .rev3__name{font-family:var(--d-sans);font-size:14px;font-weight:600;color:var(--d-ink-2);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rev3__title-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
-.rev3__title-row .rev3__w{font-size:17px}
+.rev3__title-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:8px}
+.rev3__title-row .rev3__w{font-size:17px;line-height:1.3}
+.rev3__title-row .tag3,.rev3__title-row .badge{align-self:baseline}
 
 /* 打分星星（.stars 的结构在 style.css：行反向 + input 藏起来 + label 当星星）
    style.css 里只写了 hover 变色、**没有 :checked 规则** —— 点完不高亮，

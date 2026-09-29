@@ -1,11 +1,11 @@
 {% extends 'auth_base.html' %}
-{% block title %}找回密码 · {{ settings.shopName }}{% endblock %}
+{% block title %}忘密码了？ · {{ settings.shopName }}{% endblock %}
 {% block card %}
 <div class="auth-card">
-  <div class="auth-brand"><span class="logo">🍠</span><span>{{ settings.shopName }} · 找回密码</span></div>
-  <a class="back" href="{{ url_for('user.login') }}">‹ 返回登录</a>
-  <h2>找回密码</h2>
-  <p class="sub">用注册时填的邮箱收验证码，验证通过就能重置密码</p>
+  <div class="auth-brand"><span class="logo">🍠</span><span>{{ settings.shopName }} · 忘密码了？</span></div>
+  <a class="back" href="{{ url_for('user.login') }}">‹ 返回登记</a>
+  <h2>忘密码了？</h2>
+  <p class="sub">用注册时填的邮箱收验证码，验证通过就能重设密码</p>
 
   <form method="post">
     <div class="field">
@@ -45,7 +45,7 @@
       </div>
     </div>
 
-    <button class="b3 b3--accent b3--wide" type="submit">重置密码</button>
+    <button class="b3 b3--accent b3--wide" type="submit">重设密码</button>
   </form>
 
   <p class="foot-line">想起来了？<a class="lnk" href="{{ url_for('user.login') }}">去登录 →</a></p>

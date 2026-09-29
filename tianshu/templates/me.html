@@ -1,15 +1,15 @@
 {% extends 'base.html' %}
-{% block title %}我的 · {{ settings.shopName }}{% endblock %}
-{# 「我的」3.0：左栏身份卡 + 目录式纵向导航；右栏五个面板（预约 / 订单 / 券 / 消息 / 资料）。
+{% block title %}我的打本生涯 · {{ settings.shopName }}{% endblock %}
+{# 「我的打本生涯」3.0：左栏身份卡 + 目录式纵向导航；右栏五个面板（预约 / 订单 / 券 / 消息 / 资料）。
    面板切换逻辑不变（data-tabs="me" + data-tab + .tabpane，由 tabs.js 接管），只换版式与包裹类。 #}
 {% block body %}
 {% set av = me.profile.avatar or '' %}
 
 <section class="pagehead3">
   <div class="wrap3">
-    <p class="pagehead3__k">我的 · My Account</p>
-    <h1 class="pagehead3__t">我的</h1>
-    <p class="pagehead3__lead">预约、订单、券、消息、资料 —— 五栏都在这一页，左边点着切换。</p>
+    <p class="pagehead3__k">我的打本生涯打本生涯 · My Account</p>
+    <h1 class="pagehead3__t">我的打本生涯</h1>
+    <p class="pagehead3__lead">预约、订单、券、消息、资料都在这页，左边点着看。</p>
   </div>
 </section>
 
@@ -39,18 +39,18 @@
       </div>
 
       <nav class="me-nav" data-tabs="me">
-        <button type="button" class="mi on" data-tab="bookings">我的预约<span>{{ bookings|length }} 条 ›</span></button>
+        <button type="button" class="mi on" data-tab="bookings">我的打本生涯预约<span>{{ bookings|length }} 条 ›</span></button>
         <button type="button" class="mi" data-tab="orders">订单<span>{{ orders|length }} 条 ›</span></button>
         <button type="button" class="mi" data-tab="coupons">券 / 心愿单<span>{{ coupons|length }} 张券 ›</span></button>
-        <button type="button" class="mi" data-tab="notices">消息与留言<span>{{ unread }} 条未读 ›</span></button>
-        <button type="button" class="mi" data-tab="profile">资料与安全<span>›</span></button>
+        <button type="button" class="mi" data-tab="notices">谁喊我打本<span>{{ unread }} 条未读 ›</span></button>
+        <button type="button" class="mi" data-tab="profile">资料<span>›</span></button>
       </nav>
     </aside>
 
     {# ---------------- 右栏：五个面板 ---------------- #}
     <div>
 
-      {# ---------------------------------------------------------------- 我的预约 #}
+      {# ---------------------------------------------------------------- 我的打本生涯预约 #}
       <div class="tabpane on" data-tab="bookings">
         {% for b in bookings %}
         {% set o = order_of.get(b.id) %}
@@ -93,7 +93,7 @@
 
           {% if b.status == 'booked' %}
           <details style="margin-top:12px">
-            <summary class="body-secondary" style="cursor:pointer">改个时间（定金保留）</summary>
+            <summary class="body-secondary" style="cursor:pointer">改时间（定金留着）</summary>
             <form class="row" style="margin-top:12px;gap:8px;align-items:flex-end;flex-wrap:wrap"
                   method="post" action="{{ url_for('user.reschedule', bid=b.id) }}">
               <div class="field" style="flex:1 1 130px">
@@ -101,7 +101,7 @@
                 <select name="ts">{% for d in days %}<option value="{{ d.ts }}">{{ d.label }}</option>{% endfor %}</select>
               </div>
               <div class="field" style="flex:1 1 190px">
-                <label>时间（自己填）</label>
+                <label>时间</label>
                 <input name="time" type="time" value="{{ b.time }}" required>
               </div>
               <button class="b3 b3--sm" type="submit">改期</button>
@@ -115,7 +115,7 @@
                 style="margin-top:14px;gap:10px;align-items:flex-end;flex-wrap:wrap;
                        border-top:1px solid var(--d-rule);padding-top:14px">
             <div class="field">
-              <label>打几分（点星星）</label>
+              <label>打几分</label>
               <div class="stars">
                 {% for i in range(5, 0, -1) %}
                 <input type="radio" name="rating" value="{{ i }}" id="st{{ b.id }}-{{ i }}" {{ 'checked' if i == 5 }}>
@@ -124,7 +124,7 @@
               </div>
             </div>
             <div class="field" style="flex:1 1 180px">
-              <label>说两句（可留空只打分）</label>
+              <label>说两句（可空）</label>
               <input name="text" placeholder="剧情 / DM / 房间 都可以聊">
             </div>
             <div class="field" style="max-width:84px"><label>剧情</label>
@@ -170,13 +170,13 @@
             {% elif b.status != 'cancelled' %}
               {% if o and o.status in ('unpaid','paid') %}
               <form method="post" action="{{ url_for('user.order_act', oid=o.id, action='refund') }}">
-                <button class="b3 b3--sm" type="submit">取消 / 退定金</button></form>
+                <button class="b3 b3--sm" type="submit">临时跳车 / 退定金</button></form>
               {% else %}
               <form method="post" action="{{ url_for('user.cancel_booking', bid=b.id) }}">
-                <button class="b3 b3--sm" type="submit">取消预约</button></form>
+                <button class="b3 b3--sm" type="submit">不玩了</button></form>
               {% endif %}
             {% endif %}
-            <a class="b3 b3--sm b3--ghost" href="{{ url_for('public.script_detail', sid=b.sid) }}">再看一眼剧本</a>
+            <a class="b3 b3--sm b3--ghost" href="{{ url_for('public.script_detail', sid=b.sid) }}">再看一眼本本</a>
           </div>
 
           {# 我给的评价：摆出来（几星、写了什么、店家有没有回）——
@@ -186,7 +186,7 @@
           <div class="myrev3">
             <div class="myrev3__h">
               <span class="myrev3__s">{% for i in range(5) %}<i class="{{ 'on' if i < (rv.rating or 0) }}">★</i>{% endfor %}</span>
-              <span class="caption">我的评价 · {{ day_label(rv.createdAt) }}{% if rv.anonymous %} · 匿名{% endif %}</span>
+              <span class="caption">我的打本生涯评价 · {{ day_label(rv.createdAt) }}{% if rv.anonymous %} · 匿名{% endif %}</span>
             </div>
             {% if rv.text %}<p class="myrev3__t">{{ rv.text }}</p>{% endif %}
             {% if rv.dims %}
@@ -194,15 +194,15 @@
               {% for k, v in rv.dims.items() %}<span class="tag3">{{ k }} {{ v }}/5</span>{% endfor %}
             </div>
             {% endif %}
-            {% if rv.reply %}<p class="rev3__q" style="margin-top:10px">店家回复：{{ rv.reply }}</p>{% endif %}
+            {% if rv.reply %}<p class="rev3__q" style="margin-top:10px">店长回复：{{ rv.reply }}</p>{% endif %}
           </div>
           {% endif %}
         </div>
         {% else %}
         <div class="empty3">
           <p class="empty3__k">No Bookings</p>
-          <h3 class="empty3__t">还没有预约记录</h3>
-          <p class="empty3__p">挑一个本子、选好时间，定金锁位之后就会出现在这里。</p>
+          <h3 class="empty3__t">还没上车记录</h3>
+          <p class="empty3__p">去本本墙挑本、选好时间，定金锁位后就在这。</p>
           <div class="empty3__a"><a class="b3 b3--solid" href="{{ url_for('public.scripts') }}">去挑个本子</a></div>
         </div>
         {% endfor %}
@@ -248,7 +248,7 @@
       <div class="tabpane" data-tab="coupons">
         <div class="two">
           <div>
-            <h2 class="heading-section">我的券（{{ coupons|length }}）</h2>
+            <h2 class="heading-section">我的打本生涯券（{{ coupons|length }}）</h2>
             {% for c in coupons %}
             <div class="block3" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
               <div>
@@ -282,7 +282,7 @@
         </div>
       </div>
 
-      {# ---------------------------------------------------------------- 消息与留言 #}
+      {# ---------------------------------------------------------------- 谁喊我打本 #}
       <div class="tabpane" data-tab="notices">
         <div class="two">
           <div>
@@ -342,11 +342,11 @@
         </div>
       </div>
 
-      {# ---------------------------------------------------------------- 资料与安全 #}
+      {# ---------------------------------------------------------------- 资料 #}
       <div class="tabpane" data-tab="profile">
         <div class="two">
           <div>
-            <h2 class="heading-section">我的资料</h2>
+            <h2 class="heading-section">我的打本生涯资料</h2>
             <div class="block3">
               <form method="post" action="{{ url_for('user.profile_save') }}" enctype="multipart/form-data" class="form-stack">
                 <div class="field">
@@ -382,7 +382,7 @@
               <div class="row" style="justify-content:space-between;padding:6px 0">
                 <span class="body-secondary">注册时间</span><span class="caption">{{ day_label(me.first) }}</span></div>
               <div class="row" style="justify-content:space-between;padding:6px 0">
-                <span class="body-secondary">我的邀请码</span><b class="copy-mono" style="font-size:14px">{{ me.invite or '—' }}</b></div>
+                <span class="body-secondary">我的打本生涯邀请码</span><b class="copy-mono" style="font-size:14px">{{ me.invite or '—' }}</b></div>
               <p class="body-secondary" style="margin:12px 0 0">朋友填你的邀请码注册，你俩各得一张 ¥{{ settings.inviteCoupon }} 抵扣券
                 （付游玩费时直接抵掉，90 天内有效）。</p>
             </div>

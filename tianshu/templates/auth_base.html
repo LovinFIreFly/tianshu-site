@@ -38,7 +38,7 @@
   <div class="auth-stage">
     {% block top %}
     <div class="auth-top">
-      <a class="auth-home" href="{{ url_for('public.home', browse=1) }}">‹ 门店首页</a>
+      <a class="auth-home" href="{{ url_for('public.home', browse=1) }}">‹ 回大厅</a>
       <a class="theme-btn" href="{{ url_for('public.toggle_theme') }}" title="切换深浅色" aria-label="切换深浅色">
         {% if theme == 'light' %}🌙{% else %}☀️{% endif %}</a>
     </div>
@@ -52,15 +52,15 @@
        都在用客户端了，不需要再下一遍。 #}
     {% set _ua = request.headers.get('User-Agent') or '' %}
     {% set _in_app = ('TianshuApp' in _ua) or ('TianshuDesktop' in _ua) or in_shell %}
-    <p class="auth-foot">{{ settings.shopName }} · 今晚换个人活一次 · © {{ year }}
+    <p class="auth-foot">© {{ year }} {{ settings.shopName }}・熬夜改本中
       {% if not _in_app %}
       <a class="btn btn-sm btn-ghost desk-dl" style="margin-left:8px"
          href="{{ url_for('static', filename='app/tianshu-desktop.exe',
                           v=static_v('app/tianshu-desktop.exe')) }}"
-         download="甜薯剧本杀-电脑版.exe">💻 电脑版下载</a>
+         download="甜薯剧本杀-电脑版.exe">💻 电脑端更爽</a>
       <a class="btn btn-sm btn-ghost phone-dl" style="margin-left:8px"
          href="{{ url_for('static', filename='app/tianshu.apk', v=static_v('app/tianshu.apk')) }}"
-         download="甜薯剧本杀.apk">📱 装 App</a>
+         download="甜薯剧本杀.apk">📱 揣兜里随时约本</a>
       {% endif %}</p>
   </div>
 

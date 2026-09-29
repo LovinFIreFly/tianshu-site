@@ -1,24 +1,24 @@
 {% extends 'base.html' %}
-{% block title %}玩家社区 · {{ settings.shopName }}{% endblock %}
+{% block title %}唠嗑区 · {{ settings.shopName }}{% endblock %}
 {# 社区 3.0：左边信息流（细线分隔，像论坛/报纸），右边固定栏放发帖框与规则 —— 不再是单列堆卡片。 #}
 {% block body %}
 {% set TYPE_NAME = {'chat': '动态', 'diary': '日记', 'guide': '攻略', 'ask': '组队'} %}
 
 <section class="pagehead3">
   <div class="wrap3">
-    <p class="pagehead3__k">玩家社区 · Community</p>
-    <h1 class="pagehead3__t">玩家社区</h1>
-    <p class="pagehead3__lead">动态、日记、攻略、组队。别剧透不标注就行 —— 被举报会被删。</p>
+    <p class="pagehead3__k">唠嗑区 · Community</p>
+    <h1 class="pagehead3__t">唠嗑区</h1>
+    <p class="pagehead3__lead">动态、日记、攻略、组队。剧透记得标，被举报就删。</p>
   </div>
 </section>
 
 <div class="wrap3">
-  {# 分类是**页内筛**（tabs.js 管）：点一下立刻藏/显，不刷新、不换网址。
+  {# 类型是**页内筛**（tabs.js 管）：点一下立刻藏/显，不刷新、不换网址。
      全部帖子都已经渲染在下面，所以"全部"切回来也是瞬间的。
      data-filter="type" → 按帖子的 data-type 筛（不带就是按 data-status，后台那套）。 #}
   <div class="toolbar3">
     <div class="chips3" data-filter="type">
-      <span class="chips3__lab">分类</span>
+      <span class="chips3__lab">类型</span>
       <button type="button" class="chip3 {{ 'on' if not t }}" data-show="all">全部</button>
       {% for k, n in TYPE_NAME.items() %}
       <button type="button" class="chip3 {{ 'on' if t == k }}" data-show="{{ k }}">{{ n }}（{{ counts.get(k, 0) }}）</button>
@@ -69,13 +69,13 @@
       {% else %}
       <div class="empty3">
         <p class="empty3__k">Empty</p>
-        <h3 class="empty3__t">还没人发帖</h3>
-        <p class="empty3__p">你可以来发第一条：今晚想拼的本、上次那局的战报、或者一份新手攻略。</p>
+        <h3 class="empty3__t">还没人唠嗑</h3>
+        <p class="empty3__p">你可以第一个来：想拼的本、上局战报、新手攻略都行。</p>
       </div>
       {% endfor %}
       {# 页内筛选：某一类里一条都没有时，别给一片空白 #}
       <div class="no-hit" hidden style="padding:clamp(20px,3vw,34px) 0">
-        <p class="body-secondary" style="margin:0">这个分类下还没有帖子。点「全部」看看其它的。</p>
+        <p class="body-secondary" style="margin:0">这个类型下还没有帖子。点「全部」看看其它的。</p>
       </div>
     </div>
 
@@ -83,41 +83,40 @@
     <div>
       <div class="sticky3">
         {% if me %}
-        <p class="sidehead3">发一条<span class="line"></span></p>
+        <p class="sidehead3">来吐槽 / 安利<span class="line"></span></p>
         <form method="post" action="{{ url_for('public.post_create') }}" class="form-stack">
           <div class="field">
             <label>发到哪一类</label>
             <select name="type">
-              <option value="chat">动态（随便聊两句）</option>
-              <option value="diary">日记（这局的战报）</option>
-              <option value="guide">攻略（带规格说明那种）</option>
-              <option value="ask">组队（找人拼一场）</option>
+              <option value="chat">动态（随便唠）</option>
+              <option value="diary">日记（这局战报）</option>
+              <option value="guide">攻略（带说明）</option>
+              <option value="ask">组队（找人拼车）</option>
             </select>
           </div>
           <div class="field">
-            <label>标题（可留空）</label>
-            <input name="title" placeholder="一句话标题">
+            <label>标题（可填可不填）</label>
+            <input name="title" placeholder="一句话">
           </div>
           <div class="field">
             <label>内容</label>
-            <textarea name="text" rows="5" placeholder="想说什么？求拼车的话把时间本子写清楚"></textarea>
+            <textarea name="text" rows="5" placeholder="说点什么... 求拼车写清本子和时间"></textarea>
           </div>
-          <button class="b3 b3--solid b3--wide" type="submit">发出去</button>
+          <button class="b3 b3--solid b3--wide" type="submit">发送</button>
         </form>
         {% else %}
         <div class="note3">
-          <b>登录之后就能发帖、点赞</b><br>
+          <b>上车登记后才能发帖、点赞</b><br>
           发帖、点赞、举报都要先登录。
           <div style="margin-top:12px">
-            <a class="b3 b3--sm b3--solid" href="{{ url_for('user.login', next='/comm') }}">去登录</a>
+            <a class="b3 b3--sm b3--solid" href="{{ url_for('user.login', next='/comm') }}">去登记</a>
           </div>
         </div>
         {% endif %}
 
         <div class="note3" style="margin-top:var(--d-s5)">
-          <b>发帖规矩</b><br>
-          ① 剧透必须标「有剧透」；② 不骂人、不发广告；③ 求拼车请写清本子、日期、时间。
-          被举报核实后直接删。
+          <b>唠嗑规矩</b><br>
+          ① 剧透要标；② 别骂人、别广告；③ 拼车写清本子和时间。举报核实就删。
         </div>
       </div>
     </div>

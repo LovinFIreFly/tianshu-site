@@ -1,21 +1,21 @@
 {% extends 'base.html' %}
-{% block title %}拼车大厅 · {{ settings.shopName }}{% endblock %}
-{# 拼车大厅 3.0：页头 + 卡片流。空态改用 .empty3（走令牌，换款式时底色/文字一起换）。 #}
+{% block title %}拼车局 · {{ settings.shopName }}{% endblock %}
+{# 拼车局 3.0：页头 + 卡片流。空态改用 .empty3（走令牌，换款式时底色/文字一起换）。 #}
 {% block body %}
 
 <section class="pagehead3">
   <div class="wrap3">
-    <p class="pagehead3__k">拼车大厅 · Share a Table</p>
-    <h1 class="pagehead3__t">拼车大厅</h1>
-    <p class="pagehead3__lead">同一本、同一时段凑一车。<b>满员即开</b>；满了还能排候补，有人退位就先喊你。</p>
+    <p class="pagehead3__k">拼车局 · Share a Table</p>
+    <h1 class="pagehead3__t">拼车局</h1>
+    <p class="pagehead3__lead">同一本、同一时段凑一车。<b>人齐发车</b>；满了还能蹲候补，有人跳车就先喊你。</p>
   </div>
 </section>
 
 <div class="wrap3">
   <div class="toolbar3">
-    <span class="copy-mono">在等搭子的车 · {{ cars|length }}</span>
+    <span class="copy-mono">正在发车的局 · {{ cars|length }}</span>
     <div class="toolbar3__end">
-      <a class="b3 b3--solid b3--sm" href="{{ url_for('public.scripts') }}">我要开一车</a>
+      <a class="b3 b3--solid b3--sm" href="{{ url_for('public.scripts') }}">我要发车</a>
     </div>
   </div>
 
@@ -25,9 +25,9 @@
     <article class="ccard3 rv" style="--i:{{ loop.index0 }}">
       <div class="ccard3__top">
         <span class="ccard3__tag">{{ c.day }} {{ c.time }}</span>
-        {% if c.full %}<span class="tag3 tag3--accent">满员</span>
-        {% elif c.need %}<span class="tag3 tag3--accent">还差 {{ c.need }} 人</span>
-        {% else %}<span class="tag3 tag3--ok">已成局</span>{% endif %}
+        {% if c.full %}<span class="tag3 tag3--accent">已满锁车</span>
+        {% elif c.need %}<span class="tag3 tag3--accent">差 {{ c.need }}！</span>
+        {% else %}<span class="tag3 tag3--ok">人齐发车</span>{% endif %}
       </div>
 
       <h3 class="ccard3__title">{{ c.title }}</h3>
@@ -47,7 +47,7 @@
       <div class="ccard3__foot">
         <a class="b3 b3--sm b3--ghost" href="{{ url_for('public.car_detail', cid=c.id) }}">进车队 →</a>
         {% if not me %}
-          <a class="b3 b3--sm b3--solid" href="{{ url_for('user.login', next=request.path) }}">登录后上车</a>
+          <a class="b3 b3--sm b3--solid" href="{{ url_for('user.login', next=request.path) }}">上车登记后上车</a>
         {% elif c.mine %}
           <span class="tag3 tag3--ok">你在这车上</span>
           {% if not c.owner == (me.username) %}
@@ -56,7 +56,7 @@
           {% endif %}
         {% elif c.full %}
           <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='wait') }}">
-            <button class="b3 b3--sm" type="submit">排候补</button></form>
+            <button class="b3 b3--sm" type="submit">蹲候补</button></form>
         {% else %}
           <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='join') }}">
             <button class="b3 b3--sm b3--solid" type="submit">上车</button></form>
@@ -71,7 +71,7 @@
           {% endfor %}
         </div>
         <p class="empty3__p" style="font-size:12.5px;margin-top:10px">
-          只显示昵称、性别、年龄段 —— 电话这类信息车上看不到，保护隐私。
+          车上只露昵称、性别、年龄段，电话啥的看不到，保护隐私。
         </p>
       </details>
     </article>
@@ -79,19 +79,19 @@
   </div>
   {% else %}
   <div class="empty3 rv" style="margin-top:clamp(18px,2.6vw,30px)">
-    <p class="empty3__k">No Cars Yet</p>
-    <h3 class="empty3__t">还没有车</h3>
-    <p class="empty3__p">想拼车很简单：去剧本页选一个本、把「玩法」选成<b>拼车</b>下单，你的车就会出现在这儿。</p>
+    <p class="empty3__k">No Cars</p>
+    <h3 class="empty3__t">还没人发车</h3>
+    <p class="empty3__p">还没人发车，不如你来开个头？去本本墙挑本，玩法选<b>拼车</b>就发车。</p>
     <div class="empty3__a">
       <a class="b3 b3--solid" href="{{ url_for('public.scripts') }}">去挑个本子</a>
-      <a class="b3" href="{{ url_for('public.comm') }}">去社区问问</a>
+      <a class="b3" href="{{ url_for('public.comm') }}">去唠嗑区问问</a>
     </div>
   </div>
   {% endif %}
 
   {% if tags %}
   <details class="rv" style="margin:clamp(24px,3vw,40px) 0 clamp(40px,6vw,80px)">
-    <summary class="copy-mono" style="cursor:pointer;color:var(--d-ink-4)">车队标签是什么意思</summary>
+    <summary class="copy-mono" style="cursor:pointer;color:var(--d-ink-4)">车队标签是啥</summary>
     <div class="chips3" style="margin-top:12px">
       {% for t in tags %}<span class="tag3">{{ t }}</span>{% endfor %}
     </div>

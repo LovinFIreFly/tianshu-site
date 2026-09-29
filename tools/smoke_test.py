@@ -213,29 +213,29 @@ _pat = r'<a href="([^"]+)" class="(on)?">\s*<span class="ico"[^>]*>([^<]+)</span
 _mt = _re.search(r'<nav class="mobtab".*?</nav>', html, _re.S)
 _tabs = _re.findall(_pat, _mt.group(0) if _mt else '')
 check('对外页面有手机底部导航，正好四个入口',
-      [t[3] for t in _tabs] == ['首页', '剧本库', '拼车', '我的'], str([t[3] for t in _tabs]))
+      [t[3] for t in _tabs] == ['大厅', '本本墙', '拼车局', '我的打本记录'], str([t[3] for t in _tabs]))
 check('高亮跟着当前页走（首页时只亮「首页」）',
-      [t[3] for t in _tabs if t[1]] == ['首页'], str([t[3] for t in _tabs if t[1]]))
+      [t[3] for t in _tabs if t[1]] == ['大厅'], str([t[3] for t in _tabs if t[1]]))
 _s2, _css = guest.get('/static/css/style.css')
 check('底部导航桌面端隐藏、窄屏才是固定底栏',
       '.mobtab{display:none}' in _css and '.mobtab{display:flex;position:fixed' in _css)
 _s2, _car = guest.get('/car')
 _mt2 = _re.search(r'<nav class="mobtab".*?</nav>', _car, _re.S)
 _t2 = _re.findall(_pat, _mt2.group(0) if _mt2 else '')
-check('拼车页底部导航把「拼车」点亮',
-      [t[3] for t in _t2 if t[1]] == ['拼车'], str([t[3] for t in _t2 if t[1]]))
+check('拼车页底部导航把「拼车局」点亮',
+      [t[3] for t in _t2 if t[1]] == ['拼车局'], str([t[3] for t in _t2 if t[1]]))
 # 外观款式（skin）：后台统一设置 → **全站（手机+电脑）一起变**；客人不能自己换
 _ss, _sh = guest.get('/car')
 check('客人端不出现款式预览条（只有管理员能预览）', 'skin-bar' not in _sh)
 check('默认款式不额外加载皮肤表', all(('skin-%s.css' % k) not in _sh for k in ('noir', 'riso', 'swiss', 'monolith')))
-for path, want in (('/scripts', '剧本库'), ('/car', '拼车'), ('/login', '登录'), ('/register', '注册')):
+for path, want in (('/scripts', '本本墙'), ('/car', '拼车局'), ('/login', '上车登记'), ('/register', '注册')):
     s, html = guest.get(path)
     check('打开 %s' % path, s == 200 and want in html, 'HTTP %s' % s)
 s, html = guest.get('/me')
-check('没登录看「我的」会跳去登录', s == 200 and '登录' in html)
+check('没登录看「我的」会跳去登录', s == 200 and '上车登记' in html)
 s, html = guest.get('/admin/')
 # 会被重定向到登录页（urllib 自动跟了跳转，所以最后看到的是登录页）
-check('客户/游客进不了后台', s == 403 or ('登录' in html and '到店核销' not in html), 'HTTP %s' % s)
+check('客户/游客进不了后台', s == 403 or ('上车登记' in html and '到店核销' not in html), 'HTTP %s' % s)
 
 print('② 管理员：加剧本')
 admin = Client()
@@ -823,7 +823,7 @@ total = sum(1 for line in open(os.path.join(ROOT, 'tools', 'smoke_test.py'), enc
             if "check('" in line)
 print('⑫ 账号安全 / 改期 / 车队详情 / 评价细节')
 s, html = guest.get('/forgot')
-check('找回密码页能打开', s == 200 and '重置密码' in html and 'auth-card' in html)
+check('忘密码页能打开', s == 200 and '重设密码' in html and 'auth-card' in html)
 cus5 = Client()
 cus5.post('/register', {'phone': '13900002222', 'username': '账号安全号', 'password': '123456',
                         'password2': '123456', 'code': '1234', 'agree': '1',
@@ -1151,13 +1151,13 @@ check('电脑版 exe 在（网站能下载到）', os.path.exists(_exe),
       '%.1f MB' % (os.path.getsize(_exe) / 1048576) if os.path.exists(_exe) else '缺文件')
 check('桌面壳源码 desktop.py 在', os.path.exists(os.path.join(ROOT, 'desktop.py')))
 s, html = guest.get('/scripts')
-check('电脑页脚有「电脑版下载」入口', 'tianshu-desktop.exe' in html and '电脑版下载' in html)
+check('电脑页脚有「电脑端更爽」入口', 'tianshu-desktop.exe' in html and '电脑端更爽' in html)
 check('手机端会藏起「电脑版下载」（那边有装App）', '.desk-dl{display:none}' in _css3)
 
 # ⑪ 下载入口：电脑网页看得到、壳里看不到；"记住我"的勾选框要在
 s, html = guest.get('/login')
-check('登录页底部有「电脑版下载」',
-      s == 200 and 'tianshu-desktop.exe' in html and '电脑版下载' in html, 'HTTP %s' % s)
+check('登录页底部有「电脑端更爽」',
+      s == 200 and 'tianshu-desktop.exe' in html and '电脑端更爽' in html, 'HTTP %s' % s)
 check('登录页底部也有手机版安装包（窄屏时才显示）',
       'tianshu.apk' in html and 'phone-dl' in html)
 _shell = Client()

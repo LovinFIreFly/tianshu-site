@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}{{ settings.shopName }} · 首页{% endblock %}
+{% block title %}{{ settings.shopName }} · 藏在学校里的剧本杀小店{% endblock %}
 {# 首页 3.0：非对称编辑排版。左边「大标题 + 搜索」，右边挂一块「今夜场次牌」；
    下面依次是横向海报轨、班次表、拼车卡片流、编号入口。靠细线 + 编号分区，不靠圆角色块。 #}
 {% block body %}
@@ -11,27 +11,25 @@
     <div class="dhero__grid">
 
       <div class="dhero__main">
-        <p class="dhero__kicker rv">剧本 · 场地 · DM</p>
+        <p class="dhero__kicker rv">下课别走，校内剧本社，换段剧情上演</p>
         {# 文字遮罩升起（Awwwards 获奖站最常用的一招）：每行藏在一条框里往上推 #}
         <h1 class="dhero__title">
-          <span class="ln"><i>今晚，</i></span>
-          <span class="ln"><i><em>换一个人</em></i></span>
-          <span class="ln"><i>活一次。</i></span>
+          <span class="ln"><i><em>今晚换段人生活</em></i></span>
         </h1>
-        <p class="dhero__sub rv" style="--i:2">挑本、开团、到店，剩下的交给我们。全城最好的一本，今晚就等你落座。</p>
+        <p class="dhero__sub rv" style="--i:2">选好本，凑齐人，下课直接来。DM、场地、零食都给你备好了。</p>
 
         <form class="sform3 rv" style="--i:3" method="get" action="{{ url_for('public.scripts') }}" role="search">
-          <input class="sform3__in" name="q" placeholder="搜剧本名 / 类型 / 人数" aria-label="搜剧本" value="{{ request.args.get('q','') }}">
+          <input class="sform3__in" name="q" placeholder="找找你想冲的本" aria-label="搜剧本" value="{{ request.args.get('q','') }}">
           <button class="sform3__btn" type="submit">找本子 ↗</button>
         </form>
 
         <div class="dhero__cta rv" style="--i:4">
-          <a class="b3 b3--solid" href="{{ url_for('public.scripts') }}">挑个本子</a>
-          <a class="b3" href="{{ url_for('public.car') }}">看看谁在拼车</a>
+          <a class="b3 b3--solid" href="{{ url_for('public.scripts') }}">去挑本</a>
+          <a class="b3" href="{{ url_for('public.car') }}">去拼车</a>
         </div>
 
         <p class="dhero__lead rv" style="--i:5">
-          今日 {{ sessions|length }} 场 · 在架 {{ scripts|length }} 本 · 累计开本 {{ stat.plays }}
+          {% if sessions %}今日 {{ sessions|length }} 场开本{% else %}今日暂无开本{% endif %} · {{ scripts|length }} 个本 · 累计开本 {{ stat.plays }}
         </p>
       </div>
 
@@ -61,7 +59,7 @@
               <path d="M52 40 l6 6 l12 -14" stroke="var(--d-accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/>
             </svg>
             <span class="empty3__t" style="display:block">今天还没排场次。</span>
-            <span class="empty3__s" style="display:block">挑个本子选好时间，我们给你开一场。</span>
+            <span class="empty3__s" style="display:block">去挑本选好时间，我们给你开一场。</span>
           </div>
           {% endif %}
           <div class="board3__foot">
@@ -97,13 +95,13 @@
 </section>
 {% endif %}
 
-{# ============ 七·真实内容前置：玩家短评滚动 + 今日 DM 值班 + 老板今日推荐 ============ #}
+{# ============ 七·真实内容前置：玩家短评滚动 + 今日 DM 排班 + 今日推荐本 ============ #}
 <section class="band realtalk">
   <div class="wrap3">
     <header class="dsec__head rv">
       <span class="dsec__no">★</span>
-      <h2 class="dsec__title">玩家在说</h2>
-      <p class="dsec__meta">真实短评 · 慢慢滚</p>
+      <h2 class="dsec__title">剧友圈</h2>
+      <p class="dsec__meta">真实测评 · 慢慢滚</p>
       <span class="dsec__rule"></span>
     </header>
 
@@ -123,19 +121,19 @@
       </div>
     </div>
     {% else %}
-    <p class="dsec__lead">还没有人评。来玩完抢个沙发～</p>
+    <p class="dsec__lead">还没人分享？你第一个来唠唠？</p>
     {% endif %}
 
     <div class="realstrip rv">
       {% if dm_duty %}
       <div class="realstrip__c">
-        <span class="realstrip__k">今日 DM 值班</span>
+        <span class="realstrip__k">今日 DM 排班</span>
         <span class="realstrip__v">{{ dm_duty|join('、') }}</span>
       </div>
       {% endif %}
       {% if boss_pick %}
       <a class="realstrip__c realstrip__pick" href="{{ url_for('public.script_detail', sid=boss_pick.id) }}">
-        <span class="realstrip__k">老板今日推荐</span>
+        <span class="realstrip__k">今日推荐本</span>
         <span class="realstrip__v">{{ boss_pick.title }} · ¥{{ boss_pick.price|int }}/人 →</span>
       </a>
       {% endif %}
@@ -179,13 +177,13 @@
   </div>
 </section>
 
-{# ============ 01 本子上新：横向海报轨 ============ #}
+{# ============ 01 本本清单：横向海报轨 ============ #}
 <section class="dsec">
   <div class="wrap3">
     <header class="dsec__head rv">
       <span class="dsec__no">01</span>
-      <h2 class="dsec__title">本子上新</h2>
-      <p class="dsec__meta">在架 {{ scripts|length }} 本 · 左右拖着看</p>
+      <h2 class="dsec__title">本本清单</h2>
+      <p class="dsec__meta">{{ scripts|length }} 个本 · 左右拖着看</p>
       <span class="dsec__rule"></span>
     </header>
 
@@ -234,19 +232,19 @@
     {% else %}
     <div class="empty3 rv">
       <p class="empty3__k">Now Empty</p>
-      <h3 class="empty3__t">戏单还空着</h3>
-      <p class="empty3__p">剧本库还没有本子。用管理员账号登录，去「管理后台 → 剧本」加几个，这里就热闹了。</p>
+      <h3 class="empty3__t">店长正在熬夜测本，马上就上！</h3>
+      <p class="empty3__p">店长正在熬夜测本，马上就上！</p>
     </div>
     {% endif %}
   </div>
 </section>
 
-{# ============ 02 今天这几场：班次表（细线表，不再拉一条大黑横幅） ============ #}
+{# ============ 02 今日开本：班次表（细线表，不再拉一条大黑横幅） ============ #}
 <section class="dsec">
   <div class="wrap3">
     <header class="dsec__head rv">
       <span class="dsec__no">02</span>
-      <h2 class="dsec__title">今天这几场</h2>
+      <h2 class="dsec__title">今日开本</h2>
       <p class="dsec__meta">按开演时间排</p>
       <span class="dsec__rule"></span>
     </header>
@@ -268,7 +266,7 @@
       {% endfor %}
     </div>
     {% else %}
-    <p class="dsec__lead">今天还没排场次。想玩的话，挑个本子选好时间，我们给你开一场。</p>
+    <p class="dsec__lead">今天还没排场次。想玩的话，去挑本选好时间，我们给你开一场。</p>
     <a class="b3 b3--accent" href="{{ url_for('public.scripts') }}">去挑本子</a>
     {% endif %}
   </div>
@@ -279,7 +277,7 @@
   <div class="wrap3">
     <header class="dsec__head rv">
       <span class="dsec__no">03</span>
-      <h2 class="dsec__title">有人在等搭子</h2>
+      <h2 class="dsec__title">正在发车的局</h2>
       <p class="dsec__meta">拼车大厅 · 随时上车</p>
       <span class="dsec__rule"></span>
     </header>
@@ -314,10 +312,10 @@
     {% else %}
     <div class="empty3 rv">
       <p class="empty3__k">No Cars Yet</p>
-      <h3 class="empty3__t">还没有车</h3>
-      <p class="empty3__p">想拼车很简单：去剧本页选一个本、把「玩法」选成<b>拼车</b>下单，你的车就会出现在这儿。</p>
+      <h3 class="empty3__t">还没人发车</h3>
+      <p class="empty3__p">还没人发车，不如你来开个头？去本本墙挑一个本，把玩法选成<b>拼车</b>就发一车。</p>
       <div class="empty3__a">
-        <a class="b3 b3--solid" href="{{ url_for('public.scripts') }}">去挑个本子</a>
+        <a class="b3 b3--solid" href="{{ url_for('public.scripts') }}">去去挑本</a>
         <a class="b3" href="{{ url_for('public.car') }}">看拼车大厅</a>
       </div>
     </div>
@@ -325,13 +323,13 @@
   </div>
 </section>
 
-{# ============ 04 门店新鲜事（有内容才显示） ============ #}
+{# ============ 04 店长通知（有内容才显示） ============ #}
 {% if banners %}
 <section class="dsec">
   <div class="wrap3">
     <header class="dsec__head rv">
       <span class="dsec__no">04</span>
-      <h2 class="dsec__title">门店新鲜事</h2>
+      <h2 class="dsec__title">店长通知</h2>
       <p class="dsec__meta">活动 / 上新 / 通知</p>
       <span class="dsec__rule"></span>
     </header>
@@ -351,12 +349,12 @@
 </section>
 {% endif %}
 
-{# ============ 05 好戏入口：编号清单 ============ #}
+{# ============ 05 逛一逛：编号清单 ============ #}
 <section class="dsec dsec--alt">
   <div class="wrap3">
     <header class="dsec__head rv">
       <span class="dsec__no">05</span>
-      <h2 class="dsec__title">好戏入口</h2>
+      <h2 class="dsec__title">逛一逛</h2>
       <p class="dsec__meta">四条路，随便挑</p>
       <span class="dsec__rule"></span>
     </header>

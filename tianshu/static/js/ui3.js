@@ -215,8 +215,19 @@
 
     function showStep(i) {
       if (!hsteps.length) return;
+      var old = hsteps[hidx];
       hidx = ((i % hsteps.length) + hsteps.length) % hsteps.length;
-      hsteps.forEach(function (el, k) { el.classList.toggle('is-on', k === hidx); });
+      hsteps.forEach(function (el, k) {
+        var willOn = k === hidx;
+        if (!willOn && el.classList.contains('is-on') && el !== old) {
+          el.classList.remove('is-out');   /* 防旧残留 */
+        }
+        el.classList.toggle('is-on', willOn);
+      });
+      if (old && !old.classList.contains('is-on')) {
+        old.classList.add('is-out');
+        setTimeout(function () { old.classList.remove('is-out'); }, 620);
+      }
       hbtns.forEach(function (b, k) { b.classList.toggle('on', k === hidx); });
       var cur = hbtns[hidx];
       if (cur) {                    /* 去掉再加回，强制让进度条从 0 重新走一遍 */
@@ -237,58 +248,9 @@
     startAuto();
   }
 
-  /* ------------------------------------------- ⑧ 一划一屏：首屏 ↔ 怎么玩 ↔ 本子上新
-     之前是"先让你滚一点、停下来、再平滑对齐"—— 手感上就是卡一下。
-     现在直接接管滚轮：在这几屏里滚一格，立刻用 rAF 动画把整屏翻过去（540ms，先快后慢）。
-     最后一块（本子上新）是普通长内容，只做"目标"不做"起点"，进去了就正常滚。 */
-  var heroEl = $('.dhero');
-  var nextEl = how ? how.nextElementSibling : null;
-  if (heroEl && how && nextEl && !reduce && finePtr) {
-    var stops = [], flying = false;
-    function measureStops() {
-      stops = [heroEl, how, nextEl].map(function (el) {
-        return Math.round(el.getBoundingClientRect().top + (window.pageYOffset || 0));
-      });
-    }
-    function glideTo(top, ms) {
-      var from = window.pageYOffset || 0;
-      var delta = top - from;
-      if (!delta) { flying = false; return; }
-      var t0 = null;
-      flying = true;
-      function frame(ts) {
-        if (t0 === null) t0 = ts;
-        var p = Math.min(1, (ts - t0) / (ms || 540));
-        var e2 = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
-        window.scrollTo(0, Math.round(from + delta * e2));
-        if (p < 1) { window.requestAnimationFrame(frame); } else { flying = false; }
-      }
-      window.requestAnimationFrame(frame);
-    }
-    window.addEventListener('wheel', function (e) {
-      if (e.ctrlKey || e.metaKey) return;              /* 缩放之类的别拦 */
-      if (flying) { e.preventDefault(); return; }      /* 动画期间把滚轮吞掉，别跟它打架 */
-      var vh = window.innerHeight;
-      var y = window.pageYOffset || 0;
-      var i;
-      if (e.deltaY > 0) {                              /* 往下：整屏翻到下一屏 */
-        for (i = 0; i < stops.length - 1; i++) {
-          if (y >= stops[i] - 2 && y < stops[i] + vh * 0.98) {
-            e.preventDefault(); glideTo(stops[i + 1], 540); return;
-          }
-        }
-      } else {                                         /* 往上：回到上一屏（只在前半屏接管） */
-        for (i = stops.length - 1; i > 0; i--) {
-          if (y >= stops[i] - 2 && y < stops[i] + vh * 0.5) {
-            e.preventDefault(); glideTo(stops[i - 1], 540); return;
-          }
-        }
-      }
-    }, { passive: false });
-    measureStops();
-    window.addEventListener('resize', measureStops);
-    window.addEventListener('load', measureStops);
-  }
+  /* ---------------------------------------------------------------- ⑧ 首页"怎么玩"：自动播放
+     不再接管滚轮做"一划一屏"—— 滚动时中间那屏会被翻过去、露出一段空黑背景。
+     现在恢复正常滚动；只保留这三步自动翻页 + 可点进度条，切换改成"翻纸片"手感。 */
 
   /* ---------------------------------------------------------------- ⑨ 磁吸 */
   /* 桌面鼠标才做：按钮朝光标方向偏 3~4px，松开回位（Duolingo 式微交互） */
