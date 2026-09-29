@@ -296,3 +296,33 @@ section.dsec > .wrap3 > svg{transform:none}
   }
 }
 
+/* ============================================================================
+   P4 · 404 手绘页 + 空状态插画（按建议继续，全部走线稿手绘）
+   ========================================================================== */
+
+/* 404 / 错误页：把告示上的「朱红」换成 Symphony 的赭黄，线稿更贴暗色剧场 */
+section.dsec svg{--d-vermilion:var(--accent)}
+section.dsec > .wrap3 > svg{animation:sym-rise-in .7s var(--d-ease) both}
+@keyframes sym-rise-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* 大号状态码：赭黄渐变描字，像灯箱亮起 */
+.heading-hero{background:linear-gradient(180deg,var(--accent),var(--accent-2));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* 空状态：每个 .empty3 顶部补一张手绘线稿（没有自带 doodle 的也会自动有） */
+.empty3{position:relative}
+.empty3::before{
+  content:"";display:block;width:clamp(96px,16vw,130px);height:auto;aspect-ratio:120/90;
+  margin:0 auto 10px;
+  background:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 90' fill='none' stroke='%23C69B67' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'><path d='M16 66 C32 52 44 76 60 62 S90 46 106 64'/><circle cx='60' cy='36' r='13'/><path d='M54 36 l5 5 l9 -10'/><path d='M28 28 q9 -11 18 -4' opacity='.45'/><path d='M76 26 q9 -9 18 -2' opacity='.45'/></svg>") center/contain no-repeat;
+  animation:sym-float-y 4.5s ease-in-out infinite}
+/* 首页「今日开演」空态自带的 doodle 也走同款摆动 + 赭黄 */
+.empty3__doodle{stroke:var(--accent);animation:sym-float-y 4.5s ease-in-out infinite}
+@keyframes sym-float-y{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+/* 减少动态：插画与浮起都静下来 */
+@media (prefers-reduced-motion: reduce){
+  section.dsec > .wrap3 > svg,
+  .empty3::before,
+  .empty3__doodle{animation:none}
+}
+
