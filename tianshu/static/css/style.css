@@ -423,7 +423,11 @@ input[type=file]:hover::file-selector-button{background:var(--ink);color:var(--p
 .act .sub{margin-left:auto;font-size:var(--fs-xs);color:var(--ink-4)}
 
 /* ============================ 11. 认证页 ============================ */
-.auth-bg{min-height:100vh;background:var(--paper);display:flex;flex-direction:column}
+/* 登录/欢迎页的骨架：**body 本身**是 flex 纵向容器（auth-stage 的 flex:1 靠它撑满一屏）；
+   .auth-bg 是老版留下的**空装饰层** —— 绝不能按普通块渲染，否则它自己占一整屏，
+   卡片全被顶到屏幕外（线上"内容跑到页面底部"就是这个：2026-09 踩过）。 */
+body.auth-body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+.auth-bg{position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--paper)}
 /* 登录页三件套（top / 卡片 / foot）**纵向居中**排列。
    ⚠️ 2026-09 踩过的坑：这里曾改成横向 row、420px 约束放在模板没用的 .auth-body 上 ——
    结果三件套被挤成三条竖排窄条（线上截图）。约束必须写在真正渲染的元素自己身上。 */
