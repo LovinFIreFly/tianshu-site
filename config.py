@@ -58,6 +58,8 @@ SETTINGS_DEFAULT = {
     # 可选值见 business.SKINS；二选一留空就回退到下面的 skin（历史部署兼容用）
     "skin_desktop": "playbill",
     "skin_mobile": "playbill",
+    # 手机端方案：app=独立手机站(/m，与桌面站完全分开)；legacy=沿用旧原生层(skin_mobile)
+    "mobileMode": "app",
     # 历史兼容：单款式旧值，二选一都没配时回退到这里
     "skin": "playbill",
     # 店铺实拍（"真实照片前置"用）：后台「门店设置」里传，首页会挂一条照片墙

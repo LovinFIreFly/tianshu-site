@@ -101,6 +101,9 @@ def create_app():
     app.register_blueprint(user.bp)
     app.register_blueprint(dm.bp)
     app.register_blueprint(admin.bp)
+    # 手机端独立站（v2）：与桌面站完全独立的一套静态移动站点，不碰数据库
+    from tianshu.views import mobile_site
+    app.register_blueprint(mobile_site.bp)
 
     @app.context_processor
     def inject_globals():
@@ -179,6 +182,33 @@ def create_app():
             rest = {k: val for k, val in request.args.items() if k != 'shell'}
             qs = urlencode(rest)
             return redirect(request.path + (('?' + qs) if qs else ''))
+
+    @app.before_request
+    def mobile_front():
+        """手机端独立站分流：手机访客默认进 /m（与桌面站完全分开）。
+
+        - 后台「门店设置 → 手机端方案」可切回 legacy（继续用旧的原生层 skin_mobile）；
+        - 网址带 ?device=desktop 或曾经设过该覆盖，则留在桌面站（方便手机上预览桌面版）；
+        - 后台 / 工作台 / 静态资源 / 健康检查 不受影响；/m 自身不重定向（防回环）。
+        """
+        import re as _re
+        p = request.path
+        if p.startswith(('/m', '/static', '/health')):
+            return
+        if p.startswith(('/admin', '/dm')):
+            return
+        if request.args.get('device') == 'desktop':
+            session['device_override'] = 'desktop'
+            return
+        if session.get('device_override') == 'desktop':
+            return
+        if business.get_settings().get('mobileMode', 'app') != 'app':
+            return
+        ua = request.headers.get('User-Agent') or ''
+        is_mobile = ('TianshuApp' in ua) or bool(
+            _re.search(r'(?:iPhone|iPod|Android|Mobile|BlackBerry|IEMobile|Opera Mini|Windows Phone)', ua or '', _re.I))
+        if is_mobile and not p.startswith('/m'):
+            return redirect('/m')
 
     @app.before_request
     def csrf_guard():

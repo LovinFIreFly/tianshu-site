@@ -698,6 +698,9 @@ def settings():
         rows['skin_desktop'] = f.get('skin_desktop')
     if f.get('skin_mobile') in business.SKINS:
         rows['skin_mobile'] = f.get('skin_mobile')
+    # 手机端方案：独立手机站(app) / 沿用旧原生层(legacy) —— 只认这两个值
+    if f.get('mobileMode') in ('app', 'legacy'):
+        rows['mobileMode'] = f.get('mobileMode')
     # 历史兼容：单款式旧值（二选一都没配时回退用）
     if f.get('skin') in business.SKINS:
         rows['skin'] = f.get('skin')

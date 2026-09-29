@@ -267,6 +267,13 @@
           <option value="{{ k }}" {% if (settings.skin_mobile or settings.skin) == k %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select></div>
+      <div class="field"><label>手机端方案（决定手机访客看到哪套界面）</label>
+        <select name="mobileMode">
+          <option value="app" {% if settings.mobileMode != 'legacy' %}selected{% endif %}>独立手机站（全新从零搭建 · 推荐）</option>
+          <option value="legacy" {% if settings.mobileMode == 'legacy' %}selected{% endif %}>沿用旧原生层（skin_mobile 那套）</option>
+        </select>
+        <p class="sub" style="margin-top:6px">选「独立手机站」后，手机访客会自动进 <code>/m</code>（与桌面站完全分开、不共享样式与数据）；
+          想用手机看桌面版，网址加 <code>?device=desktop</code> 即可。</p></div>
         <p class="sub" style="margin-top:6px">想先看看效果：在任意页面网址后面加 <code>?skin=款式</code>
           （例 <code>?skin=monolith</code>）—— 只有管理员能预览，客人看不到。<br>
           款式换的是<b>配色 / 字体 / 圆角</b>（不换版式），手机端会自动叠一层原生布局。</p>
