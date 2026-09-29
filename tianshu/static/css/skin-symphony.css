@@ -200,3 +200,65 @@ section.dsec > .wrap3 > svg{transform:none}
 
 /* 焦点环 */
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ============================================================================
+   P2 · 布局 / 栅格 / 空间（按建议继续）
+   ========================================================================== */
+
+/* 三·Hero：全出血背景 + 左对齐编辑式排版 + 右侧视觉锚点 */
+.dhero{background:transparent;position:relative;overflow:hidden}
+.dhero::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(120% 80% at 12% 8%, rgba(198,155,103,.12), transparent 48%),
+    radial-gradient(100% 70% at 88% 92%, rgba(94,106,210,.10), transparent 52%),
+    linear-gradient(180deg,#0B0D12 0%,#08090a 70%);
+  background-attachment:fixed}
+.dhero > .wrap3{position:relative;z-index:1}
+.dhero__title{font-size:clamp(40px,6.4vw,76px);line-height:.98;letter-spacing:-.03em;text-align:left}
+.dhero__title .ln > i{transform:none}     /* 关掉入场遮罩位移，改直接显示 */
+.dhero__sub{max-width:46ch;font-size:16px}
+.dhero .sform3{width:min(720px,100%);margin:clamp(24px,2.6vw,32px) 0 0}
+.sform3__in{height:52px;font-size:16px}
+.sform3__btn{height:52px;padding:0 22px;font-weight:600}
+.dhero__cta{margin-top:18px}
+.dhero__cta .b3--solid{background:var(--accent);color:#0B0D12}
+.dhero__cta a:nth-child(2){background:transparent;border-color:var(--rule);color:var(--ink)}
+.dhero__cta a:nth-child(2):hover{background:rgba(255,255,255,.08)}
+
+/* 三·右侧「今夜开演」做成一张海报式视觉锚点（无图时用渐变占位） */
+.dhero__side .board3{position:relative;overflow:hidden;background:linear-gradient(160deg,#1b1d22 0%,#101216 100%);
+  border:1px solid var(--rule);border-radius:var(--r-lg);box-shadow:var(--sh-2);padding:20px;transform:none}
+.dhero__side .board3::before{content:"";display:block;height:132px;margin:-20px -20px 16px;
+  background:
+    radial-gradient(80% 120% at 20% 0%, rgba(198,155,103,.5), transparent 60%),
+    radial-gradient(90% 120% at 90% 10%, rgba(94,106,210,.5), transparent 55%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,.04) 0 2px, transparent 2px 9px),
+    #15171c;
+  border-radius:var(--r-lg) var(--r-lg) 0 0}
+.dhero__side .board3__head h2{font-size:20px}
+
+/* 三·统计行 → Bento：主次不等宽 + 数字放大到 48px + 紧凑成组 */
+.ticker3{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:1px;
+  background:var(--rule);border:1px solid var(--rule);border-radius:var(--r-lg);overflow:hidden;margin-top:28px}
+.ticker3 > div{background:var(--paper-2);padding:16px 18px;display:flex;flex-direction:column;justify-content:center}
+.ticker3 b{font-size:48px;line-height:1;font-weight:600;color:var(--ink);letter-spacing:-.03em}
+.ticker3 span{margin-top:6px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+
+/* 三·区块间距节奏：40 / 64 / 120 */
+.dsec{padding:clamp(40px,6vw,64px) 0}
+.dsec--stage{padding:clamp(56px,8vw,120px) 0}
+.wrap3{max-width:1024px;padding-left:clamp(16px,4vw,48px);padding-right:clamp(16px,4vw,48px)}
+.script-desc,.desc3,.rev3__t,.comm-post__t{max-width:624px}
+
+/* 三·侧栏 232px + 1px 分隔；主内容让出 */
+.adm-side{width:232px;border-right:1px solid var(--hair)}
+.adm-main{margin-left:232px}
+
+/* 三·卡片内边距 24，标题 18/600 */
+.pcard3__title{font-size:18px;font-weight:600}
+.ccard3__title{font-size:18px;font-weight:600}
+
+/* 七·卡片 hover 缩放 1.02 + 平滑过渡 */
+.pcard3,.ccard3,.rev3,.me-card{transition:transform .2s var(--d-ease),box-shadow .2s var(--d-ease),border-color .2s}
+.pcard3:hover,.ccard3:hover{transform:translateY(-2px) scale(1.02)}
+
