@@ -57,7 +57,7 @@
         <div class="block3">
           <div class="row" style="justify-content:space-between;align-items:flex-start">
             <div class="row" style="gap:8px">
-              <b style="font-family:var(--d-serif);font-size:16px">{{ b.emoji or '🎭' }} {{ b.title }}</b>
+              <b class="me-booking-title">{{ b.emoji or '🎭' }} {{ b.title }}</b>
               <span class="tag3">{{ b.mode or '拼车' }}</span>
               {% if b.role %}<span class="tag3">{{ b.role }}</span>{% endif %}
               {% if b.status == 'cancelled' %}<span class="tag3">已取消</span>

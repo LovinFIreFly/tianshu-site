@@ -1024,6 +1024,7 @@ html.ts-leaving body{opacity:0;transform:translateY(-10px) scale(.995);
   place-items:center;background:var(--d-ink);color:var(--d-paper-3);
   font-family:var(--d-serif);font-size:22px}
 .me-card h3{margin:var(--d-s4) 0 4px;font-family:var(--d-serif);font-size:19px;font-weight:700}
+.me-booking-title{font-family:var(--d-serif);font-size:16px;font-weight:700}
 .p-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--d-rule);
   border:1px solid var(--d-rule);margin-top:var(--d-s4)}
 .p-stats > *{background:var(--d-paper-3);padding:10px 6px;text-align:center}
@@ -1087,7 +1088,8 @@ h2.heading-section{margin:0 0 var(--d-s3)}
    深色模式下渲染成一个黑疙瘩（截图里那个方块）。改成自己画的勾选框。 */
 .agree input{position:absolute;opacity:0;width:0;height:0}
 .agree .dot{display:inline-block;flex:0 0 auto;width:16px;height:16px;position:relative;
-  border:1px solid var(--d-rule-2);border-radius:3px;background:var(--d-paper-3);
+  border:1px solid var(--d-ink-3);border-radius:3px;background:var(--d-paper-2);
+  box-shadow:inset 0 0 0 1px var(--d-paper-3);
   transition:background .18s,border-color .18s}
 .agree .dot::after{content:"";position:absolute;left:4.5px;top:1px;width:4px;height:8px;
   border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg) scale(.4);opacity:0;
@@ -1096,6 +1098,7 @@ h2.heading-section{margin:0 0 var(--d-s3)}
 .agree:has(input:checked) .dot{background:var(--d-accent);border-color:var(--d-accent)}
 .agree:has(input:checked) .dot::after{transform:rotate(45deg) scale(1);opacity:1}
 .code-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
+@media(max-width:760px){.code-row{grid-template-columns:1fr}}
 .btn-code{border:1px solid var(--d-rule-2);background:transparent;color:var(--d-ink);border-radius:var(--d-r);
   padding:11px 14px;font-size:12.5px;cursor:pointer;white-space:nowrap;transition:background .2s,border-color .2s}
 .btn-code:hover:not(:disabled){background:var(--d-paper-2);border-color:var(--d-ink)}
@@ -1231,3 +1234,61 @@ h2.heading-section{margin:0 0 var(--d-s3)}
 @media(max-width:860px){.board3__list{grid-template-columns:1fr}}
 .board3__row{grid-template-columns:auto 1fr}
 .board3__s{grid-column:1/-1;text-align:left;margin-top:6px}
+
+/* ============================================================================
+   19. 手机端（≤760px）再收一遍 —— 针对 App WebView / 窄屏
+   ----------------------------------------------------------------------------
+   用户截图里登录页和「我的」页面字号/间距都偏大，有些元素被撑出屏幕。
+   这里把登录卡、订单卡、评价表再压小一档，同时把「记住我」那个小方框
+   的边框再加深，确保在浅色卡和 App 里都能一眼看见。
+   ========================================================================== */
+@media(max-width:760px){
+  /* ---------- 勾选框：必须看得见 ---------- */
+  .agree{font-size:13px}
+  .agree .dot{width:18px;height:18px;border-color:var(--d-ink-3);background:var(--d-paper-2)}
+
+  /* ---------- 登录 / 注册 / 找回密码 ---------- */
+  .auth-stage{padding:18px var(--d-pad)}
+  .auth-top{margin-bottom:16px}
+  .auth-card{padding:18px}
+  .auth-card h2{font-size:20px}
+  .auth-card > .sub{font-size:13px}
+  .auth-card .field > label{font-size:12px}
+  .auth-card .field > input,
+  .auth-card .field > select,
+  .auth-card .field > textarea{font-size:16px;padding:9px 11px} /* 16px 防 iOS 聚焦缩放 */
+  .auth-card form{gap:12px}
+  .auth-card .b3--wide{padding:11px 20px}
+  .auth-foot{font-size:10px;margin-top:16px}
+  .auth-foot .btn,.auth-foot .b3{padding:5px 9px;font-size:11px}
+  .foot-line{font-size:12px}
+
+  /* ---------- 我的页面 ---------- */
+  .me-wrap{gap:14px}
+  .me-card{padding:14px}
+  .me-card .avatar{width:46px;height:46px;font-size:18px}
+  .me-card h3{font-size:16px}
+  .me-card .copy-mono{font-size:11px}
+  .p-stats b{font-size:14px}
+  .p-stats span{font-size:9px}
+
+  /* 预约/订单卡片 */
+  .block3{padding:12px;margin-bottom:12px}
+  .block3 .row{gap:6px}
+  .me-booking-title{font-size:15px}
+  .body-secondary{font-size:13px;line-height:1.6}
+  .code-big{font-size:16px;letter-spacing:.1em}
+
+  /* 评价表单：手机上竖着排，别撑出去 */
+  .block3 form .row{align-items:stretch;flex-direction:column;gap:10px}
+  .block3 form .field{min-width:0;width:100%}
+  .block3 form .field[style*="max-width"]{max-width:none !important}
+  .block3 form .agree{flex-direction:row}
+  .stars label{font-size:20px}
+
+  /* 通用辅助：手机上再小一号 */
+  .note3{padding:12px 14px;font-size:12.5px}
+  .rev3__t{font-size:13.5px}
+  .myrev3{padding:10px 12px}
+  .myrev3__t{font-size:13px}
+}
