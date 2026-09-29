@@ -115,7 +115,7 @@
   function buildHome() {
     const nav = D.nav.map((n, i) => {
       return '<button class="grid-nav__item reveal" style="transition-delay:' + (i * 20) + 'ms">' +
-        '<span class="grid-nav__ic">' + n.icon + "</span><span class="grid-nav__lb">" + esc(n.label) + "</span></button>";
+        '<span class="grid-nav__ic">' + n.icon + '</span><span class="grid-nav__lb">' + esc(n.label) + '</span></button>';
     }).join("");
 
     const sessions = D.sessions.map((s, i) => {
