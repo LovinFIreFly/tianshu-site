@@ -60,5 +60,5 @@
     fav: {{ ('1' if only_fav else '')|tojson }}
   };
 </script>
-<script src="{{ url_for('static', filename='js/library.js', v=1) }}" defer></script>
+<script src="{{ url_for('static', filename='js/library.js', v=static_v('js/library.js')) }}" defer></script>
 {% endblock %}
