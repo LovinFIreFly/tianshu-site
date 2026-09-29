@@ -1,0 +1,211 @@
+/* ============================================================================
+   甜薯 · 手机端原生布局层（mobile.css）
+   只在手机端加载（base.html 按设备引入）。叠在 design3 之上、皮肤之下，
+   所以「配色 / 字体 / 圆角」仍由后台选的「手机端款式」决定，这里只管
+   手机原生结构 + 流畅动效 + 触控手感。
+   设计主张（来自《移动端优秀 UI 设计 Top30》落地清单）：
+     · 单一强调色，克制使用（只点在主行动 / 选中态）
+     · 8px 间距栅格、卡片 12–16px 圆角、CTA 全圆角胶囊
+     · 触控目标 ≥ 44px；输入框 16px 防 iOS 缩放
+     · 底部 Tab ~49pt + 安全区；原生毛玻璃顶栏
+     · 动效 150–300ms、缓出 expo、列表错峰入场；尊重「减少动态」
+   ========================================================================== */
+html[data-device="mobile"] {
+
+  /* —— 手机端专属令牌（覆盖 design3 的基础值，皮肤仍可再盖色） —— */
+  --d-s1: 4px;  --d-s2: 8px;  --d-s3: 12px; --d-s4: 16px;
+  --d-s5: 24px; --d-s6: 32px;
+  --d-r: 14px; --d-r-lg: 18px; --d-pill: 9999px;
+  --tap: 44px;                                   /* 最小触控目标 */
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --shell-h: calc(50px + var(--safe-b));         /* 底栏总高（含安全区） */
+  --bar-h: calc(52px + var(--safe-t));           /* 顶栏总高 */
+}
+
+/* —— 安全区与页面骨架 —— */
+html[data-device="mobile"] body {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;       /* 去掉移动端点击灰块 */
+}
+html[data-device="mobile"] .wrap3 {
+  max-width: 100%;
+  padding-inline: 16px;
+}
+html[data-device="mobile"] .page {
+  padding: calc(var(--bar-h) + 8px) 0 calc(var(--shell-h) + 16px);
+  animation: m-page .26s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes m-page { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* —— 顶栏：毛玻璃、贴顶、收起副标题与栏目条（底栏已接管导航） —— */
+html[data-device="mobile"] .tnav {
+  position: sticky; top: 0; z-index: 60;
+  background: color-mix(in srgb, var(--d-stage) 86%, transparent);
+  backdrop-filter: saturate(150%) blur(14px);
+  -webkit-backdrop-filter: saturate(150%) blur(14px);
+  border-bottom: 1px solid var(--d-hair);
+}
+html[data-device="mobile"] .tnav__bar {
+  min-height: var(--bar-h);
+  padding: var(--safe-t) 12px 8px;
+  gap: 10px;
+}
+html[data-device="mobile"] .tnav__names i { display: none; }      /* 省一行高度 */
+html[data-device="mobile"] .tnav__strip {                        /* 栏目条在手机端让位给底栏 */
+  display: none;
+}
+html[data-device="mobile"] .tnav__search {                       /* 顶栏里的搜索收起，首页自带大搜索 */
+  display: none;
+}
+html[data-device="mobile"] .tnav__acts { gap: 8px; }
+html[data-device="mobile"] .tnav__who span { display: none; }    /* 手机端顶栏只留头像 */
+
+/* —— 内容卡片：满宽、留呼吸、去重阴影，改轻量描边 —— */
+html[data-device="mobile"] .block3,
+html[data-device="mobile"] .pcard3,
+html[data-device="mobile"] .ccard3,
+html[data-device="mobile"] .rev3,
+html[data-device="mobile"] .me-card {
+  margin-inline: 0;
+  border-radius: var(--d-r-lg);
+  box-shadow: none;
+  border-color: var(--d-hair);
+}
+html[data-device="mobile"] .block3 + .block3,
+html[data-device="mobile"] .pcard3,
+html[data-device="mobile"] .ccard3 { margin-top: 12px; }
+
+/* 卡片按压反馈：轻微回弹，像原生列表项 */
+html[data-device="mobile"] .pcard3,
+html[data-device="mobile"] .ccard3,
+html[data-device="mobile"] .block3,
+html[data-device="mobile"] .b3 {
+  transition: transform .12s cubic-bezier(.22,1,.36,1), box-shadow .2s, background .2s, border-color .2s;
+}
+html[data-device="mobile"] .pcard3:active,
+html[data-device="mobile"] .ccard3:active,
+html[data-device="mobile"] .block3:active { transform: scale(.975); }
+
+/* —— 按钮：全圆角胶囊 + 够大的触控高度 —— */
+html[data-device="mobile"] .b3 {
+  min-height: var(--tap);
+  border-radius: var(--d-pill);
+  font-size: 15px;
+  padding: 0 20px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+html[data-device="mobile"] .b3:active { transform: scale(.96); }
+html[data-device="mobile"] .b3--solid,
+html[data-device="mobile"] .b3--accent { box-shadow: 0 6px 18px -8px var(--d-accent); }
+html[data-device="mobile"] .dhero__cta { flex-direction: column; align-items: stretch; }
+html[data-device="mobile"] .dhero__cta .b3 { width: 100%; }
+
+/* —— 表单：16px 防 iOS 缩放，44px 触控高 —— */
+html[data-device="mobile"] .field input,
+html[data-device="mobile"] .field select,
+html[data-device="mobile"] .field textarea {
+  min-height: var(--tap);
+  font-size: 16px;
+  border-radius: 12px;
+}
+html[data-device="mobile"] .field label,
+html[data-device="mobile"] .caption { font-size: 12.5px; }
+
+/* —— 标签 / 胶囊：紧凑、克制 —— */
+html[data-device="mobile"] .tag3,
+html[data-device="mobile"] .chip3,
+html[data-device="mobile"] .badge,
+html[data-device="mobile"] .pill {
+  font-size: 11.5px;
+  padding: 4px 10px;
+  border-radius: var(--d-pill);
+}
+
+/* —— 底部 Tab：原生感（毛玻璃 + 安全区 + 选中态上提） —— */
+html[data-device="mobile"] .mobtab {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
+  display: flex; gap: 0;
+  height: var(--shell-h);
+  padding: 4px var(--safe-b) calc(4px + var(--safe-b));
+  background: color-mix(in srgb, var(--d-stage) 90%, transparent);
+  backdrop-filter: saturate(150%) blur(16px);
+  -webkit-backdrop-filter: saturate(150%) blur(16px);
+  border-top: 1px solid var(--d-hair);
+}
+html[data-device="mobile"] .mobtab a {
+  flex: 1 1 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-height: 44px;
+  font-size: 10.5px;
+  color: var(--d-ink-3);
+  transition: color .2s, transform .2s cubic-bezier(.22,1,.36,1);
+}
+html[data-device="mobile"] .mobtab a .ico { font-size: 20px; line-height: 1; }
+html[data-device="mobile"] .mobtab a.on {
+  color: var(--d-accent);
+  transform: translateY(-1px);
+}
+html[data-device="mobile"] .mobtab a.on .ico { transform: translateY(-1px); }
+
+/* —— 列表 / 卡片错峰入场（不依赖 JS，加载即播；尊重 reduced-motion） —— */
+html[data-device="mobile"] .block3,
+html[data-device="mobile"] .pcard3,
+html[data-device="mobile"] .ccard3,
+html[data-device="mobile"] .rev3 {
+  animation: m-rise .34s cubic-bezier(.22,1,.36,1) both;
+}
+html[data-device="mobile"] .block3:nth-child(2),
+html[data-device="mobile"] .pcard3:nth-child(2),
+html[data-device="mobile"] .ccard3:nth-child(2) { animation-delay: .05s; }
+html[data-device="mobile"] .block3:nth-child(3),
+html[data-device="mobile"] .pcard3:nth-child(3),
+html[data-device="mobile"] .ccard3:nth-child(3) { animation-delay: .1s; }
+html[data-device="mobile"] .block3:nth-child(4),
+html[data-device="mobile"] .pcard3:nth-child(4),
+html[data-device="mobile"] .ccard3:nth-child(4) { animation-delay: .15s; }
+html[data-device="mobile"] .block3:nth-child(n+5),
+html[data-device="mobile"] .pcard3:nth-child(n+5),
+html[data-device="mobile"] .ccard3:nth-child(n+5) { animation-delay: .2s; }
+@keyframes m-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+/* —— 弹层（如果有 .modal / .sheet）按底部抽屉处理 —— */
+html[data-device="mobile"] .modal,
+html[data-device="mobile"] .sheet {
+  align-items: flex-end;
+  padding: 0;
+}
+html[data-device="mobile"] .modal > *,
+html[data-device="mobile"] .sheet > * {
+  width: 100%;
+  border-radius: 18px 18px 0 0;
+  animation: m-sheet .28s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes m-sheet { from { transform: translateY(100%); } to { transform: none; } }
+
+/* —— 页脚：手机端收一收，别占太多 —— */
+html[data-device="mobile"] .dfoot { padding-bottom: calc(var(--shell-h) + 8px); }
+html[data-device="mobile"] .dfoot__grid { grid-template-columns: 1fr; gap: 18px; }
+html[data-device="mobile"] .dfoot__slogan { font-size: 13px; }
+
+/* —— 首页 Hero：左对齐、留白、搜索框满宽 —— */
+html[data-device="mobile"] .dhero__title { text-align: left; margin-left: 0; }
+html[data-device="mobile"] .dhero__sub { margin-left: 0; }
+html[data-device="mobile"] .dhero .sform3 { margin-left: 0; width: 100%; }
+html[data-device="mobile"] .dhero__side { display: none; }   /* 手机端不摆海报，省空间 */
+html[data-device="mobile"] .ticker3 {
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 8px;
+}
+
+/* —— 降噪：开了「减少动态」就全静 —— */
+@media (prefers-reduced-motion: reduce) {
+  html[data-device="mobile"] * {
+    animation-duration: .001ms !important;
+    animation-delay: 0 !important;
+    transition-duration: .001ms !important;
+  }
+}

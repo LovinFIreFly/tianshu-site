@@ -54,8 +54,11 @@ SETTINGS_DEFAULT = {
     "mailKey": "",             # Resend API Key（re_ 开头）
     "mailFrom": "",            # 发件人，例：noreply@lovinfirefly.cn（Resend 里验证过的域名）
     "mailFromName": "甜薯剧本杀",   # 发件人昵称（收件箱里显示的名字）；留空 = 只显示邮箱地址
-    # 站点外观款式（**一次设置，全站统一**：手机端和电脑端都跟着变，不用每个人自己选）
-    # 可选值见 business.SKINS；改这里只改"默认"，平时在后台「门店设置 → 外观款式」里选
+    # 站点外观款式：**手机端 / 电脑端分开选**（后台「门店设置 → 外观款式」里各挑一个）
+    # 可选值见 business.SKINS；二选一留空就回退到下面的 skin（历史部署兼容用）
+    "skin_desktop": "playbill",
+    "skin_mobile": "playbill",
+    # 历史兼容：单款式旧值，二选一都没配时回退到这里
     "skin": "playbill",
     # 店铺实拍（"真实照片前置"用）：后台「门店设置」里传，首页会挂一条照片墙
     "shopPhotos": [],          # 形如 [{'url':'/img/shop/...','cap':'前台'}, ...]

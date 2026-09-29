@@ -692,8 +692,13 @@ def settings():
     # 发件人昵称：客人收件箱里显示的名字（留空 = 只显示地址），见 business.mail_from_name
     if f.get('mailFromName') is not None:
         rows['mailFromName'] = business.clean(f.get('mailFromName'), 40)
-    # 外观款式：只认白名单里的值 —— 这个值会拼进 CSS 文件名，
-    # 不校验的话等于让人指定任意静态文件（路径穿越的老套路），所以必须卡死。
+    # 外观款式：手机端 / 电脑端分开选（都只认白名单里的值 —— 会被拼进 CSS 文件名，
+    # 不校验等于让人指定任意静态文件，路径穿越老套路，必须卡死）。两者都留空就回退到 skin。
+    if f.get('skin_desktop') in business.SKINS:
+        rows['skin_desktop'] = f.get('skin_desktop')
+    if f.get('skin_mobile') in business.SKINS:
+        rows['skin_mobile'] = f.get('skin_mobile')
+    # 历史兼容：单款式旧值（二选一都没配时回退用）
     if f.get('skin') in business.SKINS:
         rows['skin'] = f.get('skin')
     # 网站版式（一代 / 二代）：决定客人看到的那套模板和样式表。同样只认白名单 ——

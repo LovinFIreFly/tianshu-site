@@ -255,15 +255,21 @@
           <code>?ui=1</code>）—— 只有管理员能预览，客人看不到。<br>
           两套的差别是<b>整站版式和配色</b>；功能、数据、订单完全一样，随时可以换回来。
           后台和 DM 工作台不受影响，一直用新版。</p></div>
-      <div class="field"><label>外观款式（选了全站统一：手机端和电脑端一起变，不用客人自己选）</label>
-        <select name="skin">
+      <div class="field"><label>电脑端款式（客人用手机 / 平板访问时不影响，互不干扰）</label>
+        <select name="skin_desktop">
           {% for k, label in skins.items() %}
-          <option value="{{ k }}" {% if _skin_now == k %}selected{% endif %}>{{ label }}</option>
+          <option value="{{ k }}" {% if (settings.skin_desktop or settings.skin) == k %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
-        </select>
+        </select></div>
+      <div class="field"><label>手机端款式（小屏 / App 内访问时生效；会再叠一层手机原生布局 + 流畅动效）</label>
+        <select name="skin_mobile">
+          {% for k, label in skins.items() %}
+          <option value="{{ k }}" {% if (settings.skin_mobile or settings.skin) == k %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select></div>
         <p class="sub" style="margin-top:6px">想先看看效果：在任意页面网址后面加 <code>?skin=款式</code>
           （例 <code>?skin=monolith</code>）—— 只有管理员能预览，客人看不到。<br>
-          款式换的是<b>配色 / 字体 / 圆角</b>（不换版式），一代二代都生效。</p></div>
+          款式换的是<b>配色 / 字体 / 圆角</b>（不换版式），手机端会自动叠一层原生布局。</p>
       <div class="field full"><label>Resend API Key（<code>re_</code> 开头。存着的会打码显示；<b>留空 = 不改</b>，贴上新的才会替换）</label>
         <input name="mailKey" type="password"
                value="{{ ('••••••••' + settings.mailKey[-4:]) if settings.mailKey else '' }}"

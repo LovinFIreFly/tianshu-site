@@ -3,11 +3,15 @@
    款式（skin）写在 <html data-skin>，五套款式的首屏版式由 design3.css 的 [data-skin] 段接管。 #}
 {% set _skins = skins if skins is defined else {} %}
 {% set _admin = my_admin if my_admin is defined else False %}
+{% set _is_mobile = is_mobile if is_mobile is defined else False %}
+{% set _device = 'mobile' if _is_mobile else 'desktop' %}
 {% set _q_skin = request.args.get('skin') if request.args.get('skin') is defined else none %}
+{# 手机端 / 电脑端款式分开选：手机壳 UA / ?shell=mobile / 移动浏览器 → 走 skin_mobile #}
+{% set _skin_for_device = (settings.skin_mobile if _is_mobile else settings.skin_desktop) or settings.skin %}
 {% set cur_skin = (_q_skin if (_admin and _q_skin in _skins)
-                   else (settings.skin if settings.skin in _skins else 'playbill')) %}
+                   else (_skin_for_device if _skin_for_device in _skins else 'playbill')) %}
 <!DOCTYPE html>
-<html lang="zh-CN" data-skin="{{ cur_skin }}" {% if theme == 'dark' %}data-theme="dark"{% endif %}>
+<html lang="zh-CN" data-skin="{{ cur_skin }}" data-device="{{ _device }}" {% if theme == 'dark' %}data-theme="dark"{% endif %}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -22,6 +26,10 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=static_v('css/style.css')) }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/design2.css', v=2) }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/design3.css', v=static_v('css/design3.css')) }}">
+{% if _is_mobile %}
+  {# 手机原生布局 + 流畅动效层：只在手机端加载，叠在 design3 之上、皮肤之下 #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css', v=static_v('css/mobile.css')) }}">
+{% endif %}
 {% if cur_skin != 'playbill' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/skin-' ~ cur_skin ~ '.css',
                                 v=static_v('css/skin-' ~ cur_skin ~ '.css')) }}">

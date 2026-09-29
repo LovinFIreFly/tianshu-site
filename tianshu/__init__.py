@@ -134,6 +134,21 @@ def create_app():
                 'static_v': static_v,
                 'skins': business.SKINS}                           # 外观款式（后台统一切换全站）
 
+    @app.context_processor
+    def device_guess():
+        """设备判定（手机端 / 电脑端）：决定加载哪套款式 + 是否叠手机原生布局层。
+
+        优先级：网址 ?shell=mobile 已在 mark_shell() 记进 session；
+        其次手机壳 App 的 UA 带 TianshuApp 标记；最后按 UA 平台兜底。
+        """
+        import re as _re
+        # 直接用请求头读 UA：比 werkzeug 的 user_agent 解析更稳（测试客户端也能拿到）
+        ua = (request.headers.get('User-Agent') or '')
+        is_mobile = (session.get('shell') == 'mobile'
+                     or 'TianshuApp' in ua
+                     or bool(_re.search(r'(?:iPhone|iPod|Android|Mobile|BlackBerry|IEMobile|Opera Mini|Windows Phone)', ua or '', _re.I)))
+        return {'is_mobile': is_mobile, 'device': 'mobile' if is_mobile else 'desktop'}
+
     @app.before_request
     def pick_ui():
         """一代 / 二代切换：真换了就把模板缓存清一次 ——
