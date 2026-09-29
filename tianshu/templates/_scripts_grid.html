@@ -1,0 +1,42 @@
+{# 剧本库卡片网格片段：scripts 视图在 ?partial=1 时只渲染这段，
+   前端点分类标签用 fetch 拉下来原地替换 .grid，整页不跳。
+   （这是从 scripts.html 抽出来的，结构和那里的 .grid 完全一致） #}
+{% if scripts %}
+<div class="grid mt" data-spa-grid>
+  {% for s in scripts %}
+  <div class="juben" data-anim>
+    <a href="{{ url_for('public.script_detail', sid=s.id) }}">
+      <div class="cover">
+        {% if s.img %}<img class="cover-img" src="{{ s.img }}" alt="{{ s.title }}">{% else %}{{ s.emoji or '🎭' }}{% endif %}
+        {% if s.isNew %}<span class="flag" style="background:linear-gradient(135deg,#fb923c,#f97316)">上新</span>
+        {% elif s.diff and s.diff <= 2 %}<span class="flag" style="background:rgba(52,211,153,.9)">新手友好</span>{% endif %}
+        {% if rating.get(s.id|string) %}<span class="score">★ {{ rating[s.id|string] }}</span>{% endif %}
+      </div>
+      <div class="body">
+        <h4>{{ s.title }}</h4>
+        <div class="meta">{{ s.players or '—' }} · {{ s.dur or '—' }} · {{ s.type or '盒装' }}</div>
+        <div class="foot">
+          <span class="price">¥{{ s.price|int }}<small>/人</small></span>
+          <span class="book">去看看</span>
+        </div>
+      </div>
+    </a>
+    {% if s.allowRolePick or s.tags %}
+    <div class="meta" style="padding:0 16px 14px">
+      {% if s.allowRolePick %}<span class="badge">可提前选角</span>{% endif %}
+      {% for t in (s.tags or [])[:2] %}<span class="badge">{{ t }}</span>{% endfor %}
+    </div>
+    {% endif %}
+    {# 右上角那颗心：data-ajax-fav 让全局 JS 走 fetch，不刷新整页 #}
+    <form method="post" action="{{ url_for('public.fav', sid=s.id) }}" data-ajax-fav>
+      <button class="fav-btn {{ 'on' if s.id|string in favs }}" type="submit"
+              title="{{ '取消收藏' if s.id|string in favs else '收藏这个本' }}" aria-label="收藏">
+        {{ '❤' if s.id|string in favs else '♡' }}
+      </button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="panel empty" data-anim>没找到符合条件的本子，换个词试试</div>
+{% endif %}

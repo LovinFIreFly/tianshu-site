@@ -25,6 +25,12 @@
     each(root.querySelectorAll('.tabpane'), function (p) {
       var on = p.getAttribute('data-tab') === key;
       p.classList.toggle('on', on);
+      // 切出来时播一段淡入 + 轻微上移（精美但不抢戏），用 WAAPI 不污染 CSS、每次都重播
+      if (on && p.animate) {
+        p.animate(
+          [{opacity: 0, transform: 'translateY(10px)'}, {opacity: 1, transform: 'none'}],
+          {duration: 340, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'both'});
+      }
       hit = hit || on;
     });
     each(bar.querySelectorAll('[data-tab]'), function (b) {
@@ -35,6 +41,29 @@
     }
     return hit;
   }
+
+  /* 全站「收藏」按钮无刷新：任何页面里 <form data-ajax-fav> 提交都走 fetch，
+     csrf.js 已自动给 fetch 的 POST 带上 X-CSRF 头，所以令牌不用自己管。
+     失败（极少见）就退回普通提交，体验不降级。 */
+  document.addEventListener('submit', function (e) {
+    var f = e.target.closest && e.target.closest('form[data-ajax-fav]');
+    if (!f || !window.fetch) return;
+    e.preventDefault();
+    var btn = f.querySelector('button');
+    fetch(f.getAttribute('action') + '?ajax=1', {method: 'POST', headers: {'X-Requested-With': 'fetch'}})
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var on = !!d.on;
+        if (btn) {
+          btn.classList.toggle('on', on);
+          btn.textContent = on ? '❤' : '♡';
+          btn.title = on ? '取消收藏' : '收藏这个本';
+          if (btn.animate) btn.animate([{transform: 'scale(1)'}, {transform: 'scale(1.35)'}, {transform: 'scale(1)'}],
+            {duration: 220, easing: 'ease-out'});
+        }
+      })
+      .catch(function () { f.submit(); });
+  });
 
   function scrollToId(id) {
     var el = document.getElementById(id);

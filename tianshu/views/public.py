@@ -6,7 +6,7 @@
 """
 import os
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
 from tianshu import business
 from tianshu.db import db
@@ -118,9 +118,14 @@ def scripts():
             if t and t not in tags:
                 tags.append(t)
     st = business.stats()
+    rating = {k: v.get('rating') for k, v in st['byScript'].items()}
+    # SPA 筛选：带上 partial=1 时只返回卡片网格那一段 HTML（不含 base 布局），
+    # 前端点了分类标签用 fetch 拉这段、原地替换，网址始终是 /scripts，不会整页跳。
+    if request.args.get('partial') == '1':
+        return render_template('_scripts_grid.html', scripts=rows, favs=favs, rating=rating)
     return render_template('scripts.html', scripts=rows, tags=tags,
                            q=q, tag=tag, diff=diff, only_fav=only_fav, favs=favs,
-                           rating={k: v.get('rating') for k, v in st['byScript'].items()})
+                           rating=rating)
 
 
 @bp.get('/scripts/<int:sid>')
@@ -412,6 +417,10 @@ def fav(sid):
         flash('加进「想玩」了', 'ok')
     rec['sids'] = sids
     db.write('favs', rows)
+    # AJAX 收藏：前端那颗心点了用 fetch 打这个接口，成功后只回个 JSON，
+    # 前端自己改按钮状态，整页不刷新（剧本库 SPA 体验的一部分）。
+    if request.args.get('ajax') == '1' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'on': str(sid) in sids})
     return redirect(request.referrer or url_for('public.scripts'))
 
 

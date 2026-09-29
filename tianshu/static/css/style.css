@@ -726,6 +726,33 @@ details.spoiler[open] > summary{margin-bottom:var(--sp-3)}
   .btn-cta{height:48px}
 }
 
+/* ============================ 19.5 入场 / 微交互动画 ============================ */
+/* 首页 hero：一屏一件事，元素逐项淡入上移（从容不抢戏）。
+   只有首页有 .hero，所以这段只作用于首屏，不会污染其它页。 */
+.hero .wrap > *{animation:heroUp .7s cubic-bezier(.22,.61,.36,1) both}
+.hero .wrap > *:nth-child(1){animation-delay:.04s}
+.hero .wrap > *:nth-child(2){animation-delay:.12s}
+.hero .wrap > *:nth-child(3){animation-delay:.20s}
+.hero .wrap > *:nth-child(4){animation-delay:.28s}
+.hero .wrap > *:nth-child(5){animation-delay:.36s}
+.hero .wrap > *:nth-child(6){animation-delay:.44s}
+@keyframes heroUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+
+/* 列表 / 我的这种「main.wrap」页：进页面时整块轻轻落定（导航跳页也有"到位"感） */
+main.wrap{animation:pageIn .42s ease both}
+@keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* 剧本卡：hover 轻微抬起 + 封面图缓慢放大（克制，不晃眼） */
+.juben{transition:transform var(--t-fast) var(--ease)}
+.juben:hover{transform:translateY(-4px)}
+.juben .cover{overflow:hidden}
+.juben .cover-img{transition:transform .5s var(--ease)}
+.juben:hover .cover-img{transform:scale(1.06)}
+
+/* 面板 / 卡片：hover 轻抬起，回应操作 */
+.panel,.card,.adm-panel{transition:transform var(--t-fast) var(--ease)}
+.panel:hover,.card:hover{transform:translateY(-2px)}
+
 /* ============================ 20. 无障碍 / 降级 ============================ */
 button,[data-action],.lnk,.agree,.chip,.chip-sm,.pill,.tabbar button,.navi,.menu .mi,.cust-card,
 .juben .body .book{touch-action:manipulation}
