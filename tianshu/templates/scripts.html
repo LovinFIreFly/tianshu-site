@@ -26,7 +26,8 @@
     </div>
   </div>
 
-  <div class="toolbar3 toolbar3--sticky" style="border-bottom:0">
+  {# tag 栏不再吸顶跟随（用户嫌它在滚动时一直挂着影响观感）—— 就跟着页面走 #}
+  <div class="toolbar3" style="border-bottom:0">
     <div class="chips3 spa-filters" id="filters">
       <span class="chips3__lab">标签</span>
       {% for t in tags %}

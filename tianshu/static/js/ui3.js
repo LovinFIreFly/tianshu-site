@@ -173,9 +173,11 @@
   });
 
   /* ---------------------------------------------------------------- ⑥ 光斑 */
-  /* 首屏和"怎么玩"共用：光标在暗场里带一团印色光（--mx/--my 喂给 .glow3） */
-  if (!reduce) {
-    $$('.dhero, .how3').forEach(function (sec) {
+  /* 所有**暗场**都带这团印色光：首页首屏、怎么玩、剧本详情/车队详情/欢迎页的暗底首屏
+     —— 光标移到哪儿，暗红就跟着挪（--mx/--my 喂给 .glow3）。
+     只在桌面（有精确指针）才开：触屏上没光标，跟着手指跑反而怪。 */
+  if (!reduce && finePtr) {
+    $$('.dhero, .how3, .dsec--stage').forEach(function (sec) {
       var box = sec.classList.contains('how3') ? ($('.how3__pin', sec) || sec) : sec;
       sec.addEventListener('pointermove', function (e) {
         var r = box.getBoundingClientRect();

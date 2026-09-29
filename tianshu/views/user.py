@@ -266,10 +266,18 @@ def me():
             fav_ids = {str(x) for x in r.get('sids') or []}
     # 侧栏那三格里显示"已付定金"，代替原来的余额（余额功能先撤了）
     spent = sum(int(o.get('deposit') or 0) for o in orders if o.get('status') == 'paid')
+    # 我自己的评价（按预约 id 索引）：订单卡片里要把它摆出来 ——
+    # 只显示一个「已评价」太没交代，客人想看自己当时写了什么。
+    # 评价记录里没存手机号，但 bid 就是这条预约，而一条预约只有本人能评，
+    # 所以用「我的预约 id」反查最稳。
+    _mybids = {str(b.get('id')) for b in bookings}
+    _revs = db.rows('reviews')
+    my_reviews = {str(r.get('bid')): r for r in _revs if str(r.get('bid')) in _mybids}
     return render_template('me.html', u=u, bookings=bookings, orders=orders,
                            coupons=coupons, notices=business.my_notices(u, 20), spent=spent,
                            order_of=order_of, scripts=db.rows('scripts'), fav_ids=fav_ids,
-                           reviewed={r.get('bid') for r in db.rows('reviews')},
+                           reviewed={r.get('bid') for r in _revs},
+                           my_reviews=my_reviews,
                            msgs=business.my_messages(u), days=next_days(7))
 
 

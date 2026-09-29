@@ -153,11 +153,9 @@
               {# 玩完这一场：先付游玩费（全价）→ 等小客服确认 → 确认后定金退回，按钮变成"去评价" #}
               {% set _bal = (o.amount or 0) if o else 0 %}
               {% if o and o.balStatus == 'paid' %}
-                {% if b.id not in reviewed %}
-                <a class="b3 b3--sm b3--accent" href="#rev-{{ b.id }}">去评价（给剧本 / DM 打分）</a>
-                {% else %}
-                <span class="tag3 tag3--ok">已评价 ✓</span>
-                {% endif %}
+                {# 评价入口只留上面那个表单里的「提交评价」——
+                   原来这里还有一颗「去评价」按钮，两个入口重复，客人会犹豫点哪个 #}
+                {% if b.id in reviewed %}<span class="tag3 tag3--ok">已评价 ✓</span>{% endif %}
                 <span class="tag3">游玩费已结清</span>
                 {% if o.depositBack %}<span class="tag3 tag3--ok">定金 ¥{{ o.deposit }} 已退回</span>{% endif %}
               {% elif o and o.balStatus == 'claimed' %}
@@ -180,6 +178,25 @@
             {% endif %}
             <a class="b3 b3--sm b3--ghost" href="{{ url_for('public.script_detail', sid=b.sid) }}">再看一眼剧本</a>
           </div>
+
+          {# 我给的评价：摆出来（几星、写了什么、店家有没有回）——
+             原来只显示一个「已评价 ✓」，客人想看自己当时说了啥还得去剧本页翻 #}
+          {% set rv = (my_reviews or {}).get(b.id|string) %}
+          {% if rv %}
+          <div class="myrev3">
+            <div class="myrev3__h">
+              <span class="myrev3__s">{% for i in range(5) %}<i class="{{ 'on' if i < (rv.rating or 0) }}">★</i>{% endfor %}</span>
+              <span class="caption">我的评价 · {{ day_label(rv.createdAt) }}{% if rv.anonymous %} · 匿名{% endif %}</span>
+            </div>
+            {% if rv.text %}<p class="myrev3__t">{{ rv.text }}</p>{% endif %}
+            {% if rv.dims %}
+            <div class="rev3__d" style="margin-top:8px">
+              {% for k, v in rv.dims.items() %}<span class="tag3">{{ k }} {{ v }}/5</span>{% endfor %}
+            </div>
+            {% endif %}
+            {% if rv.reply %}<p class="rev3__q" style="margin-top:10px">店家回复：{{ rv.reply }}</p>{% endif %}
+          </div>
+          {% endif %}
         </div>
         {% else %}
         <div class="empty3">

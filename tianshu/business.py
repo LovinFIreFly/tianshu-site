@@ -340,7 +340,9 @@ def car_pool(me_phone=''):
                     'cap': ob.get('carCap') or 8, 'min': ob.get('carMin') or 4,
                     'need': max(0, (ob.get('carMin') or 4) - joined),
                     'reserved': ob.get('reserved') or 0,
-                    'full': joined >= (ob.get('cap') or 8), 'members': members,
+                    # 满没满看的是**车主设的车上限 carCap**（不是剧本人数 cap）——
+                    # 之前这里读了另一个字段，结果 6/6 的车也算"有位"，客人点进去才发现上不去
+                    'full': joined >= (ob.get('carCap') or 8), 'members': members,
                     'mine': bool(me_phone and any(str(b.get('phone')) == str(me_phone) for b in [ob] + mates))})
     return sorted(out, key=lambda c: (c.get('ts') or 0, str(c.get('time'))))
 

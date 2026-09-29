@@ -370,6 +370,11 @@ input[type=file]:hover::file-selector-button{background:var(--ink);color:var(--p
   border:1.5px solid var(--ink);color:var(--ink-3);font-size:15px;line-height:1}
 .fav-btn:hover{color:var(--vermilion);box-shadow:var(--sh-hard-sm)}
 .fav-btn.on{background:var(--vermilion);border-color:var(--ink);color:#fff}
+/* ⚠️ .fav-btn 上面那套绝对定位是给「卡片角上那颗心」写的。
+   评价区的点赞、详情页的收藏也复用了这个名字 —— 结果它们被扔到左上角，
+   直接叠在玩家昵称上（2026-09 用户截图：评价区「♡ 0」压住「FireFly」）。
+   凡是**同时**带着按钮类（.b3 / .btn）的，就按行内按钮走，取消绝对定位。 */
+.b3.fav-btn,.btn.fav-btn{position:static;width:auto;height:auto;top:auto;left:auto;z-index:auto}
 
 /* ============================ 10. 首页 / 报头 ============================ */
 .hero{background:var(--stage);color:var(--stage-ink);padding:var(--sp-9) var(--sp-6) var(--sp-8);text-align:center}

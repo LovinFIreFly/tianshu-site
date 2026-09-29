@@ -7,6 +7,7 @@
 {# ============ 海报舞台 ============ #}
 <section class="dsec--stage on-stage" style="border-bottom:0;
   padding:calc(var(--d-nav-h) + clamp(20px,3.4vw,44px)) 0 clamp(26px,3.6vw,48px)">
+  <div class="glow3" aria-hidden="true"></div>
   <div class="wrap3">
     <div class="split3">
       <div>
@@ -255,7 +256,7 @@
             <label>挑一辆车</label>
             <select name="carId">
               {% for c in open_cars %}
-              <option value="{{ c.id }}">{{ c.day }} {{ c.time }} · 车主 {{ c.owner }} · 已 {{ c.joined }}/{{ c.cap }} 人 · 还差 {{ c.need }} 人</option>
+              <option value="{{ c.id }}">{{ c.day }} {{ c.time }} · 车主 {{ c.owner }} · 已 {{ c.joined }}/{{ c.cap }} 人{% if c.need %} · 还差 {{ c.need }} 人{% else %} · 人够开局{% endif %}</option>
               {% else %}<option value="">现在还没有别人开着的车 —— 自己开一辆吧</option>{% endfor %}
             </select>
             <span class="sub">上别人的车，日期和时间跟着那辆车走</span>

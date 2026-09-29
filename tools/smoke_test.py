@@ -1093,6 +1093,48 @@ check('客人提交改后台设置同样拦住', str((jread('settings') or {}).g
 s, html = guest.get('/scripts')
 check('确认这会儿客人还是二代（前面那些尝试都没生效）', s == 200 and 'design3.css' in html)
 
+print('⑮ 这一轮用户反馈的修复（界面细节，用断言钉住）')
+# ① 桌面页脚上不该出现「装 App」大按钮（手机底栏那颗留着，那是该有的）
+s, html = guest.get('/')
+_foot = html.split('<footer class="dfoot">')[-1].split('</footer>')[0] if 'dfoot' in html else ''
+check('页脚里没有「装 App」（那个只属于手机底栏）',
+      'dfoot' in html and 'js-install' not in _foot and '装App' not in _foot)
+s, html = guest.get('/scripts')
+_foot2 = html.split('<footer class="dfoot">')[-1].split('</footer>')[0] if 'dfoot' in html else ''
+check('剧本库页脚也一样', 'js-install' not in _foot2)
+# ② 后台不铺整站页脚（否则会跟左侧目录叠在一起）
+s, html = admin.get('/admin')
+check('后台页不铺整站页脚（不会和左侧目录打架）',
+      s == 200 and 'dfoot' not in html and 'dfoot__brand' not in html, 'HTTP %s' % s)
+s, html = guest.get('/scripts')
+check('客人页面照旧有整站页脚', 'dfoot__brand' in html)
+# ③ 社区分类是页内筛：按钮 + data-filter，不再跳网址
+s, html = guest.get('/comm')
+check('社区分类改成就地筛（data-filter="type" + 按钮）',
+      s == 200 and 'data-filter="type"' in html and 'data-show="all"' in html)
+check('社区分类不再是会跳页的链接', '?t=' not in html)
+# ④ 剧本库的 tag 栏不再吸顶跟随
+s, html = guest.get('/scripts')
+check('剧本库 tag 栏不再吸顶（toolbar3--sticky 已去掉）', 'toolbar3--sticky' not in html)
+# ⑤ 拼车"满没满"：满员的车不能再显示成有位
+try:
+    _pool = _bs.car_pool()
+    check('拼车满员判定和显示口径一致（joined ≥ cap 就是满）',
+          all(c['full'] == (c['joined'] >= c['cap']) for c in _pool),
+          '在跑的车 %d 辆' % len(_pool))
+except Exception as _e:
+    check('拼车满员判定和显示口径一致（joined ≥ cap 就是满）', False, str(_e)[:60])
+# ⑥ 打分星星点得亮（style.css 里只有 hover、没有 :checked —— 点完不变色=像点不上）
+_s, _css3 = guest.get('/static/css/design3.css')
+check('打分星星有选中态（点完要亮起来）', '.stars input:checked ~ label' in _css3)
+# ⑦ 评价区那颗心不再绝对定位叠在昵称上
+_s, _csss = guest.get('/static/css/style.css')
+check('行内 .fav-btn 取消绝对定位（评价区不再压住昵称）', '.b3.fav-btn,.btn.fav-btn' in _csss)
+# ⑧ 订单卡片里能看到"我给的评价"（原来只有一个「已评价 ✓」，想看自己写了啥还得去剧本页翻）
+s, html = cus4.get('/me')
+check('「我的」里能看到自己写过的评价（星级 + 内容）',
+      s == 200 and 'myrev3' in html and '自检评价' in html, 'HTTP %s' % s)
+
 print('')
 print('=' * 46)
 if fails:

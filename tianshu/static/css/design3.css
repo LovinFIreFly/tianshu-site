@@ -233,6 +233,11 @@ img{max-width:100%}
 .glow3{position:absolute;inset:0;pointer-events:none;z-index:0;opacity:0;transition:opacity .5s var(--d-ease);
   background:radial-gradient(300px 220px at var(--mx,16%) var(--my,26%),var(--d-accent-05),transparent 72%)}
 .dhero:hover .glow3,.how3__pin:hover .glow3{opacity:1}
+/* 暗场版块（剧本详情 / 车队详情 / 欢迎页的首屏）也吃这团光：
+   得自己 position:relative + overflow:hidden，否则那层绝对定位会跑去认 body 当爹 */
+.dsec--stage{position:relative;overflow:hidden}
+.dsec--stage:hover .glow3{opacity:1}
+.dsec--stage > *:not(.glow3){position:relative;z-index:1}   /* 内容压在光斑上面 */
 
 @media(prefers-reduced-motion:reduce){
   .dhero__title .ln > i{transform:none;animation:none}
@@ -580,7 +585,8 @@ img{max-width:100%}
   color:var(--d-ink-4);margin-right:2px}
 .chip3{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;cursor:pointer;
   border:1px solid var(--d-rule);background:transparent;border-radius:var(--d-pill);
-  font-size:12.5px;color:var(--d-ink-3);font-family:var(--d-sans);
+  font-size:12.5px;color:var(--d-ink-3);font-family:var(--d-sans);line-height:1.2;
+  -webkit-appearance:none;appearance:none;
   transition:background .18s,color .18s,border-color .18s,transform .18s}
 .chip3:hover{border-color:var(--d-ink);color:var(--d-ink);transform:translateY(-1px)}
 .chip3.on{background:var(--d-ink);border-color:var(--d-ink);color:var(--d-paper-3)}
@@ -909,6 +915,29 @@ html.ts-leaving body{opacity:0;transform:translateY(-10px) scale(.995);
   font-size:13px;line-height:1.7;color:var(--d-ink-3)}
 .rev3__a{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
 
+/* 打分星星（.stars 的结构在 style.css：行反向 + input 藏起来 + label 当星星）
+   style.css 里只写了 hover 变色、**没有 :checked 规则** —— 点完不高亮，
+   看着就像"点不上"（用户截图）。这里把选中态补上，并把点击区做大。
+   方向说明：DOM 是 5→1、flex 是 row-reverse，所以视觉上从左到右是 1→5；
+   `input:checked ~ label` = 选中的那颗 + 它左边（DOM 里排在后面的），正好是"打几分"。 */
+.stars label{font-size:22px;line-height:1;padding:3px 2px;
+  transition:color .15s,transform .15s var(--d-ease)}
+.stars input:checked ~ label{color:var(--d-accent)}
+.stars label:hover{transform:scale(1.14)}
+/* 悬停时改用"预览"色：先把已选中的复原，再把悬停那颗及其左边点亮（跟手不打架） */
+.stars:hover input:checked ~ label{color:var(--d-rule-2)}
+.stars label:hover,.stars label:hover ~ label{color:var(--d-accent)}
+.stars input:focus-visible + label{outline:2px solid var(--d-accent);outline-offset:2px}
+
+/* 「我自己的评价」：订单/预约卡片里，评价完把打过什么直接摆出来（只显示"已评价"太没交代） */
+.myrev3{margin-top:14px;padding:12px 14px;border:1px solid var(--d-rule);border-radius:var(--d-r);
+  background:var(--d-paper-2)}
+.myrev3__h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.myrev3__s{font-size:15px;letter-spacing:1px;color:var(--d-rule-2)}
+.myrev3__s i{font-style:normal}
+.myrev3__s i.on{color:var(--d-accent)}
+.myrev3__t{margin:8px 0 0;font-size:13.5px;line-height:1.72;color:var(--d-ink-2);white-space:pre-wrap}
+
 /* 两栏工作区（左主右辅） */
 .split3{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);
   gap:clamp(22px,3.4vw,52px);align-items:start}
@@ -1030,6 +1059,29 @@ h2.heading-section{margin:0 0 var(--d-s3)}
 .auth-brand{display:flex;align-items:center;gap:9px;font-family:var(--d-mono);font-size:11px;letter-spacing:.18em;
   text-transform:uppercase;color:var(--d-ink-4);margin-bottom:var(--d-s4)}
 .auth-brand .logo{font-size:18px}
+/* 输入框发白：不是配色没写对，是**浏览器的自动填充**（Chrome 给填过的框刷上
+   自己的白/淡黄底，`background` 直接被它盖掉）。用一层内阴影把它顶回去，
+   框里还是卡片的纸色。截图里"颜色和背景不匹配"就是这块。 */
+.auth-card input:-webkit-autofill,
+.auth-card input:-webkit-autofill:hover,
+.auth-card input:-webkit-autofill:focus{
+  -webkit-text-fill-color:var(--d-ink);
+  -webkit-box-shadow:0 0 0 1000px var(--d-paper-3) inset;
+  box-shadow:0 0 0 1000px var(--d-paper-3) inset}
+.auth-card .field > input{border-color:var(--d-rule);background:var(--d-paper-3)}
+
+/* 「记住我 / 我已阅读条款」那个小方块：原来是**浏览器原生复选框**，
+   深色模式下渲染成一个黑疙瘩（截图里那个方块）。改成自己画的勾选框。 */
+.agree input{position:absolute;opacity:0;width:0;height:0}
+.agree .dot{display:inline-block;flex:0 0 auto;width:16px;height:16px;position:relative;
+  border:1px solid var(--d-rule-2);border-radius:3px;background:var(--d-paper-3);
+  transition:background .18s,border-color .18s}
+.agree .dot::after{content:"";position:absolute;left:4.5px;top:1px;width:4px;height:8px;
+  border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg) scale(.4);opacity:0;
+  transition:transform .18s var(--d-ease),opacity .18s}
+.agree:hover .dot{border-color:var(--d-ink)}
+.agree:has(input:checked) .dot{background:var(--d-accent);border-color:var(--d-accent)}
+.agree:has(input:checked) .dot::after{transform:rotate(45deg) scale(1);opacity:1}
 .code-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
 .btn-code{border:1px solid var(--d-rule-2);background:transparent;color:var(--d-ink);border-radius:var(--d-r);
   padding:11px 14px;font-size:12.5px;cursor:pointer;white-space:nowrap;transition:background .2s,border-color .2s}
@@ -1100,6 +1152,63 @@ h2.heading-section{margin:0 0 var(--d-s3)}
    --vermilion / --r / --sh-* / --fs-display …），皮肤表一换，整套版式的
    底、字、线、印色就跟着换，但版式语言始终是同一套、始终好看。
    -------------------------------------------------------------------------- */
+/* --------------------------------------------------------------------------
+   18. 手机端（≤760px）统一收一遍
+   ----------------------------------------------------------------------------
+   思路照大站的做法（苹果/华为那种）：一屏内**信息少而清楚**，留白给够但别撑开，
+   字号降一档、行高收紧，次要内容（页脚那堆链接、预览条）收进小字或折起。
+   重点：手机上**不许整页横着滑** —— 那会让每一块看着都被切掉（用户截图那样）。
+   -------------------------------------------------------------------------- */
+@media(max-width:760px){
+  html,body{overflow-x:hidden;max-width:100%}
+  main.page{padding-bottom:calc(66px + env(safe-area-inset-bottom))}   /* 别被底部那排固定入口压住 */
+  .wrap3{padding-inline:16px}
+
+  /* 区块：手机上别一段占一屏，节奏靠线和留白而不是大间距 */
+  .dsec{padding:20px 0}
+  .pagehead3{padding-top:calc(var(--d-nav-h) + 16px);padding-bottom:14px}
+  .pagehead3__t{font-size:clamp(22px,7vw,30px)}
+  .pagehead3__lead{font-size:13.5px;line-height:1.66}
+  .dsec__head{gap:6px 12px;margin-bottom:14px}
+  .dsec__title{font-size:19px}
+
+  /* 页脚：从"三栏一大片"收成"品牌一行 + 两列小字" */
+  .dfoot{padding:22px 0 18px}
+  .dfoot__grid{grid-template-columns:1fr 1fr;gap:18px 14px}
+  .dfoot__grid > div:first-child{grid-column:1/-1}
+  .dfoot__brand{font-size:20px}
+  .dfoot__slogan{display:none}
+  .dfoot h4{font-size:10px;margin-bottom:8px}
+  .dfoot ul{gap:7px}
+  .dfoot ul a{font-size:13px}
+  .dfoot__bar{margin-top:18px;padding-top:12px;gap:8px 12px;font-size:10px}
+  .skin-bar{font-size:10px;gap:5px}
+  .skin-bar a{padding:3px 9px;font-size:10px}
+
+  /* 卡片与按钮：小一号，别一行一个"大块头" */
+  .pcard3__body{padding:8px 9px 10px}
+  .pcard3__title{font-size:14px}
+  .b3{padding:9px 14px;font-size:12.5px}
+  .b3--sm{padding:7px 12px;font-size:12px}
+  .block3{padding:14px}
+  .rev3{padding:16px 0}
+
+  /* 「我的」：身份卡 + 内容上下排；统计格与面板都收紧 */
+  .me-wrap{gap:16px}
+  .me-card{padding:16px}
+  .me-card h3{font-size:17px;margin-top:12px}
+  .p-stats b{font-size:15px}
+  .p-stats span{font-size:10px;letter-spacing:0}
+  .me-nav{margin-top:14px}
+  .me-nav .mi{padding:10px 9px;font-size:13px}
+  .block3 .row{gap:8px}
+  .code-big{font-size:19px;letter-spacing:.14em}
+
+  /* 表格（订单/券）：字号降一档，靠横向滚动看全，不撑破页面 */
+  .block3 table{font-size:12.5px}
+  .adm-main{padding:16px 14px 60px}
+}
+
 /* 首页场次牌：编号条目在三栏里排（宽屏），窄屏落回单栏 */
 .board3__list{grid-template-columns:repeat(3,minmax(0,1fr));column-gap:clamp(14px,2.4vw,34px)}
 @media(max-width:860px){.board3__list{grid-template-columns:1fr}}

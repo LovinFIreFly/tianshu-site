@@ -275,8 +275,10 @@ def comm():
     for p in posts:
         k = p.get('type') or 'chat'
         counts[k] = counts.get(k, 0) + 1
-    rows = [p for p in posts if not t or (p.get('type') or 'chat') == t]
-    return render_template('comm.html', posts=rows, t=t, counts=counts)
+    # 分类改成**页内筛**（点一下就地藏/显，不跳网址、不刷新 —— 用户嫌跳页一卡一卡）：
+    # 所以这里始终把全部帖子渲染出去，t 只决定"打开时点亮哪一颗"，
+    # 网址上带 ?t= 依然能直接进到那一类（分享/收藏照旧管用）。
+    return render_template('comm.html', posts=posts, t=t, counts=counts)
 
 
 @bp.post('/post')

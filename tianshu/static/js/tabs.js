@@ -90,12 +90,15 @@
     return true;
   }
 
-  /* 就地筛选：把同面板里 data-status 不等于 val 的藏起来（'all' = 全显） */
+  /* 就地筛选：把同面板里 data-status 不等于 val 的藏起来（'all' = 全显）
+     data-filter="type" 就按 data-type 筛（社区的分类就是这么用的）——
+     筛的是 DOM，不跳网址、不刷新，点起来是"立刻"的（用户嫌跳页一卡一卡）。 */
   function applyFilter(chipBar, val) {
     var box = chipBar.closest('.tabpane') || document;
+    var attr = 'data-' + (chipBar.getAttribute('data-filter') || 'status');
     var shown = 0;
-    each(box.querySelectorAll('[data-status]'), function (it) {
-      var on = (val === 'all') || it.getAttribute('data-status') === val;
+    each(box.querySelectorAll('[' + attr + ']'), function (it) {
+      var on = (val === 'all') || it.getAttribute(attr) === val;
       it.hidden = !on;
       if (on) shown++;
     });
