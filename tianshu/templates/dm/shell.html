@@ -26,6 +26,10 @@
   </aside>
 
   <main class="adm-main">
+    <header class="adm-mobile">
+      <span class="ab"><span class="ic">🗡</span>DM 工作台</span>
+      <a class="btn btn--sm btn--ghost" href="{{ url_for('public.home') }}">← 回到网站</a>
+    </header>
     {% for key, name in NAVI %}
     <div class="tabpane {{ 'on' if loop.first }}" data-tab="{{ key }}">{{ panels.get(key, '')|safe }}</div>
     {% endfor %}
