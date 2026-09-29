@@ -80,7 +80,8 @@ def create_app():
                 'dev_env': business.is_dev_request(),      # 本机开发才显示"通用码 1234"这类提示
                 'day_label': business.day_label, 'year': _t.strftime('%Y'),
                 'theme': _req.cookies.get('theme') or 'light',     # 深浅色（存在 cookie 里；2026-09 起默认浅色）
-                'static_v': static_v}
+                'static_v': static_v,
+                'skins': business.SKINS}                           # 外观款式（后台统一切换全站）
 
     @app.before_request
     def csrf_guard():

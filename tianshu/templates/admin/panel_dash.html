@@ -127,6 +127,17 @@
         <input name="mailFrom" value="{{ settings.mailFrom }}" placeholder="noreply@lovinfirefly.cn"></div>
       <div class="field"><label>发件人昵称（收件箱里显示的名字；留空 = 只显示地址）</label>
         <input name="mailFromName" value="{{ settings.mailFromName }}" placeholder="{{ settings.shopName }}"></div>
+      {# 这里不能直接用 base.html 里的 cur_skin：父模板顶层 {% set %} 在子模板的 block 里拿不到
+         （Jinja 的作用域坑），所以在本地再算一次。 #}
+      {% set _skin_now = settings.skin if settings.skin in skins else 'playbill' %}
+      <div class="field"><label>外观款式（选了全站统一：手机端和电脑端一起变，不用客人自己选）</label>
+        <select name="skin">
+          {% for k, label in skins.items() %}
+          <option value="{{ k }}" {% if _skin_now == k %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <p class="sub" style="margin-top:6px">想先看看效果：在任意页面网址后面加 <code>?skin=款式</code>
+          （例 <code>?skin=monolith</code>）—— 只有管理员能预览，客人看不到。</p></div>
       <div class="field full"><label>Resend API Key（<code>re_</code> 开头。存着的会打码显示；<b>留空 = 不改</b>，贴上新的才会替换）</label>
         <input name="mailKey" type="password"
                value="{{ ('••••••••' + settings.mailKey[-4:]) if settings.mailKey else '' }}"

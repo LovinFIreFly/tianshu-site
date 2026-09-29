@@ -751,6 +751,34 @@ def mail_error_hint(status, text):
     return '%s：%s' % (status, t)
 
 
+# ---------------------------------------------------------------- 外观款式（skin）
+# 一套 skin = 叠在主样式（style.css）之上的一层覆盖：只换设计语言，不动结构、不动功能。
+# 管理员在「门店设置 → 外观款式」里选，**全站统一**（手机端电脑端都跟着变）。
+# ⚠️ key 必须等于 CSS 文件名 skin-<key>.css，且只能取这里列出的值 ——
+#    它会被拼进静态文件路径，白名单就是防路径穿越的闸门。
+SKINS = {
+    'playbill':  '戏单 · 铅字印刷（报头居中 / 双线 / 编号条目）',
+    'noir':      '墨 · 暗色影院（灰阶分层 / 朱红点缀）',
+    'riso':      'Riso 三色套印（朱红群青柠檬黄 / 巨型字）',
+    'swiss':     '瑞士网格（纯白无衬线 / 细线 / 高密度）',
+    'monolith':  '石碑 · 灰岩（灰底 / 单点正红 / 巨字）',
+}
+DEFAULT_SKIN = 'playbill'
+
+
+def current_skin(st=None):
+    """现在用的款式（永远返回白名单内的值：没配/配错就用默认）"""
+    st = st or get_settings()
+    v = str(st.get('skin') or '').strip()
+    return v if v in SKINS else DEFAULT_SKIN
+
+
+def skin_css(st=None):
+    """要额外加载的皮肤表文件名；默认款（playbill）不需要额外文件"""
+    v = current_skin(st)
+    return None if v == DEFAULT_SKIN else 'css/skin-%s.css' % v
+
+
 def mail_from_name(st=None):
     """发件人昵称（客人收件箱里显示的名字，例「甜薯剧本杀」）。留空 = 只显示邮箱地址。
 

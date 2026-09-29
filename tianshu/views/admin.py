@@ -563,6 +563,10 @@ def settings():
     # 发件人昵称：客人收件箱里显示的名字（留空 = 只显示地址），见 business.mail_from_name
     if f.get('mailFromName') is not None:
         rows['mailFromName'] = business.clean(f.get('mailFromName'), 40)
+    # 外观款式：只认白名单里的值 —— 这个值会拼进 CSS 文件名，
+    # 不校验的话等于让人指定任意静态文件（路径穿越的老套路），所以必须卡死。
+    if f.get('skin') in business.SKINS:
+        rows['skin'] = f.get('skin')
     for k in ('smtpHost', 'smtpUser', 'smtpFrom'):
         if f.get(k) is not None:
             rows[k] = business.clean(f.get(k), 80)

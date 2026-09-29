@@ -1,0 +1,172 @@
+/* ============================================================================
+   皮肤 D：石碑（monolith）—— 推翻前四套重新设计
+   ----------------------------------------------------------------------------
+   出处：《30 站》13 The Monolith Project：
+     · 灰底 #cfcfcf + **单点正红 #ff002f**（全站只有一个红点，其余全灰阶）
+     · 48 列隐藏栅格统一对齐；间距严格 0.8rem 刻度
+     · 巨型展示字（原站 30rem/21.7rem）制造冲击
+     · z-index 分档管理浮层
+
+   【跟前四套的根本区别】前四套都在"排版/色彩骨架"上做文章（纸墨印刷、暗色、三原色、
+   瑞士网格），这一套把**骨架也换掉**：
+     ① 底色从纸白/纯黑 → **中灰**（灰底上白卡片消失，层级只剩"字的大小"）
+     ② 卡片/面板**没有边框、没有底色**、不投阴影 —— 内容直接排在灰底上（只有留白分区）
+     ③ 全站只有一个红点（当前项 / 价格），正红出现次数 ≤3
+     ④ 标题大到占满视口宽度（clamp 到 15vw），靠**字号**而不是装饰制造层级
+     ⑤ 间距用单一刻度（--gap），不留散值
+   ============================================================================ */
+:root{
+  /* 灰底 + 近黑字：像刻在石头上 */
+  --paper:#D5D2CC; --paper-2:#C9C6BF; --paper-3:#DEDCD6;
+  --ink:#0E0E0E; --ink-2:#1C1C1C; --ink-3:#4A4A48; --ink-4:#6E6E6A;
+  --rule:rgba(14,14,14,.22); --rule-strong:rgba(14,14,14,.6);
+  --vermilion:#FF002F; --vermilion-600:#D60026; --vermilion-050:rgba(255,0,47,.1);
+  --gold:#4A4A48; --gold-050:rgba(74,74,72,.1);
+  --ok:#1F6B33; --ok-bg:rgba(31,107,51,.12);
+  --bad:#C00D24; --bad-bg:rgba(192,13,36,.12);
+  --warn:#7A5200; --warn-bg:rgba(122,82,0,.12);
+  --info:#26407A; --info-bg:rgba(38,64,122,.12);
+  /* 这一版去掉衬线：巨型**无衬线**紧体字（Monolith 的展示字气质） */
+  --serif:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Helvetica Neue",Arial,sans-serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Helvetica Neue",Arial,sans-serif;
+  --fs-display:clamp(56px,15vw,190px); --lh-display:.82; --track-display:-.05em;
+  --fs-title:clamp(30px,5.6vw,58px); --lh-title:1;
+  --fs-h2:clamp(22px,3.2vw,34px); --lh-h2:1.12;
+  --fs-h3:19px;
+  --fs-body:16px; --lh-body:1.6;
+  --fs-sm:14px; --fs-xs:12.5px;
+  --gap:14px;                       /* 单一刻度：所有间距都是它的倍数 */
+  --sp-1:4px; --sp-2:8px; --sp-3:var(--gap); --sp-4:calc(var(--gap) * 1.5);
+  --sp-5:calc(var(--gap) * 2); --sp-6:calc(var(--gap) * 2); --sp-7:calc(var(--gap) * 3);
+  --sp-8:calc(var(--gap) * 4); --sp-9:calc(var(--gap) * 5); --sp-10:calc(var(--gap) * 6);
+  --container:1280px;
+  --r-xs:0; --r-sm:0; --r:0; --r-lg:0; --r-pill:0; --r-round:100%;
+  /* 没有投影、没有噪点：灰底本身就是材质 */
+  --sh-1:0 0 0 rgba(0,0,0,0); --sh-2:0 0 0 rgba(0,0,0,0); --sh-3:0 0 0 rgba(0,0,0,0);
+  --sh-hard:0 0 0 rgba(0,0,0,0); --sh-hard-sm:0 0 0 rgba(0,0,0,0); --sh-hard-red:0 0 0 rgba(0,0,0,0);
+  --noise-opacity:0;
+}
+body::after{display:none}
+
+/* —— 骨架：内容直接排在灰底上，没有卡片框 —— */
+.wrap{max-width:var(--container);padding:calc(var(--gap) * 3) calc(var(--gap) * 2) calc(var(--gap) * 5)}
+.panel,.card,.adm-panel{background:transparent;border:0;padding:0}
+.panel + .panel,.card + .card{margin-top:calc(var(--gap) * 3)}
+.foot{border-top:1px solid var(--rule-strong);margin-top:calc(var(--gap) * 4);padding:calc(var(--gap) * 2)}
+
+/* —— 报头：极简一行小字导航 + 巨标题 —— */
+.masthead{background:var(--paper);border-bottom:1px solid var(--rule-strong)}
+.masthead .util{border-bottom:0;padding:var(--gap) calc(var(--gap) * 2);font-size:11px}
+.masthead .top{grid-template-columns:auto 1fr auto;padding:var(--gap) calc(var(--gap) * 2)}
+.masthead .wordmark{grid-column:1;justify-self:start;font-size:20px;letter-spacing:-.02em}
+.masthead .search{grid-column:2;justify-self:center;width:min(320px,40vw);border:0;
+  border-bottom:1px solid var(--ink);background:transparent;height:34px}
+.masthead .search input{background:transparent}
+.masthead .acts{grid-column:3}
+.masthead .links{border-top:1px solid var(--rule);padding:0 calc(var(--gap) * 2)}
+.masthead .links a{font-size:13px;padding:var(--gap) 0}
+.masthead .links a.on{border-bottom-color:var(--vermilion);color:var(--vermilion)}   /* 唯一的红 */
+
+/* —— 首屏：巨型字占满视口 —— */
+.hero{background:var(--paper);color:var(--ink);padding:calc(var(--gap) * 5) calc(var(--gap) * 2)}
+.hero .kicker{font-size:12px;color:var(--ink-4)}
+.hero h1{font-size:var(--fs-display);line-height:var(--lh-display);letter-spacing:var(--track-display);
+  font-weight:800;color:var(--ink)}
+.hero .slogan{color:var(--ink-3);font-size:17px;margin:calc(var(--gap) * 2) auto;max-width:52ch}
+.hero .stats{border-top:1px solid var(--rule-strong);margin-top:calc(var(--gap) * 3)}
+.hero .stats b{font-family:var(--mono);font-size:30px;font-weight:700;color:var(--ink)}
+.hero .stats span{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--ink-4)}
+.band{padding:calc(var(--gap) * 4) 0}
+.band.alt{background:var(--paper-2)}
+.band.ink{background:var(--ink);color:var(--paper)}
+.band.ink .kicker,.band.ink .label{color:rgba(245,245,245,.6)}
+
+/* —— 剧本条目：没有卡片，只有"编号 + 巨标题 + 一行信息" —— */
+.grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:calc(var(--gap) * 3) calc(var(--gap) * 2)}
+.juben{border-top:1px solid var(--rule-strong);padding-top:var(--gap)}
+.juben::before{font-size:13px;font-weight:700;color:var(--ink-4);letter-spacing:.1em}
+.juben .cover{border:0;background:var(--paper-2);aspect-ratio:3/4}
+.juben:hover .cover{background:var(--paper-3)}
+.juben .body{border-top:0;padding-top:var(--gap);margin-top:var(--gap)}
+.juben .body h4{font-size:24px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.juben .body .meta{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink-4)}
+.juben .body .price{color:var(--vermilion);font-size:22px;font-weight:800}   /* 红只给价格 */
+.juben .body .book{font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--ink)}
+.juben:hover .body .book{color:var(--vermilion)}
+
+/* —— 按钮：黑实块（不是描边、不是投影）—— */
+.btn{background:var(--ink);border:0;color:var(--paper);font-weight:700;height:44px;
+  padding:0 calc(var(--gap) * 2);letter-spacing:.02em}
+.btn:hover{background:var(--vermilion)}
+.btn-primary{background:var(--vermilion);color:#fff}
+.btn-primary:hover{background:var(--ink)}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--ink)}
+.btn-ghost:hover{background:var(--ink);color:var(--paper)}
+.btn-cta{height:56px;background:var(--ink);font-size:17px}
+.btn-cta:hover{background:var(--vermilion)}
+.btn:disabled{opacity:.3;border:1px dashed var(--ink-4);background:transparent;color:var(--ink-4)}
+.btn-code{background:transparent;border:1px solid var(--ink);color:var(--ink)}
+.btn-code:hover{background:var(--vermilion);border-color:var(--vermilion);color:#fff}
+
+/* —— 表单：只有一条下划线 —— */
+.field{margin-bottom:calc(var(--gap) * 2)}
+.field > label{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4)}
+.field > input,.field > select,.field > textarea{background:transparent;border:0;
+  border-bottom:1px solid var(--ink);min-height:40px;padding:0 2px}
+.field > input:focus,.field > select:focus,.field > textarea:focus{border-bottom-color:var(--vermilion);box-shadow:none}
+::placeholder{color:var(--ink-4)}
+
+/* —— 徽章：无边框的小字 —— */
+.badge,.pill,.chip,.chip-sm,.st{height:22px;padding:0 6px;border:0;background:var(--paper-2);
+  font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink-3)}
+.badge.new,.st.car{background:var(--vermilion);color:#fff}
+.pill.on,.chip.on,.chip-sm.on{background:var(--ink);color:var(--paper)}
+.chip-check{background:var(--paper-2);border:0;height:30px}
+.chip-check.on,.chip-check:has(input:checked){background:var(--ink);color:var(--paper)}
+
+/* —— 数据块：靠字号分层，不靠底色 —— */
+.stat-grid{border:0;grid-template-columns:repeat(4,1fr);margin-bottom:calc(var(--gap) * 2)}
+.stat-card{border-right:1px solid var(--rule);background:transparent;padding-right:var(--gap)}
+.stat-card b{font-family:var(--mono);font-size:40px;font-weight:800;letter-spacing:-.04em}
+.stat-card span{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--ink-4)}
+.kv{border:0;border-top:1px solid var(--ink)}
+.kv .cell{border:0;border-right:1px solid var(--rule);background:transparent}
+th{border-bottom:1px solid var(--ink);font-size:11px}
+td{border-bottom:1px solid var(--rule)}
+
+/* —— 我的 / 拼车 / 房间：一律去框 —— */
+.profile{background:var(--ink);color:var(--paper);border:0;box-shadow:none;
+  padding:calc(var(--gap) * 2)}
+.profile p{color:rgba(245,245,245,.6);font-family:var(--mono);font-size:11px}
+.p-stats{border:0;border-top:1px solid var(--rule)}
+.p-stats .cell{border-right:1px solid var(--rule);background:transparent}
+.car-card,.cust-card,.room-card,.role-card,.dmpick-card{background:transparent;
+  border:0;border-bottom:1px solid var(--rule);padding:var(--gap)}
+.car-card:hover,.cust-card:hover{background:var(--paper-2);box-shadow:none;transform:none}
+.role-card img,.role-card .ph{border:0;background:var(--paper-2)}
+
+/* —— 弹窗：墨块直接压在灰底上 —— */
+.modal{border:0;background:var(--paper-3);box-shadow:0 30px 90px rgba(0,0,0,.35)}
+.modal .m-head{border-bottom:1px solid var(--ink)}
+.mask{background:rgba(14,14,14,.55)}
+
+/* —— 手机适配：巨型字按视口缩，条目改两列 —— */
+@media (max-width:744px){
+  .wrap{padding:calc(var(--gap) * 2) var(--gap) calc(88px + env(safe-area-inset-bottom))}
+  .masthead .top{grid-template-columns:1fr auto;row-gap:var(--gap)}
+  .masthead .wordmark{grid-column:1;font-size:18px}
+  .masthead .search{grid-column:1 / -1;order:3;width:100%;border-bottom:1px solid var(--ink)}
+  .masthead .acts{grid-column:2;justify-self:end}
+  .hero{padding:calc(var(--gap) * 3) var(--gap)}
+  .hero h1{font-size:clamp(40px,13vw,72px)}
+  .grid{grid-template-columns:repeat(2,1fr);gap:calc(var(--gap) * 2) var(--gap)}
+  .grid > .juben:first-child{grid-column:span 2}
+  .juben .body h4{font-size:17px}
+  .grid > .juben:first-child .body h4{font-size:24px}
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+  .stat-card b{font-size:30px}
+  .btn{height:42px}
+  .mobtab{background:var(--paper);border-top:1px solid var(--ink)}
+  .mobtab a{color:var(--ink-4)}
+  .mobtab a.on{color:var(--vermilion)}
+}

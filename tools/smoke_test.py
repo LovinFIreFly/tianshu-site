@@ -156,15 +156,10 @@ _mt2 = _re.search(r'<nav class="mobtab".*?</nav>', _car, _re.S)
 _t2 = _re.findall(_pat, _mt2.group(0) if _mt2 else '')
 check('拼车页底部导航把「拼车」点亮',
       [t[3] for t in _t2 if t[1]] == ['拼车'], str([t[3] for t in _t2 if t[1]]))
-# 备选皮肤（挑款式用）：三套都能叠在主样式上加载，页脚有切换条
-for _sk in ('noir', 'riso', 'swiss'):
-    _ss, _sh = guest.get('/car?skin=' + _sk)
-    check('皮肤 %s 能加载（覆盖层叠在主样式之上）' % _sk,
-          _ss == 200 and ('skin-%s.css' % _sk) in _sh and 'skin-bar' in _sh)
+# 外观款式（skin）：后台统一设置 → **全站（手机+电脑）一起变**；客人不能自己换
 _ss, _sh = guest.get('/car')
-# 判据要写全文件名：'skin-bar' 里也含 'skin-'，只判子串会永远为真（踩过一次）
-check('不指定皮肤时不叠任何皮肤表（默认戏单）',
-      all(('skin-%s.css' % k) not in _sh for k in ('noir', 'riso', 'swiss')) and 'skin-bar' in _sh)
+check('客人端不出现款式预览条（只有管理员能预览）', 'skin-bar' not in _sh)
+check('默认款式不额外加载皮肤表', all(('skin-%s.css' % k) not in _sh for k in ('noir', 'riso', 'swiss', 'monolith')))
 for path, want in (('/scripts', '剧本库'), ('/car', '拼车'), ('/login', '登录'), ('/register', '注册')):
     s, html = guest.get(path)
     check('打开 %s' % path, s == 200 and want in html, 'HTTP %s' % s)
@@ -179,6 +174,26 @@ admin = Client()
 admin.post('/login', {'account': 'FireFly', 'password': '123123'})
 s, html = admin.get('/admin/')
 check('超管能进后台', s == 200 and '到店核销' in html)
+
+# 外观款式（skin）：后台统一设置 → 全站（手机 + 电脑）一起变；客人不能自己换
+_ss, _adm = admin.get('/admin?tab=dash')
+check('后台门店设置里有「外观款式」下拉（五种款式都在）',
+      'name="skin"' in _adm and all(k in _adm for k in ('playbill', 'noir', 'riso', 'swiss', 'monolith')))
+_ss, _adm2 = admin.get('/admin?tab=dash&skin=monolith')
+check('管理员能用 ?skin= 先预览再决定（客人看不到这个开关）', 'skin-monolith.css' in _adm2)
+import os as _os
+_root = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+for _k in ('noir', 'riso', 'swiss', 'monolith'):
+    check('皮肤表 skin-%s.css 存在' % _k,
+          _os.path.exists(_os.path.join(_root, 'tianshu', 'static', 'css', 'skin-%s.css' % _k)))
+try:
+    from tianshu import business as _bs
+    check('乱填的款式退回默认（这个值会拼进静态文件路径，必须白名单卡死）',
+          _bs.current_skin({'skin': '../../etc/passwd'}) == 'playbill'
+          and _bs.current_skin({}) == 'playbill'
+          and _bs.current_skin({'skin': 'noir'}) == 'noir')
+except Exception as _e:
+    check('乱填的款式退回默认（这个值会拼进静态文件路径，必须白名单卡死）', False, str(_e)[:60])
 title = '自检本%s' % time.strftime('%H%M%S')
 s, _ = admin.post('/admin/scripts/new', {'title': title, 'emoji': '🧪', 'price': 100})
 sc = next((x for x in jread('scripts') if x.get('title') == title), None)

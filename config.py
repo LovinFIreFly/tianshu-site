@@ -51,6 +51,9 @@ SETTINGS_DEFAULT = {
     "mailKey": "",             # Resend API Key（re_ 开头）
     "mailFrom": "",            # 发件人，例：noreply@lovinfirefly.cn（Resend 里验证过的域名）
     "mailFromName": "甜薯剧本杀",   # 发件人昵称（收件箱里显示的名字）；留空 = 只显示邮箱地址
+    # 站点外观款式（**一次设置，全站统一**：手机端和电脑端都跟着变，不用每个人自己选）
+    # 可选值见 business.SKINS；改这里只改"默认"，平时在后台「门店设置 → 外观款式」里选
+    "skin": "playbill",
     "mailSubject": "",         # 主题，留空 = 【店名】验证码
     "mailWebhook": "",         # 自定义 Webhook 地址
     "smtpHost": "",            # 例：smtpdm.aliyun.com
