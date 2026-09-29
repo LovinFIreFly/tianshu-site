@@ -1055,6 +1055,18 @@ for path in ('/', '/scripts', '/car', '/comm', '/me', '/login', '/register', '/f
 admin.post('/admin/settings', {'uiVer': '1'})
 s, html = guest.get('/scripts')
 check('后台设成一代后，客人看到的也是老版式', s == 200 and 'design3.css' not in html)
+# 一代模式下后台和 DM 工作台必须**一点不受影响**：它们是店里干活的工具，
+# 永远用新版骨架（一代目录里根本没有这些模板，得能落回二代 —— 这里踩过 500）
+s, html = admin.get('/admin')
+check('一代模式下后台照样打开、还是新版骨架（tnav），没被版式连累',
+      s == 200 and 'tnav' in html and 'site-nav' not in html
+      and '服务端出了点问题' not in html and '到店核销' in html, 'HTTP %s' % s)
+s, html = admin.get('/dm')
+check('一代模式下 DM 工作台也正常', s == 200 and 'tabpane' in html, 'HTTP %s' % s)
+s, html = admin.get('/admin?ui=1')
+check('后台自己带 ?ui=1 也还是新版骨架（后台不跟着切）', s == 200 and 'tnav' in html)
+s, html = admin.get('/admin/bookings?status=all')
+check('一代模式下后台的子页也能打开', s == 200, 'HTTP %s' % s)
 admin.post('/admin/settings', {'uiVer': '2'})
 s, html = guest.get('/scripts')
 check('切回二代：客人又看到新骨架', s == 200 and 'design3.css' in html)

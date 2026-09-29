@@ -10,7 +10,7 @@ import secrets
 from datetime import timedelta
 
 from flask import Flask, abort, g, jsonify, render_template, request
-from jinja2 import BaseLoader, FileSystemLoader
+from jinja2 import BaseLoader, FileSystemLoader, TemplateNotFound
 
 from config import IMG_DIR, ROOMS_DEFAULT, SEED_USERS, SESSION_DAYS, SETTINGS_DEFAULT, TEMPLATES_AUTO_RELOAD
 from tianshu import business
@@ -24,8 +24,13 @@ class UiLoader(BaseLoader):
         二代 = tianshu/templates/
         一代 = tianshu/templates/v1/（只放客人看得到的页：首页 / 剧本库 / 拼车 / 登录…）
 
-    一代目录里没有的东西（后台面板、DM 工作台）自动落回二代 —— 正好是想要的：
-    店里的干活工具不跟着客人的界面来回切。切换由 business.ui_ver() 决定。
+    一代模式下**必须先找 v1、找不到再落回二代**：后台面板、DM 工作台这些
+    一代目录里没有（那是店里干活的地方，不跟着客人的界面切），得能落回新版。
+    （第一版这里写成"二选一"，结果一代模式下后台直接 TemplateNotFound 500 —— 踩过。）
+
+    另外 v1 的骨架叫 layout_v1.html / auth_v1.html，**故意不叫 base.html**：
+    base.html 这个名字要留给二代，否则后台套上一代骨架。
+    切换由 business.ui_ver() 决定。
     """
 
     def __init__(self, paths):
@@ -33,8 +38,14 @@ class UiLoader(BaseLoader):
         self.v1 = FileSystemLoader([os.path.join(p, 'v1') for p in paths])
 
     def get_source(self, environment, template):
-        loader = self.v1 if business.ui_ver() == '1' else self.v2
-        return loader.get_source(environment, template)
+        if business.ui_ver() == '1':
+            for loader in (self.v1, self.v2):        # 一代优先，缺的落回二代
+                try:
+                    return loader.get_source(environment, template)
+                except TemplateNotFound:
+                    continue
+            raise TemplateNotFound(template)
+        return self.v2.get_source(environment, template)
 
 
 def seed():
