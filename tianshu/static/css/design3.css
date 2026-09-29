@@ -1394,6 +1394,10 @@ h2.heading-section{margin:0 0 var(--d-s3)}
 .realstrip__pick{background:var(--d-accent-05);border-color:var(--d-accent);text-decoration:none}
 .realstrip__pick .realstrip__v{color:var(--d-accent-2)}
 
+/* 四·通用 emoji → 手绘 SVG（emojisvg.js 注入，只在 ledger 风格下） */
+.em-svg{display:inline-block;width:1.15em;height:1.15em;vertical-align:-.2em;line-height:0}
+.em-svg svg{width:100%;height:100%;display:block;overflow:visible}
+
 /* 九·等待遮罩：铅笔在写（加载时盖一层，比转圈有人味） */
 .ts-loading{position:fixed;inset:0;z-index:2000;display:none;align-items:center;justify-content:center;
   flex-direction:column;gap:14px;background:color-mix(in srgb,var(--d-paper) 78%,transparent);
