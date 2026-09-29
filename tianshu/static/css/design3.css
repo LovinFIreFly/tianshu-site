@@ -617,6 +617,9 @@ img{max-width:100%}
   display:flex;flex-wrap:wrap;gap:var(--d-s3) var(--d-s5);align-items:center;
   font-family:var(--d-mono);font-size:11px;letter-spacing:.08em;color:var(--d-stage-2)}
 .dfoot__bar .grow{flex:1}
+/* 九·页脚：老板手写寄语（去模板腔） */
+.dfoot__note{margin:0 0 6px;font-family:var(--d-hand);font-size:17px;color:var(--d-stage-ink);
+  opacity:.9;transform:rotate(-.4deg)}
 
 /* 款式预览条（只有管理员看得见） */
 .skin-bar{display:flex;flex-wrap:wrap;align-items:center;gap:7px;font-family:var(--d-mono);font-size:11px;
@@ -1359,6 +1362,48 @@ h2.heading-section{margin:0 0 var(--d-s3)}
   .myrev3{padding:10px 12px}
   .myrev3__t{font-size:13px}
 }
+
+/* ============================================================================
+   22. 首页真实内容（七·去 AI 味）：玩家短评滚动 + DM 值班 + 老板推荐
+   ============================================================================ */
+.marq3{overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
+.marq3__track{display:flex;gap:16px;width:max-content;animation:marq 38s linear infinite}
+.marq3:hover .marq3__track{animation-play-state:paused}
+@keyframes marq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.marq3__item{flex:0 0 auto;width:min(320px,78vw);margin:0;background:var(--d-paper-3);
+  border:1.5px dashed var(--d-rule-strong);border-radius:7px 4px 8px 5px;box-shadow:var(--d-sh-1);
+  padding:14px 16px;transform:rotate(-.4deg)}
+.marq3__item:nth-child(2n){transform:rotate(.5deg)}
+.marq3__who{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.marq3__who img,.marq3__who span{width:30px;height:30px;border-radius:50%;object-fit:cover;
+  border:2px solid #fff;outline:1px solid var(--d-rule);box-shadow:var(--d-sh-1)}
+.marq3__who span{display:grid;place-items:center;background:var(--d-paper-2);font-family:var(--d-serif);
+  font-size:14px;color:var(--d-ink-2)}
+.marq3__who b{font-size:14px;color:var(--d-ink)}
+.marq3__who i{font-style:normal;color:var(--d-gold);font-size:12px;letter-spacing:1px}
+.marq3__t{font-family:var(--d-serif);font-size:15px;line-height:1.7;color:var(--d-ink-2);margin:0;
+  text-indent:0}
+.marq3__s{margin:8px 0 0;font-size:12px;color:var(--d-ink-4)}
+.realstrip{display:flex;flex-wrap:wrap;gap:14px;margin-top:clamp(18px,2.4vw,28px)}
+.realstrip__c{flex:1 1 240px;background:var(--d-paper-3);border:1.5px dashed var(--d-rule-strong);
+  border-radius:6px 3px 7px 4px;padding:12px 16px;box-shadow:var(--d-sh-1)}
+.realstrip__k{display:block;font-family:var(--d-mono);font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--d-ink-4);margin-bottom:4px}
+.realstrip__v{font-family:var(--d-serif);font-size:16px;color:var(--d-ink)}
+.realstrip__pick{background:var(--d-accent-05);border-color:var(--d-accent);text-decoration:none}
+.realstrip__pick .realstrip__v{color:var(--d-accent-2)}
+
+/* 九·等待遮罩：铅笔在写（加载时盖一层，比转圈有人味） */
+.ts-loading{position:fixed;inset:0;z-index:2000;display:none;align-items:center;justify-content:center;
+  flex-direction:column;gap:14px;background:color-mix(in srgb,var(--d-paper) 78%,transparent);
+  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.ts-loading.on{display:flex}
+.ts-loading__pencil{width:54px;height:54px;animation:pencil-write 1.1s var(--d-ease) infinite}
+@keyframes pencil-write{0%,100%{transform:translate(0,0) rotate(-8deg)}
+  25%{transform:translate(-4px,3px) rotate(6deg)}50%{transform:translate(3px,-2px) rotate(-4deg)}
+  75%{transform:translate(-2px,2px) rotate(8deg)}}
+.ts-loading__t{font-family:var(--d-hand);font-size:18px;color:var(--d-ink-2)}
 
 /* ============================================================================
    21. 后台去 AI 味：把面板改成"门店账本"

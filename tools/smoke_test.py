@@ -195,7 +195,7 @@ print('① 公开页面')
 guest = Client()
 s, html = guest.get('/')
 check('进站先看到欢迎页（不是登录表单）',
-      s == 200 and '沉浸式剧本体验' in html and '账号登录' not in html)
+      s == 200 and 'on-stage' in html and '账号登录' not in html)
 s, html = guest.get('/?browse=1')
 # 判据用页面结构：'welcome-card' 只在欢迎页有。
 # 别拿文案当判据 —— 页脚、slogan 都可能撞字（"沉浸式剧本体验"页脚里也有，踩过一次）。

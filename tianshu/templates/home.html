@@ -97,6 +97,52 @@
 </section>
 {% endif %}
 
+{# ============ 七·真实内容前置：玩家短评滚动 + 今日 DM 值班 + 老板今日推荐 ============ #}
+<section class="band realtalk">
+  <div class="wrap3">
+    <header class="dsec__head rv">
+      <span class="dsec__no">★</span>
+      <h2 class="dsec__title">玩家在说</h2>
+      <p class="dsec__meta">真实短评 · 慢慢滚</p>
+      <span class="dsec__rule"></span>
+    </header>
+
+    {% if reviews %}
+    <div class="marq3">
+      <div class="marq3__track">
+        {% for r in reviews + reviews %}
+        <figure class="marq3__item">
+          <div class="marq3__who">
+            {% if r.avatar and r.avatar.startswith('/img/') %}<img src="{{ r.avatar }}" alt="">{% else %}<span>{{ r.nick[0] }}</span>{% endif %}
+            <b>{{ r.nick }}</b><i>{% for _ in range(r.stars|int) %}★{% endfor %}</i>
+          </div>
+          <p class="marq3__t">『{{ r.text }}』</p>
+          <p class="marq3__s">—— {{ r.title or '本店' }}</p>
+        </figure>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <p class="dsec__lead">还没有人评。来玩完抢个沙发～</p>
+    {% endif %}
+
+    <div class="realstrip rv">
+      {% if dm_duty %}
+      <div class="realstrip__c">
+        <span class="realstrip__k">今日 DM 值班</span>
+        <span class="realstrip__v">{{ dm_duty|join('、') }}</span>
+      </div>
+      {% endif %}
+      {% if boss_pick %}
+      <a class="realstrip__c realstrip__pick" href="{{ url_for('public.script_detail', sid=boss_pick.id) }}">
+        <span class="realstrip__k">老板今日推荐</span>
+        <span class="realstrip__v">{{ boss_pick.title }} · ¥{{ boss_pick.price|int }}/人 →</span>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
 {# ============ 怎么玩：滚动分镜（Apple 式 sticky 叙事，抄 CSSDA 获奖站的"沉浸式滚动"） ============ #}
 <section class="how3" id="how" aria-label="怎么玩">
   <div class="how3__pin">

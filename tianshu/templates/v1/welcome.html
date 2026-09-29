@@ -14,9 +14,16 @@
 </div>
 
 <section class="welcome-stage" style="padding-top:calc(var(--site-nav-height) + var(--space-7))">
-  <span style="font-size:72px;animation:fade-up .8s var(--ease-out) both">🍠</span>
+  <span style="display:inline-block;width:84px;height:84px;animation:fade-up .8s var(--ease-out) both">
+    <svg width="84" height="84" viewBox="0 0 20 20" fill="none">
+      <path d="M3 12.5c-1-3 1-6.5 4-7.2 1.6-.4 3 .1 4 .9 3.4-1 6.6.6 6.9 3.6.2 2.4-1.4 4.6-3.9 5.2-1 .3-2 .1-2.8-.3-.6 1.1-2 1.8-3.4 1.4-2-.6-3.8-1.7-4.8-3.6Z" stroke="var(--vermilion)" stroke-width="1.2" stroke-linejoin="round"/>
+      <circle cx="7.4" cy="8.6" r="1" fill="var(--vermilion)"/>
+      <circle cx="12" cy="7.6" r="1" fill="var(--vermilion)"/>
+      <path d="M8.6 11.6c1 .5 2.2.4 3-.2" stroke="var(--vermilion)" stroke-width="1" stroke-linecap="round"/>
+    </svg>
+  </span>
   <h1 class="welcome-stage__title">{{ settings.shopName }}</h1>
-  <p class="welcome-stage__subtitle">沉浸式剧本体验 · 一场好戏从甜薯开始</p>
+  <p class="welcome-stage__subtitle">今晚换个人活一次 · 一场好戏从你推门那刻开始</p>
 
   <div class="welcome-stage__actions">
     <a class="btn btn--primary" href="{{ url_for('user.login') }}">登 录</a>

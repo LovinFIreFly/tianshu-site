@@ -327,4 +327,31 @@
     });
   }
 
+  /* ------------------------------------------------- 九·等待提示
+     交表单时盖一层"正在帮你翻本子…"（铅笔在写），比转圈有人味。
+     收藏这类无刷新提交（data-ajax-fav）不走这层。 */
+  var loadEl = null, loadTimer = null;
+  function showLoading(txt) {
+    if (!loadEl) {
+      loadEl = document.createElement('div');
+      loadEl.className = 'ts-loading';
+      loadEl.innerHTML = '<svg class="ts-loading__pencil" viewBox="0 0 48 48" fill="none">'
+        + '<path d="M30 6l12 12-20 20-14 2 2-14z" stroke="var(--d-ink)" stroke-width="2.4" stroke-linejoin="round"/>'
+        + '<path d="M28 8l12 12" stroke="var(--d-ink-4)" stroke-width="1.6"/>'
+        + '<path d="M10 40l4-4" stroke="var(--d-accent)" stroke-width="2.4" stroke-linecap="round"/></svg>'
+        + '<p class="ts-loading__t">正在帮你翻本子…</p>';
+      document.body.appendChild(loadEl);
+    }
+    loadEl.querySelector('.ts-loading__t').textContent = txt || '正在帮你翻本子…';
+    loadEl.classList.add('on');
+    clearTimeout(loadTimer);
+    loadTimer = setTimeout(function () { loadEl.classList.remove('on'); }, 4000);
+  }
+  document.addEventListener('submit', function (e) {
+    var f = e.target;
+    if (!f || (f.method && f.method.toLowerCase() === 'get')) return;
+    if (f.hasAttribute('data-ajax-fav') || f.hasAttribute('data-no-anim')) return;
+    showLoading('正在帮你翻本子…');
+  });
+
 })();

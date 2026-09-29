@@ -81,9 +81,33 @@ def home():
     day_end = business.midnight() + 86400000
     served = sum(int(b.get('players') or 0) for b in db.rows('bookings')
                  if b.get('status') in ('arrived', 'done') and (b.get('ts') or 0) < day_end)
+    # 七·真实内容前置：今日 DM 值班 / 真实玩家短评滚动 / 老板今日推荐
+    sessions = business.today_sessions()
+    dm_duty = []
+    for s in sessions:
+        n = (s.get('dmName') or '').strip()
+        if n and n != '待安排' and n not in dm_duty:
+            dm_duty.append(n)
+    # 真实玩家短评：最近几条"已展示"的评价（reviews_of 已带昵称/头像，按时间倒序）
+    script_titles = {str(s.get('id')): s.get('title', '') for s in scripts}
+    reviews = []
+    for r in business.reviews_of():
+        if not r.get('text'):
+            continue
+        reviews.append({
+            'nick': r.get('nick') or '玩家',
+            'avatar': r.get('avatar') or '',
+            'title': script_titles.get(str(r.get('sid')) or '', ''),
+            'text': r.get('text', ''),
+            'stars': r.get('rating') or 0,
+        })
+        if len(reviews) >= 8:
+            break
+    boss_pick = feat[0] if feat else (scripts[0] if scripts else None)
     return render_template('home.html', scripts=feat, stat=st, rating=rating,
                            banners=business.banners(), served=served,
-                           sessions=business.today_sessions(), cars=business.car_pool()[:3])
+                           sessions=sessions, cars=business.car_pool()[:3],
+                           dm_duty=dm_duty, reviews=reviews, boss_pick=boss_pick)
 
 
 @bp.get('/scripts')

@@ -52,7 +52,7 @@
        都在用客户端了，不需要再下一遍。 #}
     {% set _ua = request.headers.get('User-Agent') or '' %}
     {% set _in_app = ('TianshuApp' in _ua) or ('TianshuDesktop' in _ua) or in_shell %}
-    <p class="auth-foot">{{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}
+    <p class="auth-foot">{{ settings.shopName }} · 今晚换个人活一次 · © {{ year }}
       {% if not _in_app %}
       <a class="btn btn-sm btn-ghost desk-dl" style="margin-left:8px"
          href="{{ url_for('static', filename='app/tianshu-desktop.exe',
