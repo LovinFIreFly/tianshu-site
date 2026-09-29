@@ -1191,7 +1191,10 @@ def create_booking(user, form):
         price = float(join_car.get('price') or sc.get('price') or 0)     # 上车跟着车价，不另算指定 DM 加价
     else:
         price = float(sc.get('price') or 0) + (float(st['dmFee']) if form.get('dmPhone') else 0)
-    amount = round(price * players)
+    # 拼车：**每人各付各的** —— 这一单的总价就是自己那一份（单价），
+    # 尾款 = 单价 - 定金；同一辆车里别人那份由别人自己的单子付。
+    # 包车：车头一个人付所有人的钱 —— 总价 = 单价 × 人数，定金按比例。
+    amount = round(price) if mode == '拼车' else round(price * players)
     deposit = car_deposit(st) if mode == '拼车' else round(amount * float(st['depositRatio']))
     if coupon:
         deposit = max(0, deposit - int(coupon.get('amount') or 0))

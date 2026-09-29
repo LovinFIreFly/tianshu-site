@@ -69,6 +69,8 @@
 
           <p class="body-secondary" style="margin:12px 0 0">
             {{ b.players }} 人 · 总价 ¥{{ b.amount or 0 }} · 定金 ¥{{ b.deposit or 0 }}
+            {% if b.mode == '拼车' %}（拼车各付各的：这里是<b>你自己那一份</b>，同车别人付各自的）{% endif %}
+            {% if b.mode == '包车' %}（包车：车头一个人付全车的钱）{% endif %}
             {% if o %} · 订单：{{ {'unpaid':'待付定金','claimed':'待小客服确认','paid':'已付定金','refunded':'已退款','closed':'已关闭'}.get(o.status, o.status) }}{% endif %}
           </p>
 

@@ -728,8 +728,11 @@ img{max-width:100%}
    13c. 弹窗 / 遮罩的出场：淡入 + 面板升起一点点（后台用户档案、装 App 引导都用）
         display:none → 显示 会自动重播动画，所以每次打开都会重放。
    -------------------------------------------------------------------------- */
-.mask{animation:d-mask-in .22s var(--d-ease) both}
-.mask .modal{animation:d-pop .34s var(--d-ease) both}
+/* 层级：顶栏是 1000，弹窗必须压过它（之前 .mask 是 100，被顶栏压在上面） */
+.mask{animation:d-mask-in .22s var(--d-ease) both;z-index:1300;
+  background:rgba(20,17,14,.66);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.mask .modal{animation:d-pop .34s var(--d-ease) both;
+  border:1px solid var(--d-rule-2);border-radius:var(--d-r);box-shadow:var(--d-sh3)}
 @keyframes d-mask-in{from{opacity:0}to{opacity:1}}
 @keyframes d-pop{from{opacity:0;transform:translateY(20px) scale(.985)}to{opacity:1;transform:none}}
 
