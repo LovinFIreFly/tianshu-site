@@ -1074,6 +1074,25 @@ s, html = admin.get('/admin?tab=dash')
 check('后台「门店设置」里有「网站版式」下拉（一代 / 二代都在）',
       'name="uiVer"' in html and '一代' in html and '二代' in html)
 
+# 谁能动版式：**只有管理员**。DM 和客人既看不到入口，也切不动 ——
+# 版式是全站统一的（一个人改了所有人跟着变），所以权限必须卡在管理员这一级。
+s, html = dmcli.get('/?ui=1')
+check('DM 带 ?ui=1 不生效（还是二代）', s == 200 and 'design3.css' in html)
+s, html = dmcli.get('/?skin=monolith')
+check('DM 带 ?skin= 也不生效（预览只给管理员）', 'skin-monolith.css' not in html)
+s, html = dmcli.get('/dm')
+check('DM 工作台上没有「版式预览」那一栏（不是管理员就看不见）', '版式预览' not in html)
+s, html = dmcli.get('/admin')
+check('DM 进不了后台（自然也改不了版式）', s == 403 or '到店核销' not in html, 'HTTP %s' % s)
+dmcli.post('/admin/settings', {'uiVer': '1'})
+check('DM 直接提交改版式也被拦住（设置没变）',
+      str((jread('settings') or {}).get('uiVer') or '2') != '1',
+      '现在是 %s' % (jread('settings') or {}).get('uiVer'))
+guest.post('/admin/settings', {'uiVer': '1'})
+check('客人提交改后台设置同样拦住', str((jread('settings') or {}).get('uiVer') or '2') != '1')
+s, html = guest.get('/scripts')
+check('确认这会儿客人还是二代（前面那些尝试都没生效）', s == 200 and 'design3.css' in html)
+
 print('')
 print('=' * 46)
 if fails:
