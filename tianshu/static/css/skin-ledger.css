@@ -96,8 +96,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9998;o
   background:var(--paper-2);font-family:var(--mono);font-size:11px;padding:2px 9px}
 .tag3--accent{background:var(--vermilion-050);border-color:var(--vermilion);color:var(--vermilion);
   border-radius:10px 3px 9px 2px}            /* 马克笔高亮选中的标签 */
-.tag3:nth-child(2n){transform:rotate(-1.5deg);font-size:12px}
-.tag3:nth-child(3n){transform:rotate(1deg);padding:3px 11px}
+
 
 /* —— ④ 拍立得头像白边 —— */
 .avatar-circle,.tnav__who img,img.avatar{
@@ -232,6 +231,12 @@ html{scroll-behavior:auto}
 .chalk3__t{font-family:var(--hand);font-size:16px;color:var(--ink-2);line-height:1.7}
 .chalk3__k{font-family:var(--mono);color:var(--ink-4);letter-spacing:.04em}
 .chalk3__pin{color:var(--vermilion)}
+
+/* —— 订单/我的页面卡片对比度再拉开一点，标签别歪 —— */
+.me-card{background:#fff;border-color:var(--rule-strong);color:var(--ink)}
+.me-card .copy-mono,.me-card .sub{color:var(--ink-3)}
+.myrev3{background:#fff;border-color:var(--rule-strong);color:var(--ink)}
+.tag3{color:var(--ink)}
 
 /* —— 卡片内文别再贴边（社区帖子、评价卡共用 .rev3） —— */
 .rev3{padding:18px}
