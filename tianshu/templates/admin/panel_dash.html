@@ -232,6 +232,47 @@
   </form>
 </div>
 
+{# ---------------------------------------------------------------- 店铺实拍墙
+   单独一个表单（收文件）；首页照片墙会把这里传的真实照片挂出来。 #}
+<h2>店铺实拍墙</h2>
+<div class="panel">
+  <p class="sub" style="margin:0 0 14px">
+    传几张店里的真实照片 —— 前台、房间、道具、玩家在现场。首页会挂一条照片墙，
+    比统一风格的素材图有人味得多。建议横图、png / jpg / webp（每张 ≤700KB）。
+  </p>
+  {% if settings.shopPhotos %}
+  <div class="row" style="gap:12px;flex-wrap:wrap;margin:0 0 16px">
+    {% for p in settings.shopPhotos %}
+    <div style="width:140px">
+      <img src="{{ p.url }}" alt="{{ p.cap }}" style="width:100%;height:100px;object-fit:cover;border:1px solid var(--rule);border-radius:var(--d-r)">
+      <p class="sub" style="margin:4px 0;font-size:12px">{{ p.cap or '（无说明）' }}</p>
+      <form method="post" action="{{ url_for('admin.settings_shop_photos') }}">
+        <button class="b3 b3--sm" type="submit" name="rid" value="{{ p.url }}">删</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="sub" style="margin:0 0 14px">还没传 —— 首页照片墙不会出现。</p>
+  {% endif %}
+  <form id="shopPhotosForm" method="post" action="{{ url_for('admin.settings_shop_photos') }}" enctype="multipart/form-data"
+        class="row" style="gap:12px;align-items:flex-end">
+    <div class="field" style="flex:0 1 320px">
+      <label>上传照片（可多选，png / jpg / webp，≤700KB）</label>
+      <input type="file" name="photo" accept="image/png,image/jpeg,image/webp" multiple>
+    </div>
+    <div class="field" style="flex:0 1 320px">
+      <label>每张对应的说明（逗号分隔，按顺序：前台, 房间…）</label>
+      <input name="cap" placeholder="前台, 沉浸房, 道具墙">
+    </div>
+    <button class="b3 b3--sm b3--solid" type="submit">存照片墙</button>
+  </form>
+  <div class="field full" style="margin-top:14px">
+    <label>照片墙旁边配的一句话（手写体显示，可留空）</label>
+    <input name="intro" form="shopPhotosForm" value="{{ settings.shopIntro }}">
+  </div>
+</div>
+
 <div class="two mt">
   <div>
     <h2>发一封测试邮件</h2>

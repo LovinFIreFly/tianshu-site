@@ -57,6 +57,9 @@ SETTINGS_DEFAULT = {
     # 站点外观款式（**一次设置，全站统一**：手机端和电脑端都跟着变，不用每个人自己选）
     # 可选值见 business.SKINS；改这里只改"默认"，平时在后台「门店设置 → 外观款式」里选
     "skin": "playbill",
+    # 店铺实拍（"真实照片前置"用）：后台「门店设置」里传，首页会挂一条照片墙
+    "shopPhotos": [],          # 形如 [{'url':'/img/shop/...','cap':'前台'}, ...]
+    "shopIntro": "",           # 店铺一句话（实拍区旁边配的手写小字）
     "mailSubject": "",         # 主题，留空 = 【店名】验证码
     "mailWebhook": "",         # 自定义 Webhook 地址
     "smtpHost": "",            # 例：smtpdm.aliyun.com

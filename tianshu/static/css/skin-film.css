@@ -1,0 +1,72 @@
+/* ============================================================================
+   皮肤 F：胶片 · 做旧（film）
+   ----------------------------------------------------------------------------
+   出处：老放映机质感 + 旧票根 + 冲印店色卡。用来压掉"AI 干净感"：
+   ① 暖棕做旧纸 + 全屏胶片颗粒（feTurbulence 噪点，叠 multiply）
+   ② 标题下一道**手绘朱线**（不规则、粗细不一，不是机器画的 1px 直线）
+   ③ 卡片轻微歪 0.4°、圆角不等，像实物摆上去；投影是硬 offset（老印刷套印不准）
+   ④ 文字加一点点错位重影，模拟套印偏色
+   ⑤ 强调色用"邮戳红"，小面积戳在价格 / 编号上
+   ========================================================================== */
+:root{
+  --paper:#ECE2CC; --paper-2:#E2D4B8; --paper-3:#F4ECD8;
+  --ink:#2A2118; --ink-2:#3C3022; --ink-3:#5C4F3C; --ink-4:#8A7B62;
+  --rule:rgba(42,33,24,.30); --rule-strong:rgba(42,33,24,.55);
+  --vermilion:#A6321F; --vermilion-600:#C04A30; --vermilion-050:rgba(166,50,31,.12);
+  --gold:#9C6B22; --gold-050:rgba(156,107,34,.16);
+  --ok:#4E7A3F; --ok-bg:rgba(78,122,63,.16);
+  --bad:#A6321F; --bad-bg:rgba(166,50,31,.16);
+  --warn:#8A6320; --warn-bg:rgba(138,99,32,.16);
+  --info:#3A5A78; --info-bg:rgba(58,90,120,.16);
+  --serif:'STKaiti','KaiTi','楷体',Georgia,serif;     /* 标题用楷体，手写感 */
+  --sans:system-ui,'PingFang SC','Microsoft YaHei',sans-serif;
+  --mono:ui-monospace,'Courier New',monospace;
+  --noise-opacity:.07;
+}
+
+/* 全屏胶片颗粒（只在 film 皮肤挂，不影响其它皮肤） */
+body::after{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:9998;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.9'/%3E%3C/svg%3E");
+  opacity:var(--noise-opacity);mix-blend-mode:multiply}
+/* 四角压暗（暗角，老照片味） */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:9997;
+  background:radial-gradient(120% 120% at 50% 45%,transparent 58%,rgba(42,33,24,.22) 100%)}
+
+/* 顶部栏：做旧纸 + 粗墨边 */
+.tnav{background:color-mix(in srgb,var(--paper) 90%,transparent);border-bottom:1.5px solid var(--ink)}
+.tnav__mark{background:var(--vermilion);border-radius:3px;transform:rotate(-2deg)}
+.tnav__names b{font-family:var(--d-serif);letter-spacing:.02em}
+
+/* 标题下一道手绘朱线（不规则、粗细不一） */
+.dhero__title em::after,.dsec__title::after,.how3__t::after,.pagehead3__t::after{
+  content:"";position:absolute;left:-2%;right:-2%;bottom:.02em;height:.2em;
+  background:var(--vermilion);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='12'%3E%3Cpath d='M2 7 C 30 3, 60 10, 90 5 S 160 9, 198 4' stroke='%23000' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center/100% 100%;
+          mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='12'%3E%3Cpath d='M2 7 C 30 3, 60 10, 90 5 S 160 9, 198 4' stroke='%23000' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center/100% 100%}
+
+/* 卡片：轻微歪 + 不等圆角 + 硬投影（套印不准） */
+.pcard3,.ccard3,.rev3,.block3,.me-card,.panel,.cell,.room-card,.role-card{
+  border-color:var(--ink);border-radius:7px 4px 8px 5px;
+  box-shadow:3px 3px 0 rgba(42,33,24,.16);transform:rotate(-.4deg)}
+.pcard3:hover,.ccard3:hover,.rev3:hover,.block3:hover{transform:rotate(0) translateY(-2px);
+  box-shadow:4px 5px 0 rgba(42,33,24,.2)}
+
+/* 按钮：邮戳感 */
+.b3{border-color:var(--ink);border-radius:6px 4px 7px 4px}
+.b3--solid,.b3--accent{background:var(--vermilion);color:#F4ECD8;border-color:var(--ink)}
+.b3--solid:hover,.b3--accent:hover{background:var(--vermilion-600)}
+.tag3--accent{background:var(--vermilion-050);border-color:var(--vermilion);color:var(--vermilion)}
+
+/* 编号 / 元信息：打字机等宽 */
+.dsec__no,.board3__t,.how3__no,.pagehead3__k,.copy-mono{font-family:var(--mono);letter-spacing:.12em}
+
+/* 海报大字：楷体 + 错位重影（套印偏色） */
+.dhero__title{font-family:var(--d-serif);text-shadow:1.5px 1px 0 rgba(166,50,31,.18),-1px -1px 0 rgba(58,90,120,.14)}
+
+/* 首屏光斑：film 下暖一点、淡一点 */
+.glow3{background:radial-gradient(180px 140px at var(--mx,16%) var(--my,26%),rgba(189,127,60,.12),transparent 70%),
+  radial-gradient(460px 340px at var(--mx,16%) var(--my,26%),rgba(120,70,30,.14),transparent 72%)}
+
+/* 手机底栏：墨边 + 做旧纸 */
+.mobtab{border-top:1.5px solid var(--ink);background:color-mix(in srgb,var(--paper) 92%,transparent)}

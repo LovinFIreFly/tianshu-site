@@ -54,6 +54,9 @@
   --d-serif:var(--serif,Georgia,serif);
   --d-sans:var(--sans,system-ui,sans-serif);
   --d-mono:var(--mono,ui-monospace,monospace);
+  /* 手写体（去 AI 味的用）：中文走楷体，英文走 Caveat/手写系统字 */
+  --d-hand:var(--hand,'STKaiti','KaiTi','楷体','Caveat',cursive);
+  --hand:var(--d-hand);
   --d-fs-display:var(--fs-display,clamp(44px,11vw,104px));
   --d-lh-display:var(--lh-display,.92);
   --d-track-display:var(--track-display,-.03em);
@@ -1249,6 +1252,55 @@ h2.heading-section{margin:0 0 var(--d-s3)}
 @media(max-width:860px){.board3__list{grid-template-columns:1fr}}
 .board3__row{grid-template-columns:auto 1fr}
 .board3__s{grid-column:1/-1;text-align:left;margin-top:6px}
+
+/* ============================================================================
+   20. 手写 / 涂鸦（去 AI 味）
+   ----------------------------------------------------------------------------
+   机器生成的网站干净得发假。这里加点"人味"：手写体、信手画的线、便签。
+   只在点缀处用（公告、空状态、标题下划线），正文还是用正经字体，保证可读。
+   ========================================================================== */
+.hand{font-family:var(--d-hand);font-weight:400}
+/* 手绘下划线：用 mask 把一条粗线"啃"成粗细不匀的手画感 */
+.hl{position:relative;display:inline-block}
+.hl::after{content:"";position:absolute;left:-1%;right:-1%;bottom:-.06em;height:.32em;
+  background:var(--d-accent);border-radius:40% 60% 50% 50%/60% 40% 60% 40%;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='14'%3E%3Cpath d='M3 8 C 40 4, 70 11, 100 7 S 165 10, 197 5' stroke='%23000' stroke-width='6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center/100% 100%;
+          mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='14'%3E%3Cpath d='M3 8 C 40 4, 70 11, 100 7 S 165 10, 197 5' stroke='%23000' stroke-width='6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center/100% 100%}
+/* 今日小黑板（手写公告条） */
+.chalk3{display:flex;align-items:flex-start;gap:14px;margin:0 auto;max-width:var(--d-max);
+  background:var(--d-stage);color:var(--d-stage-2);border-radius:var(--d-r);
+  padding:16px clamp(16px,2.4vw,28px);box-shadow:var(--d-sh1)}
+.chalk3__pin{flex:0 0 auto;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
+  background:var(--d-accent);color:var(--d-paper-3);font-size:15px;transform:rotate(-6deg)}
+.chalk3__b{flex:1;min-width:0}
+.chalk3__k{font-family:var(--d-mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--d-stage-2);opacity:.7;margin:0 0 4px}
+.chalk3__t{font-family:var(--d-hand);font-size:19px;line-height:1.55;margin:0;color:var(--d-stage-ink)}
+/* 空状态：加一张手绘小涂鸦 + 手写安慰话 */
+.empty3{position:relative;text-align:center;padding:clamp(22px,4vw,40px) 0;color:var(--d-ink-3)}
+.empty3__doodle{width:clamp(90px,16vw,140px);height:auto;margin:0 auto 12px;display:block;opacity:.85}
+.empty3__t{font-family:var(--d-hand);font-size:18px;color:var(--d-ink-2);line-height:1.6}
+.empty3__s{font-size:13px;color:var(--d-ink-4);margin-top:6px}
+/* 便签：贴在卡片角上的手写小条 */
+.note3{font-family:var(--d-hand)}
+
+/* 店铺实拍墙：错落贴的照片（去 AI 味） */
+.shopwall3{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:clamp(10px,1.6vw,18px)}
+.shopwall3__item{margin:0;background:var(--d-paper-3);border:1px solid var(--d-rule);
+  border-radius:var(--d-r);overflow:hidden;box-shadow:var(--d-sh1);
+  transform:rotate(var(--rot,0deg));transition:transform .3s var(--d-ease),box-shadow .3s}
+.shopwall3__item:hover{transform:rotate(0) scale(1.02);box-shadow:var(--d-sh2);z-index:1}
+.shopwall3__item img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--d-paper-2)}
+.shopwall3__item figcaption{padding:8px 10px;font-size:15px;color:var(--d-ink-2);line-height:1.4}
+.shopwall3__item:nth-child(3n+1){--rot:-1.2deg}
+.shopwall3__item:nth-child(3n+2){--rot:.8deg}
+.shopwall3__item:nth-child(3n){--rot:-.4deg}
+.shopwall3__intro{margin:clamp(14px,2vw,22px) 0 0;font-size:19px;color:var(--d-ink-3);line-height:1.6;
+  max-width:54ch}
+@media(max-width:760px){.shopwall3{grid-template-columns:repeat(2,1fr);gap:10px}
+  .shopwall3__item img{aspect-ratio:1/1}}
+
 
 /* ============================================================================
    19. 手机端（≤760px）再收一遍 —— 针对 App WebView / 窄屏

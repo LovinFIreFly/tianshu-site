@@ -633,6 +633,39 @@ def settings_group_qr():
     return redirect(url_for('admin.dashboard') + '#dash')
 
 
+@bp.post('/settings/shop-photos')
+@staff_required
+def settings_shop_photos():
+    """店铺实拍墙：传几张真实照片（前台 / 房间 / 道具…），首页照片墙会显示。
+
+    表单里可带多张文件（name=photo），每张配一句说明（name=cap）；
+    也可只删某一张（带 rid 参数 = 那张的 url）。HTML 表单不能嵌套，单独成路由。
+    """
+    rows = db.read('settings') or {}
+    photos = list(rows.get('shopPhotos') or [])
+    rid = request.form.get('rid')
+    if rid:                       # 删一张
+        rows['shopPhotos'] = [p for p in photos if p.get('url') != rid]
+        db.write('settings', rows)
+        business.audit(current_user().get('username'), role(), '删了张店铺实拍')
+        flash('删掉了', 'ok')
+        return redirect(url_for('admin.dashboard') + '#dash')
+    caps = request.form.getlist('cap')
+    for i, fs in enumerate(request.files.getlist('photo')):
+        url, err = business.save_upload(fs, 'shop')
+        if url:
+            photos.append({'url': url, 'cap': (caps[i] if i < len(caps) else '') or ''})
+        elif err and fs and fs.filename:
+            flash('有张图没存上：%s' % err, 'warn')
+    rows['shopPhotos'] = photos
+    if request.form.get('intro') is not None:
+        rows['shopIntro'] = business.clean(request.form.get('intro'), 120)
+    db.write('settings', rows)
+    business.audit(current_user().get('username'), role(), '更新了店铺实拍（%d 张）' % len(photos))
+    flash('店铺实拍存好了，首页照片墙立刻能看到', 'ok')
+    return redirect(url_for('admin.dashboard') + '#dash')
+
+
 @bp.post('/settings')
 @staff_required
 def settings():

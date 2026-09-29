@@ -54,7 +54,15 @@
             {% endfor %}
           </ol>
           {% else %}
-          <div class="board3__empty">今天还没排场次。挑个本子选好时间，我们给你开一场。</div>
+          <div class="board3__empty">
+            <svg class="empty3__doodle" viewBox="0 0 120 90" fill="none" aria-hidden="true">
+              <path d="M14 60 C 30 40, 44 78, 60 56 S 92 30, 106 52" stroke="var(--d-ink-4)" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+              <circle cx="60" cy="40" r="20" stroke="var(--d-accent)" stroke-width="3" opacity=".55"/>
+              <path d="M52 40 l6 6 l12 -14" stroke="var(--d-accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/>
+            </svg>
+            <span class="empty3__t" style="display:block">今天还没排场次。</span>
+            <span class="empty3__s" style="display:block">挑个本子选好时间，我们给你开一场。</span>
+          </div>
           {% endif %}
           <div class="board3__foot">
             <a class="b3 b3--sm b3--ghost" href="{{ url_for('public.car') }}">拼车大厅</a>
@@ -73,6 +81,21 @@
     </div>
   </div>
 </section>
+
+{# ============ 今日小黑板（手写公告，去 AI 味的点缀） ============ #}
+{% if settings.notice %}
+<section class="band" style="padding:clamp(0px,1vw,14px) 0">
+  <div class="wrap3">
+    <div class="chalk3 rv">
+      <span class="chalk3__pin">✦</span>
+      <div class="chalk3__b">
+        <p class="chalk3__k">今日小黑板 · Note</p>
+        <p class="chalk3__t">{{ settings.notice }}</p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
 
 {# ============ 怎么玩：滚动分镜（Apple 式 sticky 叙事，抄 CSSDA 获奖站的"沉浸式滚动"） ============ #}
 <section class="how3" id="how" aria-label="怎么玩">
@@ -311,6 +334,31 @@
     </ul>
   </div>
 </section>
+
+{# ============ 店铺实拍：真实照片墙（去 AI 味 —— 比统一素材图有人味） ============ #}
+{% if settings.shopPhotos %}
+<section class="dsec" style="border-top:1px solid var(--d-rule-2)">
+  <div class="wrap3">
+    <header class="dsec__head rv">
+      <span class="dsec__no">★</span>
+      <h2 class="dsec__title">店里的样子</h2>
+      <p class="dsec__meta">实拍 · 不是网图</p>
+      <span class="dsec__rule"></span>
+    </header>
+    <div class="shopwall3 rv">
+      {% for p in settings.shopPhotos %}
+      <figure class="shopwall3__item">
+        <img src="{{ p.url }}" alt="{{ p.cap }}" loading="lazy">
+        {% if p.cap %}<figcaption class="hand">{{ p.cap }}</figcaption>{% endif %}
+      </figure>
+      {% endfor %}
+    </div>
+    {% if settings.shopIntro %}
+    <p class="shopwall3__intro hand rv">{{ settings.shopIntro }}</p>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
 
 {# ============ 收尾：一句台词 + 两个动作（浅底 + 印色引句，不拉横幅） ============ #}
 <section class="dsec" style="border-bottom:0;border-top:1px solid var(--d-rule-2)">
