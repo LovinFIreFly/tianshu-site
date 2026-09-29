@@ -965,8 +965,9 @@ html.ts-leaving body{opacity:0;transform:translateY(-10px) scale(.995);
 /* 「我自己的评价」：订单/预约卡片里，评价完把打过什么直接摆出来（只显示"已评价"太没交代） */
 .myrev3{margin-top:14px;padding:12px 14px;border:1px solid var(--d-rule);border-radius:var(--d-r);
   background:var(--d-paper-2)}
-.myrev3__h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.myrev3__s{font-size:15px;letter-spacing:1px;color:var(--d-rule-2)}
+.myrev3__h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.myrev3__s{font-size:15px;letter-spacing:1px;color:var(--d-rule-2);line-height:1}
+.myrev3__h .caption{line-height:1}
 .myrev3__s i{font-style:normal}
 .myrev3__s i.on{color:var(--d-accent)}
 .myrev3__t{margin:8px 0 0;font-size:13.5px;line-height:1.72;color:var(--d-ink-2);white-space:pre-wrap}

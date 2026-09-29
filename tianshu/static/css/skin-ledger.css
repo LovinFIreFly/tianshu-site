@@ -17,7 +17,8 @@
   --paper:#F3EEDF; --paper-2:#E9E1CC; --paper-3:#FBF7EC;
   --ink:#211C15; --ink-2:#3B342A; --ink-3:#615845; --ink-4:#8C8068;
   --rule:rgba(33,28,21,.20); --rule-strong:rgba(33,28,21,.46);
-  --vermilion:#B2301C; --vermilion-600:#8C2010; --vermilion-050:rgba(178,48,28,.10);
+  --vermilion:#2F6B6B; --vermilion-600:#1F4F4F; --vermilion-050:rgba(47,107,107,.12);
+  --cta:#B2301C; --cta-600:#8C2010; --cta-050:rgba(178,48,28,.10);
   --gold:#8A6A2A; --gold-050:rgba(138,106,42,.12);
   --ok:#3C6B3C; --ok-bg:rgba(60,107,60,.12);
   --bad:#B2301C; --bad-bg:rgba(178,48,28,.12);
@@ -106,10 +107,10 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9998;o
 
 /* —— ④ 按钮不规则圆角 + ⑤ 收藏盖章 —— */
 .b3{border-width:2px;border-style:solid;border-radius:6px 3px 7px 4px;font-family:var(--sans);font-weight:600}
-.b3--solid,.b3--accent{background:var(--vermilion);color:var(--paper-3);border-color:var(--ink)}
-.b3--solid:hover,.b3--accent:hover{background:var(--vermilion-600);transform:translate(-1px,-1px);box-shadow:var(--sh-hard)}
+.b3--solid,.b3--accent{background:var(--cta);color:var(--paper-3);border-color:var(--ink)}
+.b3--solid:hover,.b3--accent:hover{background:var(--cta-600);transform:translate(-1px,-1px);box-shadow:var(--sh-hard)}
 @keyframes ledger-stamp{0%{transform:scale(2.2) rotate(-14deg);opacity:0}55%{opacity:1}100%{transform:scale(1) rotate(-4deg)}}
-.fav-btn.on,.btn.on.is-stamp{animation:ledger-stamp .32s var(--d-ease);color:var(--vermilion)}
+.fav-btn.on,.btn.on.is-stamp{animation:ledger-stamp .32s var(--d-ease);color:var(--cta)}
 
 /* —— ① 元信息等宽 + ② 编号手写缩进 —— */
 .price,.code-big,.copy-mono,.adm-main th,.dsec__no,.how3__no,.pagehead3__k{font-family:var(--mono)}
@@ -127,7 +128,8 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9998;o
   --paper:#211E19; --paper-2:#1A1712; --paper-3:#2A261F;
   --ink:#EDE6D6; --ink-2:#D8CEBB; --ink-3:#A99E87; --ink-4:#7E745E;
   --rule:rgba(237,230,214,.20); --rule-strong:rgba(237,230,214,.42);
-  --vermilion:#D8503A; --vermilion-600:#B83A26; --vermilion-050:rgba(216,80,58,.14);
+  --vermilion:#4A9E9E; --vermilion-600:#3A7A7A; --vermilion-050:rgba(74,158,158,.14);
+  --cta:#D8503A; --cta-600:#B83A26; --cta-050:rgba(216,80,58,.14);
   --sh-1:1px 1px 0 rgba(0,0,0,.4); --sh-2:2px 2px 0 rgba(0,0,0,.5); --sh-3:3px 3px 0 rgba(0,0,0,.55);
   --sh-hard:2px 2px 0 rgba(0,0,0,.55)}
 [data-theme="dark"] body{background-color:var(--paper);color:var(--ink)}
@@ -147,3 +149,32 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9998;o
 
 /* —— ⑨ 表单出错：手写体口语，不红字系统腔 —— */
 .field .err,.form-err{font-family:var(--hand);color:var(--vermilion);font-size:15px;margin-top:4px}
+
+/* .....................................................................
+   按 Word 建议继续去 AI 味（本层 ledger 独享）
+   ..................................................................... */
+
+/* ① 去掉平滑滚动：ledger 下滚动更直接，不会「嗖」地掠过中间内容 */
+html{scroll-behavior:auto}
+
+/* ② 隐藏「中文·ENGLISH 大写」副标题，去掉 AI 味最强的页头公式 */
+.pagehead3__k{display:none}
+.copy-mono,.ticker3 span,.chip3__x{text-transform:none;letter-spacing:.02em}
+
+/* ③ 胶囊筛选标签改成不规则印章/贴纸 */
+.chip3{border:1.5px dashed var(--rule-strong);border-radius:4px 2px 5px 3px;
+  background:var(--paper-3);font-family:var(--mono);font-size:12px;padding:4px 10px;
+  transform:rotate(-.5deg)}
+.chip3:nth-child(2n){transform:rotate(.8deg)}
+.chip3:nth-child(3n){transform:rotate(-.3deg);padding:3px 11px}
+.chip3.on{background:var(--vermilion);border-color:var(--vermilion-600);color:var(--paper-3);
+  transform:rotate(0)}
+.chip3.on:hover{background:var(--vermilion-600)}
+
+/* ④ Hero 大字别贴左边，留出「随手写」的边距 */
+@media(min-width:1000px){
+  .dhero__title{text-align:left;margin-left:var(--d-s5)}
+  .dhero__sub{margin-left:var(--d-s5)}
+  .dhero .sform3{margin-left:var(--d-s5)}
+  .dhero__cta{justify-content:flex-start;margin-left:var(--d-s5)}
+}
