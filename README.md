@@ -340,9 +340,29 @@ bash /opt/tianshu/deploy/install.sh tianshu.lovinfirefly.cn
 
 **⑤ 手机流量打开 `https://tianshu.lovinfirefly.cn`** —— 证书是 Caddy 自动申请的，第一次打开等 10 秒左右。
 
-**以后怎么更新网站**：本机改完 → `git push` → 服务器上再跑一次
-`bash /opt/tianshu/deploy/install.sh tianshu.lovinfirefly.cn`
-（这条命令重复跑没事，等于"拉最新代码 + 重启服务"）
+**以后怎么更新网站**：本机改完 → `git push` → 服务器上跑一条命令就完事
+
+```bash
+bash /opt/tianshu/deploy/update.sh          # 平时更新用这条（推荐）
+# 或：bash /opt/tianshu/deploy/install.sh tianshu.lovinfirefly.cn   # 两条都行，这条顺带把系统也过一遍
+```
+
+两个脚本的分工：`install.sh` 管**机器**（系统依赖 / Caddy / systemd / 定时备份，装一次就够）；
+`update.sh` 管**网站本身**——更新前自动备份 `data/` → 拉代码 → 装依赖 → 重启 → 自测三页，
+起不来就把日志尾巴打出来。重复跑都没事。`data/` 在 `.gitignore` 里，**任何一次更新都不会动它**。
+
+### 界面代次：一代 / 二代（管理员可选）
+
+站里有**两套界面**，后台「门店设置 → 网站版式」一句话切换，**客人看到的整站跟着变**：
+
+| | 是什么 | 模板在哪 |
+|---|---|---|
+| **二代 · 新骨架**（默认） | 现在这套：两行顶栏 + 非对称首屏 + 细线编号 | `tianshu/templates/` |
+| **一代 · 老版式** | 3.0 改版前那套（老首页那样子） | `tianshu/templates/v1/` |
+
+- **后台和 DM 工作台永远是二代** —— 那是店里干活的地方，不跟着客人的界面切（一代目录里根本没有这些模板）
+- 换之前先看：任意页面网址加 `?ui=1` / `?ui=2`，页脚也有「版式预览」那一排 —— **只有管理员生效**，客人带了没用
+- 款式（`?skin=`）换的是配色/字体/圆角，一/二代都生效
 
 > 不管哪种：**数据都在 `data/`**，整个文件夹拷走就是完整备份。
 
