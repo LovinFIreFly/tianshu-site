@@ -178,3 +178,57 @@ html{scroll-behavior:auto}
   .dhero .sform3{margin-left:var(--d-s5)}
   .dhero__cta{justify-content:flex-start;margin-left:var(--d-s5)}
 }
+
+/* .....................................................................
+   按 Word 建议继续（结构性 / 质感层，ledger 独享）
+   ..................................................................... */
+
+/* —— 404 手绘页：让内联 SVG 的邮戳红走 ledger 主色（teal），并加贴墙感 —— */
+:root{--d-vermilion:var(--vermilion)}
+[data-skin="ledger"] .heading-hero{color:var(--vermilion)}
+[data-skin="ledger"] section.dsec > .wrap3 > svg,
+[data-skin="ledger"] .dsec svg[viewBox^="0 0 150"]{transform:rotate(-3deg)}
+
+/* —— 车票按钮：不规则撕纸条 + 左边虚线齿孔 + 随手歪 —— */
+.b3{position:relative;border-radius:6px 3px 7px 4px;transform:rotate(-.5deg)}
+.b3::before{content:"";position:absolute;left:10px;top:5px;bottom:5px;
+  border-left:1.5px dashed currentColor;opacity:.32}
+.b3{padding-left:22px}
+.b3:hover{transform:rotate(0)}
+.b3--solid::after,.b3--accent::after,.btn--primary::after,.btn-accent::after{display:none}
+.dhero .b3::before{opacity:.5}
+
+/* —— 剧本卡片：真·封皮质感（书脊 + 折角 + 拿起来） —— */
+.pcard3{transform:rotate(-.6deg)}
+.pcard3:nth-child(2n){transform:rotate(.7deg)}
+.pcard3:nth-child(3n){transform:rotate(-.35deg)}
+.pcard3__cover{border-radius:3px 6px 4px 3px;overflow:hidden;
+  box-shadow:inset 7px 0 10px -7px rgba(33,28,21,.5);   /* 左书脊阴影 */
+  border-left:2px solid rgba(33,28,21,.35)}
+.pcard3__cover::after{content:"";position:absolute;top:0;right:0;z-index:3;
+  width:0;height:0;border-style:solid;border-width:0 22px 22px 0;
+  border-color:transparent var(--paper-2) transparent transparent;
+  filter:drop-shadow(-2px 2px 2px rgba(33,28,21,.25))}   /* 右上折角 */
+.pcard3:hover{transform:rotate(0) translateY(-4px) scale(1.02);
+  box-shadow:var(--sh-3);transition:transform .28s var(--d-ease),box-shadow .28s}
+.pcard3__type{background:var(--vermilion);color:var(--paper-3);font-family:var(--mono);
+  border-radius:0 0 6px 0;letter-spacing:.04em}
+
+/* —— 空状态：手绘插画（空桌+骰子）+ 贴墙便签 —— */
+.empty3{position:relative;background:var(--paper-3);border:1.5px dashed var(--rule-strong);
+  border-radius:8px 4px 9px 5px;box-shadow:var(--sh-2);transform:rotate(-.4deg)}
+.empty3__k{color:var(--ink-4)}
+.empty3__t,.empty3__p{color:var(--ink-2)}
+.empty3:not(:has(.empty3__doodle))::before{
+  content:"";display:block;width:118px;height:84px;margin:0 auto 10px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 118 84'%3E%3Cg fill='none' stroke='%23211C15' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M26 50 L92 44 L96 64 L30 70 Z'/%3E%3Cpath d='M28 70 L26 80 M94 64 L96 74 M60 47 L60 40'/%3E%3C/g%3E%3Cg fill='none' stroke='%232F6B6B' stroke-width='2' stroke-linejoin='round'%3E%3Crect x='50' y='30' width='16' height='16' rx='3' transform='rotate(8 58 38)'/%3E%3Cpath d='M58 33 v4 M55 38 h6 M53 35 h2 M61 41 h2'/%3E%3C/g%3E%3C/svg%3E") no-repeat center/contain}
+
+/* —— 首页「今夜开演」牌 / 小黑板 / 通知：做成贴在墙上的手写便签 —— */
+.dhero__side .board3{background:var(--paper-3);border:1.5px solid var(--rule-strong);
+  border-radius:8px 4px 9px 5px;box-shadow:var(--sh-2);transform:rotate(.5deg);padding:16px}
+.dhero__side .board3__head h2{font-family:var(--hand);font-size:19px;color:var(--ink)}
+.chalk3{position:relative;background:var(--paper-3);border:1.5px dashed var(--rule-strong);
+  border-radius:8px 4px 9px 5px;box-shadow:var(--sh-2);transform:rotate(-.5deg);padding:14px 18px}
+.chalk3__t{font-family:var(--hand);font-size:16px;color:var(--ink-2);line-height:1.7}
+.chalk3__k{font-family:var(--mono);color:var(--ink-4);letter-spacing:.04em}
+.chalk3__pin{color:var(--vermilion)}
