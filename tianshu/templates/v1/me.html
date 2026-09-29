@@ -1,0 +1,331 @@
+{% extends 'base.html' %}
+{% block title %}我的 · {{ settings.shopName }}{% endblock %}
+{% block body %}
+
+{% set av = me.profile.avatar or '' %}
+<section class="tile tile--light" style="padding-top:calc(var(--site-nav-height) + var(--space-6))">
+  <div class="tile__inner">
+    <div class="me-wrap">
+      <aside>
+        <div class="card profile">
+          <div class="avatar">{% if av.startswith('/img/') %}<img src="{{ av }}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">{% else %}{{ (me.profile.nick or me.username)[0] }}{% endif %}</div>
+          <h3 class="heading-section">{{ me.profile.nick or me.username }}</h3>
+          <p class="body-secondary">{{ me.phone[:3] }}****{{ me.phone[-4:] }}{% if me.invite %} · 邀请码 {{ me.invite }}{% endif %}</p>
+          <div class="p-stats">
+            <div><b>{{ me.credit or 100 }}</b><span>信用分</span></div>
+            <div><b>{{ coupons|selectattr('used', 'equalto', false)|list|length }}</b><span>可用券</span></div>
+            <div><b>{{ spent }}</b><span>已付定金</span></div>
+          </div>
+        </div>
+        <nav class="me-nav" data-tabs="me">
+          <button type="button" class="mi {{ 'on' if true }}" data-tab="bookings">我的预约<span>{{ bookings|length }} 条 ›</span></button>
+          <button type="button" class="mi" data-tab="orders">订单<span>{{ orders|length }} 条 ›</span></button>
+          <button type="button" class="mi" data-tab="coupons">券 / 心愿单<span>{{ coupons|length }} 张券 ›</span></button>
+          <button type="button" class="mi" data-tab="notices">消息与留言<span>{{ unread }} 条未读 ›</span></button>
+          <button type="button" class="mi" data-tab="profile">资料与安全<span>›</span></button>
+        </nav>
+      </aside>
+
+      <div>
+
+{# ---------------------------------------------------------------- 我的预约 #}
+<div class="tabpane on" data-tab="bookings">
+  {% for b in bookings %}
+  {% set o = order_of.get(b.id) %}
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;gap:var(--space-2);align-items:flex-start">
+      <div>
+        <b>{{ b.emoji or '🎭' }} {{ b.title }}</b>
+        <span class="pill">{{ b.mode or '拼车' }}</span>
+        {% if b.role %}<span class="badge">{{ b.role }}</span>{% endif %}
+        {% if b.status == 'cancelled' %}<span class="badge">已取消</span>
+        {% elif b.status == 'arrived' %}<span class="badge badge--brand">已到店</span>
+        {% else %}<span class="badge badge--brand">已锁定</span>{% endif %}
+      </div>
+      <span class="caption">{{ b.day }} {{ b.time }}</span>
+    </div>
+
+    <p class="body-secondary mt-3">
+      {{ b.players }} 人 · 总价 ¥{{ b.amount or 0 }} · 定金 ¥{{ b.deposit or 0 }}
+      {% if o %} · 订单：{{ {'unpaid':'待付定金','claimed':'待小客服确认','paid':'已付定金','refunded':'已退款','closed':'已关闭'}.get(o.status, o.status) }}{% endif %}
+    </p>
+
+    {% if b.status != 'cancelled' %}
+      {% if not o or o.status == 'paid' %}
+      <div class="mt-3" style="display:flex;gap:8px;align-items:baseline">
+        <span class="body-secondary">到店报这个码：</span><span class="code-big">{{ b.verifyCode or '—' }}</span></div>
+      {% elif o.status == 'claimed' %}
+      <div class="mt-3" style="display:flex;gap:8px;align-items:center">
+        <span class="badge">待小客服确认</span>
+        <span class="body-secondary">钱到账、小客服点确认之后，核销码才会显示在这里</span></div>
+      {% else %}
+      <div class="mt-3" style="display:flex;gap:8px;align-items:center">
+        <span class="badge">未付定金</span>
+        <span class="body-secondary">付完定金、小客服确认到账后才会显示核销码（在那之前只有店里的管理员和 DM 看得到）</span></div>
+      {% endif %}
+    {% endif %}
+
+    {% if b.status == 'booked' %}
+    <details class="mt-3">
+      <summary class="body-secondary" style="cursor:pointer">改个时间（定金保留）</summary>
+      <form class="mt-3" method="post" action="{{ url_for('user.reschedule', bid=b.id) }}" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+        <div class="field" style="flex:1 1 130px;margin:0"><label>新日期</label>
+          <select class="input" name="ts">{% for d in days %}<option value="{{ d.ts }}">{{ d.label }}</option>{% endfor %}</select></div>
+        <div class="field" style="flex:1 1 190px;margin:0"><label>时间（自己填）</label>
+          <input class="input" name="time" type="time" value="{{ b.time }}" required></div>
+        <button class="btn btn--sm" type="submit">改期</button>
+      </form>
+    </details>
+    {% endif %}
+
+    {% if b.status in ('arrived', 'done') and b.id not in reviewed
+          and (not o or o.balStatus == 'paid' or (o.amount or 0) - (o.deposit or 0) <= 0) %}
+    <form class="mt-3" method="post" action="{{ url_for('user.review', bid=b.id) }}"
+          style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;border-top:1px solid var(--rule);padding-top:12px">
+      <div class="field" style="margin:0"><label>打几分（点星星）</label>
+        <div class="stars">
+          {% for i in range(5, 0, -1) %}
+          <input type="radio" name="rating" value="{{ i }}" id="st{{ b.id }}-{{ i }}" {{ 'checked' if i == 5 }}>
+          <label for="st{{ b.id }}-{{ i }}" title="{{ i }} 星">★</label>
+          {% endfor %}
+        </div></div>
+      <div class="field" style="flex:1 1 180px;margin:0"><label>说两句（可留空只打分）</label>
+        <input class="input" name="text" placeholder="剧情 / DM / 房间 都可以聊"></div>
+      <div class="field" style="max-width:84px;margin:0"><label>剧情</label>
+        <select class="input" name="plot"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></div>
+      <div class="field" style="max-width:74px;margin:0"><label>DM</label>
+        <select class="input" name="dm"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></div>
+      <div class="field" style="max-width:74px;margin:0"><label>氛围</label>
+        <select class="input" name="vibe"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></div>
+      <div class="field" style="max-width:74px;margin:0"><label>房间</label>
+        <select class="input" name="room"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></div>
+      <label class="body-secondary" style="display:flex;gap:4px;align-items:center">
+        <input type="checkbox" name="anonymous" value="1" style="width:auto"> 匿名</label>
+      <button class="btn btn--sm btn--primary" type="submit">提交评价</button>
+    </form>
+    {% endif %}
+
+    <div class="mt-3" style="display:flex;gap:8px;flex-wrap:wrap">
+      {% if o and o.status == 'unpaid' %}
+      <a class="btn btn--sm btn--primary" href="{{ url_for('user.pay_deposit', oid=o.id) }}">
+        支付定金 ¥{{ o.payable if o.payable is not none else o.deposit }}</a>
+      {% elif o and o.status == 'claimed' %}
+      <a class="btn btn--sm" href="{{ url_for('user.pay_deposit', oid=o.id) }}">再看支付方式</a>
+      {% endif %}
+      {% if b.status in ('arrived', 'done') %}
+        {% set _bal = ((o.amount or 0) - (o.deposit or 0)) if o else 0 %}
+        {% if o and o.balStatus == 'paid' %}
+          <span class="badge badge--brand">已结清 ✓</span>
+        {% elif o and o.balStatus == 'claimed' %}
+          <a class="btn btn--sm" href="{{ url_for('user.pay_deposit', oid=o.id) }}">尾款待确认 · 再看支付方式</a>
+        {% elif _bal > 0 %}
+          <a class="btn btn--sm btn--primary" href="{{ url_for('user.pay_deposit', oid=o.id) }}">立即支付尾款 ¥{{ _bal }}</a>
+        {% endif %}
+      {% elif b.status != 'cancelled' %}
+        {% if o and o.status in ('unpaid','paid') %}
+        <form method="post" action="{{ url_for('user.order_act', oid=o.id, action='refund') }}">
+          <button class="btn btn--sm" type="submit">取消 / 退定金</button></form>
+        {% else %}
+        <form method="post" action="{{ url_for('user.cancel_booking', bid=b.id) }}">
+          <button class="btn btn--sm" type="submit">取消预约</button></form>
+        {% endif %}
+      {% endif %}
+      <a class="btn btn--sm btn--ghost" href="{{ url_for('public.script_detail', sid=b.sid) }}">再看一眼剧本</a>
+    </div>
+  </div>
+  {% else %}
+  <div class="panel empty">还没有预约记录 —— <a class="lnk" href="{{ url_for('public.scripts') }}">去挑个本子</a></div>
+  {% endfor %}
+
+{# ---------------------------------------------------------------- 订单 #}
+</div>
+
+<div class="tabpane" data-tab="orders">
+  {% if orders %}
+  <div class="card scroll">
+    <table>
+      <tr><th>剧本</th><th>场次</th><th>人数</th><th>总价</th><th>定金</th><th>状态</th><th>下单时间</th></tr>
+      {% for o in orders %}
+      <tr>
+        <td>{{ o.title }}</td>
+        <td>{{ o.day }} {{ o.time }}</td>
+        <td>{{ o.players }}</td>
+        <td>¥{{ o.amount or 0 }}</td>
+        <td class="price">¥{{ o.deposit or 0 }}</td>
+        <td>
+          {% if o.status == 'paid' %}<span class="badge badge--brand">已付定金</span>
+          {% elif o.status == 'claimed' %}<span class="badge">待小客服确认</span>
+          {% elif o.status == 'unpaid' %}<span class="badge">待付定金</span>
+          {% elif o.status == 'refunded' %}<span class="badge">已退款</span>
+          {% else %}<span class="badge">已关闭</span>{% endif %}
+        </td>
+        <td class="sub">{{ day_label(o.createdAt) }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% else %}
+  <div class="panel empty">还没有订单</div>
+  {% endif %}
+
+{# ---------------------------------------------------------------- 券 / 余额 / 心愿单 #}
+</div>
+
+<div class="tabpane" data-tab="coupons">
+  <div class="two">
+    <div>
+      <h2 class="heading-section">我的券（{{ coupons|length }}）</h2>
+      {% for c in coupons %}
+      <div class="card between">
+        <div>
+          <b class="price">¥{{ c.amount }}</b> 抵扣券
+          <span class="body-secondary">{{ c.from or '门店活动' }}{% if c.minAmount %} · 满 {{ c.minAmount }} 可用{% endif %}</span>
+        </div>
+        <span class="badge {{ 'bad' if c.used else 'ok' }}">{{ '已用' if c.used else '可用' }}</span>
+      </div>
+      {% else %}
+      <div class="panel empty">还没有券。店里偶尔会发，邀请朋友注册也送</div>
+      {% endfor %}
+    </div>
+    <div>
+      <h2 class="heading-section">心愿单</h2>
+      {% set hit = [] %}
+      {% for s in scripts %}{% if s.id|string in fav_ids %}{% set _ = hit.append(s) %}{% endif %}{% endfor %}
+      <div class="card">
+        {% for s in hit %}
+        <a class="between" style="padding:4px 0" href="{{ url_for('public.script_detail', sid=s.id) }}">
+          <span>{{ s.emoji }} {{ s.title }}</span><span class="sub">¥{{ s.price|int }}</span></a>
+        {% else %}
+        <p class="body-secondary">在剧本页点右上角那颗心，就会出现在这儿</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+{# ---------------------------------------------------------------- 消息与留言 #}
+</div>
+
+<div class="tabpane" data-tab="notices">
+  <div class="two">
+    <div>
+      <div class="between">
+        <h2 class="heading-section">消息（{{ unread }} 条未读）</h2>
+        {% if unread %}
+        <form method="post" action="{{ url_for('user.notice_read') }}">
+          <button class="btn btn--sm" type="submit">全部标为已读</button></form>
+        {% endif %}
+      </div>
+      {% for n in notices %}
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;gap:var(--space-2)">
+          <b>{{ n.title }}</b>
+          <span class="caption">{{ day_label(n.at) }}</span>
+        </div>
+        <p class="body-secondary mt-3">{{ n.text }}</p>
+      </div>
+      {% else %}
+      <div class="panel empty">还没有消息。预约、退款、门店回复、信用分变动都会发到这儿</div>
+      {% endfor %}
+    </div>
+    <div>
+      <h2 class="heading-section">给店家留言</h2>
+      <div class="card">
+        <form method="post" action="{{ url_for('user.msg_create') }}">
+          <div class="field"><label>想说点什么</label>
+            <textarea class="input" name="text" rows="3" placeholder="想改时间 / 问价 / 对 DM 有要求…"></textarea></div>
+          <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+            <div class="field" style="max-width:180px;margin:0"><label>类型</label>
+              <select class="input" name="cat"><option>💡 建议</option><option>⏰ 改时间</option>
+                <option>💰 问价</option><option>🙋 找人</option><option>😤 投诉</option></select></div>
+            <button class="btn btn--sm btn--primary" type="submit">发出去</button>
+          </div>
+        </form>
+      </div>
+
+      {% for m in msgs %}
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;gap:var(--space-2)">
+          <span class="caption">{{ m.cat }} · {{ day_label(m.createdAt) }}</span>
+          <span class="badge {{ 'ok' if m.reply else 'warn' }}">{{ '店家已回' if m.reply else '等回复' }}</span>
+        </div>
+        <p class="body-secondary mt-3">{{ m.text }}</p>
+        {% if m.reply %}<p style="color:var(--brand)">店家：{{ m.reply }}</p>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+{# ---------------------------------------------------------------- 资料与安全 #}
+</div>
+
+<div class="tabpane" data-tab="profile">
+  <div class="two">
+    <div>
+      <h2 class="heading-section">我的资料</h2>
+      <div class="card">
+        <form method="post" action="{{ url_for('user.profile_save') }}" enctype="multipart/form-data">
+          <div class="field"><label>昵称</label>
+            <input class="input" name="nick" maxlength="16" value="{{ me.profile.nick or '' }}"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <div class="field" style="flex:1"><label>性别（拼车时别人能看到）</label>
+              <select class="input" name="gender">
+                <option value="">保密</option>
+                <option value="男" {{ 'selected' if me.profile.gender == '男' }}>男</option>
+                <option value="女" {{ 'selected' if me.profile.gender == '女' }}>女</option>
+              </select></div>
+            <div class="field" style="max-width:92px"><label>年龄</label>
+              <input class="input" name="age" type="number" min="0" max="99" value="{{ me.profile.age or '' }}"></div>
+          </div>
+          <div class="field"><label>头像（png/jpg/webp，≤700KB）</label>
+            <input type="file" name="avatar" accept="image/png,image/jpeg,image/webp"></div>
+          <button class="btn btn--sm btn--primary" type="submit">保存资料</button>
+        </form>
+      </div>
+
+      <h2 class="heading-section">账号信息</h2>
+      <div class="card">
+        <div class="between"><span class="body-secondary">登录手机号</span><b>{{ me.phone[:3] }}****{{ me.phone[-4:] }}</b></div>
+        <div class="between"><span class="body-secondary">注册时间</span><span class="caption">{{ day_label(me.first) }}</span></div>
+        <div class="between"><span class="body-secondary">我的邀请码</span><b class="mono">{{ me.invite or '—' }}</b></div>
+        <p class="body-secondary mt-3">朋友填你的邀请码注册，你俩各得一张 ¥{{ settings.inviteCoupon }} 抵扣券
+          （直接抵定金，90 天内有效）。</p>
+      </div>
+    </div>
+
+    <div>
+      <h2 class="heading-section">账号安全</h2>
+      <div class="card">
+        <form method="post" action="{{ url_for('user.account_pwd') }}">
+          <h3 class="heading-section" style="font-size:var(--fs-h4)">改密码</h3>
+          <div class="field"><label>现在的密码</label>
+            <input class="input" name="old" type="password" autocomplete="current-password"></div>
+          <div class="field"><label>新密码（至少 6 位）</label>
+            <input class="input" name="password" type="password" autocomplete="new-password"></div>
+          <button class="btn btn--sm btn--primary" type="submit">改密码</button>
+        </form>
+      </div>
+
+      <details class="mt-4">
+        <summary class="body-secondary" style="cursor:pointer">危险区：注销账号（点开才显示）</summary>
+        <div class="card" style="margin-top:var(--space-3)">
+          <form method="post" action="{{ url_for('user.account_delete') }}"
+                onsubmit="return confirm('注销后账号和名下数据都会删除，确定？')">
+            <p class="body-secondary" style="margin:0 0 var(--space-3)">注销 = 账号和名下的预约、券、积分全部删除，<b>不可恢复</b>。
+              输入完整手机号确认（{{ me.phone }}）：</p>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <input class="input" name="confirm" placeholder="输入 {{ me.phone }}" style="max-width:220px">
+              <button class="btn btn--sm" type="submit">确认注销</button>
+            </div>
+          </form>
+        </div>
+      </details>
+    </div>
+  </div>
+</div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

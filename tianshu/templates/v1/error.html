@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}{{ code }} · {{ settings.shopName }}{% endblock %}
+{% block body %}
+<div class="panel" style="max-width:520px;margin:60px auto;text-align:center">
+  <div style="font-size:52px">{{ '🚧' if code == 404 else ('🔒' if code == 403 else '💥') }}</div>
+  <h1>{{ code }}</h1>
+  <p class="sub">{{ msg }}</p>
+  <a class="btn btn-primary mt" href="{{ url_for('public.home') }}">回首页</a>
+</div>
+{% endblock %}

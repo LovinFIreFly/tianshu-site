@@ -1036,6 +1036,32 @@ check('客户档案页能打开', s == 200 and '13800000000' in html)
 admin.post('/admin/notice/send', {'title': '自检群发', 'text': '这是一条自检通知', 'scope': 'all'})
 check('群发通知发出去了', any(n.get('title') == '自检群发' for n in jread('notices')))
 
+print('⑭ 一代 / 二代界面切换（并站之后管理员可选）')
+s, html = guest.get('/')
+check('默认二代：客人看到新骨架（加载 design3.css）', s == 200 and 'design3.css' in html)
+s, html = guest.get('/?ui=1')
+check('客人带 ?ui=1 也切不了（只有管理员能预览）', s == 200 and 'design3.css' in html)
+s, html = admin.get('/?ui=1')
+check('管理员能预览一代：老骨架、不加载 design3.css',
+      s == 200 and 'design3.css' not in html and 'style.css' in html, 'HTTP %s' % s)
+s, html = admin.get('/?ui=2')
+check('也能一键切回二代', s == 200 and 'design3.css' in html)
+# 一代那套模板是从改版前的提交原样搬过来的 —— 逐页确认真的还能渲染（别点开就 500）
+for path in ('/', '/scripts', '/car', '/comm', '/me', '/login', '/register', '/forgot',
+             '/scripts/%s' % sc['id']):
+    s, html = admin.get(path + ('&' if '?' in path else '?') + 'ui=1')
+    check('一代模式 %s 能打开' % path, s == 200, 'HTTP %s' % s)
+# 真切过去：设置存成一代 → 客人也走一代；再切回二代
+admin.post('/admin/settings', {'uiVer': '1'})
+s, html = guest.get('/scripts')
+check('后台设成一代后，客人看到的也是老版式', s == 200 and 'design3.css' not in html)
+admin.post('/admin/settings', {'uiVer': '2'})
+s, html = guest.get('/scripts')
+check('切回二代：客人又看到新骨架', s == 200 and 'design3.css' in html)
+s, html = admin.get('/admin?tab=dash')
+check('后台「门店设置」里有「网站版式」下拉（一代 / 二代都在）',
+      'name="uiVer"' in html and '一代' in html and '二代' in html)
+
 print('')
 print('=' * 46)
 if fails:

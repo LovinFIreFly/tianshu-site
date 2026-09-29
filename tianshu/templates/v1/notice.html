@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}消息中心 · {{ settings.shopName }}{% endblock %}
+{% block body %}
+
+<section class="tile tile--dark" style="padding-top:calc(var(--site-nav-height) + var(--space-6));padding-bottom:var(--space-6)">
+  <div class="tile__inner">
+    <div class="between" style="align-items:flex-start">
+      <div>
+        <span class="kicker">消息中心</span>
+        <h1 class="heading-title" style="color:#fff;margin-top:var(--space-2)">消息中心</h1>
+        <p class="caption" style="color:rgba(247,246,242,.72);margin-top:var(--space-3)">
+          共 {{ rows|length }} 条{% if unread %} · <span class="badge new">未读 {{ unread }} 条</span>{% endif %}
+        </p>
+      </div>
+      <div class="row" style="gap:8px">
+        {% if unread %}
+        <form method="post" action="{{ url_for('user.notice_read') }}">
+          <button class="btn btn--sm btn--ghost" type="submit">全部标为已读</button>
+        </form>
+        {% endif %}
+        <a class="btn btn--sm btn--ghost" href="{{ url_for('user.me') }}">← 回我的</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="tile tile--warm" style="padding-top:var(--space-6);padding-bottom:var(--space-9)">
+  <div class="tile__inner">
+    {% for n in rows %}
+    <div class="card mt-4">
+      <div class="between" style="align-items:flex-start">
+        <div>
+          <b>{{ n.title }}</b>
+          {% if n.kind %}<span class="pill">{{ n.kind }}</span>{% endif %}
+          {% if (me.phone|string) not in (n.readBy or []) %}<span class="badge new">未读</span>{% endif %}
+        </div>
+        <span class="sub">{{ day_label(n.at) }}</span>
+      </div>
+      <p class="body-secondary mt-3">{{ n.text }}</p>
+    </div>
+    {% else %}
+    <div class="card empty mt-4">还没有消息。预约成功、退款、门店回复、信用分变动都会发到这里</div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

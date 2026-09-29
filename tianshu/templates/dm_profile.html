@@ -7,7 +7,7 @@
 <section class="dsec--stage on-stage" style="border-bottom:0;
   padding:calc(var(--d-nav-h) + clamp(20px,3.2vw,42px)) 0 clamp(22px,3vw,38px)">
   <div class="wrap3">
-    <a class="lnk" href="{{ url_for('public.scripts') }}" style="color:var(--d-hair)">← 回剧本库</a>
+    <a class="lnk" href="{{ url_for('public.scripts') }}" style="color:var(--d-stage-2)">← 回剧本库</a>
 
     <div class="row" style="margin-top:var(--d-s5);gap:clamp(18px,3vw,34px);align-items:flex-start;flex-wrap:wrap">
       {% if pf.photo %}
@@ -15,7 +15,7 @@
            style="width:132px;height:132px;object-fit:cover;border:1px solid var(--d-hair);border-radius:var(--d-r)">
       {% endif %}
       <div style="min-width:0;flex:1">
-        <p class="pagehead3__k" style="color:var(--d-hair)">主持人 / Game Master</p>
+        <p class="pagehead3__k" style="color:var(--d-stage-2)">主持人 / Game Master</p>
         <h1 class="heading-hero" style="margin-top:10px;font-size:min(var(--d-fs-display),8vw,84px)">{{ nickname }}</h1>
         {% if pf.style %}
         <p class="body-large" style="max-width:58ch;margin-top:14px;color:var(--d-stage-ink)">{{ pf.style }}</p>

@@ -1,0 +1,37 @@
+{% extends 'auth_base.html' %}
+{% block title %}登录 · {{ settings.shopName }}{% endblock %}
+{% block card %}
+<div class="auth-card">
+  <div class="auth-brand"><span class="logo">🍠</span><span>{{ settings.shopName }}</span></div>
+  <h2>账号登录</h2>
+  <p class="sub">使用手机号或用户名登录</p>
+
+  <form method="post">
+    <div class="field"><span class="ico" aria-hidden="true">👤</span>
+      <input name="account" placeholder="手机号 / 用户名" aria-label="账号" autocomplete="username"
+             enterkeyhint="next" required autofocus value="{{ request.form.get('account','') }}"></div>
+    <div class="field"><span class="ico" aria-hidden="true">🔒</span>
+      <input name="password" type="password" placeholder="密码" aria-label="密码"
+             autocomplete="current-password" enterkeyhint="go" required></div>
+
+    {# 「记住我」：勾着 = 这台设备 {{ settings.loginDays or 180 }} 天不用再登（默认勾，最省事）；
+       共享电脑/员工机可以取消勾选，那样关掉浏览器就要重登。
+       hidden 那个 0 是为了"取消勾选"也能被后端读出来（复选框不勾就不会提交）。 #}
+    <input type="hidden" name="remember" value="0">
+    <label class="agree" style="margin:2px 2px 14px">
+      <input type="checkbox" name="remember" value="1" checked>
+      <span class="dot" aria-hidden="true"></span>
+      <span>记住我（这台设备半年内不用再登）</span>
+    </label>
+
+    <p style="text-align:right;margin:2px 2px 18px;font-size:13px">
+      <a class="lnk" href="{{ url_for('user.forgot') }}">忘记密码？</a></p>
+
+    <button class="btn btn-primary" type="submit">登 录</button>
+  </form>
+
+  <p class="foot-line">没有账号？<a class="lnk" href="{{ url_for('user.register') }}">前往注册 →</a>
+    <span style="opacity:.5">·</span> <a class="lnk" style="color:var(--text-2)" href="{{ url_for('public.home', browse=1) }}">先随便逛逛</a></p>
+  {# 这里的「演示账号 FireFly / 123123」已删：网站一上线，写出来就等于把钥匙挂门上 #}
+</div>
+{% endblock %}

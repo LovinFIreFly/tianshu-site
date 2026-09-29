@@ -788,6 +788,42 @@ def skin_css(st=None):
     return None if v == DEFAULT_SKIN else 'css/skin-%s.css' % v
 
 
+# ---------------------------------------------------------------- 界面代次（uiVer）
+# 一代 = 3.0 改版前那套（style.css + design2.css + templates/v1/ 的模板）
+# 二代 = 现在的 3.0 骨架（多一层 design3.css + templates/ 的模板）
+# 管理员在「门店设置 → 网站版式」里选，**全站统一**；客人看不到这个开关。
+# 后台和 DM 工作台老用二代 —— 那是店里自己干活的地方，不跟着客人的界面来回切。
+UI_VERSIONS = {
+    '2': '二代 · 新骨架（推荐）',
+    '1': '一代 · 老版式（改版前那套）',
+}
+DEFAULT_UI = '2'
+
+
+def current_ui(st=None):
+    """现在用哪一代界面（永远返回白名单内的值：没配/配错就用二代）"""
+    st = st or get_settings()
+    v = str(st.get('uiVer') or '').strip()
+    return v if v in UI_VERSIONS else DEFAULT_UI
+
+
+def ui_ver():
+    """本次请求该渲染哪一代：管理员带 ?ui=1 / ?ui=2 可以先看再决定（和 ?skin= 一个路子）。
+
+    模板目录、样式表都跟着它走，所以这一个函数决定了"这次整个页面长什么样"。
+    """
+    try:
+        from flask import request as _r
+
+        from tianshu.security import current_user as _cu
+        q = _r.args.get('ui')
+        if q in UI_VERSIONS and has_role(_cu(), 'admin'):
+            return q
+    except Exception:
+        pass                      # 没有请求上下文（后台任务、自检直接调函数）就走设置值
+    return current_ui()
+
+
 def mail_from_name(st=None):
     """发件人昵称（客人收件箱里显示的名字，例「甜薯剧本杀」）。留空 = 只显示邮箱地址。
 

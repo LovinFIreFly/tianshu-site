@@ -12,7 +12,7 @@
       <div>
         <a class="b3 b3--sm" style="margin-bottom:clamp(12px,1.6vw,20px)"
            href="{{ url_for('public.scripts') }}">← 回剧本库</a>
-        <p class="pagehead3__k" style="color:var(--d-hair)">{{ sc.type or '剧本' }} / Script</p>
+        <p class="pagehead3__k" style="color:var(--d-stage-2)">{{ sc.type or '剧本' }} / Script</p>
         <h1 class="heading-hero" style="margin-top:clamp(10px,1.6vw,16px)">{{ sc.title }}</h1>
 
         <div class="row" style="margin-top:18px;gap:8px">
@@ -22,13 +22,13 @@
           {% for t in sc.tags %}<span class="tag3">{{ t }}</span>{% endfor %}
         </div>
 
-        <p class="body-large" style="margin:18px 0 0;max-width:60ch;color:var(--d-hair)">
+        <p class="body-large" style="margin:18px 0 0;max-width:60ch;color:var(--d-stage-2)">
           {{ sc.desc or '门店还没写简介。' }}
         </p>
 
         <div class="row" style="margin-top:clamp(20px,2.6vw,30px);gap:14px">
           <span style="font-family:var(--d-mono);font-size:clamp(22px,2.6vw,30px);color:var(--d-stage-ink);letter-spacing:-.02em">
-            ¥{{ sc.price|int }}<span style="font-size:12px;letter-spacing:.08em;color:var(--d-hair)"> /人</span>
+            ¥{{ sc.price|int }}<span style="font-size:12px;letter-spacing:.08em;color:var(--d-stage-2)"> /人</span>
           </span>
           <form method="post" action="{{ url_for('public.fav', sid=sc.id) }}" data-ajax-fav style="display:inline">
             <button class="b3 b3--sm fav-btn {{ 'on' if sc.id|string in favs }}" type="submit">
@@ -39,7 +39,7 @@
         </div>
 
         {# 费用口径说清楚：页面上这个价是"游玩费"，不是定金 —— 不然客人会以为 ¥100 就能占位 #}
-        <p class="sub" style="margin:16px 0 0;color:var(--d-hair);max-width:52ch">
+        <p class="sub" style="margin:16px 0 0;color:var(--d-stage-2);font-size:13px;max-width:56ch">
           ¥{{ sc.price|int }} 是<b style="color:var(--d-stage-ink)">游玩费</b>（玩完再付）；
           先付定金 ¥{{ car_deposit|int }}/人 占位 —— <b style="color:var(--d-stage-ink)">玩完由小客服退回</b>，
           没到场 / 中途跳车的不退。

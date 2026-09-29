@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN" {% if theme == 'dark' %}data-theme="dark"{% endif %}>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#161310">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" href="{{ url_for('static', filename='icon.svg') }}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="甜薯">
+  <title>{% block title %}{{ settings.shopName }}{% endblock %}</title>
+  {# 旧样式兜底 + 新设计系统叠加 #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=static_v('css/style.css')) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design2.css', v=2) }}">
+{% set _skins = skins if skins is defined else {} %}
+{% set _admin = my_admin if my_admin is defined else False %}
+{% set _q_skin = request.args.get('skin') if request.args.get('skin') is defined else none %}
+{% set cur_skin = (_q_skin if (_admin and _q_skin in _skins)
+                   else (settings.skin if settings.skin in _skins else 'playbill')) %}
+{% if cur_skin != 'playbill' %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/skin-' ~ cur_skin ~ '.css',
+                                 v=static_v('css/skin-' ~ cur_skin ~ '.css')) }}">
+{% endif %}
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+{# 新骨架：毛玻璃顶栏 + 主内容 .page + 手机底栏 mobtab + 页脚；功能钩子全部保留。 #}
+<header class="site-nav" id="siteNav">
+  <div class="site-nav__inner">
+    <a class="site-nav__brand" href="{{ url_for('public.home') }}">
+      <span class="site-nav__brand-mark" aria-hidden="true">🍠</span>
+      <span>{{ settings.shopName }}</span>
+    </a>
+
+    <nav class="site-nav__links" aria-label="主导航">
+      <a href="{{ url_for('public.home') }}" class="{{ 'on' if request.endpoint == 'public.home' }}">首页</a>
+      <a href="{{ url_for('public.scripts') }}" class="{{ 'on' if request.endpoint == 'public.scripts' }}">剧本库</a>
+      <a href="{{ url_for('public.car') }}" class="{{ 'on' if request.endpoint == 'public.car' }}">拼车大厅</a>
+      <a href="{{ url_for('public.comm') }}" class="{{ 'on' if request.endpoint == 'public.comm' }}">社区</a>
+      {% if my_admin %}<a href="{{ url_for('admin.dashboard') }}" class="{{ 'on' if request.endpoint and request.endpoint.startswith('admin.') }}">管理</a>{% endif %}
+      {% if my_dm %}<a href="{{ url_for('dm.index') }}" class="{{ 'on' if request.endpoint and request.endpoint.startswith('dm.') }}">DM</a>{% endif %}
+    </nav>
+
+    <form class="nav-search" method="get" action="{{ url_for('public.scripts') }}" role="search">
+      <input name="q" placeholder="搜剧本 / 类型 / 人数" aria-label="搜剧本" value="{{ request.args.get('q','') }}">
+      <button type="submit" aria-label="搜索">⌕</button>
+    </form>
+
+    <div class="site-nav__actions">
+      <a class="site-nav__icon" href="{{ url_for('public.toggle_theme') }}" title="切换深浅色" aria-label="切换深浅色">
+        {% if theme == 'dark' %}☀{% else %}☾{% endif %}</a>
+      {% if me %}
+      <a class="site-nav__icon {{ 'has' if unread }}" href="{{ url_for('user.notice_center') }}"
+         title="消息{% if unread %}（{{ unread }} 条未读）{% endif %}" aria-label="消息">
+        <span>✉</span>
+        {% if unread %}<span class="site-nav__dot">{{ unread }}</span>{% endif %}
+      </a>
+      <a class="site-nav__who" href="{{ url_for('user.me') }}">
+        {% set av = me.profile.avatar or '' %}
+        {% if av.startswith('/img/') %}<img class="site-nav__avatar" src="{{ av }}" alt="">{% endif %}
+        <span>{{ me.profile.nick or me.username }}</span>
+      </a>
+      <a class="btn btn--sm btn--primary" href="{{ url_for('user.logout') }}">退出</a>
+      {% else %}
+      <a class="btn btn--sm btn--ghost" href="{{ url_for('user.register') }}">注册</a>
+      <a class="btn btn--sm btn--primary" href="{{ url_for('user.login') }}">登录</a>
+      {% endif %}
+    </div>
+  </div>
+</header>
+
+{% with msgs = get_flashed_messages(with_categories=true) %}
+  {% if msgs %}<div class="flash-wrap">{% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}</div>{% endif %}
+{% endwith %}
+
+<main class="page {% block main_class %}{% endblock %}">{% block body %}{% endblock %}</main>
+
+{% set in_tianshu_app = 'TianshuApp' in (request.headers.get('User-Agent') or '') %}
+<footer class="site-foot">
+  <div class="site-foot__inner">
+    <span>{{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}</span>
+    {% if _admin %}
+    <div class="skin-bar">
+      <span>版式预览：</span>
+      <a href="{{ request.path }}?ui=2" class="{{ 'on' if ui_ver != '1' }}">二代 · 新骨架</a>
+      <a href="{{ request.path }}?ui=1" class="{{ 'on' if ui_ver == '1' }}">一代 · 老版式</a>
+    </div>
+    {% endif %}
+    {% if _admin and _skins %}
+    <div class="skin-bar">
+      <span>款式预览：</span>
+      <a href="{{ request.path }}" class="{{ 'on' if cur_skin == 'playbill' }}">默认</a>
+      {% for k, label in _skins.items() %}
+      <a href="{{ request.path }}?skin={{ k }}" class="{{ 'on' if cur_skin == k }}">{{ label.split('（')[0] }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if me and not in_tianshu_app %}
+    <div class="js-install">
+      <a class="btn btn--sm btn--ghost" href="{{ url_for('static', filename='app/tianshu.apk', v=static_v('app/tianshu.apk')) }}" download="甜薯剧本杀.apk">📱 装 App</a>
+    </div>
+    {% endif %}
+  </div>
+</footer>
+
+<nav class="mobtab" aria-label="主要导航">
+  <a href="{{ url_for('public.home') }}" class="{{ 'on' if request.endpoint == 'public.home' }}"><span class="ico">🏠</span><span>首页</span></a>
+  <a href="{{ url_for('public.scripts') }}" class="{{ 'on' if (request.endpoint or '').startswith('public.script') }}"><span class="ico">📚</span><span>剧本库</span></a>
+  <a href="{{ url_for('public.car') }}" class="{{ 'on' if request.endpoint == 'public.car' }}"><span class="ico">🚗</span><span>拼车</span></a>
+  <a href="{{ url_for('user.me') }}" class="{{ 'on' if request.endpoint == 'user.me' }}"><span class="ico">👤</span><span>我的</span></a>
+  {% if not in_tianshu_app %}<a id="install-btn" class="js-install" href="{{ url_for('static', filename='app/tianshu.apk', v=static_v('app/tianshu.apk')) }}" download="甜薯剧本杀.apk"><span class="ico">📱</span><span>装App</span></a>{% endif %}
+</nav>
+
+<script>
+  (function(){
+    var nav = document.getElementById('siteNav');
+    if (nav) {
+      function onScroll() { nav.classList.toggle('scrolled', window.scrollY > 10); }
+      window.addEventListener('scroll', onScroll, {passive:true}); onScroll();
+    }
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+      var _els = document.querySelectorAll('.js-install');
+      for (var _i = 0; _i < _els.length; _i++) _els[_i].style.display = 'none';
+    }
+  })();
+</script>
+<script src="{{ url_for('static', filename='js/csrf.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/upload.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/tabs.js') }}" defer></script>
+<script>
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('/static/sw.js').catch(function(){});
+  }
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

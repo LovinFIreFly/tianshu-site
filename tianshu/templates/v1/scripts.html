@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}剧本库 · {{ settings.shopName }}{% endblock %}
+{# 剧本库：全宽 tile + 胶囊搜索 + 胶囊筛选 + poster-grid；SPA 不跳页，只换网格。 #}
+{% block main_class %}{% endblock %}
+{% block body %}
+
+<section class="tile tile--warm" style="padding-top:calc(var(--site-nav-height) + var(--space-7))">
+  <div class="tile__inner">
+    <header class="sec-head">
+      <span class="sec-no">剧本库</span>
+      <h1 class="heading-section">全部本子</h1>
+      <span class="body-secondary">共 {{ scripts|length }} 个{% if q or tag or diff or only_fav %} · 筛选中{% endif %}</span>
+    </header>
+
+    <form class="capsule-search spa-search" method="get" style="max-width:520px">
+      <div class="capsule-search__segment">
+        <label>搜剧本</label>
+        <input name="q" value="{{ q }}" placeholder="名字 / 简介 / 类型">
+      </div>
+      <span class="capsule-search__divider"></span>
+      <button class="capsule-search__btn" type="submit" aria-label="搜索">⌕</button>
+    </form>
+
+    <div class="row spa-filters mt-5" style="gap:8px;flex-wrap:wrap">
+      <button type="button" class="pill {{ 'on' if not tag and not diff and not only_fav }}" data-filter="all">全部</button>
+      {% for t in tags %}
+      <button type="button" class="pill {{ 'on' if tag == t }}" data-filter="tag" data-val="{{ t }}">{{ t }}</button>
+      {% endfor %}
+      <button type="button" class="pill {{ 'on' if diff == '1' }}" data-filter="diff" data-val="1">新手友好</button>
+      <button type="button" class="pill {{ 'on' if only_fav }}" data-filter="fav" data-val="1">❤ 我的想玩</button>
+    </div>
+
+    <div id="scriptGrid" class="mt-7">{% include '_scripts_grid.html' %}</div>
+  </div>
+</section>
+
+<script>
+{# 剧本库 SPA：分类标签 + 搜索都不跳页，只换网格 + 入场动画 + URL 用 replaceState 保持 /scripts #}
+(function () {
+  var wrap = document.getElementById('scriptGrid');
+  if (!wrap) return;
+  var filters = document.querySelector('.spa-filters');
+  var state = {q: '{{ q }}', tag: '{{ tag }}', diff: '{{ diff }}', fav: '{{ '1' if only_fav else '' }}'};
+
+  function buildQS() {
+    var p = [];
+    if (state.q) p.push('q=' + encodeURIComponent(state.q));
+    if (state.tag) p.push('tag=' + encodeURIComponent(state.tag));
+    if (state.diff) p.push('diff=' + state.diff);
+    if (state.fav) p.push('fav=' + state.fav);
+    return p.join('&');
+  }
+
+  function playIn(html) {
+    wrap.innerHTML = html;
+    var items = wrap.querySelectorAll('.poster-card, [data-anim]');
+    Array.prototype.forEach.call(items, function (el, i) {
+      if (el.animate) el.animate(
+        [{opacity: 0, transform: 'translateY(16px) scale(.98)'}, {opacity: 1, transform: 'none'}],
+        {duration: 420, delay: i * 40, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'both'});
+    });
+  }
+
+  function load() {
+    var qs = buildQS();
+    fetch('/scripts?partial=1' + (qs ? '&' + qs : ''), {headers: {'X-Requested-With': 'fetch'}})
+      .then(function (r) { return r.text(); })
+      .then(function (html) { playIn(html); history.replaceState(null, '', '/scripts'); })
+      .catch(function () {});
+  }
+
+  filters.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-filter]');
+    if (!b) return;
+    var f = b.getAttribute('data-filter');
+    if (f === 'all') { state.tag = state.diff = state.fav = ''; }
+    else if (f === 'tag') { state.tag = (state.tag === b.getAttribute('data-val')) ? '' : b.getAttribute('data-val'); state.diff = state.fav = ''; }
+    else if (f === 'diff') { state.diff = state.diff ? '' : '1'; }
+    else if (f === 'fav') { state.fav = state.fav ? '' : '1'; }
+    filters.querySelectorAll('.pill').forEach(function (p) {
+      var pf = p.getAttribute('data-filter');
+      var on = pf === 'all' ? (!state.tag && !state.diff && !state.fav)
+              : pf === 'tag' ? (state.tag === p.getAttribute('data-val'))
+              : pf === 'diff' ? !!state.diff
+              : pf === 'fav' ? !!state.fav : false;
+      p.classList.toggle('on', on);
+    });
+    load();
+  });
+
+  var sf = document.querySelector('.spa-search');
+  if (sf) sf.addEventListener('submit', function (e) {
+    e.preventDefault();
+    state.q = (sf.querySelector('[name=q]') || {}).value || '';
+    load();
+  });
+})();
+</script>
+{% endblock %}

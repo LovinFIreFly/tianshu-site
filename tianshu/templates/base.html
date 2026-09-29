@@ -134,6 +134,13 @@
            download="甜薯剧本杀.apk">📱 装 App</a>
       </span>
       {% endif %}
+      {% if _admin %}
+      <div class="skin-bar">
+        <span>版式预览：</span>
+        <a href="{{ request.path }}?ui=2" class="{{ 'on' if ui_ver != '1' }}">二代 · 新骨架</a>
+        <a href="{{ request.path }}?ui=1" class="{{ 'on' if ui_ver == '1' }}">一代 · 老版式</a>
+      </div>
+      {% endif %}
       {% if _admin and _skins %}
       <div class="skin-bar">
         <span>款式预览：</span>

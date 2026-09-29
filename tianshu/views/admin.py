@@ -606,6 +606,10 @@ def settings():
     # 不校验的话等于让人指定任意静态文件（路径穿越的老套路），所以必须卡死。
     if f.get('skin') in business.SKINS:
         rows['skin'] = f.get('skin')
+    # 网站版式（一代 / 二代）：决定客人看到的那套模板和样式表。同样只认白名单 ——
+    # 它会决定加载哪一套 CSS、走哪个模板目录，不能让人随便填。
+    if f.get('uiVer') in business.UI_VERSIONS:
+        rows['uiVer'] = f.get('uiVer')
     for k in ('smtpHost', 'smtpUser', 'smtpFrom'):
         if f.get(k) is not None:
             rows[k] = business.clean(f.get(k), 80)

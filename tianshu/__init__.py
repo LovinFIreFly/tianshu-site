@@ -10,11 +10,31 @@ import secrets
 from datetime import timedelta
 
 from flask import Flask, abort, g, jsonify, render_template, request
+from jinja2 import BaseLoader, FileSystemLoader
 
 from config import IMG_DIR, ROOMS_DEFAULT, SEED_USERS, SESSION_DAYS, SETTINGS_DEFAULT, TEMPLATES_AUTO_RELOAD
 from tianshu import business
 from tianshu.db import db
 from tianshu.security import current_user, hash_password, role, session_secret
+
+
+class UiLoader(BaseLoader):
+    """按"一代 / 二代"挑模板目录。
+
+        二代 = tianshu/templates/
+        一代 = tianshu/templates/v1/（只放客人看得到的页：首页 / 剧本库 / 拼车 / 登录…）
+
+    一代目录里没有的东西（后台面板、DM 工作台）自动落回二代 —— 正好是想要的：
+    店里的干活工具不跟着客人的界面来回切。切换由 business.ui_ver() 决定。
+    """
+
+    def __init__(self, paths):
+        self.v2 = FileSystemLoader(paths)
+        self.v1 = FileSystemLoader([os.path.join(p, 'v1') for p in paths])
+
+    def get_source(self, environment, template):
+        loader = self.v1 if business.ui_ver() == '1' else self.v2
+        return loader.get_source(environment, template)
 
 
 def seed():
@@ -38,6 +58,8 @@ def seed():
 def create_app():
     seed()
     app = Flask(__name__)
+    # 模板目录：一代 / 二代由 UiLoader 现挑（见类说明）
+    app.jinja_loader = UiLoader([os.path.join(app.root_path, app.template_folder or 'templates')])
     app.secret_key = session_secret()
     app.config.update(
         PERMANENT_SESSION_LIFETIME=timedelta(days=SESSION_DAYS),
@@ -78,10 +100,26 @@ def create_app():
                 'settings': business.get_settings(),
                 'unread': business.unread_count(u) if u else 0,
                 'dev_env': business.is_dev_request(),      # 本机开发才显示"通用码 1234"这类提示
+                'ui_ver': business.ui_ver(),               # 这次渲染的是"一代"还是"二代"界面
+                'ui_versions': business.UI_VERSIONS,
                 'day_label': business.day_label, 'year': _t.strftime('%Y'),
                 'theme': _req.cookies.get('theme') or 'light',     # 深浅色（存在 cookie 里；2026-09 起默认浅色）
                 'static_v': static_v,
                 'skins': business.SKINS}                           # 外观款式（后台统一切换全站）
+
+    @app.before_request
+    def pick_ui():
+        """一代 / 二代切换：真换了就把模板缓存清一次 ——
+        Jinja 按"模板名"缓存编译结果，一/二代的名字是一样的（home.html），
+        不清缓存的话切过去还是旧那套。"""
+        v = business.ui_ver()
+        env = app.jinja_env
+        if getattr(env, '_ui_ver', None) != v:
+            try:
+                env.cache.clear()
+            except Exception:
+                pass
+            env._ui_ver = v
 
     @app.before_request
     def csrf_guard():
