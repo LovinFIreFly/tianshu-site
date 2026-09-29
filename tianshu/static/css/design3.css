@@ -298,7 +298,9 @@ img{max-width:100%}
    4. 章节 .dsec —— 编号 + 标题 + 右侧动作，靠细线分隔（不再居中）
    -------------------------------------------------------------------------- */
 .dsec{padding:clamp(24px,3.4vw,48px) 0;border-bottom:1px solid var(--d-rule)}
-.dsec--alt{background:var(--d-paper-2)}
+/* 交替区块不再铺满一层底：底色一铺就是一条"又宽又空"的大带子。
+   改成一条稍重的分隔线，靠线的粗细造节奏（印刷感），页面留一整片干净纸面。 */
+.dsec--alt{background:transparent;border-top:1px solid var(--d-rule-2)}
 .dsec--stage{background:var(--d-stage);color:var(--d-stage-ink);border-bottom-color:var(--d-hair)}
 .dsec--stage .dsec__title,.dsec--stage .dsec__no{color:var(--d-stage-ink)}
 .dsec--stage .dsec__meta,.dsec--stage .copy-mute{color:var(--d-hair)}
@@ -330,16 +332,16 @@ img{max-width:100%}
 .rail3__bar i{position:absolute;left:0;top:0;bottom:0;width:20%;background:var(--d-accent);transition:transform .12s linear}
 .rail3__nav{position:absolute;top:-46px;right:0;display:flex;gap:6px}
 
-/* 暗场滚动条幅：首页首屏下面那条不停走字的带子（一眼就"这不是模板站"） */
-.marquee3{background:var(--d-stage);color:var(--d-stage-ink);border-top:1px solid var(--d-hair);
-  border-bottom:1px solid var(--d-hair);overflow:hidden;padding:11px 0;position:relative}
-.marquee3__in{display:flex;gap:34px;white-space:nowrap;width:max-content;
-  animation:d-marquee 30s linear infinite;padding-left:34px}
-.marquee3 span{display:inline-flex;align-items:center;gap:12px;font-family:var(--d-serif);
-  font-size:clamp(14px,1.5vw,19px);font-weight:700;letter-spacing:.01em}
-.marquee3 span::after{content:"◆";color:var(--d-accent);font-size:9px;line-height:1}
-.marquee3 em{font-style:normal;font-family:var(--d-mono);font-size:11px;letter-spacing:.2em;
-  text-transform:uppercase;color:var(--d-hair);align-self:center;margin-right:4px}
+/* 印色小带子：首页首屏下面那条走字带 —— 一根 accent 色细带 + 等宽小字，
+   像剧院门口的电子屏，不是一条粗黑横幅（粗黑横幅压在上面太沉） */
+.marquee3{background:var(--d-accent);color:#fff;border:0;overflow:hidden;padding:7px 0;position:relative}
+/* 间距放在每段里面（不用 gap）：这样 -50% 位移正好等于"半个内容"，
+   前后两半一模一样，滚动永远不会跳帧 */
+.marquee3__in{display:flex;gap:0;white-space:nowrap;width:max-content;
+  animation:d-marquee 46s linear infinite}
+.marquee3 span{display:inline-flex;align-items:center;gap:10px;padding-right:22px;
+  font-family:var(--d-mono);font-size:11.5px;letter-spacing:.2em;font-weight:500;color:#fff;opacity:.94}
+.marquee3 span::after{content:"◆";font-size:7px;line-height:1;opacity:.55}
 @media(prefers-reduced-motion:reduce){.marquee3__in{animation:none}}
 @media(max-width:900px){.rail3__nav{display:none}}
 .rail3__nav button{width:34px;height:34px;border:1px solid var(--d-rule);background:var(--d-paper);
@@ -431,6 +433,10 @@ img{max-width:100%}
   line-height:1.7;color:var(--d-ink-3)}
 .toolbar3{display:flex;align-items:center;gap:var(--d-s3);flex-wrap:wrap;
   padding:var(--d-s4) 0;border-bottom:1px solid var(--d-rule)}
+/* 筛选条吸顶（抄 Airbnb：价格与筛选全程可见，滚到哪儿都能改条件） */
+.toolbar3--sticky{position:sticky;top:var(--d-nav-h);z-index:6;
+  background:color-mix(in srgb,var(--d-paper) 93%,transparent);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 .toolbar3__end{margin-left:auto;display:flex;align-items:center;gap:var(--d-s3);flex-wrap:wrap}
 .grid3{display:grid;grid-template-columns:repeat(auto-fill,minmax(156px,1fr));gap:clamp(10px,1.2vw,16px)}
 @media(max-width:600px){.grid3{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}}
@@ -658,13 +664,14 @@ img{max-width:100%}
 /* --------------------------------------------------------------------------
    15. 空态 .empty3 —— 用"线 + 编号"，不用虚线框（不同款式靠令牌自动换色）
    -------------------------------------------------------------------------- */
-.empty3{border:1px solid var(--d-rule);border-left:3px solid var(--d-accent);background:var(--d-paper-2);
-  padding:clamp(15px,2vw,24px) clamp(15px,2.2vw,26px);max-width:760px;text-align:left}
+/* 空态：一张**收紧的居中小卡**（之前铺满整行、又宽又空，看着很蠢） */
+.empty3{border:1px solid var(--d-rule);background:var(--d-paper-3);border-radius:var(--d-r);
+  padding:clamp(18px,2.4vw,26px) clamp(18px,2.6vw,28px);max-width:520px;margin-inline:auto;text-align:center}
 .empty3__k{margin:0;font-family:var(--d-mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;
   color:var(--d-accent)}
-.empty3__t{margin:7px 0 0;font-family:var(--d-serif);font-size:clamp(18px,2.1vw,23px);font-weight:700;line-height:1.22}
-.empty3__p{margin:7px 0 0;max-width:54ch;color:var(--d-ink-3);font-size:13.5px;line-height:1.7}
-.empty3__a{margin-top:13px;display:flex;flex-wrap:wrap;gap:8px}
+.empty3__t{margin:8px 0 0;font-family:var(--d-serif);font-size:clamp(17px,2vw,21px);font-weight:700;line-height:1.24}
+.empty3__p{margin:8px auto 0;max-width:40ch;color:var(--d-ink-3);font-size:13px;line-height:1.7}
+.empty3__a{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
 
 /* --------------------------------------------------------------------------
    16. 响应式收尾
