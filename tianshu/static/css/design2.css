@@ -667,6 +667,14 @@ h1,h2,h3,h4,h5,h6,p{margin:0}
 .btn--sm.btn--secondary,
 .btn--sm.btn--ghost{padding:8px 16px;font-size:var(--fs-sm)}
 
+/* --------------------------------------------------------------------------
+   16. 组件补充：社区 tabbar / 进度条
+   -------------------------------------------------------------------------- */
+.tabbar{display:flex;flex-wrap:wrap;gap:var(--space-2)}
+.tabbar a{padding:var(--space-2) var(--space-4);border-radius:var(--radius-pill);font-size:var(--fs-sm);font-weight:var(--fw-medium);color:var(--ink-3);background:var(--surface);box-shadow:var(--shadow-1);transition:background var(--duration-fast), color var(--duration-fast);text-decoration:none}
+.tabbar a:hover{background:var(--surface-warm);color:var(--ink)}
+.tabbar a.on{background:var(--ink);color:var(--bg)}
+
 /* 动画减弱 */
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
