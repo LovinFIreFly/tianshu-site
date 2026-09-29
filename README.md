@@ -357,6 +357,42 @@ bash /opt/tianshu/deploy/install.sh tianshu.lovinfirefly.cn
 > iOS 不用打包：用 Safari 打开网站 → 分享 → 「添加到主屏幕」，效果一样（图标走
 > `static/icons/apple-touch-icon.png`）。安卓不装 App 也是同样的路子：浏览器菜单 → 「添加到桌面」。
 
+## 推送慢 / 连不上 GitHub 时的兜底办法
+
+网络不稳（代理断、GitHub 超时）是常态，按这个顺序来：
+
+**① 用自带的重试脚本**（直连 → 本机代理 → 国内镜像，自动换路）
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\push.ps1            # Windows
+bash tools/push.sh                                                 # Linux / 服务器
+```
+
+**② 让服务器走国内镜像拉**（服务器端改一次，长期有效）
+
+```bash
+git -C /opt/tianshu remote set-url origin https://ghproxy.com/https://github.com/LovinFireFly/tianshu-site.git
+cd /opt/tianshu && git pull
+```
+
+**③ 完全连不上时：打包成 bundle 带出去推**（一台机器打包 → 能联网的机器推）
+
+```bash
+git bundle create update.bundle origin/python-rewrite..HEAD   # 只打包没推上去的那几笔
+# 把 update.bundle 拷到能联网的机器，在那边：
+git clone update.bundle tianshu && cd tianshu && git push https://github.com/LovinFireFly/tianshu-site.git HEAD:python-rewrite
+```
+
+**④ 最土但最快：只传改动的几个文件**（适合就改了一两个文件）
+
+```bash
+scp tianshu/static/css/style.css root@你的服务器:/opt/tianshu/tianshu/static/css/style.css
+ssh root@你的服务器 "systemctl restart tianshu"
+```
+
+> 提醒：apk 这种二进制（3MB+）会让每次推送都变慢；它放在 `tianshu/static/app/`
+> 只是为了"浏览器点一下就能下载"，以后更新可以考虑改成直接 scp 传服务器，不进 git。
+
 ## License
 
 MIT，见 [LICENSE](LICENSE)
