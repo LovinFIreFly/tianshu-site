@@ -1,47 +1,56 @@
 {% extends 'base.html' %}
 {% block title %}{{ settings.shopName }} · 首页{% endblock %}
-{# 首页整幅色块贴边，所以 main 不带 .wrap，各段自己套 #}
+{# 首页各段用 .tile 全宽色块贴边，主容器不套 .wrap，保持 Apple 式大块节奏。 #}
 {% block main_class %}{% endblock %}
 {% block body %}
 
-{# ============ 第一屏：整幅深色，只有一件事——开始挑本（Nike「一屏一件事」）============ #}
+{# ============ Hero：深色全屏，只有一件事 —— 开始挑本 ============ #}
 <section class="hero">
-  <div class="wrap hero-inner">
-    <p class="kicker">剧本 · 场地 · DM</p>
-    <h1 class="hero-title">{{ settings.shopName }}</h1>
-    <p class="slogan">今晚换一个人活一次。挑本、开团、到店，剩下的交给我们。</p>
+  <div class="hero__bg"></div>
+  <div class="hero__content">
+    <p class="caption" style="color:rgba(247,246,242,.6);text-transform:uppercase;letter-spacing:.12em;font-weight:500">剧本 · 场地 · DM</p>
+    <h1 class="hero__title">{{ settings.shopName }}</h1>
+    <p class="hero__subtitle">今晚换一个人活一次。挑本、开团、到店，剩下的交给我们。</p>
 
-    <form class="search-pill" method="get" action="{{ url_for('public.scripts') }}" role="search">
-      <span class="ico" aria-hidden="true">⌕</span>
-      <input name="q" placeholder="搜剧本名 / 类型 / 人数" aria-label="搜剧本">
-      <button class="btn btn-primary" type="submit">找本子</button>
+    <form class="capsule-search" method="get" action="{{ url_for('public.scripts') }}" role="search">
+      <div class="capsule-search__segment">
+        <label>搜剧本</label>
+        <input name="q" placeholder="剧本名 / 类型 / 人数" aria-label="搜剧本" value="{{ request.args.get('q','') }}">
+      </div>
+      <span class="capsule-search__divider"></span>
+      <button class="capsule-search__btn" type="submit" aria-label="搜索">⌕</button>
     </form>
 
-    <div class="btns">
-      <a class="btn btn-cta" href="{{ url_for('public.scripts') }}">挑个本子</a>
-      <a class="btn btn-ghost" href="{{ url_for('public.car') }}">看看谁在拼车</a>
+    <div class="hero__ctas">
+      <a class="btn btn--primary" href="{{ url_for('public.scripts') }}">挑个本子</a>
+      <a class="btn btn--ghost" href="{{ url_for('public.car') }}" style="color:#fff;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.3)">看看谁在拼车</a>
     </div>
 
-    <div class="stats">
-      <div><b>{{ stat.plays }}</b><span>累计开本</span></div>
-      <div><b>{{ scripts|length }}</b><span>在架剧本</span></div>
-      <div><b>{{ sessions|length }}</b><span>今日场次</span></div>
-      <div><b>{{ served }}</b><span>接待人次</span></div>
+    <div class="hero__stats reveal" style="margin-top:var(--space-8);display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-5);max-width:680px;margin-inline:auto">
+      <div><div style="font-size:var(--fs-h2);font-weight:700;line-height:1">{{ stat.plays }}</div><div class="caption" style="color:rgba(247,246,242,.6)">累计开本</div></div>
+      <div><div style="font-size:var(--fs-h2);font-weight:700;line-height:1">{{ scripts|length }}</div><div class="caption" style="color:rgba(247,246,242,.6)">在架剧本</div></div>
+      <div><div style="font-size:var(--fs-h2);font-weight:700;line-height:1">{{ sessions|length }}</div><div class="caption" style="color:rgba(247,246,242,.6)">今日场次</div></div>
+      <div><div style="font-size:var(--fs-h2);font-weight:700;line-height:1">{{ served }}</div><div class="caption" style="color:rgba(247,246,242,.6)">接待人次</div></div>
     </div>
   </div>
+  <div class="hero__scrolldown">向下卷 · 发现好戏</div>
 </section>
 
-{# ============ 轮播（有内容才显示；放首屏下，不抢主视觉）============ #}
+{# ============ 轮播活动（有内容才显示） ============ #}
 {% if banners %}
-<section class="band">
-  <div class="wrap">
-    <div class="banner">
+<section class="tile tile--light reveal">
+  <div class="tile__inner">
+    <header class="sec-head">
+      <span class="sec-no">活动</span>
+      <h2 class="heading-section">门店新鲜事</h2>
+    </header>
+    <div class="poster-grid" style="margin-top:var(--space-6)">
       {% for b in banners %}
-      <div class="slide">
-        <div class="emo">{{ b.emoji or '🎭' }}</div>
-        <div class="t">{{ b.title }}</div>
-        <div class="d">{{ b.text }}</div>
-      </div>
+      <article class="card text-center" style="animation-delay:{{ loop.index0 * 80 }}ms">
+        <div style="font-size:48px">{{ b.emoji or '🎭' }}</div>
+        <h3 style="font-size:var(--fs-h3);margin-top:var(--space-3);font-weight:700">{{ b.title }}</h3>
+        <p class="body-secondary mt-3">{{ b.text }}</p>
+      </article>
       {% endfor %}
     </div>
   </div>
@@ -49,111 +58,161 @@
 {% endif %}
 
 {# ============ 01 本子上新 ============ #}
-<section class="band alt">
-  <div class="wrap">
+<section class="tile tile--warm reveal">
+  <div class="tile__inner">
     <header class="sec-head">
       <span class="sec-no">01</span>
-      <h2>本子上新</h2>
-      <a class="sub lnk" href="{{ url_for('public.scripts') }}">全部剧本 →</a>
+      <h2 class="heading-section">本子上新</h2>
+      <a class="lnk body-large" href="{{ url_for('public.scripts') }}">全部剧本 →</a>
     </header>
 
     {% if scripts %}
-    <div class="grid">
+    <div class="poster-grid">
       {% for s in scripts %}
-      <div class="juben" data-anim>
+      <article class="poster-card" style="animation-delay:{{ loop.index0 * 70 }}ms">
+        <a href="{{ url_for('public.scripts', t=s.type) }}" class="badge" style="position:absolute;top:var(--space-3);left:var(--space-3);z-index:2">{{ s.type or '剧本' }}</a>
         <a href="{{ url_for('public.script_detail', sid=s.id) }}">
-          <div class="cover">
-            {% if s.img %}<img class="cover-img" src="{{ s.img }}" alt="{{ s.title }}">{% else %}{{ s.emoji or '🎭' }}{% endif %}
-            {% if s.isNew %}<span class="flag">上新</span>{% endif %}
-            {% if rating.get(s.id|string) %}<span class="score">★ {{ rating[s.id|string] }}</span>{% endif %}
-          </div>
-          <div class="body">
-            <h4>{{ s.title }}</h4>
-            <div class="meta">{{ s.players or '人数待定' }} · {{ s.dur or '时长待定' }} · 难度 {{ s.diff or 3 }}/5</div>
-            <div class="foot">
-              <span class="price">¥{{ s.price|int }}<small> / 人</small></span>
-              <span class="book">看这一本 →</span>
-            </div>
-          </div>
+          {% if s.img %}<img class="poster-card__cover" src="{{ s.img }}" alt="{{ s.title }}">{% else %}<div class="poster-card__emoji">{{ s.emoji or '🎭' }}</div>{% endif %}
         </a>
-        {% if me %}<form method="post" action="{{ url_for('public.fav', sid=s.id) }}">
-          <button class="fav-btn {{ 'on' if s.id|string in favs }}" type="submit" aria-label="收藏">
-            {{ '❤' if s.id|string in favs else '♡' }}</button>
-        </form>{% endif %}
-      </div>
+        <div class="poster-card__body">
+          <h3 class="poster-card__title"><a href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.title }}</a></h3>
+          <p class="poster-card__meta">{{ s.players or '人数待定' }} · {{ s.dur or '时长待定' }} · 难度 {{ s.diff or 3 }}/5</p>
+          <div class="poster-card__tags">
+            {% if s.isNew %}<span class="badge badge--brand">上新</span>{% endif %}
+            {% if rating.get(s.id|string) %}<span class="badge">★ {{ rating[s.id|string] }}</span>{% endif %}
+            <span class="badge badge--dark">¥{{ s.price|int }}/人</span>
+          </div>
+        </div>
+        {% if me %}
+        <form method="post" action="{{ url_for('public.fav', sid=s.id) }}" style="position:absolute;top:0;right:0;z-index:3">
+          <button class="poster-card__heart fav-btn {{ 'active' if s.id|string in favs }}" type="submit" aria-label="收藏">{{ '❤' if s.id|string in favs else '♡' }}</button>
+        </form>
+        {% endif %}
+      </article>
       {% endfor %}
     </div>
     {% else %}
-    <div class="panel empty">
-      <div class="e">戏单空着</div>
-      <p>剧本库还没有本子 —— 用管理员账号登录，去「管理后台 → 剧本」加几个</p>
+    <div class="panel empty text-center">
+      <div style="font-size:var(--fs-h3);font-weight:700">戏单空着</div>
+      <p class="body-secondary mt-3">剧本库还没有本子 —— 用管理员账号登录，去「管理后台 → 剧本」加几个</p>
     </div>
     {% endif %}
   </div>
 </section>
 
 {# ============ 02 今天的场次 ============ #}
-<section class="band ink">
-  <div class="wrap">
-    <header class="sec-head sec-head-light">
+<section class="tile tile--dark reveal">
+  <div class="tile__inner">
+    <header class="sec-head">
       <span class="sec-no">02</span>
-      <h2>今天这几场</h2>
-      <span class="sub">按开演时间排</span>
+      <h2 class="heading-section">今天这几场</h2>
+      <span class="body-secondary">按开演时间排</span>
     </header>
 
     {% if sessions %}
       {% for s in sessions %}
-      <div class="row-line">
+      <div class="row-line" style="border-color:rgba(247,246,242,.12)">
         <div class="rl-main">
-          <b class="serif rl-time">{{ s.time }}</b>
-          <span class="serif rl-title">{{ s.title }}</span>
-          <span class="sub">{{ s.roomId or '房间待定' }} · DM {{ s.dmName or '待安排' }} · 已报 {{ s.joined }}/{{ s.cap or '—' }} 人</span>
+          <b class="serif" style="font-size:var(--fs-h3);font-weight:700">{{ s.time }}</b>
+          <span class="serif body-large">{{ s.title }}</span>
+          <span class="body-secondary">{{ s.roomId or '房间待定' }} · DM {{ s.dmName or '待安排' }} · 已报 {{ s.joined }}/{{ s.cap or '—' }} 人</span>
         </div>
-        <a class="btn btn-sm btn-ghost" href="{{ url_for('public.script_detail', sid=s.sid) }}">去看看</a>
+        <a class="btn btn--sm btn--ghost" href="{{ url_for('public.script_detail', sid=s.sid) }}" style="color:var(--ink);box-shadow:inset 0 0 0 1.5px rgba(247,246,242,.2)">去看看</a>
       </div>
       {% endfor %}
     {% else %}
-      <p class="lead">今天还没排场次。想玩的话，直接去剧本页挑个时间，我们给你开一场。</p>
-      <div style="margin-top:var(--sp-6)"><a class="btn btn-cta" href="{{ url_for('public.scripts') }}">去挑本子</a></div>
+      <p class="body-large" style="color:var(--ink-2)">今天还没排场次。想玩的话，直接去剧本页挑个时间，我们给你开一场。</p>
+      <div class="mt-6"><a class="btn btn--primary" href="{{ url_for('public.scripts') }}">去挑本子</a></div>
     {% endif %}
   </div>
 </section>
 
 {# ============ 03 拼车 ============ #}
-<section class="band">
-  <div class="wrap">
+<section class="tile tile--light reveal">
+  <div class="tile__inner">
     <header class="sec-head">
       <span class="sec-no">03</span>
-      <h2>有人在等搭子</h2>
-      <a class="sub lnk" href="{{ url_for('public.car') }}">拼车大厅 →</a>
+      <h2 class="heading-section">有人在等搭子</h2>
+      <a class="lnk body-large" href="{{ url_for('public.car') }}">拼车大厅 →</a>
     </header>
 
     {% if cars %}
       {% for c in cars %}
       <div class="row-line">
         <div class="rl-main">
-          <span class="serif rl-title">{{ c.title }}</span>
-          <span class="sub">{{ c.day }} {{ c.time }} · 车主 {{ c.owner }} · {{ c.joined }}/{{ c.cap }} 人</span>
+          <span class="serif body-large">{{ c.title }}</span>
+          <span class="body-secondary">{{ c.day }} {{ c.time }} · 车主 {{ c.owner }} · {{ c.joined }}/{{ c.cap }} 人</span>
         </div>
-        <span class="badge {{ 'bad' if c.full else 'ok' }}">{{ '已满' if c.full else '还差 %s 人' % c.need }}</span>
+        <span class="badge {{ 'badge--brand' if c.full else 'badge--dark' }}">{{ '已满' if c.full else '还差 %s 人' % c.need }}</span>
       </div>
       {% endfor %}
-      <div style="margin-top:var(--sp-6)"><a class="btn btn-ghost btn-block" href="{{ url_for('public.car') }}">去拼车大厅看全部</a></div>
+      <div class="mt-6"><a class="btn btn--ghost" href="{{ url_for('public.car') }}">去拼车大厅看全部</a></div>
     {% else %}
-      <p class="lead">还没人开车。你可以开第一辆 —— 挑好本子和时间，等人来。</p>
-      <div style="margin-top:var(--sp-6)"><a class="btn btn-cta" href="{{ url_for('public.scripts') }}">我来开一车</a></div>
+      <p class="body-large body-secondary">还没人开车。你可以开第一辆 —— 挑好本子和时间，等人来。</p>
+      <div class="mt-6"><a class="btn btn--primary" href="{{ url_for('public.scripts') }}">我来开一车</a></div>
     {% endif %}
   </div>
 </section>
 
-{# ============ 收尾引文 ============ #}
-<section class="band alt">
-  <div class="wrap">
-    <blockquote class="quote">
-      好本子只演一次，好搭子只凑一回。
-      <footer>—— 甜薯门店</footer>
-    </blockquote>
+{# ============ 04 彩色拼图入口（Dropbox 式） ============ #}
+<section class="tile tile--warm reveal">
+  <div class="tile__inner">
+    <header class="sec-head text-center">
+      <span class="sec-no">04</span>
+      <h2 class="heading-section">好戏入口</h2>
+    </header>
+    <div class="puzzle-grid">
+      <a class="puzzle-tile puzzle-tile--car" href="{{ url_for('public.car') }}">
+        <span class="puzzle-tile__icon">🚗</span>
+        <div>
+          <div class="puzzle-tile__title">拼车大厅</div>
+          <div class="puzzle-tile__desc">找搭子，一起开本</div>
+        </div>
+      </a>
+      <a class="puzzle-tile puzzle-tile--comm" href="{{ url_for('public.comm') }}">
+        <span class="puzzle-tile__icon">💬</span>
+        <div>
+          <div class="puzzle-tile__title">玩家社区</div>
+          <div class="puzzle-tile__desc">动态、攻略、组队</div>
+        </div>
+      </a>
+      <a class="puzzle-tile puzzle-tile--dm" href="{% if my_dm %}{{ url_for('dm.index') }}{% else %}{{ url_for('public.home') }}#dm{% endif %}">
+        <span class="puzzle-tile__icon">🎭</span>
+        <div>
+          <div class="puzzle-tile__title">DM 工作台</div>
+          <div class="puzzle-tile__desc">带本、练本、结算</div>
+        </div>
+      </a>
+      <a class="puzzle-tile puzzle-tile--me" href="{{ url_for('user.me') }}">
+        <span class="puzzle-tile__icon">👤</span>
+        <div>
+          <div class="puzzle-tile__title">我的</div>
+          <div class="puzzle-tile__desc">订单、券、档案</div>
+        </div>
+      </a>
+    </div>
   </div>
 </section>
+
+{# ============ 收尾引文 ============ #}
+<section class="tile tile--brand reveal">
+  <div class="tile__inner text-center">
+    <blockquote class="heading-display" style="font-size:var(--fs-title)">“好本子只演一次，好搭子只凑一回。”</blockquote>
+    <footer class="mt-4 body-secondary">—— 甜薯门店</footer>
+  </div>
+</section>
+
+<script>
+  (function(){
+    if (!window.IntersectionObserver) {
+      document.querySelectorAll('.reveal').forEach(function(el){ el.classList.add('in'); });
+      return;
+    }
+    var obs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if (e.isIntersecting) { e.target.classList.add('in'); obs.unobserve(e.target); } });
+    }, {threshold:.12, rootMargin:'0px 0px -40px 0px'});
+    document.querySelectorAll('.reveal').forEach(function(el){ obs.observe(el); });
+  })();
+</script>
 
 {% endblock %}
