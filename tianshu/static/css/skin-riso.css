@@ -97,9 +97,9 @@
 .stat-card b{color:var(--vermilion);font-size:38px}
 
 /* 底部导航：黄底粗黑边 */
-.tab-dock{background:var(--gold);border-top:4px solid var(--ink)}
-.tab-dock a{color:var(--ink);font-weight:700}
-.tab-dock a.on{color:var(--vermilion)}
+.mobtab{background:var(--gold);border-top:4px solid var(--ink)}
+.mobtab a{color:var(--ink);font-weight:700}
+.mobtab a.on{color:var(--vermilion)}
 
 /* 弹窗：硬投影 */
 .modal{border:3px solid var(--ink);box-shadow:12px 12px 0 var(--ink)}

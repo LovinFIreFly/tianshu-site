@@ -227,7 +227,7 @@ tbody tr:last-child td{border-bottom:0}
 .site-foot{border-top:1px solid var(--rule);margin-top:var(--sp-8);padding:var(--sp-6) var(--sp-5);
   color:var(--ink-4);font-size:var(--fs-xs);text-align:center}
 .foot-inner{display:flex;flex-direction:column;align-items:center;gap:var(--sp-3);max-width:var(--container);margin:0 auto}
-.tab-dock{display:none}
+.mobtab{display:none}
 
 /* ============================ 5. 按钮 ============================ */
 /* 铅字压在纸上：直角 + 墨边 + 不模糊的硬投影；按下 = 位移吃掉投影 */
@@ -708,16 +708,16 @@ details.spoiler[open] > summary{margin-bottom:var(--sp-3)}
   .act .sub{margin-left:0}
   .p-stats{grid-template-columns:repeat(3,1fr)}
   /* 底部导航：手机单手够得着的地方 */
-  .tab-dock{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:70;
+  .mobtab{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:70;
     padding:var(--sp-2) var(--sp-2) calc(var(--sp-2) + env(safe-area-inset-bottom));
     background:color-mix(in srgb,var(--paper) 94%,transparent);
     -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
     border-top:1px solid var(--rule)}
-  .tab-dock a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+  .mobtab a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
     padding:var(--sp-2) 0 3px;font-size:var(--fs-xs);color:var(--ink-3);text-decoration:none}
-  .tab-dock a .ico{font-size:18px;line-height:1;opacity:.6}
-  .tab-dock a.on{color:var(--vermilion);font-weight:700}
-  .tab-dock a.on .ico{opacity:1}
+  .mobtab a .ico{font-size:18px;line-height:1;opacity:.6}
+  .mobtab a.on{color:var(--vermilion);font-weight:700}
+  .mobtab a.on .ico{opacity:1}
   .btn{height:38px}
   .btn-cta{height:48px}
 }
