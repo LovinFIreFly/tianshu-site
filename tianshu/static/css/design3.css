@@ -608,10 +608,11 @@ img{max-width:100%}
 @media(max-width:760px){.dfoot__grid{grid-template-columns:1fr;gap:var(--d-s5)}}
 .dfoot__brand{font-family:var(--d-serif);font-size:clamp(20px,2.4vw,30px);font-weight:700;letter-spacing:-.02em;line-height:1.1}
 .dfoot__slogan{margin-top:var(--d-s3);font-size:13.5px;color:var(--d-stage-2);max-width:34ch;line-height:1.7}
-.dfoot h4{margin:0 0 var(--d-s3);font-family:var(--d-mono);font-size:10.5px;letter-spacing:.2em;
+.dfoot h4{margin:0 0 var(--d-s3);font-family:var(--d-mono);font-size:12px;letter-spacing:.1em;
   text-transform:uppercase;color:var(--d-stage-2);font-weight:400}
 .dfoot ul{list-style:none;margin:0;padding:0;display:grid;gap:9px}
-.dfoot ul a{font-size:14px;color:var(--d-stage-ink);opacity:.86;transition:opacity .2s,transform .2s;display:inline-block}
+.dfoot ul a{font-size:14.5px;color:var(--d-stage-ink);opacity:.86;transition:opacity .2s,transform .2s;display:inline-block}
+.dfoot__slogan{margin-top:var(--d-s3);font-size:14px;color:var(--d-stage-2);max-width:34ch;line-height:1.7}
 .dfoot ul a:hover{opacity:1;transform:translateX(3px);color:var(--d-accent)}
 .dfoot__bar{margin-top:clamp(24px,3vw,40px);padding-top:var(--d-s4);border-top:1px solid var(--d-hair);
   display:flex;flex-wrap:wrap;gap:var(--d-s3) var(--d-s5);align-items:center;
@@ -800,7 +801,7 @@ html.ts-leaving body{opacity:0;transform:translateY(-10px) scale(.995);
 .adm-main > .between h1{margin:0;font-family:var(--d-serif);font-size:clamp(22px,3vw,32px);
   font-weight:700;letter-spacing:-.01em;line-height:1.1}
 .adm-main .panel{padding:clamp(16px,2.4vw,28px);margin-bottom:clamp(14px,2vw,22px);
-  border:1px solid var(--d-rule);border-radius:var(--d-r);background:var(--d-paper-3)}
+  border:1px solid var(--d-rule);border-radius:var(--d-r);background:var(--d-paper-3);color:var(--d-ink)}
 .adm-main .panel > h3:first-child{margin-top:0}
 .adm-main h3{margin:clamp(20px,2.6vw,30px) 0 6px;font-family:var(--d-serif);font-size:clamp(16px,1.9vw,20px);
   font-weight:700;letter-spacing:-.005em;line-height:1.3;padding-top:2px}
@@ -842,8 +843,8 @@ input[type="file"]::file-selector-button:hover{background:var(--d-paper-3)}
   background:var(--d-rule);border:1px solid var(--d-rule);margin-bottom:clamp(14px,2vw,22px)}
 .adm-main .stats > *{background:var(--d-paper-3);padding:var(--d-s4) var(--d-s5)}
 .adm-main .stats b{display:block;font-family:var(--d-mono);font-size:clamp(18px,2.2vw,26px);letter-spacing:-.02em;color:var(--d-ink)}
-.adm-main .stats span{display:block;margin-top:4px;font-family:var(--d-mono);font-size:11px;letter-spacing:.02em;color:var(--d-ink-3);text-transform:uppercase}
-  letter-spacing:.12em;text-transform:uppercase;color:var(--d-ink-4)}
+.adm-main .stats span{display:block;margin-top:4px;font-family:var(--d-mono);font-size:12px;letter-spacing:.04em;color:var(--d-ink-2);text-transform:uppercase}
+.adm-main .stats > *{background:var(--d-paper-3);padding:var(--d-s4) var(--d-s5);color:var(--d-ink)}
 /* 后台外壳：整体让出固定顶栏的高度（之前侧栏和第一屏标题被顶栏压住）。
    侧栏是"永远暗底"，所以它的字色不能用 --ink（某些款式把 --ink 设成近黑，就成了暗底暗字） */
 .adm{padding-top:var(--d-nav-h)}
@@ -867,7 +868,7 @@ input[type="file"]::file-selector-button:hover{background:var(--d-paper-3)}
    -------------------------------------------------------------------------- */
 /* 空态：一张**收紧的居中小卡**（之前铺满整行、又宽又空，看着很蠢） */
 .empty3{border:1px solid var(--d-rule);background:var(--d-paper-3);border-radius:var(--d-r);
-  padding:clamp(18px,2.4vw,26px) clamp(18px,2.6vw,28px);max-width:520px;margin-inline:auto;text-align:center}
+  padding:clamp(18px,2.4vw,26px) clamp(18px,2.6vw,28px);max-width:520px;margin-inline:auto;text-align:center;color:var(--d-ink)}
 .empty3__k{margin:0;font-family:var(--d-mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;
   color:var(--d-accent)}
 .empty3__t{margin:8px 0 0;font-family:var(--d-serif);font-size:clamp(17px,2vw,21px);font-weight:700;line-height:1.24}
@@ -913,7 +914,7 @@ input[type="file"]::file-selector-button:hover{background:var(--d-paper-3)}
 .lnk{border-bottom:1px solid var(--d-rule-2);transition:border-color .2s,color .2s}
 .lnk:hover{color:var(--d-accent);border-color:var(--d-accent)}
 .sub{color:var(--d-ink-4);font-size:12.5px;line-height:1.6}
-.caption{font-family:var(--d-mono);font-size:11px;letter-spacing:.06em;color:var(--d-ink-4)}
+.caption{font-family:var(--d-mono);font-size:12px;letter-spacing:.04em;color:var(--d-ink-4)}
 .input{width:100%;border:1px solid var(--d-rule);border-radius:var(--d-r);background:var(--d-paper-3);
   padding:10px 12px;font-size:14px;color:var(--d-ink);font-family:var(--d-sans)}
 .input:focus{border-color:var(--d-accent);outline:0;box-shadow:0 0 0 3px var(--d-accent-05)}
@@ -970,7 +971,7 @@ input[type="file"]::file-selector-button:hover{background:var(--d-paper-3)}
 
 /* 「我自己的评价」：订单/预约卡片里，评价完把打过什么直接摆出来（只显示"已评价"太没交代） */
 .myrev3{margin-top:14px;padding:12px 14px;border:1px solid var(--d-rule);border-radius:var(--d-r);
-  background:var(--d-paper-2)}
+  background:var(--d-paper-2);color:var(--d-ink)}
 .myrev3__h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .myrev3__s{font-size:15px;letter-spacing:1px;color:var(--d-rule-2);line-height:1}
 .myrev3__h .caption{line-height:1}
@@ -1035,20 +1036,21 @@ input[type="file"]::file-selector-button:hover{background:var(--d-paper-3)}
 .between{display:flex;align-items:center;justify-content:space-between;gap:var(--d-s4);flex-wrap:wrap}
 .text-center{text-align:center}
 .body-secondary,.body-large{color:var(--d-ink-3);line-height:1.72}
+.body-secondary{font-size:14.5px}
 .body-large{font-size:var(--d-fs-body)}
 
 /* --------------------------------------------------------------------------
    16c2. 「我的」：左栏身份卡 + 纵向胶囊导航（改成"目录 + 细线"）
    -------------------------------------------------------------------------- */
 .block3{border:1px solid var(--d-rule);border-radius:var(--d-r);background:var(--d-paper-3);
-  padding:clamp(14px,2vw,22px);margin-bottom:var(--d-s4)}
+  padding:clamp(14px,2vw,22px);margin-bottom:var(--d-s4);color:var(--d-ink)}
 .block3--tint{background:var(--d-paper-2)}
 .block3 > h3:first-child,.block3 > h2:first-child{margin-top:0}
 .me-wrap{max-width:var(--d-max);margin:0 auto;display:grid;grid-template-columns:290px minmax(0,1fr);
   gap:clamp(20px,3vw,44px);align-items:start}
 @media(max-width:900px){.me-wrap{grid-template-columns:1fr}}
 .me-card{border:1px solid var(--d-rule);border-radius:var(--d-r);background:var(--d-paper-3);
-  padding:var(--d-s5)}
+  padding:var(--d-s5);color:var(--d-ink)}
 .me-card .avatar,.avatar-circle{width:56px;height:56px;border-radius:var(--d-round);overflow:hidden;display:grid;
   place-items:center;background:var(--d-ink);color:var(--d-paper-3);
   font-family:var(--d-serif);font-size:22px}
@@ -1058,8 +1060,8 @@ input[type="file"]::file-selector-button:hover{background:var(--d-paper-3)}
 .p-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--d-rule);
   border:1px solid var(--d-rule);margin-top:var(--d-s4)}
 .p-stats > *{background:var(--d-paper-3);padding:10px 6px;text-align:center}
-.p-stats b{display:block;font-family:var(--d-mono);font-size:17px;letter-spacing:-.02em}
-.p-stats span{display:block;margin-top:3px;font-size:10.5px;letter-spacing:.06em;color:var(--d-ink-4)}
+.p-stats b{display:block;font-family:var(--d-mono);font-size:17px;letter-spacing:-.02em;color:var(--d-ink)}
+.p-stats span{display:block;margin-top:3px;font-size:11.5px;letter-spacing:.04em;color:var(--d-ink-3)}
 .me-nav{display:flex;flex-direction:column;gap:0;position:sticky;top:calc(var(--d-nav-h) + 16px);
   border-top:1px solid var(--d-rule-2);margin-top:var(--d-s5)}
 @media(max-width:900px){
@@ -1075,7 +1077,7 @@ input[type="file"]::file-selector-button:hover{background:var(--d-paper-3)}
    设计 2 给 .mi.on 刷了 background:var(--ink) 的深色药丸，不覆盖就是深底深字） */
 .me-nav .mi.on{color:var(--d-ink);font-weight:600;background:var(--d-accent-05);
   box-shadow:inset 3px 0 0 var(--d-accent)}
-.me-nav .mi span{font-family:var(--d-mono);font-size:10.5px;letter-spacing:.05em;color:var(--d-ink-4);white-space:nowrap}
+.me-nav .mi span{font-family:var(--d-mono);font-size:11.5px;letter-spacing:.04em;color:var(--d-ink-4);white-space:nowrap}
 .tabpane{display:none}
 .tabpane.on{display:block}
 .tabpane.on > *{animation:d-rise .5s var(--d-ease) both}
