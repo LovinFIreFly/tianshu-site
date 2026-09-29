@@ -1157,6 +1157,12 @@ def reviews_of(sid=None, only_visible=True):
         rows = [r for r in rows if str(r.get('sid')) == str(sid)]
     if only_visible:
         rows = [r for r in rows if not r.get('hidden')]
+    users = {str(u.get('username')): u for u in db.rows('users')}
+    for r in rows:
+        author = users.get(str(r.get('username') or ''))
+        profile = (author or {}).get('profile') or {}
+        r['avatar'] = profile.get('avatar') or ''
+        r['nick'] = profile.get('nick') or r.get('username') or '玩家'
     return sorted(rows, key=lambda x: -(x.get('createdAt') or 0))
 
 

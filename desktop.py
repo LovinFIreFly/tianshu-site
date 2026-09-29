@@ -106,10 +106,17 @@ def main():
         if cand and os.path.exists(cand):
             icon = cand
             break
+    # 桌面壳带 UA 标记：服务端认出是壳里，就不显示「电脑版下载」等入口
+    # WebView2 的 session cookie 不一定持久，单靠 ?shell=desktop 翻页后可能丢
+    UA = ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+          '(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 TianshuDesktop/1.0')
     try:
-        webview.start(icon=icon)
-    except TypeError:                          # 老版本 pywebview 不认 icon 参数
-        webview.start()
+        webview.start(icon=icon, user_agent=UA)
+    except TypeError:
+        try:
+            webview.start(user_agent=UA)
+        except TypeError:                  # 更老的 pywebview 两个参数都不认
+            webview.start()
 
 
 if __name__ == '__main__':

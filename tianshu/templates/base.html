@@ -88,7 +88,7 @@
 
 <main class="page {% block main_class %}{% endblock %}">{% block body %}{% endblock %}</main>
 
-{% set in_tianshu_app = 'TianshuApp' in (request.headers.get('User-Agent') or '') %}
+{% set in_tianshu_app = 'TianshuApp' in (request.headers.get('User-Agent') or '') or 'TianshuDesktop' in (request.headers.get('User-Agent') or '') %}
 {# 在客户端壳里（手机壳 App 看 UA，电脑版 exe 看 session 里的 shell 标记）——
    已经在用客户端了，就别再显示"下载客户端"的按钮 #}
 {% set in_app = in_tianshu_app or in_shell %}

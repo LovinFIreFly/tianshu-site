@@ -51,7 +51,7 @@
        已经在壳里用的（UA 带 TianshuApp 的手机壳 / 带过 ?shell=desktop 的电脑版）不显示 ——
        都在用客户端了，不需要再下一遍。 #}
     {% set _ua = request.headers.get('User-Agent') or '' %}
-    {% set _in_app = ('TianshuApp' in _ua) or in_shell %}
+    {% set _in_app = ('TianshuApp' in _ua) or ('TianshuDesktop' in _ua) or in_shell %}
     <p class="auth-foot">{{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}
       {% if not _in_app %}
       <a class="btn btn-sm btn-ghost desk-dl" style="margin-left:8px"

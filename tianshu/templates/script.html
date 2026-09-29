@@ -152,8 +152,17 @@
       <div>
         {% for r in reviews %}
         <article class="rev3 rv" style="--i:{{ loop.index0 }}">
-          <div class="rev3__h">
-            <span class="rev3__w">{{ r.username or '玩家' }}</span>
+          <div class="rev3__h rev3__h--author">
+            <div class="rev3__author">
+              <div class="rev3__avatar">
+                {% if r.avatar and r.avatar.startswith('/img/') %}
+                <img src="{{ r.avatar }}" alt="">
+                {% else %}
+                <span>{{ (r.nick or r.username or '玩家')[0] }}</span>
+                {% endif %}
+              </div>
+              <span class="rev3__name">{{ r.nick or r.username or '玩家' }}</span>
+            </div>
             <span class="caption">{% for i in range(r.rating or 5) %}★{% endfor %} · {{ day_label(r.createdAt) }}</span>
           </div>
           <p class="rev3__t">{{ r.text or '（只打了分）' }}</p>

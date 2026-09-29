@@ -76,7 +76,7 @@
 
 <main class="page {% block main_class %}{% endblock %}">{% block body %}{% endblock %}</main>
 
-{% set in_tianshu_app = 'TianshuApp' in (request.headers.get('User-Agent') or '') %}
+{% set in_tianshu_app = 'TianshuApp' in (request.headers.get('User-Agent') or '') or 'TianshuDesktop' in (request.headers.get('User-Agent') or '') %}
 {% set in_app_v1 = in_tianshu_app or in_shell %}
 <footer class="site-foot">
   <div class="site-foot__inner">
