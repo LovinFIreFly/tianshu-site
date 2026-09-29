@@ -1,50 +1,48 @@
 {% extends 'base.html' %}
 {% block title %}{{ who.username }} 的主页{% endblock %}
+{% block main_class %}{% endblock %}
 {% block body %}
-<div class="between">
-  <div>
-    <h1>{{ who.profile.avatar or '🎭' }} {{ who.profile.nick or who.username }}</h1>
-    <p class="sub">
-      {% if role_name == 'dm' %}<span class="badge">🗡 DM</span>
-      {% elif role_name == 'user' %}<span class="badge">🎭 玩家</span>
-      {% else %}<span class="badge">门店</span>{% endif %}
-      · {{ followers }} 人关注
-      {% if who.profile.gender %}· {{ who.profile.gender }}{% endif %}
-      {% if who.profile.age %}· {{ who.profile.age }} 岁{% endif %}
-    </p>
-  </div>
-  {% if me and me.username != who.username %}
-  <form method="post" action="{{ url_for('public.user_follow', username=who.username) }}">
-    <button class="btn btn-sm {{ 'btn-primary' if not following }}" type="submit">
-      {{ '已关注 ✓' if following else '+ 关注' }}</button>
-  </form>
-  {% endif %}
-</div>
 
-{% if role_name == 'dm' %}
-<div class="panel mt">
-  <h3>可开本</h3>
-  <div class="row" style="gap:8px">
-    {% for s in scripts %}{% if who.username in (s.dms or []) %}<span class="pill">{{ s.title }}</span>{% endif %}{% else %}<span class="sub">还没登记可开的本</span>{% endfor %}
-  </div>
-</div>
-{% endif %}
+<section class="tile tile--warm" style="padding-top:calc(var(--site-nav-height) + var(--space-7))">
+  <div class="tile__inner">
+    <div class="between" style="align-items:center">
+      <div>
+        <h1 class="heading-section" style="font-size:var(--fs-hero)">{{ who.profile.avatar or '🎭' }} {{ who.profile.nick or who.username }}</h1>
+        <p class="body-secondary" style="margin-top:var(--space-2)">
+          {% if role_name == 'dm' %}<span class="badge">🗡 DM</span>
+          {% elif role_name == 'user' %}<span class="badge">🎭 玩家</span>
+          {% else %}<span class="badge">门店</span>{% endif %}
+          · {{ followers }} 人关注
+          {% if who.profile.gender %}· {{ who.profile.gender }}{% endif %}
+          {% if who.profile.age %}· {{ who.profile.age }} 岁{% endif %}
+        </p>
+      </div>
+      {% if me and me.username != who.username %}
+      <form method="post" action="{{ url_for('public.user_follow', username=who.username) }}">
+        <button class="btn btn--sm {{ 'btn--primary' if not following else '' }}" type="submit">{{ '已关注 ✓' if following else '+ 关注' }}</button>
+      </form>
+      {% endif %}
+    </div>
 
-<h2>TA 写过的评价（{{ reviews|length }}）</h2>
-{% for r in reviews %}
-<div class="panel mt">
-  <div class="between">
-    <b><a href="{{ url_for('public.script_detail', sid=r.sid) }}">{{ r.title or '剧本评价' }}</a></b>
-    <span class="sub">{{ r.rating }}/5 · {{ day_label(r.createdAt) }}</span>
+    {% if role_name == 'dm' %}
+    <div class="card mt-6">
+      <h3 class="heading-section" style="font-size:var(--fs-h4)">可开本</h3>
+      <div class="mt-3" style="display:flex;gap:8px;flex-wrap:wrap">
+        {% for s in scripts %}{% if who.username in (s.dms or []) %}<span class="pill">{{ s.title }}</span>{% endif %}{% else %}<span class="body-secondary">还没登记可开的本</span>{% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <h2 class="heading-section mt-7">TA 写过的评价（{{ reviews|length }}）</h2>
+    <div class="mt-4" style="display:flex;flex-direction:column;gap:var(--space-4)">
+      {% for r in reviews %}<div class="card">
+        <div class="between"><b><a class="lnk" href="{{ url_for('public.script_detail', sid=r.sid) }}">{{ r.title or '剧本评价' }}</a></b>
+          <span class="caption">{{ r.rating }}/5 · {{ day_label(r.createdAt) }}</span></div>
+        <p class="body-secondary mt-3">{{ r.text or '（只打了分）' }}</p>
+        {% if r.followUps %}{% for f in r.followUps %}<p class="caption mt-2" style="border-left:2px solid var(--brand);padding-left:8px">追评：{{ f.text }}</p>{% endfor %}{% endif %}
+      </div>{% else %}<div class="panel empty text-center">还没写过评价</div>{% endfor %}
+    </div>
   </div>
-  <p style="color:var(--text2)">{{ r.text or '（只打了分）' }}</p>
-  {% if r.followUps %}
-  <div style="border-left:2px solid var(--primary);padding-left:8px;margin-top:6px">
-    {% for f in r.followUps %}<p class="sub">追评：{{ f.text }}</p>{% endfor %}
-  </div>
-  {% endif %}
-</div>
-{% else %}
-<div class="panel empty">还没写过评价</div>
-{% endfor %}
+</section>
+
 {% endblock %}

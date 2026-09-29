@@ -1,81 +1,60 @@
 {% extends 'base.html' %}
 {% block title %}{{ nickname }} · 主持人主页{% endblock %}
+{% block main_class %}{% endblock %}
 {% block body %}
 
-{# DM 公开主页：做成一张"演职员表"——左边头像与段位，右边硬数据与带过的本 #}
-<a class="sub lnk" href="{{ url_for('public.scripts') }}">← 回剧本库</a>
-
-<div class="two" style="margin-top:var(--sp-6)">
-  <div>
-    {% set pf = u.dmProfile or {} %}
-    {# 形象照：DM 自己在工作台「我的成长」里传的，没有就不摆位置 #}
-    {% if pf.photo %}
-    <img class="dm-portrait" src="{{ pf.photo }}" alt="{{ nickname }} 的形象照">
-    {% endif %}
-
-    <span class="kicker">主持人 / Game Master</span>
-    <h1 style="font-size:44px;margin:var(--sp-3) 0">{{ nickname }}</h1>
-
-    {% if pf.style %}<p class="lead">{{ pf.style }}</p>{% endif %}
-
-    <div class="row" style="margin-top:var(--sp-5)">
-      <span class="badge">{{ st.tier.icon }} {{ st.tier.name }}</span>
-      {% if st.rating %}<span class="badge ok">★ {{ st.rating }}（{{ st.ratingCount }} 条评价）</span>{% endif %}
-      {% if st.assigned %}<span class="badge new">被点名 {{ st.assigned }} 次</span>{% endif %}
-    </div>
-
-    {% if pf.bio %}
-    <div class="quote" style="font-size:19px;margin-top:var(--sp-7)">{{ pf.bio }}</div>
-    {% endif %}
-
-    <div class="kv" style="margin-top:var(--sp-7)">
-      <div class="cell"><b>{{ st.done }}</b><span>带本量</span></div>
-      <div class="cell"><b>{{ st.rating or '—' }}</b><span>平均评分</span></div>
-      <div class="cell"><b>{{ st.goodRate }}%</b><span>好评率</span></div>
-      <div class="cell"><b>{{ st.players }}</b><span>接待人次</span></div>
-    </div>
-
-    {% if st.topTags %}
-    <div style="margin-top:var(--sp-6)">
-      <span class="kicker">擅长的类型</span>
-      <div class="chips" style="margin-top:var(--sp-3)">
-        {% for t in st.topTags %}<span class="badge">{{ t }}</span>{% endfor %}
+<section class="tile tile--dark" style="padding-top:calc(var(--site-nav-height) + var(--space-7))">
+  <div class="tile__inner">
+    <a class="lnk" href="{{ url_for('public.scripts') }}" style="color:var(--stage-text)">← 回剧本库</a>
+    <div style="display:flex;flex-wrap:wrap;gap:var(--space-6);align-items:center;margin-top:var(--space-4)">
+      {% if (u.dmProfile or {}).photo %}<img src="{{ (u.dmProfile or {}).photo }}" alt="{{ nickname }}"
+        style="width:140px;height:140px;border-radius:var(--radius-2xl);object-fit:cover;box-shadow:var(--shadow-3)">{% endif %}
+      <div>
+        <span class="caption" style="text-transform:uppercase;letter-spacing:.12em;color:var(--stage-text)">主持人 / Game Master</span>
+        <h1 class="heading-hero" style="font-size:48px;margin-top:var(--space-2)">{{ nickname }}</h1>
+        {% set pf = u.dmProfile or {} %}
+        {% if pf.style %}<p class="body-large" style="max-width:620px;margin-top:var(--space-3)">{{ pf.style }}</p>{% endif %}
+        <div class="mt-4" style="display:flex;gap:8px;flex-wrap:wrap">
+          <span class="badge badge--brand">{{ st.tier.icon }} {{ st.tier.name }}</span>
+          {% if st.rating %}<span class="badge badge--brand">★ {{ st.rating }}（{{ st.ratingCount }} 条评价）</span>{% endif %}
+          {% if st.assigned %}<span class="badge">被点名 {{ st.assigned }} 次</span>{% endif %}
+        </div>
       </div>
     </div>
-    {% endif %}
-
-    {% if titles %}
-    <div style="margin-top:var(--sp-6)">
-      <span class="kicker">带过的本</span>
-      <p class="sub" style="margin-top:var(--sp-3)">{{ titles|join(' · ') }}</p>
-    </div>
-    {% endif %}
   </div>
+</section>
 
-  <aside>
-    {% if reviews %}
-    <span class="kicker">最近的评价</span>
-    {% for r in reviews %}
-    <div class="msg-item">
-      <div class="top">
-        <span class="who">{{ r.username or '玩家' }}</span>
-        <span class="stars">{{ '★' * (r.rating or 0) }}</span>
-        <span class="time">{{ day_label(r.createdAt) }}</span>
+<section class="tile tile--light reveal">
+  <div class="tile__inner">
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:var(--space-7);align-items:start">
+      <div>
+        {% set pf = u.dmProfile or {} %}
+        {% if pf.bio %}<blockquote class="body-large" style="border-left:3px solid var(--brand);padding-left:var(--space-4);margin:0">{{ pf.bio }}</blockquote>{% endif %}
+        <div class="poster-grid" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr));margin-top:var(--space-6)">
+          <div class="card text-center"><div class="heading-section" style="font-size:var(--fs-title)">{{ st.done }}</div><div class="body-secondary">带本量</div></div>
+          <div class="card text-center"><div class="heading-section" style="font-size:var(--fs-title)">{{ st.rating or '—' }}</div><div class="body-secondary">平均评分</div></div>
+          <div class="card text-center"><div class="heading-section" style="font-size:var(--fs-title)">{{ st.goodRate }}%</div><div class="body-secondary">好评率</div></div>
+          <div class="card text-center"><div class="heading-section" style="font-size:var(--fs-title)">{{ st.players }}</div><div class="body-secondary">接待人次</div></div>
+        </div>
+        {% set pf = u.dmProfile or {} %}
+        {% if st.topTags %}<div class="mt-6"><span class="caption">擅长的类型</span>
+          <div class="mt-3" style="display:flex;gap:8px;flex-wrap:wrap">{% for t in st.topTags %}<span class="badge">{{ t }}</span>{% endfor %}</div></div>{% endif %}
+        {% if titles %}<div class="mt-6"><span class="caption">带过的本</span><p class="body-secondary mt-3">{{ titles|join(' · ') }}</p></div>{% endif %}
       </div>
-      {% if r.text %}<p>{{ r.text }}</p>{% endif %}
-    </div>
-    {% endfor %}
-    {% else %}
-    <div class="panel empty">
-      <div class="e">还没有评价</div>
-      <p>玩过他的本，可以在「我的 → 预约」里给一句评价</p>
-    </div>
-    {% endif %}
 
-    <div style="margin-top:var(--sp-6)">
-      <a class="btn btn-cta btn-block" href="{{ url_for('public.scripts') }}">找个本，约他开场</a>
+      <aside>
+        <span class="caption">最近的评价</span>
+        {% for r in reviews %}<div class="card mt-4">
+          <div style="display:flex;justify-content:space-between;gap:8px"><b>{{ r.username or '玩家' }}</b><span class="caption">{{ day_label(r.createdAt) }}</span></div>
+          <div class="mt-2" style="color:var(--brand);letter-spacing:2px">{{ '★' * (r.rating or 0) }}</div>
+          {% if r.text %}<p class="body-secondary mt-2">{{ r.text }}</p>{% endif %}
+        </div>{% else %}<div class="panel empty text-center mt-4">
+          <div style="font-weight:700">还没有评价</div>
+          <p class="body-secondary mt-3">玩过他的本，可以在「我的 → 预约」里给一句评价</p></div>{% endfor %}
+        <div class="mt-6"><a class="btn btn--primary btn--block" href="{{ url_for('public.scripts') }}">找个本，约他开场</a></div>
+      </aside>
     </div>
-  </aside>
-</div>
+  </div>
+</section>
 
 {% endblock %}
