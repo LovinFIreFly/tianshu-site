@@ -2,26 +2,94 @@
 """
 自检脚本：改完代码跑一遍，看看有没有把功能改坏
 
-用法（两个窗口）：
-    python app.py --no-browser       # 第一个窗口起服务
-    python tools/smoke_test.py       # 第二个窗口跑自检
+用法（一条命令就够，它会自己起一个"一次性"服务）：
+    python tools/smoke_test.py
+
+    # 想连已经在跑的服务（注意：那会往**真实 data/** 里写东西，跑完数据是脏的）
+    BASE=http://127.0.0.1:8000 python tools/smoke_test.py
+
+它自己起服务时是这样的：
+    ① 开一个临时数据目录（系统临时目录下，不在项目里）
+    ② TS_DATA_DIR 指向它 → 服务从**空库**开始（只有 4 个内置账号 + 默认设置）
+    ③ 随机端口起服务，跑完把服务和临时目录一起收拾掉
+
+所以每次跑都是干净起点、跑多少次结果都一样，不会：
+  · 让"自检本"一本本堆在剧本库里 · 让验证码额度一天用完 · 留下"余额变动"通知
+  · 把"关注"从关注点成取关（那个接口是切换式的，第二次跑就反了）
+哪次没过，临时目录会留下来（路径会打出来），方便翻现场。
 
 它会真的去点网页：登录、加剧本、下单、核销、退款、拼车、权限，
-顺便直接读 data/*.json 核对算出来的钱对不对。
+顺便直接读数据目录里的 *.json 核对算出来的钱对不对。
 """
 import http.cookiejar
 import json
 import os
+import shutil
+import socket
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 
-BASE = os.environ.get('BASE', 'http://127.0.0.1:8000')
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA = os.path.join(ROOT, 'data')
+# 没给 BASE = 自己起服务（默认，干净）；给了 BASE = 连那个已经在跑的服务
+_EXTERNAL = os.environ.get('BASE')
+BASE = _EXTERNAL or ''
+DATA = os.path.abspath(os.environ.get('TS_DATA_DIR') or os.path.join(ROOT, 'data'))
+
+_server = None          # 自己起的那个服务进程
+_tmpdir = None          # 临时数据目录
+
+
+def _free_port():
+    """让系统随便给个没用过的端口（别去抢 8000 —— 那个可能是你正在看的预览）"""
+    with socket.socket() as s:
+        s.bind(('127.0.0.1', 0))
+        return s.getsockname()[1]
+
+
+def _start_server():
+    """起一个跑在临时数据目录上的服务，返回它的地址"""
+    global BASE, DATA
+    tmp = tempfile.mkdtemp(prefix='tianshu-smoke-')
+    port = _free_port()
+    env = dict(os.environ, TS_DATA_DIR=tmp, PYTHONIOENCODING='utf-8', PYTHONUTF8='1')
+    log = open(os.path.join(tmp, 'server.log'), 'w', encoding='utf-8')
+    proc = subprocess.Popen([sys.executable, 'app.py', '--no-browser', '--port', str(port)],
+                            cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
+    BASE = 'http://127.0.0.1:%d' % port
+    DATA = tmp
+    # 自检进程自己也 import tianshu（有些断言要直接调后端纯函数），
+    # 让它读同一份临时数据，免得两边看到的东西不一样
+    os.environ['TS_DATA_DIR'] = tmp
+    for _ in range(80):                      # 最多等 40 秒（首次运行要装依赖会久一点）
+        if proc.poll() is not None:
+            break
+        try:
+            urllib.request.urlopen(BASE + '/health', timeout=2).read()
+            print('临时数据目录：%s' % tmp)
+            print('自检服务：%s（跑完自动关掉）' % BASE)
+            return proc, tmp
+        except Exception:
+            time.sleep(0.5)
+    log.close()
+    print('自检服务起不来（%s）。日志：' % BASE)
+    try:
+        with open(os.path.join(tmp, 'server.log'), encoding='utf-8', errors='replace') as f:
+            print('  ' + '\n  '.join(f.read().strip().splitlines()[-15:]))
+    except OSError:
+        pass
+    sys.exit(2)
+
+
+if _EXTERNAL:
+    BASE = _EXTERNAL
+    print('连已经在跑的服务：%s（注意：会写真实数据目录 %s）' % (BASE, DATA))
+else:
+    _server, _tmpdir = _start_server()
 
 # 有些检查要直接调后端函数（角色判定、发件人拼接这类纯函数，走 HTTP 验不出来），
 # 脚本是从 tools/ 跑的，所以得把仓库根目录塞进 sys.path 才能 import tianshu。
@@ -334,6 +402,12 @@ _o9 = next((x for x in jread('pays') if x.get('bid') == (_bk9 or {}).get('id')),
 check('游玩费 = 总价（定金是要退回的，不在这里抵）',
       _o9 and int(_o9.get('amount') or 0) > 0,
       '游玩费 %s 定金 %s' % ((_o9 or {}).get('amount'), (_o9 or {}).get('deposit')))
+# 定金：客人说付了 → 前台确认到账（真实流程里核销之前定金一定是确认过的，
+# 没确认的单子核销后也该能付游玩费，见下面那条断言）
+cus7.post('/order/%s/claim' % (_o9 or {}).get('id'), {})
+admin.post('/admin/orders/%s/confirm' % (_o9 or {}).get('id'), {})
+_o9 = next((x for x in jread('pays') if x.get('id') == (_o9 or {}).get('id')), {})
+check('核销前先确认定金到账', _o9.get('status') == 'paid', '状态=%s' % _o9.get('status'))
 s, html = cus7.get('/me')
 check('玩完之前不显示「支付游玩费」', '支付游玩费' not in html)
 admin.post('/admin/verify', {'code': (_bk9 or {}).get('verifyCode')})
@@ -356,6 +430,29 @@ check('确认游玩费时，定金自动退回（门店规矩）', bool(_o9.get(
       'depositBack=%s' % _o9.get('depositBack'))
 s, html = cus7.get('/me')
 check('确认后点评解锁（打几分出现了）', '打几分' in html)
+
+# 反过来：定金在系统里还没确认到账的单子（前台代收 / 现金那种），人来了照常核销、
+# 玩完照常付游玩费 —— 但**不能**记成"定金已退回"：没收到过的钱不能退，
+# 也不能这么通知客人（这条是自检跑干净之后揪出来的真 bug）
+cus8 = Client()
+cus8.post('/register', {'phone': '13900007777', 'username': '定金未确认号', 'password': '123456',
+                        'password2': '123456', 'code': '1234', 'agree': '1',
+                        'email': 'check8@example.com'})
+cus8.post('/book', {'sid': sc['id'], 'ts_day': iso_of(day), 'time': '19:00', 'players': 2, 'mode': '包车'})
+_bk10 = next((b for b in jread('bookings') if b.get('phone') == '13900007777'
+              and b.get('status') == 'booked'), None)
+_o10 = next((x for x in jread('pays') if x.get('bid') == (_bk10 or {}).get('id')), None)
+admin.post('/admin/verify', {'code': (_bk10 or {}).get('verifyCode')})    # 定金没确认就核销
+s, html = cus8.get('/me')
+check('定金没确认的单子，核销后照样能付游玩费（不然客人页面上什么都没有）',
+      '支付游玩费' in html)
+cus8.post('/order/%s/claim-bal' % (_o10 or {}).get('id'), {})
+s, _h = admin.post('/admin/orders/%s/confirm' % (_o10 or {}).get('id'), {})
+_o10 = next((x for x in jread('pays') if x.get('id') == (_o10 or {}).get('id')), {})
+check('定金没收到过时，不假装"已退回"（否则账对不上）',
+      _o10.get('balStatus') == 'paid' and not _o10.get('depositBack'),
+      'depositBack=%s' % _o10.get('depositBack'))
+check('后台会提醒"这单定金没自动退，手动处理"', '没确认到账' in _h or '没退' in _h)
 
 print('⑦ 用户档案 / 改角色 / 发券')
 s, html = admin.get('/admin/users')
@@ -947,4 +1044,20 @@ if fails:
         print('  [!!] %s' % name)
 else:
     print('全部 %d 项检查通过 [OK]' % total)
+
+# 收工：把自己起的服务和临时数据目录收拾掉（没过就留着，方便翻现场）
+if _server:
+    try:
+        _server.terminate()
+        _server.wait(timeout=10)
+    except Exception:
+        try:
+            _server.kill()
+        except Exception:
+            pass
+if _tmpdir:
+    if fails:
+        print('这次没过，临时数据留着查：%s' % _tmpdir)
+    else:
+        shutil.rmtree(_tmpdir, ignore_errors=True)
 sys.exit(1 if fails else 0)

@@ -10,7 +10,10 @@
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, 'data')          # 数据、密钥、上传的图都在这
+# 数据、密钥、上传的图都在这。默认就是项目里的 data/；
+# 想跑在别的地方（自检就是这么干的：临时目录、跑完就删、不弄脏真实数据），
+# 设环境变量 TS_DATA_DIR 指过去即可 —— 必须在启动**之前**设好。
+DATA_DIR = os.path.abspath(os.environ.get('TS_DATA_DIR') or os.path.join(BASE_DIR, 'data'))
 IMG_DIR = os.path.join(DATA_DIR, 'img')
 
 PORT = 8000                    # 被占用会自动往后试 8001、8002…

@@ -163,7 +163,10 @@
               {% elif o and o.balStatus == 'claimed' %}
                 <span class="tag3">游玩费待小客服确认</span>
                 <a class="b3 b3--sm" href="{{ url_for('user.pay_deposit', oid=o.id) }}">再看支付方式</a>
-              {% elif o and o.status == 'paid' and _bal > 0 %}
+              {% elif o and _bal > 0 %}
+                {# 不看定金状态：到店核销只看客人来没来，定金可能还在等前台点确认
+                   （现金/微信线下收的）。游玩费是独立一笔，核销了就该能付 ——
+                   之前绑着"定金已确认"，会把这种单卡成"页面上什么都没有"。 #}
                 <a class="b3 b3--sm b3--accent" href="{{ url_for('user.pay_deposit', oid=o.id) }}">支付游玩费 ¥{{ _bal }}</a>
               {% endif %}
             {% elif b.status != 'cancelled' %}

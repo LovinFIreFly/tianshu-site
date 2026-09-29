@@ -1332,8 +1332,17 @@ def order_action(user, order_id, action, is_staff=False, reason=''):
         bal = max(0, int(order.get('amount') or 0))
         if order.get('balStatus') == 'paid':
             return False, '这单的游玩费已经确认过了'
-        # 玩完 → 定金按门店规矩退回（没到场 / 中途跳车的单不会被核销，所以走不到这里）
-        back = 0 if order.get('depositBack') else int(order.get('deposit') or 0)
+        # 玩完 → 定金按门店规矩退回（没到场 / 中途跳车的单不会被核销，所以走不到这里）。
+        # **只在定金确实收到过（status=paid）时才退**：核销只证明人来了，
+        # 不代表定金在系统里被确认过 —— 前台代收 / 现金那种可能还停在 unpaid。
+        # 没收到过的钱不能记成"已退回"，否则客人收到"定金已退回"、账上却从来没进过这笔。
+        back = 0
+        warn_deposit = 0
+        if not order.get('depositBack'):
+            if order.get('status') == 'paid':
+                back = int(order.get('deposit') or 0)
+            else:
+                warn_deposit = int(order.get('deposit') or 0)
         order.update(balStatus='paid', balPaidAt=now_ms())
         if back:
             order['depositBack'] = now_ms()
@@ -1342,11 +1351,20 @@ def order_action(user, order_id, action, is_staff=False, reason=''):
                '《%s》%s 的游玩费 ¥%d 收到了。%s去「我的预约」给剧本和 DM 打分吧，等你一句话～'
                % (order.get('title'), order.get('day'), bal,
                   ('定金 ¥%d 也一起原路退回了。' % back) if back else ''), 'pay')
+        if warn_deposit:
+            notify_staff('游玩费确认了，但这单定金没自动退',
+                         '%s《%s》%s：定金 ¥%d 在系统里还没确认到账（不是"已付"），'
+                         '所以这次没有记成"已退回" —— 该退就手动退给客人，'
+                         '或者先在订单页点「确认支付定金」把账补上。'
+                         % (order.get('username'), order.get('title'), order.get('day'), warn_deposit),
+                         'pay')
         audit((user or {}).get('username') or '门店', 'staff',
-              '确认《%s》游玩费 ¥%d%s' % (order.get('title'), bal,
-                                        ('、退定金 ¥%d' % back) if back else ''))
+              '确认《%s》游玩费 ¥%d%s%s' % (order.get('title'), bal,
+                                          ('、退定金 ¥%d' % back) if back else '',
+                                          ('（定金 ¥%d 未确认到账，未退）' % warn_deposit) if warn_deposit else ''))
         return True, ('已确认收到游玩费%s —— 客人那边的点评解锁了'
-                      % ('、定金已退回' if back else ''))
+                      % ('、定金已退回' if back else
+                         ('（注意：定金 ¥%d 还没确认到账，这次没退）' % warn_deposit if warn_deposit else '')))
 
     if action == 'refund':
         if order.get('status') not in ('paid', 'unpaid', 'claimed'):
