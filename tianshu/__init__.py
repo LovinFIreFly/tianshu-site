@@ -76,10 +76,12 @@ def create_app():
 
     @app.template_filter('nl2p')
     def nl2p_filter(text):
-        """把纯文本按空行拆成 <p> 段落；先吃掉文本里原本的 <br> 标签，避免显示成 <br>。"""
+        """把纯文本按空行拆成 <p> 段落；先吃掉文本里原本的 <br> 标签（含转义后的 &lt;br&gt;），避免显示成 <br>。"""
         import re
         from markupsafe import escape
-        s = re.sub(r'<br\s*/?>', '\n', str(text or ''), flags=re.IGNORECASE)
+        s = str(text or '')
+        s = re.sub(r'<br\s*/?>', '\n', s, flags=re.IGNORECASE)
+        s = re.sub(r'&lt;br\s*/?&gt;', '\n', s, flags=re.IGNORECASE)
         paragraphs = [p.strip() for p in s.split('\n\n') if p.strip()]
         if not paragraphs:
             return ''

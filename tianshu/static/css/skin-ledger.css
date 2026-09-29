@@ -232,3 +232,11 @@ html{scroll-behavior:auto}
 .chalk3__t{font-family:var(--hand);font-size:16px;color:var(--ink-2);line-height:1.7}
 .chalk3__k{font-family:var(--mono);color:var(--ink-4);letter-spacing:.04em}
 .chalk3__pin{color:var(--vermilion)}
+
+/* —— 卡片内文别再贴边（社区帖子、评价卡共用 .rev3） —— */
+.rev3{padding:18px}
+.rev3__h,.rev3__title-row,.rev3__t,.rev3__a{padding-left:0;padding-right:0}
+
+/* —— 暗场舞台里的长文颜色被 ledger 正文覆盖，这里补回浅色 —— */
+.dsec--stage .script-desc,.dsec--stage .poster3__d{color:var(--d-stage-2)}
+.dsec--stage .script-desc p,.dsec--stage .poster3__d p{color:inherit}
