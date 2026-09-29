@@ -131,7 +131,16 @@
     <div class="dfoot__bar">
       <span>{{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}</span>
       <span class="grow"></span>
-      {# 这里原来还有个「装 App」大按钮 —— 电脑上不该出现它（手机底栏那颗就够），已删 #}
+      {# 电脑上给「电脑版下载」（套壳的 exe，双击就是独立窗口）；
+         手机上不显示 —— 手机那边有底栏那颗「装App」（apk）。 #}
+      {% if not in_tianshu_app %}
+      <span class="desk-dl">
+        <a class="b3 b3--sm b3--ghost" style="border-color:var(--d-hair);color:inherit"
+           href="{{ url_for('static', filename='app/tianshu-desktop.exe',
+                            v=static_v('app/tianshu-desktop.exe')) }}"
+           download="甜薯剧本杀-电脑版.exe">💻 电脑版下载</a>
+      </span>
+      {% endif %}
       {% if _admin %}
       <div class="skin-bar">
         <span>版式预览：</span>

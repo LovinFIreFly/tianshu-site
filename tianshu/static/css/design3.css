@@ -230,8 +230,14 @@ img{max-width:100%}
   to{transform:translate3d(3%,2%,0) scale(1.07)}}
 
 /* 光标跟随光斑：首屏和"怎么玩"共用一套（暗场里最出效果） */
-.glow3{position:absolute;inset:0;pointer-events:none;z-index:0;opacity:0;transition:opacity .5s var(--d-ease);
-  background:radial-gradient(300px 220px at var(--mx,16%) var(--my,26%),var(--d-accent-05),transparent 72%)}
+/* 光标跟随的那团暗红光。原来用的是 --d-accent-05（**8% 透明度**）——
+   在深棕底上等于没画（用户："还是没有鼠标跟随"）。现在：一大一小两层，
+   外圈是暖红的光晕、内芯亮一点，强度提到看得见但不过分（不给文字抢戏）。 */
+.glow3{position:absolute;inset:0;pointer-events:none;z-index:0;opacity:0;
+  transition:opacity .5s var(--d-ease);
+  background:
+    radial-gradient(180px 140px at var(--mx,16%) var(--my,26%),rgba(255,120,86,.16),transparent 70%),
+    radial-gradient(560px 420px at var(--mx,16%) var(--my,26%),rgba(200,50,30,.26),transparent 72%)}
 .dhero:hover .glow3,.how3__pin:hover .glow3{opacity:1}
 /* 暗场版块（剧本详情 / 车队详情 / 欢迎页的首屏）也吃这团光：
    得自己 position:relative + overflow:hidden，否则那层绝对定位会跑去认 body 当爹 */
@@ -615,6 +621,9 @@ img{max-width:100%}
 /* 款式预览条（只有管理员看得见） */
 .skin-bar{display:flex;flex-wrap:wrap;align-items:center;gap:7px;font-family:var(--d-mono);font-size:11px;
   letter-spacing:.06em;color:var(--d-stage-2)}
+/* 「电脑版下载」只在电脑上出现：手机那边有底栏的「装App」，别两个一起挤 */
+.desk-dl{display:inline}
+@media(max-width:760px){.desk-dl{display:none}}
 /* 款式预览条在暗底页脚里：必须自己带底色，否则会白底白字看不见 */
 .skin-bar a{display:inline-block;padding:4px 10px;border:1px solid var(--d-hair);border-radius:var(--d-pill);
   background:rgba(255,255,255,.07);color:var(--d-stage-ink);white-space:nowrap;

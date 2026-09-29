@@ -1135,6 +1135,25 @@ s, html = cus4.get('/me')
 check('「我的」里能看到自己写过的评价（星级 + 内容）',
       s == 200 and 'myrev3' in html and '自检评价' in html, 'HTTP %s' % s)
 
+# ⑨ 光标跟随那团暗红光：强度够不够 + 是不是缓动跟随（用户说"看不见"）
+_s, _ui3 = guest.get('/static/js/ui3.js')
+check('光斑是缓动跟随（rAF 每帧靠近），不是瞬移贴上去',
+      'requestAnimationFrame(frame)' in _ui3)
+check('光斑强度给够了（原来 8% 透明度，深底上等于没画）',
+      'rgba(200,50,30,.26)' in _css3 and 'rgba(255,120,86,.16)' in _css3)
+for _p in ('/?browse=1', '/scripts/%s' % sc['id'], '/welcome'):
+    _s, _h = guest.get(_p)
+    check('暗场首屏挂了光斑层 %s' % _p, _s == 200 and 'glow3' in _h, 'HTTP %s' % _s)
+
+# ⑩ 电脑版（套壳 exe）：文件在 + 电脑页脚有下载入口（手机上应该看不到）
+_exe = os.path.join(ROOT, 'tianshu', 'static', 'app', 'tianshu-desktop.exe')
+check('电脑版 exe 在（网站能下载到）', os.path.exists(_exe),
+      '%.1f MB' % (os.path.getsize(_exe) / 1048576) if os.path.exists(_exe) else '缺文件')
+check('桌面壳源码 desktop.py 在', os.path.exists(os.path.join(ROOT, 'desktop.py')))
+s, html = guest.get('/scripts')
+check('电脑页脚有「电脑版下载」入口', 'tianshu-desktop.exe' in html and '电脑版下载' in html)
+check('手机端会藏起「电脑版下载」（那边有装App）', '.desk-dl{display:none}' in _css3)
+
 print('')
 print('=' * 46)
 if fails:

@@ -173,16 +173,32 @@
   });
 
   /* ---------------------------------------------------------------- ⑥ 光斑 */
-  /* 所有**暗场**都带这团印色光：首页首屏、怎么玩、剧本详情/车队详情/欢迎页的暗底首屏
-     —— 光标移到哪儿，暗红就跟着挪（--mx/--my 喂给 .glow3）。
-     只在桌面（有精确指针）才开：触屏上没光标，跟着手指跑反而怪。 */
-  if (!reduce && finePtr) {
+  /* 所有**暗场**都带这团印色光：首页首屏、怎么玩、剧本详情 / 车队详情 / 欢迎页的暗底首屏
+     —— 光标在哪儿，暗红就跟到哪儿（--mx/--my 喂给 .glow3）。
+
+     两个细节决定"看不看得见"：
+       ① 亮度够不够 —— 原来只有 8% 透明度，深棕底上等于没画（CSS 里已提上去）；
+       ② 是不是瞬间贴上去 —— 直接跟着鼠标"跳"反而感觉不到跟随，
+          所以这里用 rAF 做缓动（每帧只靠近目标 12%），光会"牵"着走。 */
+  if (!reduce) {
     $$('.dhero, .how3, .dsec--stage').forEach(function (sec) {
       var box = sec.classList.contains('how3') ? ($('.how3__pin', sec) || sec) : sec;
+      var tx = 0, ty = 0, cx = 0, cy = 0, moved = false, raf = 0;
+      function frame() {
+        cx += (tx - cx) * 0.12;
+        cy += (ty - cy) * 0.12;
+        sec.style.setProperty('--mx', cx.toFixed(1) + 'px');
+        sec.style.setProperty('--my', cy.toFixed(1) + 'px');
+        // 追上目标就停，别空转（省电；下次 pointermove 再启动）
+        raf = (Math.abs(tx - cx) > 0.6 || Math.abs(ty - cy) > 0.6)
+          ? requestAnimationFrame(frame) : 0;
+      }
       sec.addEventListener('pointermove', function (e) {
         var r = box.getBoundingClientRect();
-        sec.style.setProperty('--mx', (e.clientX - r.left) + 'px');
-        sec.style.setProperty('--my', (e.clientY - r.top) + 'px');
+        tx = e.clientX - r.left;
+        ty = e.clientY - r.top;
+        if (!moved) { cx = tx; cy = ty; moved = true; }   // 第一次先就位，别从左上角飞过来
+        if (!raf) raf = requestAnimationFrame(frame);
       }, { passive: true });
     });
   }
