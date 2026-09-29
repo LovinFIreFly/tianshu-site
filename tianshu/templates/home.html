@@ -69,6 +69,18 @@
   </div>
 </section>
 
+{# ============ 滚动条幅：暗场走字带（纯装饰） ============ #}
+<div class="marquee3" aria-hidden="true">
+  <div class="marquee3__in">
+    {% for i in range(5) %}
+    <span>今晚换一个人活一次</span>
+    <span>拼车满员即开</span>
+    <span>挑本 · 开团 · 到店</span>
+    <span>好本子只演一次</span>
+    {% endfor %}
+  </div>
+</div>
+
 {# ============ 01 本子上新：横向海报轨 ============ #}
 <section class="dsec">
   <div class="wrap3">
@@ -90,7 +102,7 @@
         <article class="pcard3">
           <a class="pcard3__cover" href="{{ url_for('public.script_detail', sid=s.id) }}">
             {% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}" loading="lazy">
-            {% else %}<span class="pcard3__ph">{{ s.emoji or '🎭' }}</span>{% endif %}
+            {% else %}<span class="pcard3__ph">{{ s.emoji or '🎭' }}<em>无剧照</em></span>{% endif %}
             <span class="pcard3__type">{{ s.type or '剧本' }}</span>
           </a>
           <div class="pcard3__body">
