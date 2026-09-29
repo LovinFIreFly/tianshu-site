@@ -31,13 +31,14 @@
 }
 
 /* 报头：黄底黑字的一条横幅（像老海报的天头） */
-.masthead{background:var(--gold);border-bottom:4px solid var(--ink)}
-.masthead .util{background:var(--ink);color:var(--paper);border-bottom:0}
-.masthead .util a{color:var(--gold)}
-.masthead .wordmark{color:var(--ink);font-size:clamp(26px,4.4vw,40px);letter-spacing:.06em}
-.masthead .links{border-top:2px solid var(--ink);background:var(--paper)}
-.masthead .links a.on{border-bottom-width:4px;border-bottom-color:var(--vermilion)}
-.masthead .search{border:3px solid var(--ink);background:var(--paper-3);height:40px}
+.site-nav{background:var(--gold);border-bottom:4px solid var(--ink)}
+.brand-name{color:var(--ink);font-size:clamp(24px,4vw,34px);letter-spacing:.04em}
+.brand-sub{color:var(--ink-4)}
+.nav-links a{color:var(--ink-3)}
+.nav-links a.on{color:var(--ink);border-bottom-color:var(--vermilion);border-bottom-width:4px}
+.nav-search{border:3px solid var(--ink);background:var(--paper-3);height:40px}
+.nav-search input{color:var(--ink)}
+.icon-btn{color:var(--ink-3)}
 
 /* 分区靠**色块**切换（不用线）：纸 → 黄 → 墨，三段轮换 */
 .band.alt{background:var(--gold)}
@@ -96,9 +97,9 @@
 .stat-card b{color:var(--vermilion);font-size:38px}
 
 /* 底部导航：黄底粗黑边 */
-.mobtab{background:var(--gold);border-top:4px solid var(--ink)}
-.mobtab a{color:var(--ink);font-weight:700}
-.mobtab a.on{color:var(--vermilion)}
+.tab-dock{background:var(--gold);border-top:4px solid var(--ink)}
+.tab-dock a{color:var(--ink);font-weight:700}
+.tab-dock a.on{color:var(--vermilion)}
 
 /* 弹窗：硬投影 */
 .modal{border:3px solid var(--ink);box-shadow:12px 12px 0 var(--ink)}

@@ -1,14 +1,14 @@
 {% extends 'base.html' %}
 {% block title %}{{ settings.shopName }} · 首页{% endblock %}
-{# 首页要整幅色块贴到屏幕两边，所以不要 <main class="wrap">，各段自己套 .wrap #}
+{# 首页整幅色块贴边，所以 main 不带 .wrap，各段自己套 #}
 {% block main_class %}{% endblock %}
 {% block body %}
 
-{# ============ 第一屏：整幅墨色，只有一件事 —— 让你开始挑本（Nike 的"一屏一件事"）============ #}
+{# ============ 第一屏：整幅深色，只有一件事——开始挑本（Nike「一屏一件事」）============ #}
 <section class="hero">
-  <div class="wrap" style="padding-top:0;padding-bottom:0">
+  <div class="wrap hero-inner">
     <p class="kicker">剧本 · 场地 · DM</p>
-    <h1>{{ settings.shopName }}</h1>
+    <h1 class="hero-title">{{ settings.shopName }}</h1>
     <p class="slogan">今晚换一个人活一次。挑本、开团、到店，剩下的交给我们。</p>
 
     <form class="search-pill" method="get" action="{{ url_for('public.scripts') }}" role="search">
@@ -22,7 +22,6 @@
       <a class="btn btn-ghost" href="{{ url_for('public.car') }}">看看谁在拼车</a>
     </div>
 
-    {# 对外不露营业额：第四格换成累计场次（到目前一共开过多少场） #}
     <div class="stats">
       <div><b>{{ stat.plays }}</b><span>累计开本</span></div>
       <div><b>{{ scripts|length }}</b><span>在架剧本</span></div>
@@ -32,7 +31,7 @@
   </div>
 </section>
 
-{# ============ 轮播（有内容才显示；放在首屏下面，不抢主视觉）============ #}
+{# ============ 轮播（有内容才显示；放首屏下，不抢主视觉）============ #}
 {% if banners %}
 <section class="band">
   <div class="wrap">
@@ -49,19 +48,19 @@
 </section>
 {% endif %}
 
-{# ============ 01 本子上新：戏单式海报网格（编号是 CSS 计数器自动出的）============ #}
+{# ============ 01 本子上新 ============ #}
 <section class="band alt">
   <div class="wrap">
-    <div class="act">
-      <b>01</b>
+    <header class="sec-head">
+      <span class="sec-no">01</span>
       <h2>本子上新</h2>
       <a class="sub lnk" href="{{ url_for('public.scripts') }}">全部剧本 →</a>
-    </div>
+    </header>
 
     {% if scripts %}
     <div class="grid">
       {% for s in scripts %}
-      <div class="juben">
+      <div class="juben" data-anim>
         <a href="{{ url_for('public.script_detail', sid=s.id) }}">
           <div class="cover">
             {% if s.img %}<img class="cover-img" src="{{ s.img }}" alt="{{ s.title }}">{% else %}{{ s.emoji or '🎭' }}{% endif %}
@@ -93,21 +92,21 @@
   </div>
 </section>
 
-{# ============ 02 今天的场次：墨色区 + 戏单式列表（时间用衬线大字，一眼扫完）============ #}
+{# ============ 02 今天的场次 ============ #}
 <section class="band ink">
   <div class="wrap">
-    <div class="act" style="border-top-color:rgba(244,241,234,.2)">
-      <b>02</b>
+    <header class="sec-head sec-head-light">
+      <span class="sec-no">02</span>
       <h2>今天这几场</h2>
       <span class="sub">按开演时间排</span>
-    </div>
+    </header>
 
     {% if sessions %}
       {% for s in sessions %}
-      <div class="between" style="padding:var(--sp-4) 0;border-bottom:1px solid rgba(244,241,234,.14)">
-        <div style="display:flex;align-items:baseline;gap:var(--sp-5);flex-wrap:wrap">
-          <b class="serif" style="font-size:26px;color:var(--vermilion)">{{ s.time }}</b>
-          <span class="serif" style="font-size:20px">{{ s.title }}</span>
+      <div class="row-line">
+        <div class="rl-main">
+          <b class="serif rl-time">{{ s.time }}</b>
+          <span class="serif rl-title">{{ s.title }}</span>
           <span class="sub">{{ s.roomId or '房间待定' }} · DM {{ s.dmName or '待安排' }} · 已报 {{ s.joined }}/{{ s.cap or '—' }} 人</span>
         </div>
         <a class="btn btn-sm btn-ghost" href="{{ url_for('public.script_detail', sid=s.sid) }}">去看看</a>
@@ -120,20 +119,20 @@
   </div>
 </section>
 
-{# ============ 03 拼车：列表用细线分隔，不用卡片 ============ #}
+{# ============ 03 拼车 ============ #}
 <section class="band">
   <div class="wrap">
-    <div class="act">
-      <b>03</b>
+    <header class="sec-head">
+      <span class="sec-no">03</span>
       <h2>有人在等搭子</h2>
       <a class="sub lnk" href="{{ url_for('public.car') }}">拼车大厅 →</a>
-    </div>
+    </header>
 
     {% if cars %}
       {% for c in cars %}
-      <div class="between" style="padding:var(--sp-4) 0;border-bottom:1px solid var(--rule)">
-        <div style="display:flex;align-items:baseline;gap:var(--sp-4);flex-wrap:wrap">
-          <span class="serif" style="font-size:19px;font-weight:700">{{ c.title }}</span>
+      <div class="row-line">
+        <div class="rl-main">
+          <span class="serif rl-title">{{ c.title }}</span>
           <span class="sub">{{ c.day }} {{ c.time }} · 车主 {{ c.owner }} · {{ c.joined }}/{{ c.cap }} 人</span>
         </div>
         <span class="badge {{ 'bad' if c.full else 'ok' }}">{{ '已满' if c.full else '还差 %s 人' % c.need }}</span>
@@ -147,7 +146,7 @@
   </div>
 </section>
 
-{# ============ 收尾：一句引文（编辑式收口，比"行动号召横幅"耐看）============ #}
+{# ============ 收尾引文 ============ #}
 <section class="band alt">
   <div class="wrap">
     <blockquote class="quote">

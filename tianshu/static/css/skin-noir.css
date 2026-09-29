@@ -29,11 +29,11 @@
 html[data-theme="dark"]{--paper:#0C0C0C;--paper-2:#151515;--paper-3:#1B1B1B}
 
 /* 顶部报头：暗底 + 浅色双线（双线在暗底上改成一实一虚，更"影院"） */
-.masthead{background:var(--paper);border-bottom:1px solid var(--rule-strong)}
-.masthead .util{border-bottom:1px solid var(--rule)}
-.masthead .links{border-top:1px solid var(--rule)}
-.masthead .search{background:var(--paper-2);border-color:var(--rule-strong)}
-.masthead .wordmark{color:var(--ink)}
+.site-nav{background:color-mix(in srgb,var(--paper) 80%,transparent);border-bottom:1px solid var(--rule-strong)}
+.brand-name{color:var(--ink)}
+.brand-sub{color:var(--ink-4)}
+.nav-search{background:var(--paper-2);border-color:var(--rule-strong)}
+.nav-actions .who{color:var(--ink-3)}
 
 /* 分区：暗底上不再用双线（看不清），改成**灰阶递变**分层 */
 .band.alt{background:var(--paper-2)}

@@ -184,51 +184,50 @@ th,td{font-size:var(--fs-sm)}
 tbody tr:hover td{background:var(--paper-2)}
 tbody tr:last-child td{border-bottom:0}
 
-/* ============================ 4. 报头（masthead） ============================ */
-/* 报头再紧一档：
-   1. util 行从 30px 压到 22px，字号 10px，所有子元素 vertical-align:middle；
-   2. top 行 padding 6px，字标 22px 封顶，隐藏 "沉浸式剧本" 副标（小屏鼓出来）；
-   3. links 的 a 上下 padding 6px，字号 13px；
-   4. 头像 / 图标 / 按钮全部同比例缩 2px；
-   5. 上下跳根治：给 emoji 单独固定 14px/line-height:1，不参与行高计算。 */
-.masthead{background:var(--paper);border-bottom:3px double var(--ink);position:sticky;top:0;z-index:60}
-.masthead .util{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);
-  max-width:var(--container);margin:0 auto;height:22px;line-height:1;padding:0 var(--sp-5);
-  border-bottom:1px solid var(--rule);font-family:var(--mono);font-size:10px;
-  letter-spacing:.06em;color:var(--ink-4)}
-.masthead .util *{line-height:1;vertical-align:middle}
-.masthead .util a{font-size:10px}
-.masthead .util a:hover{color:var(--vermilion)}
-.masthead .util .sp{flex:1}
-.masthead .top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:var(--sp-3);
-  max-width:var(--container);margin:0 auto;padding:6px var(--sp-5)}
-.masthead .wordmark{grid-column:2;justify-self:center;display:flex;align-items:baseline;gap:var(--sp-2);
-  font-family:var(--serif);font-size:clamp(18px,2.4vw,22px);font-weight:700;letter-spacing:.04em;white-space:nowrap}
-.masthead .wordmark small{display:none}
-.masthead .acts{grid-column:3;justify-self:end;display:flex;align-items:center;gap:var(--sp-2)}
-.masthead .search{grid-column:1;justify-self:start;display:flex;align-items:center;gap:var(--sp-2);
-  width:min(220px,30vw);border:1.5px solid var(--ink);background:var(--paper-3);
-  padding:0 var(--sp-2);height:30px}
-.masthead .search:focus-within{box-shadow:var(--sh-hard-sm)}
-.masthead .search input{height:28px;font-size:13px}
-.masthead .search .ico{color:var(--ink-4);font-size:12px}
-.masthead .links{display:flex;gap:var(--sp-4);max-width:var(--container);margin:0 auto;
-  padding:0 var(--sp-5);overflow-x:auto;scrollbar-width:none;border-top:1px solid var(--rule)}
-.masthead .links::-webkit-scrollbar{display:none}
-.masthead .links a{padding:6px 0;font-size:13px;color:var(--ink-3);white-space:nowrap;
-  border-bottom:2px solid transparent}
-.masthead .links a:hover{color:var(--ink)}
-.masthead .links a.on{color:var(--ink);font-weight:700;border-bottom-color:var(--vermilion)}
-.masthead .who{display:flex;align-items:center;gap:var(--sp-2);font-size:12px;color:var(--ink-3)}
-.masthead .icon-btn{display:inline-flex;align-items:center;justify-content:center;position:relative;
-  width:28px;height:28px;border:1.5px solid transparent;color:var(--ink-3);font-size:13px}
-.masthead .icon-btn:hover{color:var(--ink);border-color:var(--ink)}
-.masthead .icon-btn .dot{position:absolute;top:2px;right:2px;min-width:14px;height:14px;padding:0 3px;
+/* ============================ 4. 顶部导航（site-nav） ============================ */
+/* 全新骨架：固定玻璃导航（品牌 / 栏目 / 搜索 / 操作分列），不再是戏单三层报头。
+   底色用半透明 + 背景模糊（影院暗场里浮一层玻璃），款式层（noir/riso）覆盖颜色和字。 */
+.site-nav{position:sticky;top:0;z-index:60;
+  background:color-mix(in srgb,var(--paper) 86%,transparent);
+  -webkit-backdrop-filter:saturate(1.4) blur(14px);backdrop-filter:saturate(1.4) blur(14px);
+  border-bottom:1px solid var(--rule)}
+.nav-row{display:flex;align-items:center;gap:var(--sp-4);max-width:var(--container);margin:0 auto;
+  padding:0 var(--sp-5);height:60px}
+.brand{display:flex;align-items:baseline;gap:8px;text-decoration:none;white-space:nowrap;flex:none}
+.brand-mark{font-size:22px;line-height:1}
+.brand-name{font-family:var(--serif);font-weight:700;font-size:20px;letter-spacing:.02em;color:var(--ink)}
+.brand-sub{font-family:var(--mono);font-size:var(--fs-num);letter-spacing:.1em;color:var(--ink-4);text-transform:uppercase}
+.nav-links{display:flex;gap:var(--sp-4);margin-left:var(--sp-3)}
+.nav-links a{padding:8px 0;font-size:14px;color:var(--ink-3);text-decoration:none;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:color var(--t-fast) var(--ease)}
+.nav-links a:hover{color:var(--ink)}
+.nav-links a.on{color:var(--ink);font-weight:700;border-bottom-color:var(--vermilion)}
+.nav-search{display:flex;align-items:center;gap:var(--sp-2);margin-left:auto;width:min(260px,32vw);
+  border:1.5px solid var(--rule-strong);background:var(--paper-3);padding:0 var(--sp-3);height:38px;
+  border-radius:var(--r-round,999px)}
+.nav-search:focus-within{border-color:var(--vermilion);box-shadow:var(--sh-hard-sm)}
+.nav-search input{height:34px;font-size:14px;border:0;background:none;color:var(--ink);flex:1}
+.nav-search input:focus{outline:none}
+.nav-search .ico{color:var(--ink-4);font-size:15px}
+.nav-actions{display:flex;align-items:center;gap:var(--sp-2);flex:none}
+.nav-actions .btn-sm{height:34px;padding:0 var(--sp-3);font-size:13px}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;position:relative;
+  width:34px;height:34px;border:1.5px solid transparent;border-radius:var(--r-round,999px);
+  color:var(--ink-3);font-size:15px;text-decoration:none}
+.icon-btn:hover{color:var(--ink);border-color:var(--rule-strong)}
+.icon-btn .dot{position:absolute;top:2px;right:2px;min-width:15px;height:15px;padding:0 3px;
   display:none;align-items:center;justify-content:center;background:var(--vermilion);color:#fff;
-  font-size:9px;font-family:var(--mono);border:1px solid var(--paper)}
-.masthead .icon-btn.has .dot{display:flex}
-.masthead .acts .btn-sm{height:28px;padding:0 var(--sp-3);font-size:12px}
-.avatar{width:26px;height:26px;border-radius:var(--r-round);object-fit:cover;border:1.5px solid var(--ink)}
+  font-size:9px;font-family:var(--mono);border:1.5px solid var(--paper);border-radius:999px}
+.icon-btn.has .dot{display:flex}
+.who{display:flex;align-items:center;gap:var(--sp-2);font-size:13px;color:var(--ink-3);text-decoration:none}
+.who:hover{color:var(--ink)}
+.avatar{width:28px;height:28px;border-radius:var(--r-round,999px);object-fit:cover;border:1.5px solid var(--rule-strong)}
+
+/* ============================ 4.5 页脚 / 手机底栏 ============================ */
+.site-foot{border-top:1px solid var(--rule);margin-top:var(--sp-8);padding:var(--sp-6) var(--sp-5);
+  color:var(--ink-4);font-size:var(--fs-xs);text-align:center}
+.foot-inner{display:flex;flex-direction:column;align-items:center;gap:var(--sp-3);max-width:var(--container);margin:0 auto}
+.tab-dock{display:none}
 
 /* ============================ 5. 按钮 ============================ */
 /* 铅字压在纸上：直角 + 墨边 + 不模糊的硬投影；按下 = 位移吃掉投影 */
@@ -673,18 +672,13 @@ details.spoiler[open] > summary{margin-bottom:var(--sp-3)}
 }
 @media (max-width:744px){
   :root{--fs-body:16px;--fs-h3:17px;--fs-lead:17px;--container:100%}
-  /* 报头在手机上收成两行：日期条 + 居中小字标，功能退到右侧 */
-  .masthead .util{padding:4px var(--sp-4);font-size:11px}
-  .masthead .top{grid-template-columns:1fr auto;row-gap:6px;padding:var(--sp-2) var(--sp-4)}
-  .masthead .wordmark{grid-column:1 / -1;justify-self:center;font-size:22px;order:2}
-  .masthead .search{grid-column:1;order:1;width:100%;height:36px}
-  .masthead .search input{height:34px;font-size:16px}
-  .masthead .acts{grid-column:2;order:1;justify-self:end}
-  .masthead .who{max-width:68px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
-  .masthead .icon-btn{width:34px;height:34px}
-  .masthead .acts .btn-sm{height:30px;padding:0 var(--sp-2);font-size:12.5px}
-  .masthead .links{padding:0 var(--sp-4);gap:var(--sp-4)}
-  .masthead .links a{padding:var(--sp-2) 0;font-size:13.5px}
+  /* 顶部导航在手机上：栏目与搜索收进底部 .tab-dock，顶栏只留品牌 + 操作 */
+  .nav-row{height:54px;gap:var(--sp-2);padding:0 var(--sp-4)}
+  .brand-sub{display:none}
+  .brand-name{font-size:18px}
+  .nav-links{display:none}
+  .nav-search{display:none}
+  .nav-actions .btn-sm{height:30px;padding:0 var(--sp-2);font-size:12.5px}
   /* iOS：输入框字号 <16px 时一聚焦就把整页放大 */
   input,select,textarea{font-size:16px}
   .wrap{padding:var(--sp-5) var(--sp-4) calc(76px + env(safe-area-inset-bottom))}
@@ -714,14 +708,16 @@ details.spoiler[open] > summary{margin-bottom:var(--sp-3)}
   .act .sub{margin-left:0}
   .p-stats{grid-template-columns:repeat(3,1fr)}
   /* 底部导航：手机单手够得着的地方 */
-  .mobtab{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:70;
+  .tab-dock{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:70;
     padding:var(--sp-2) var(--sp-2) calc(var(--sp-2) + env(safe-area-inset-bottom));
-    background:var(--paper);border-top:3px double var(--ink)}
-  .mobtab a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
-    padding:var(--sp-2) 0 3px;font-size:var(--fs-xs);color:var(--ink-3)}
-  .mobtab a .ico{font-size:18px;line-height:1;opacity:.6}
-  .mobtab a.on{color:var(--ink);font-weight:700}
-  .mobtab a.on .ico{opacity:1}
+    background:color-mix(in srgb,var(--paper) 94%,transparent);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border-top:1px solid var(--rule)}
+  .tab-dock a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+    padding:var(--sp-2) 0 3px;font-size:var(--fs-xs);color:var(--ink-3);text-decoration:none}
+  .tab-dock a .ico{font-size:18px;line-height:1;opacity:.6}
+  .tab-dock a.on{color:var(--vermilion);font-weight:700}
+  .tab-dock a.on .ico{opacity:1}
   .btn{height:38px}
   .btn-cta{height:48px}
 }
@@ -730,6 +726,43 @@ details.spoiler[open] > summary{margin-bottom:var(--sp-3)}
 /* 首页 hero：一屏一件事，元素逐项淡入上移（从容不抢戏）。
    只有首页有 .hero，所以这段只作用于首屏，不会污染其它页。 */
 .hero .wrap > *{animation:heroUp .7s cubic-bezier(.22,.61,.36,1) both}
+
+/* ============================ 19.6 全新首页组件 ============================ */
+/* 影院首屏：深色径向渐变 + 顶部一抹朱红辉光，标题超大字；款式层（noir/riso）覆盖底色 */
+.hero{position:relative;overflow:hidden;color:var(--ink);text-align:center;
+  padding:calc(var(--sp-9) + 44px) var(--sp-5) var(--sp-9);
+  background:radial-gradient(125% 120% at 50% -10%,#211913 0%,#0C0C0C 62%)}
+.hero::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(55% 45% at 72% 8%,rgba(228,80,58,.20),transparent 70%)}
+.hero-inner{position:relative;max-width:880px;margin:0 auto;display:flex;
+  flex-direction:column;align-items:center;gap:var(--sp-4)}
+.hero-title{font-family:var(--serif);font-weight:800;line-height:.94;letter-spacing:-.02em;
+  font-size:clamp(40px,8vw,84px)}
+.hero .kicker{color:var(--vermilion)}
+.hero .slogan{font-size:18px;max-width:32em;margin:0 auto;color:var(--ink-2)}
+.hero .search-pill{width:min(440px,90vw)}
+.hero .btns{display:flex;gap:var(--sp-3);flex-wrap:wrap;justify-content:center}
+.hero .stats{width:100%;max-width:660px;margin-top:var(--sp-5);padding-top:var(--sp-5);
+  border-top:1px solid var(--rule-strong);display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-4)}
+.hero .stats b{display:block;font-size:34px;color:var(--vermilion);font-family:var(--serif)}
+.hero .stats span{font-size:var(--fs-xs);color:var(--ink-3)}
+
+/* 区块标题（替代旧 .act 的编号条）：左侧编号 + 标题，右侧接操作链接 */
+.sec-head{display:flex;align-items:baseline;gap:var(--sp-4);border-bottom:1px solid var(--rule);
+  padding-bottom:var(--sp-3);margin-bottom:var(--sp-5)}
+.sec-head .sec-no{font-family:var(--mono);font-size:var(--fs-num);letter-spacing:.12em;color:var(--vermilion)}
+.sec-head h2{font-size:var(--fs-h2)}
+.sec-head .lnk,.sec-head .sub{margin-left:auto}
+.sec-head-light{border-bottom-color:rgba(244,241,234,.2)}
+.sec-head-light h2,.sec-head-light .sub{color:var(--ink)}
+
+/* 行列表（今日场次 / 拼车）：左主信息 + 右操作，细线分隔 */
+.row-line{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);
+  padding:var(--sp-4) 0;border-bottom:1px solid var(--rule)}
+.row-line .rl-main{display:flex;align-items:baseline;gap:var(--sp-5);flex-wrap:wrap}
+.rl-time{font-size:26px;color:var(--vermilion)}
+.rl-title{font-size:20px;font-weight:700}
+.band.ink .row-line{border-bottom-color:rgba(244,241,234,.14)}
 .hero .wrap > *:nth-child(1){animation-delay:.04s}
 .hero .wrap > *:nth-child(2){animation-delay:.12s}
 .hero .wrap > *:nth-child(3){animation-delay:.20s}
