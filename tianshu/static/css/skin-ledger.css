@@ -1,0 +1,65 @@
+/* ============================================================================
+   皮肤 G：柜台 · 手写账本（ledger）
+   ----------------------------------------------------------------------------
+   出处：剧本杀门店前台的手工 ledger / 粉笔小黑板 /  rubber stamp。
+   用来压掉"AI 干净感"：
+   ① 纸色像旧账本：米黄、略偏冷灰，不雪白
+   ② 边框用**虚线 / 双线**，像账册格子；不用实色圆角卡片
+   ③ 数字强制等宽，金额像打算盘敲出来的
+   ④ 标题用楷体/宋体，正文用系统 sans；红只当"印章"小面积戳
+   ⑤ 按钮像橡皮章：粗边框、轻微旋转、阴影是硬 offset
+   ========================================================================== */
+:root{
+  --paper:#F5F1E6; --paper-2:#EBE5D6; --paper-3:#FCFAF3;
+  --ink:#1F1B16; --ink-2:#3A342B; --ink-3:#625A4B; --ink-4:#8F8674;
+  --rule:rgba(31,27,22,.22); --rule-strong:rgba(31,27,22,.48);
+  --vermilion:#B82F1A; --vermilion-600:#8F2110; --vermilion-050:rgba(184,47,26,.10);
+  --gold:#8A6A2A; --gold-050:rgba(138,106,42,.12);
+  --ok:#3A6B3A; --ok-bg:rgba(58,107,58,.12);
+  --bad:#B82F1A; --bad-bg:rgba(184,47,26,.12);
+  --warn:#7A5A00; --warn-bg:rgba(122,90,0,.12);
+  --info:#2F4A6A; --info-bg:rgba(47,74,106,.12);
+  /* 标题走楷体/宋体，像手写招牌；数字走等宽 */
+  --serif:'STKaiti','KaiTi','楷体','SimSun','宋体',Georgia,serif;
+  --sans:system-ui,'PingFang SC','Microsoft YaHei',sans-serif;
+  --mono:ui-monospace,'Courier New','SF Mono',monospace;
+  /* 形状：极小的圆角 /  mostly 直角 */
+  --r:2px; --r-lg:3px; --r-pill:100%;
+  --sh-1:1px 1px 0 rgba(31,27,22,.10);
+  --sh-2:2px 2px 0 rgba(31,27,22,.14);
+  --sh-3:3px 3px 0 rgba(31,27,22,.18);
+  --sh-hard:2px 2px 0 rgba(31,27,22,.22);
+}
+
+/* 全站卡片：虚线框 + 硬 offset，像贴在账本上的便签 */
+.pcard3,.ccard3,.rev3,.block3,.me-card,.panel,.cell,.room-card,.role-card,.adm-main .panel{
+  border-style:dashed;
+  border-radius:var(--r);
+  box-shadow:var(--sh-2)}
+.pcard3:hover,.ccard3:hover,.rev3:hover,.block3:hover,.me-card:hover,.panel:hover{
+  box-shadow:var(--sh-3)}
+
+/* 后台面板更像账本页 */
+.adm-main .panel{
+  background:repeating-linear-gradient(180deg,var(--paper-3),var(--paper-3) 31px,var(--paper-2) 31px,var(--paper-2) 32px);
+  border:1.5px dashed var(--rule-strong)}
+
+/* 按钮：橡皮章 */
+.b3{border-width:2px;border-style:solid;border-radius:var(--r);font-family:var(--sans);font-weight:600}
+.b3--solid,.b3--accent{background:var(--vermilion);color:var(--paper-3);border-color:var(--ink)}
+.b3--solid:hover,.b3--accent:hover{background:var(--vermilion-600);transform:translate(-1px,-1px);box-shadow:var(--sh-hard)}
+.btn-primary{background:var(--vermilion);color:var(--paper-3)}
+
+/* 金额 / 编号 等宽 */
+.price,.code-big,.dsec__no,.how3__no,.pagehead3__k,.copy-mono,.adm-main .stats b,.adm-main th{
+  font-family:var(--mono)}
+
+/* 标题下一道印章红线（比 film 更细、更像蘸了印泥盖的） */
+.dhero__title em::after,.dsec__title::after,.how3__t::after,.pagehead3__t::after{
+  height:.08em;background:var(--vermilion);opacity:.85}
+
+/* 首屏：账本纸 + 淡格线 */
+.dhero{background:linear-gradient(176deg,#3A3228 0%,#2E2721 55%,#242019 100%)}
+
+/* 小黑板 NOTE：ledger 下更像粉笔字 */
+.board3{background:var(--ink-2);color:#EAE6DA;border:2px solid var(--ink);border-radius:var(--r)}

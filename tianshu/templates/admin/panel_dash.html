@@ -3,6 +3,99 @@
   <h1>管理后台</h1>
 </div>
 
+{# ---------------------------------------------------------------- 门店群二维码
+   放在最前：客人进群、问进度是每天都在用的入口，别再埋到设置下面。 #}
+<h2>门店群二维码</h2>
+<div class="panel">
+  <p class="sub" style="margin:0 0 14px">
+    客人点「支付定金」或「支付游玩费」那一页，会显示这张图 —— 方便他们进群约本、问进度。
+    建议 500×500 左右的 png / jpg（微信、QQ、支付宝的群二维码都行）。
+  </p>
+  {% if settings.groupQr %}
+  <img src="{{ settings.groupQr }}" alt="门店群二维码"
+       style="width:150px;border:1px solid var(--rule);border-radius:var(--d-r);display:block;margin:0 0 14px">
+  {% else %}
+  <p class="sub" style="margin:0 0 14px">还没传 —— 支付页上就不会出现这一块。</p>
+  {% endif %}
+  <form method="post" action="{{ url_for('admin.settings_group_qr') }}" enctype="multipart/form-data"
+        class="row" style="gap:12px;align-items:flex-end">
+    <div class="field" style="flex:0 1 320px">
+      <label>上传二维码图片（png / jpg / webp，≤700KB）</label>
+      <input type="file" name="qr" accept="image/png,image/jpeg,image/webp">
+    </div>
+    <button class="b3 b3--sm b3--solid" type="submit">保存二维码</button>
+    {% if settings.groupQr %}
+    <button class="b3 b3--sm" type="submit" name="remove" value="1">删掉这张</button>
+    {% endif %}
+  </form>
+</div>
+
+{# ---------------------------------------------------------------- 店铺实拍墙
+   真实照片前置：首页照片墙会把这里传的真实照片挂出来。 #}
+<h2>店铺实拍墙</h2>
+<div class="panel">
+  <p class="sub" style="margin:0 0 14px">
+    传几张店里的真实照片 —— 前台、房间、道具、玩家在现场。首页会挂一条照片墙，
+    比统一风格的素材图有人味得多。建议横图、png / jpg / webp（每张 ≤700KB）。
+  </p>
+  {% if settings.shopPhotos %}
+  <div class="row" style="gap:12px;flex-wrap:wrap;margin:0 0 16px">
+    {% for p in settings.shopPhotos %}
+    <div style="width:140px">
+      <img src="{{ p.url }}" alt="{{ p.cap }}" style="width:100%;height:100px;object-fit:cover;border:1px solid var(--rule);border-radius:var(--d-r)">
+      <p class="sub" style="margin:4px 0;font-size:12px">{{ p.cap or '（无说明）' }}</p>
+      <form method="post" action="{{ url_for('admin.settings_shop_photos') }}">
+        <button class="b3 b3--sm" type="submit" name="rid" value="{{ p.url }}">删</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="sub" style="margin:0 0 14px">还没传 —— 首页照片墙不会出现。</p>
+  {% endif %}
+  <form id="shopPhotosForm" method="post" action="{{ url_for('admin.settings_shop_photos') }}" enctype="multipart/form-data"
+        class="row" style="gap:12px;align-items:flex-end">
+    <div class="field" style="flex:0 1 320px">
+      <label>上传照片（可多选，png / jpg / webp，≤700KB）</label>
+      <input type="file" name="photo" accept="image/png,image/jpeg,image/webp" multiple>
+    </div>
+    <div class="field" style="flex:0 1 320px">
+      <label>每张对应的说明（逗号分隔，按顺序：前台, 房间…）</label>
+      <input name="cap" placeholder="前台, 沉浸房, 道具墙">
+    </div>
+    <button class="b3 b3--sm b3--solid" type="submit">存照片墙</button>
+  </form>
+  <div class="field full" style="margin-top:14px">
+    <label>照片墙旁边配的一句话（手写体显示，可留空）</label>
+    <input name="intro" form="shopPhotosForm" value="{{ settings.shopIntro }}">
+  </div>
+</div>
+
+{# ---------------------------------------------------------------- 测试邮件 + 最近操作
+   这两块并排放在前面：发信有没有通、最近改了啥，一眼要看。 #}
+<div class="two mt">
+  <div>
+    <h2>发一封测试邮件</h2>
+    <div class="panel">
+      <form method="post" action="{{ url_for('admin.mail_test') }}" class="form-inline">
+        <div class="field" style="flex:1 1 220px;margin:0"><label>收件邮箱</label>
+          <input name="to" type="email" value="{{ me.email or '' }}" placeholder="你的邮箱"></div>
+        <button class="btn btn-sm" type="submit">发测试邮件</button>
+      </form>
+      <p class="sub mt">把上面的发信通道填好并「保存设置」后再点这个 —— 收到邮件就说明验证码能正常发出去了。</p>
+    </div>
+  </div>
+  <div>
+    <h2>最近操作</h2>
+    <div class="panel">
+      {% for l in logs %}
+      <div class="sub" style="padding:3px 0">{{ l.by }}：{{ l.text }}</div>
+      {% else %}<p class="sub">还没有日志</p>{% endfor %}
+    </div>
+  </div>
+</div>
+
+{# ---------------------------------------------------------------- 到店核销（客人报 6 位码，输这儿） #}
 <div class="panel">
   <h3>到店核销（客人报 6 位码，输这儿）</h3>
   <form class="form-inline" method="post" action="{{ url_for('admin.verify') }}">
@@ -88,8 +181,8 @@
 </div>
 
 {# ---------------------------------------------------------------- 门店设置
-   以前这块塞在上面的"右栏"里：十几个字段单列排下来要滚好几屏，而左半边是空的，看着很难受。
-   现在：搬出来占满整宽 + 字段两列一组 + 按用途分段（基本 / 定金与券 / DM 结算 / 发信 / 拼车与首页）。 #}
+   始终放在最后：十几个字段单列排下来要滚好几屏，放最下面不挡日常操作。
+   现在：占满整宽 + 字段两列一组 + 按用途分段（基本 / 定金与券 / DM 结算 / 发信 / 拼车与首页）。 #}
 <h2>门店设置</h2>
 <div class="panel">
   <form method="post" action="{{ url_for('admin.settings') }}">
@@ -148,7 +241,7 @@
       {# 这里不能直接用 base.html 里的 cur_skin：父模板顶层 {% set %} 在子模板的 block 里拿不到
          （Jinja 的作用域坑），所以在本地再算一次。 #}
       {% set _skin_now = settings.skin if settings.skin in skins else 'playbill' %}
-      {# 网站版式：一代 / 二代。一代 = 3.0 改版前那套（客人看到的老样子），
+      {# 网站版式：一代 / 二代。一代 = 3.0 改版前那套（style.css + design2.css + templates/v1/ 的模板），
          二代 = 现在的骨架。后台和 DM 工作台永远是二代，不跟着切。 #}
       {% set _ui_now = settings.uiVer if settings.uiVer in ui_versions else '2' %}
       <div class="field"><label>网站版式（客人看到的整站界面：一代 / 二代，全站统一）</label>
@@ -203,94 +296,4 @@
     <button class="btn btn-primary" type="submit">保存设置</button>
     <p class="sub mt">改完点这颗保存，立刻生效（也存在 data/settings.json 里，能直接改文件）。</p>
   </form>
-</div>
-
-{# ---------------------------------------------------------------- 门店群二维码
-   单独一个表单：HTML 里表单不能嵌套，而且这里要收文件（/settings 那个是纯文本字段）。 #}
-<h2>门店群二维码</h2>
-<div class="panel">
-  <p class="sub" style="margin:0 0 14px">
-    客人点「支付定金」或「支付游玩费」那一页，会显示这张图 —— 方便他们进群约本、问进度。
-    建议 500×500 左右的 png / jpg（微信、QQ、支付宝的群二维码都行）。
-  </p>
-  {% if settings.groupQr %}
-  <img src="{{ settings.groupQr }}" alt="门店群二维码"
-       style="width:150px;border:1px solid var(--rule);border-radius:var(--d-r);display:block;margin:0 0 14px">
-  {% else %}
-  <p class="sub" style="margin:0 0 14px">还没传 —— 支付页上就不会出现这一块。</p>
-  {% endif %}
-  <form method="post" action="{{ url_for('admin.settings_group_qr') }}" enctype="multipart/form-data"
-        class="row" style="gap:12px;align-items:flex-end">
-    <div class="field" style="flex:0 1 320px">
-      <label>上传二维码图片（png / jpg / webp，≤700KB）</label>
-      <input type="file" name="qr" accept="image/png,image/jpeg,image/webp">
-    </div>
-    <button class="b3 b3--sm b3--solid" type="submit">保存二维码</button>
-    {% if settings.groupQr %}
-    <button class="b3 b3--sm" type="submit" name="remove" value="1">删掉这张</button>
-    {% endif %}
-  </form>
-</div>
-
-{# ---------------------------------------------------------------- 店铺实拍墙
-   单独一个表单（收文件）；首页照片墙会把这里传的真实照片挂出来。 #}
-<h2>店铺实拍墙</h2>
-<div class="panel">
-  <p class="sub" style="margin:0 0 14px">
-    传几张店里的真实照片 —— 前台、房间、道具、玩家在现场。首页会挂一条照片墙，
-    比统一风格的素材图有人味得多。建议横图、png / jpg / webp（每张 ≤700KB）。
-  </p>
-  {% if settings.shopPhotos %}
-  <div class="row" style="gap:12px;flex-wrap:wrap;margin:0 0 16px">
-    {% for p in settings.shopPhotos %}
-    <div style="width:140px">
-      <img src="{{ p.url }}" alt="{{ p.cap }}" style="width:100%;height:100px;object-fit:cover;border:1px solid var(--rule);border-radius:var(--d-r)">
-      <p class="sub" style="margin:4px 0;font-size:12px">{{ p.cap or '（无说明）' }}</p>
-      <form method="post" action="{{ url_for('admin.settings_shop_photos') }}">
-        <button class="b3 b3--sm" type="submit" name="rid" value="{{ p.url }}">删</button>
-      </form>
-    </div>
-    {% endfor %}
-  </div>
-  {% else %}
-  <p class="sub" style="margin:0 0 14px">还没传 —— 首页照片墙不会出现。</p>
-  {% endif %}
-  <form id="shopPhotosForm" method="post" action="{{ url_for('admin.settings_shop_photos') }}" enctype="multipart/form-data"
-        class="row" style="gap:12px;align-items:flex-end">
-    <div class="field" style="flex:0 1 320px">
-      <label>上传照片（可多选，png / jpg / webp，≤700KB）</label>
-      <input type="file" name="photo" accept="image/png,image/jpeg,image/webp" multiple>
-    </div>
-    <div class="field" style="flex:0 1 320px">
-      <label>每张对应的说明（逗号分隔，按顺序：前台, 房间…）</label>
-      <input name="cap" placeholder="前台, 沉浸房, 道具墙">
-    </div>
-    <button class="b3 b3--sm b3--solid" type="submit">存照片墙</button>
-  </form>
-  <div class="field full" style="margin-top:14px">
-    <label>照片墙旁边配的一句话（手写体显示，可留空）</label>
-    <input name="intro" form="shopPhotosForm" value="{{ settings.shopIntro }}">
-  </div>
-</div>
-
-<div class="two mt">
-  <div>
-    <h2>发一封测试邮件</h2>
-    <div class="panel">
-      <form method="post" action="{{ url_for('admin.mail_test') }}" class="form-inline">
-        <div class="field" style="flex:1 1 220px;margin:0"><label>收件邮箱</label>
-          <input name="to" type="email" value="{{ me.email or '' }}" placeholder="你的邮箱"></div>
-        <button class="btn btn-sm" type="submit">发测试邮件</button>
-      </form>
-      <p class="sub mt">把上面的发信通道填好并「保存设置」后再点这个 —— 收到邮件就说明验证码能正常发出去了。</p>
-    </div>
-  </div>
-  <div>
-    <h2>最近操作</h2>
-    <div class="panel">
-      {% for l in logs %}
-      <div class="sub" style="padding:3px 0">{{ l.by }}：{{ l.text }}</div>
-      {% else %}<p class="sub">还没有日志</p>{% endfor %}
-    </div>
-  </div>
 </div>

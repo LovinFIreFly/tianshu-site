@@ -1359,3 +1359,55 @@ h2.heading-section{margin:0 0 var(--d-s3)}
   .myrev3{padding:10px 12px}
   .myrev3__t{font-size:13px}
 }
+
+/* ============================================================================
+   21. 后台去 AI 味：把面板改成"门店账本"
+   ----------------------------------------------------------------------------
+   后台是店里每天干活的地方，越像真账本越顺手。
+   ============================================================================ */
+/* 概览每个区块标题：粗墨线底边，像账本页眉 */
+.adm-main > h2{
+  margin-top:clamp(28px,3.6vw,44px);
+  font-family:var(--d-serif);
+  font-size:clamp(20px,2.6vw,26px);
+  padding-bottom:8px;
+  border-bottom:2px solid var(--d-ink)}
+.adm-main > h2:first-of-type{margin-top:0}
+
+/* 核销码 / 数字：红印 */
+.adm-main .code-big{
+  font-family:var(--d-mono);
+  letter-spacing:.08em;
+  color:var(--d-accent);
+  font-weight:700}
+
+/* 统计四项：硬边账本格 */
+.adm-main .stats{
+  border:2px solid var(--d-ink);
+  background:var(--d-paper-3)}
+.adm-main .stats > *{border-right:1px dashed var(--d-rule)}
+.adm-main .stats > *:last-child{border-right:0}
+
+/* 保存按钮：印章感 */
+.adm-main .btn-primary[type="submit"]{
+  font-weight:700;
+  letter-spacing:.04em;
+  padding:11px 24px;
+  box-shadow:var(--d-sh-hard)}
+
+/* 设置表单里的说明更像账边批注 */
+.adm-main .field .sub{
+  font-size:12px;
+  color:var(--d-ink-4);
+  font-style:italic}
+
+/* 后台侧栏当前项：像翻到的页 */
+.adm-side .navi.on{
+  border-left:3px solid var(--d-accent);
+  background:rgba(255,255,255,.08)}
+
+@media(max-width:760px){
+  .adm-main .stats{border-width:1px}
+  .adm-main .stats > *{border-right:0;border-bottom:1px dashed var(--d-rule)}
+  .adm-main .stats > *:last-child{border-bottom:0}
+}

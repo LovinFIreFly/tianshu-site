@@ -327,30 +327,4 @@
     });
   }
 
-  /* ------------------------------------------------- ⑪ 整站页面切换动画
-     点站内链接时先让整页淡出 .19s 再跳 —— 从剧本库点进详情不再"啪"一下换掉。
-     浏览器支持跨文档 View Transition（Chrome 126+）时走原生，这里不重复做。 */
-  var vtNative = false;
-  try {
-    vtNative = !!(document.startViewTransition && window.CSS && CSS.supports &&
-                  CSS.supports('view-transition-name', 'none'));
-  } catch (err) { vtNative = false; }
-  if (!reduce && !vtNative) {
-    document.addEventListener('click', function (e) {
-      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-      var a = e.target && e.target.closest ? e.target.closest('a') : null;
-      if (!a) return;
-      var href = a.getAttribute('href') || '';
-      if (!href || href.charAt(0) === '#' || a.target || a.hasAttribute('download')) return;
-      if (a.host && a.host !== location.host) return;                       /* 外链不管 */
-      if (a.pathname === location.pathname && a.search === location.search) return;
-      if (a.closest && a.closest('[data-no-anim]')) return;                 /* 想跳过的加这个属性 */
-      e.preventDefault();
-      document.documentElement.classList.add('ts-leaving');
-      setTimeout(function () { location.href = a.href; }, 190);
-    }, true);
-    window.addEventListener('pageshow', function (ev) {
-      if (ev.persisted) document.documentElement.classList.remove('ts-leaving');
-    });
-  }
 })();
