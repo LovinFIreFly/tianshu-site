@@ -686,9 +686,12 @@ img{max-width:100%}
 .how3__k{margin:0;font-family:var(--d-mono);font-size:10.5px;letter-spacing:.22em;
   text-transform:uppercase;color:var(--d-hair)}
 .how3__stage{position:relative;margin-top:clamp(18px,2.6vw,32px);min-height:clamp(210px,30vh,300px)}
-.how3__step{position:absolute;inset:0;opacity:0;transform:translateY(28px);pointer-events:none;
-  transition:opacity .62s var(--d-ease),transform .62s var(--d-ease)}
-.how3__step.is-on{opacity:1;transform:none;pointer-events:auto}
+/* 换场：上一步**快速淡出**（.28s），下一步**晚 .14s 再起**（从下面升上来）。
+   两边先后错开 —— 之前两段同时以 .62s 交叉淡入，会看到两行字叠在一起（虚影） */
+.how3__step{position:absolute;inset:0;opacity:0;transform:translateY(16px);pointer-events:none;
+  transition:opacity .28s var(--d-ease),transform .38s var(--d-ease)}
+.how3__step.is-on{opacity:1;transform:none;pointer-events:auto;
+  transition:opacity .5s .14s var(--d-ease),transform .6s .14s var(--d-ease)}
 .how3__no{margin:0;font-family:var(--d-mono);font-size:11.5px;letter-spacing:.2em;color:var(--d-accent)}
 .how3__t{margin:clamp(10px,1.6vw,18px) 0 0;font-family:var(--d-serif);font-weight:700;
   line-height:1.06;letter-spacing:var(--d-track-display);
@@ -720,6 +723,32 @@ img{max-width:100%}
 .dsec__head.rv .dsec__rule{transform:scaleX(0);transform-origin:left;
   transition:transform 1s .12s var(--d-ease)}
 .dsec__head.rv.in .dsec__rule{transform:scaleX(1)}
+
+/* --------------------------------------------------------------------------
+   13c. 弹窗 / 遮罩的出场：淡入 + 面板升起一点点（后台用户档案、装 App 引导都用）
+        display:none → 显示 会自动重播动画，所以每次打开都会重放。
+   -------------------------------------------------------------------------- */
+.mask{animation:d-mask-in .22s var(--d-ease) both}
+.mask .modal{animation:d-pop .34s var(--d-ease) both}
+@keyframes d-mask-in{from{opacity:0}to{opacity:1}}
+@keyframes d-pop{from{opacity:0;transform:translateY(20px) scale(.985)}to{opacity:1;transform:none}}
+
+/* --------------------------------------------------------------------------
+   13d. 整站页面切换：从列表点进详情不再"啪"一下换掉
+        ① 支持跨文档 View Transition 的浏览器（Chrome 126+）走原生淡入淡出
+        ② 其它浏览器用 .ts-leaving 兜底：先淡出，再跳
+   -------------------------------------------------------------------------- */
+@view-transition{navigation:auto}
+::view-transition-old(root){animation:d-page-out .2s var(--d-ease) both}
+::view-transition-new(root){animation:d-page-in .34s var(--d-ease) both}
+@keyframes d-page-out{to{opacity:0;transform:translateY(-10px) scale(.995)}}
+@keyframes d-page-in{from{opacity:0;transform:translateY(12px) scale(.997)}}
+html.ts-leaving body{opacity:0;transform:translateY(-10px) scale(.995);
+  transition:opacity .2s var(--d-ease),transform .2s var(--d-ease)}
+@media(prefers-reduced-motion:reduce){
+  html.ts-leaving body{transition:none;opacity:1;transform:none}
+  .mask,.mask .modal{animation:none}
+}
 
 /* --------------------------------------------------------------------------
    14. 后台 / DM 面板：留白与层级修补（修「文字顶头」「挤成一片」）
@@ -950,10 +979,13 @@ img{max-width:100%}
 }
 .me-nav .mi{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;
   padding:12px 10px;border:0;border-bottom:1px solid var(--d-rule);background:transparent;
-  font-size:14px;color:var(--d-ink-3);cursor:pointer;font-family:var(--d-sans);
+  border-radius:var(--d-r);font-size:14px;color:var(--d-ink-3);cursor:pointer;font-family:var(--d-sans);
   transition:color .2s,background .2s,padding-left .24s var(--d-ease)}
 .me-nav .mi:hover{color:var(--d-ink);background:var(--d-accent-05);padding-left:14px}
-.me-nav .mi.on{color:var(--d-ink);font-weight:600;box-shadow:inset 2px 0 0 var(--d-accent)}
+/* 当前项：浅印色 + 左侧朱红短线（**必须显式写 background** ——
+   设计 2 给 .mi.on 刷了 background:var(--ink) 的深色药丸，不覆盖就是深底深字） */
+.me-nav .mi.on{color:var(--d-ink);font-weight:600;background:var(--d-accent-05);
+  box-shadow:inset 3px 0 0 var(--d-accent)}
 .me-nav .mi span{font-family:var(--d-mono);font-size:10.5px;letter-spacing:.05em;color:var(--d-ink-4);white-space:nowrap}
 .tabpane{display:none}
 .tabpane.on{display:block}

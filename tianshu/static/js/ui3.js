@@ -37,17 +37,19 @@
     }, { passive: true });
     onScroll();
 
-    /* 鼠标移到屏幕上方 → 栏目条自动浮现（不用往上滚回去） */
+    /* 鼠标移到屏幕上方 → 栏目条自动浮现（检测区放大到 96px；鼠标进到栏上也算） */
     var navHold = null;
     window.addEventListener('pointermove', function (e) {
-      if (e.clientY < 58) {
+      var nearTop = e.clientY < 96 ||
+        (e.target && e.target.closest && !!e.target.closest('.tnav'));
+      if (nearTop) {
         if (navHold) { clearTimeout(navHold); navHold = null; }
         nav.classList.add('nav-open');
-      } else if (e.clientY > 132 && nav.classList.contains('nav-open') && !navHold) {
+      } else if (e.clientY > 190 && nav.classList.contains('nav-open') && !navHold) {
         navHold = setTimeout(function () {
           nav.classList.remove('nav-open');
           navHold = null;
-        }, 260);
+        }, 300);
       }
     }, { passive: true });
     nav.addEventListener('pointerleave', function () {
@@ -217,30 +219,57 @@
     startAuto();
   }
 
-  /* ------------------------------------------------- ⑧ 一划一屏：首屏 → 怎么玩
-     两块都是满屏，所以往下划一点点就把你稳稳送到下一屏（阈值小 = 划一下就到）。
-     只在下滑时对齐、只对齐这一个缝；进了「怎么玩」之后不再碰滚轮。 */
-  if (how && !reduce && finePtr) {
-    var howTop = 0, howGuard = 0, howTmr = null, hLastY = window.pageYOffset || 0, hDir = 0;
-    function measureHow() { howTop = how.getBoundingClientRect().top + (window.pageYOffset || 0); }
-    function onHowScroll() {
-      var y = window.pageYOffset || 0;
-      if (y > hLastY) hDir = 1; else if (y < hLastY) hDir = -1;
-      hLastY = y;
-      if (howTmr) clearTimeout(howTmr);
-      howTmr = setTimeout(function () {
-        var now = Date.now();
-        if (now < howGuard) return;
-        if (y >= howTop - 4) return;                       /* 已经在「怎么玩」里：不劫持 */
-        if (hDir !== 1) return;                            /* 只在下滑时对齐 */
-        if (y < window.innerHeight * 0.12) return;         /* 几乎没动：不打扰 */
-        howGuard = now + 900;
-        window.scrollTo({ top: howTop, behavior: 'smooth' });
-      }, 140);
+  /* ------------------------------------------- ⑧ 一划一屏：首屏 ↔ 怎么玩 ↔ 本子上新
+     之前是"先让你滚一点、停下来、再平滑对齐"—— 手感上就是卡一下。
+     现在直接接管滚轮：在这几屏里滚一格，立刻用 rAF 动画把整屏翻过去（540ms，先快后慢）。
+     最后一块（本子上新）是普通长内容，只做"目标"不做"起点"，进去了就正常滚。 */
+  var heroEl = $('.dhero');
+  var nextEl = how ? how.nextElementSibling : null;
+  if (heroEl && how && nextEl && !reduce && finePtr) {
+    var stops = [], flying = false;
+    function measureStops() {
+      stops = [heroEl, how, nextEl].map(function (el) {
+        return Math.round(el.getBoundingClientRect().top + (window.pageYOffset || 0));
+      });
     }
-    measureHow();
-    window.addEventListener('resize', measureHow);
-    window.addEventListener('scroll', onHowScroll, { passive: true });
+    function glideTo(top, ms) {
+      var from = window.pageYOffset || 0;
+      var delta = top - from;
+      if (!delta) { flying = false; return; }
+      var t0 = null;
+      flying = true;
+      function frame(ts) {
+        if (t0 === null) t0 = ts;
+        var p = Math.min(1, (ts - t0) / (ms || 540));
+        var e2 = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+        window.scrollTo(0, Math.round(from + delta * e2));
+        if (p < 1) { window.requestAnimationFrame(frame); } else { flying = false; }
+      }
+      window.requestAnimationFrame(frame);
+    }
+    window.addEventListener('wheel', function (e) {
+      if (e.ctrlKey || e.metaKey) return;              /* 缩放之类的别拦 */
+      if (flying) { e.preventDefault(); return; }      /* 动画期间把滚轮吞掉，别跟它打架 */
+      var vh = window.innerHeight;
+      var y = window.pageYOffset || 0;
+      var i;
+      if (e.deltaY > 0) {                              /* 往下：整屏翻到下一屏 */
+        for (i = 0; i < stops.length - 1; i++) {
+          if (y >= stops[i] - 2 && y < stops[i] + vh * 0.98) {
+            e.preventDefault(); glideTo(stops[i + 1], 540); return;
+          }
+        }
+      } else {                                         /* 往上：回到上一屏（只在前半屏接管） */
+        for (i = stops.length - 1; i > 0; i--) {
+          if (y >= stops[i] - 2 && y < stops[i] + vh * 0.5) {
+            e.preventDefault(); glideTo(stops[i - 1], 540); return;
+          }
+        }
+      }
+    }, { passive: false });
+    measureStops();
+    window.addEventListener('resize', measureStops);
+    window.addEventListener('load', measureStops);
   }
 
   /* ---------------------------------------------------------------- ⑨ 磁吸 */
@@ -277,6 +306,33 @@
         card.style.setProperty('--ry', '0deg');
         card.style.setProperty('--rx', '0deg');
       });
+    });
+  }
+
+  /* ------------------------------------------------- ⑪ 整站页面切换动画
+     点站内链接时先让整页淡出 .19s 再跳 —— 从剧本库点进详情不再"啪"一下换掉。
+     浏览器支持跨文档 View Transition（Chrome 126+）时走原生，这里不重复做。 */
+  var vtNative = false;
+  try {
+    vtNative = !!(document.startViewTransition && window.CSS && CSS.supports &&
+                  CSS.supports('view-transition-name', 'none'));
+  } catch (err) { vtNative = false; }
+  if (!reduce && !vtNative) {
+    document.addEventListener('click', function (e) {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      var a = e.target && e.target.closest ? e.target.closest('a') : null;
+      if (!a) return;
+      var href = a.getAttribute('href') || '';
+      if (!href || href.charAt(0) === '#' || a.target || a.hasAttribute('download')) return;
+      if (a.host && a.host !== location.host) return;                       /* 外链不管 */
+      if (a.pathname === location.pathname && a.search === location.search) return;
+      if (a.closest && a.closest('[data-no-anim]')) return;                 /* 想跳过的加这个属性 */
+      e.preventDefault();
+      document.documentElement.classList.add('ts-leaving');
+      setTimeout(function () { location.href = a.href; }, 190);
+    }, true);
+    window.addEventListener('pageshow', function (ev) {
+      if (ev.persisted) document.documentElement.classList.remove('ts-leaving');
     });
   }
 })();
