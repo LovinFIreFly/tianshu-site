@@ -36,6 +36,24 @@
       if (!ticking) { ticking = true; window.requestAnimationFrame(onScroll); }
     }, { passive: true });
     onScroll();
+
+    /* 鼠标移到屏幕上方 → 栏目条自动浮现（不用往上滚回去） */
+    var navHold = null;
+    window.addEventListener('pointermove', function (e) {
+      if (e.clientY < 58) {
+        if (navHold) { clearTimeout(navHold); navHold = null; }
+        nav.classList.add('nav-open');
+      } else if (e.clientY > 132 && nav.classList.contains('nav-open') && !navHold) {
+        navHold = setTimeout(function () {
+          nav.classList.remove('nav-open');
+          navHold = null;
+        }, 260);
+      }
+    }, { passive: true });
+    nav.addEventListener('pointerleave', function () {
+      if (navHold) { clearTimeout(navHold); navHold = null; }
+      nav.classList.remove('nav-open');
+    });
   }
 
   /* ---------------------------------------------------------------- ② 入场 */
@@ -165,85 +183,64 @@
     });
   }
 
-  /* ------------------------------------------------- ⑦ 首页"怎么玩"滚动分镜
-     整块钉在视口里，按滚动进度换场（0-1/3-2/3-1）。窄屏时 CSS 已退化，
-     这里算出来也是 1，不会把手机坑住。 */
+  /* ------------------------------------------------- ⑦ 首页"怎么玩"：自动播放
+     3 秒走一步（底部那条 3 秒走满就翻），点下面的条可以直接切、切完重新计时。
+     滚轮不参与 1/2/3 的切换 —— 这一屏就是一屏，往下划直接进下一块。 */
   var how = $('.how3');
   if (how) {
     var hsteps = $$('.how3__step', how);
-    var hbars = $$('.how3__bar li', how);
-    var hbusy = false;
-    var paintHow = function () {
-      var r = how.getBoundingClientRect();
-      var total = r.height - window.innerHeight;
-      var p = total > 0 ? Math.min(0.999, Math.max(0, -r.top / total)) : 1;
-      var idx = Math.floor(p * hsteps.length);
-      hsteps.forEach(function (el, k) { el.classList.toggle('is-on', k === idx); });
-      hbars.forEach(function (el, k) { el.classList.toggle('is-on', k <= idx); });
-      hbusy = false;
-    };
-    if (hsteps.length) {
-      window.addEventListener('scroll', function () {
-        if (!hbusy) { hbusy = true; window.requestAnimationFrame(paintHow); }
-      }, { passive: true });
-      paintHow();
+    var hbtns = $$('.how3__bar button', how);
+    var hidx = 0, htimer = null;
+    var hCanAuto = !reduce && window.matchMedia && window.matchMedia('(min-width:834px)').matches;
+
+    function showStep(i) {
+      if (!hsteps.length) return;
+      hidx = ((i % hsteps.length) + hsteps.length) % hsteps.length;
+      hsteps.forEach(function (el, k) { el.classList.toggle('is-on', k === hidx); });
+      hbtns.forEach(function (b, k) { b.classList.toggle('on', k === hidx); });
+      var cur = hbtns[hidx];
+      if (cur) {                    /* 去掉再加回，强制让进度条从 0 重新走一遍 */
+        cur.classList.remove('on');
+        void cur.offsetWidth;
+        cur.classList.add('on');
+      }
     }
+    function startAuto() {
+      if (!hCanAuto) return;
+      if (htimer) clearInterval(htimer);
+      htimer = setInterval(function () { showStep(hidx + 1); }, 3000);
+    }
+    hbtns.forEach(function (b, k) {
+      b.addEventListener('click', function () { showStep(k); startAuto(); });
+    });
+    showStep(0);
+    startAuto();
   }
 
-  /* ------------------------------------------------- ⑧ 吸附：一划一下，稳稳落到下一屏
-     首屏往下划 → 平滑迅速对齐到"怎么玩"的开头；
-     在分镜里每停一次 → 吸附到当前这一步的起点（0 / 1/3 / 2/3 / 结尾）。
-     只在桌面（分镜真的钉住时）启用；手机上分镜会退化成普通三段，这里自动不生效。 */
+  /* ------------------------------------------------- ⑧ 一划一屏：首屏 → 怎么玩
+     两块都是满屏，所以往下划一点点就把你稳稳送到下一屏（阈值小 = 划一下就到）。
+     只在下滑时对齐、只对齐这一个缝；进了「怎么玩」之后不再碰滚轮。 */
   if (how && !reduce && finePtr) {
-    var howPin = $('.how3__pin', how);
-    var howTop = 0, howStep = 0, howTotal = 0, howGuard = 0, howTmr = null, howAnchor = null;
-    var lastY = 0, scrollDir = 0;
-    function measure() {
-      howTop = how.getBoundingClientRect().top + (window.pageYOffset || 0);
-      howTotal = Math.max(0, how.offsetHeight - window.innerHeight);
-      howStep = howTotal / Math.max(1, how.querySelectorAll('.how3__step').length);
-    }
-    function glide(top) {
-      howGuard = Date.now() + 800;
-      howAnchor = top;
-      window.scrollTo({ top: top, behavior: 'smooth' });
-    }
-    function snap() {
-      if (!howPin || window.getComputedStyle(howPin).position !== 'sticky') return;
+    var howTop = 0, howGuard = 0, howTmr = null, hLastY = window.pageYOffset || 0, hDir = 0;
+    function measureHow() { howTop = how.getBoundingClientRect().top + (window.pageYOffset || 0); }
+    function onHowScroll() {
       var y = window.pageYOffset || 0;
-      if (Date.now() < howGuard) return;
-      var dir = scrollDir;          /* 方向在滚动时记下来（延时后 lastY 已经等于 y 了） */
-
-      /* ① 还在首屏：往下划超过大半屏，就平滑对齐到分镜开头 */
-      if (y < howTop - 6) {
-        if (dir === 1 && y > howTop - window.innerHeight * 0.5) glide(howTop);
-        return;
-      }
-      /* ② 已经划出去了，不再管 */
-      if (y > howTop + howTotal + 6) return;
-
-      /* ③ 在分镜里：滚过 1/4 步才算"翻页"，否则吸回原位
-            （这样鼠标滚一格就是稳稳一步，不会一格一格被弹回来） */
-      if (howAnchor === null) {
-        howAnchor = howTop + Math.round((y - howTop) / howStep) * howStep;
-      }
-      var d = y - howAnchor;
-      var near = Math.abs(d) < howStep * 0.26
-        ? howAnchor
-        : howAnchor + Math.round(d / howStep) * howStep;
-      near = Math.max(howTop, Math.min(howTop + howTotal, near));
-      if (Math.abs(near - y) < 8) { howAnchor = near; return; }
-      glide(near);
-    }
-    measure();
-    window.addEventListener('resize', measure);
-    window.addEventListener('scroll', function () {
-      var y = window.pageYOffset || 0;
-      if (y > lastY) scrollDir = 1; else if (y < lastY) scrollDir = -1;
-      lastY = y;
+      if (y > hLastY) hDir = 1; else if (y < hLastY) hDir = -1;
+      hLastY = y;
       if (howTmr) clearTimeout(howTmr);
-      howTmr = setTimeout(snap, 150);
-    }, { passive: true });
+      howTmr = setTimeout(function () {
+        var now = Date.now();
+        if (now < howGuard) return;
+        if (y >= howTop - 4) return;                       /* 已经在「怎么玩」里：不劫持 */
+        if (hDir !== 1) return;                            /* 只在下滑时对齐 */
+        if (y < window.innerHeight * 0.12) return;         /* 几乎没动：不打扰 */
+        howGuard = now + 900;
+        window.scrollTo({ top: howTop, behavior: 'smooth' });
+      }, 140);
+    }
+    measureHow();
+    window.addEventListener('resize', measureHow);
+    window.addEventListener('scroll', onHowScroll, { passive: true });
   }
 
   /* ---------------------------------------------------------------- ⑨ 磁吸 */
@@ -258,6 +255,28 @@
         btn.style.transform = 'translate(' + (dx * 4).toFixed(2) + 'px,' + (dy * 3).toFixed(2) + 'px)';
       });
       btn.addEventListener('pointerleave', function () { btn.style.transform = ''; });
+    });
+  }
+
+  /* ------------------------------------------------- ⑩ 卡片微倾（桌面）
+     光标在卡片上移动时，卡片最多朝光标方向倾 3~4 度（像伸手翻一张牌）。
+     拖动轨道时不倾，免得跟拖拽打架。 */
+  if (!reduce && finePtr) {
+    $$('.pcard3').forEach(function (card) {
+      card.addEventListener('pointermove', function (e) {
+        var tr = card.closest ? card.closest('.rail3__track') : null;
+        if (tr && tr.classList.contains('dragging')) return;
+        var r = card.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        var px = (e.clientX - r.left) / r.width - 0.5;
+        var py = (e.clientY - r.top) / r.height - 0.5;
+        card.style.setProperty('--ry', (px * 7).toFixed(2) + 'deg');
+        card.style.setProperty('--rx', (-py * 6).toFixed(2) + 'deg');
+      });
+      card.addEventListener('pointerleave', function () {
+        card.style.setProperty('--ry', '0deg');
+        card.style.setProperty('--rx', '0deg');
+      });
     });
   }
 })();

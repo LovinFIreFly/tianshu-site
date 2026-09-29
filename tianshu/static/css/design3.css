@@ -167,6 +167,9 @@ img{max-width:100%}
   border-top:1px solid var(--d-rule);overflow:hidden;transition:height .32s var(--d-ease),opacity .2s}
 @media(min-width:834px){.tnav__strip{display:flex}}
 .tnav.scrolled .tnav__strip{height:0;opacity:0;border-top-color:transparent}
+/* 鼠标移到屏幕顶部时，栏目条自动滑回来（不用往上滚） */
+.tnav.nav-open .tnav__strip{height:32px;opacity:1;border-top-color:var(--d-rule);
+  transition:height .26s var(--d-ease),opacity .2s}
 .tnav__strip a{position:relative;font-family:var(--d-mono);font-size:11.5px;letter-spacing:.16em;
   text-transform:uppercase;color:var(--d-ink-3);padding:8px 0;white-space:nowrap;transition:color .2s}
 .tnav__strip a::after{content:"";position:absolute;left:0;right:0;bottom:4px;height:1.5px;background:var(--d-accent);
@@ -186,7 +189,10 @@ img{max-width:100%}
    所以两块接缝看不见 —— 不会再有"红被切一刀"的硬边 */
 .dhero{position:relative;overflow:hidden;color:var(--d-stage-ink);border-bottom:0;
   background:linear-gradient(176deg,var(--d-night-1) 0%,var(--d-night-2) 55%,var(--d-night-3) 100%);
-  padding:calc(var(--d-nav-h) + clamp(20px,3vw,42px)) 0 clamp(24px,3.4vw,44px)}
+  padding:calc(var(--d-nav-h) + clamp(20px,3vw,42px)) 0 clamp(24px,3.4vw,44px);
+  /* 首屏占满一屏：正好一屏，往下划一下就进下一屏 */
+  min-height:100svh;display:flex;flex-direction:column;justify-content:center}
+.dhero > .wrap3{width:100%}
 .dhero::before{content:"";position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(80% 60% at 8% 0%,var(--d-accent-05),transparent 62%)}
 .dhero__grid{display:grid;gap:clamp(18px,2.4vw,34px)}
@@ -333,10 +339,11 @@ img{max-width:100%}
 /* --------------------------------------------------------------------------
    4. 章节 .dsec —— 编号 + 标题 + 右侧动作，靠细线分隔（不再居中）
    -------------------------------------------------------------------------- */
-.dsec{padding:clamp(24px,3.4vw,48px) 0;border-bottom:1px solid var(--d-rule)}
+.dsec{padding:clamp(24px,3.4vw,48px) 0;border-bottom:1px solid var(--d-rule);
+  background:var(--d-paper);color:var(--d-ink)}
 /* 交替区块不再铺满一层底：底色一铺就是一条"又宽又空"的大带子。
    改成一条稍重的分隔线，靠线的粗细造节奏（印刷感），页面留一整片干净纸面。 */
-.dsec--alt{background:transparent;border-top:1px solid var(--d-rule-2)}
+.dsec--alt{background:var(--d-paper);color:var(--d-ink);border-top:1px solid var(--d-rule-2)}
 .dsec--stage{color:var(--d-stage-ink);border-bottom-color:var(--d-hair);
   background:linear-gradient(180deg,var(--d-night-2) 0%,var(--d-night-3) 100%)}
 .dsec--stage .dsec__title,.dsec--stage .dsec__no{color:var(--d-stage-ink)}
@@ -632,6 +639,28 @@ img{max-width:100%}
 @keyframes d-rise-x{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
 /* 数字滚动计数 */
 .count3{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+/* ---- 从标杆站抄来的三种"表现形式" ---- */
+/* ① 封面揭示（Awwwards 系常规操作）：卡片升起时封面像幕布一样被拉开 */
+.rv .pcard3__cover{clip-path:inset(0 0 100% 0)}
+.rv.in .pcard3__cover{clip-path:inset(0);transition:clip-path 1s .12s var(--d-ease)}
+/* ② 卡片跟光标轻微倾斜（桌面）：最多 4 度，像伸手翻一张牌（.pcard3 的 transform 走变量，
+      这样 hover 抬起和倾斜可以叠加，不会互相覆盖） */
+.pcard3{transform:perspective(760px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg))}
+.pcard3:hover{transform:perspective(760px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-3px)}
+/* ③ 实底按钮：hover 时一道高光从左扫过（Stripe / Vercel 的按钮手感） */
+.b3--solid,.b3--accent,.btn--primary,.btn-accent{position:relative;overflow:hidden}
+.b3--solid::after,.b3--accent::after,.btn--primary::after,.btn-accent::after{
+  content:"";position:absolute;top:-25%;bottom:-25%;left:-70%;width:45%;pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.32),transparent);
+  transform:skewX(-18deg);transition:left .55s var(--d-ease)}
+.b3--solid:hover::after,.b3--accent:hover::after,
+.btn--primary:hover::after,.btn-accent:hover::after{left:130%}
+@media(prefers-reduced-motion:reduce){
+  .rv .pcard3__cover{clip-path:none}
+  .pcard3,.pcard3:hover{transform:none}
+  .b3--solid::after,.b3--accent::after,.btn--primary::after,.btn-accent::after{display:none}
+}
 /* 顶栏进度条：滚动时显示阅读进度 */
 .scrollbar3{position:fixed;top:0;left:0;height:2px;background:var(--d-accent);z-index:1100;width:0;
   transition:width .1s linear}
@@ -646,11 +675,13 @@ img{max-width:100%}
    —— 滚动时整块钉在视口里，三步依次换场；窄屏自动退化成普通三段，
       不钉、不占高，手机上不会被一屏卡住。
    -------------------------------------------------------------------------- */
-/* 起始色 = 首屏结束色（#1D1815），两块接缝彻底看不见 */
-.how3{color:var(--d-stage-ink);height:220vh;position:relative;
+/* 起始色 = 首屏结束色（#1D1815），两块接缝彻底看不见。
+   这一屏也是**正好一屏**：静止的自动播放分镜（3 秒一换，可点下面的条切），
+   滚轮不参与 1/2/3 的切换 —— 往下划就直接进下一屏。 */
+.how3{color:var(--d-stage-ink);position:relative;
   background:linear-gradient(180deg,var(--d-night-3) 0%,#262019 48%,#1B1613 100%)}
-.how3__pin{position:sticky;top:0;height:100vh;display:flex;align-items:center;overflow:hidden;
-  padding-top:var(--d-nav-h)}
+.how3__pin{position:relative;display:flex;align-items:center;overflow:hidden;
+  min-height:100svh;padding:calc(var(--d-nav-h) + clamp(16px,2.6vw,32px)) 0 clamp(28px,4vw,52px)}
 .how3__pin > .wrap3{position:relative;z-index:1;width:100%}
 .how3__k{margin:0;font-family:var(--d-mono);font-size:10.5px;letter-spacing:.22em;
   text-transform:uppercase;color:var(--d-hair)}
@@ -663,17 +694,23 @@ img{max-width:100%}
   line-height:1.06;letter-spacing:var(--d-track-display);
   font-size:min(var(--d-fs-display),5.2vw,62px)}
 .how3__d{margin:clamp(12px,1.8vw,20px) 0 0;max-width:46ch;font-size:15px;line-height:1.75;color:var(--d-hair)}
-.how3__bar{display:flex;gap:10px;list-style:none;margin:clamp(18px,2.6vw,30px) 0 0;padding:0}
-.how3__bar li{flex:0 0 52px;height:2px;background:var(--d-hair);transition:background .5s var(--d-ease)}
-.how3__bar li.is-on{background:var(--d-accent)}
+/* 底部三条：既是进度条，也是**可以点的切换按钮**（当前那条 3 秒走满，走满就自动翻到下一步） */
+.how3__bar{display:flex;gap:8px;list-style:none;margin:clamp(18px,2.6vw,30px) 0 0;padding:0}
+.how3__bar li{flex:0 0 56px}
+.how3__bar button{position:relative;display:block;width:100%;height:3px;padding:0;border:0;cursor:pointer;
+  background:var(--d-hair);overflow:hidden;transition:transform .25s var(--d-ease)}
+.how3__bar button::after{content:"";position:absolute;inset:0;background:var(--d-accent);
+  transform:scaleX(0);transform-origin:left}
+.how3__bar button:hover{transform:scaleY(2.2)}
+.how3__bar button.on::after{animation:d-fill 3s linear forwards}
+@keyframes d-fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 .how3__cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:clamp(18px,2.6vw,30px)}
 .how3 .b3{background:transparent;border-color:var(--d-hair);color:var(--d-stage-ink)}
 .how3 .b3:hover{background:var(--d-stage-ink);border-color:var(--d-stage-ink);color:var(--d-stage)}
 .how3 .b3--accent{background:var(--d-accent);border-color:var(--d-accent);color:#fff}
 .how3 .b3--accent:hover{background:var(--d-accent-2);border-color:var(--d-accent-2);color:#fff}
 @media(max-width:833px){
-  .how3{height:auto}
-  .how3__pin{position:static;height:auto;padding:clamp(30px,7vw,52px) 0}
+  .how3__pin{min-height:0;padding:clamp(28px,7vw,46px) 0 clamp(32px,7vw,52px)}
   .how3__stage{position:static;min-height:0}
   .how3__step{position:static;opacity:1;transform:none;margin-bottom:22px}
   .how3__bar{display:none}
@@ -730,6 +767,23 @@ img{max-width:100%}
 .adm-main .stats b{display:block;font-family:var(--d-mono);font-size:clamp(18px,2.2vw,26px);letter-spacing:-.02em}
 .adm-main .stats span{display:block;margin-top:4px;font-family:var(--d-mono);font-size:10.5px;
   letter-spacing:.12em;text-transform:uppercase;color:var(--d-ink-4)}
+/* 后台外壳：整体让出固定顶栏的高度（之前侧栏和第一屏标题被顶栏压住）。
+   侧栏是"永远暗底"，所以它的字色不能用 --ink（某些款式把 --ink 设成近黑，就成了暗底暗字） */
+.adm{padding-top:var(--d-nav-h)}
+.adm-side{top:var(--d-nav-h);height:calc(100vh - var(--d-nav-h));
+  background:linear-gradient(180deg,var(--d-night-1),#14100E);color:rgba(255,255,255,.66)}
+.adm-brand{color:#F5F1EA}
+.adm-side .navi{color:rgba(255,255,255,.66)}
+.adm-side .navi:hover{color:#fff;background:rgba(255,255,255,.08)}
+.adm-side .navi.on{color:#fff;background:var(--d-accent-05);border-left-color:var(--d-accent)}
+.adm-side .navi-no{color:rgba(255,255,255,.36)}
+.adm-side .navi.on .navi-no{color:var(--d-accent)}
+.adm-foot{border-top-color:rgba(255,255,255,.1)}
+.adm-foot .navi{color:rgba(255,255,255,.5)}
+@media(max-width:900px){.adm-side{top:auto;height:auto}}
+/* 待安排那三格（房间 / DM / 安排按钮）在窄屏也排得开 */
+.adm-main .panel form.row{row-gap:8px}
+.adm-main select[name="roomId"],.adm-main select[name="dm"]{max-width:190px}
 
 /* --------------------------------------------------------------------------
    15. 空态 .empty3 —— 用"线 + 编号"，不用虚线框（不同款式靠令牌自动换色）

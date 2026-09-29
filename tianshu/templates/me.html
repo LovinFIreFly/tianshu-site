@@ -383,9 +383,9 @@
                 <form method="post" action="{{ url_for('user.account_delete') }}"
                       onsubmit="return confirm('注销后账号和名下数据都会删除，确定？')">
                   <p class="body-secondary" style="margin:0 0 var(--d-s3)">注销 = 账号和名下的预约、券、积分全部删除，<b>不可恢复</b>。
-                    输入完整手机号确认（{{ me.phone }}）：</p>
+                    输入完整手机号确认（当前账号 {{ me.phone[:3] }}****{{ me.phone[-4:] }}）：</p>
                   <div class="row" style="gap:8px">
-                    <input name="confirm" placeholder="输入 {{ me.phone }}" style="max-width:220px">
+                    <input name="confirm" placeholder="输入完整手机号" style="max-width:220px">
                     <button class="b3 b3--sm" type="submit">确认注销</button>
                   </div>
                 </form>

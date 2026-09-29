@@ -58,11 +58,11 @@
     <form class="row" method="post" action="{{ url_for('admin.booking_arrange', bid=b.id) }}"
           style="gap:8px;align-items:center;margin:0">
       <select name="roomId" style="min-width:120px">
-        <option value="">房间…</option>
+        <option value="">房间（可留空 · 待定）</option>
         {% for r in rooms %}<option value="{{ r.name }}">{{ r.name }}（{{ r.cap }}人）</option>{% endfor %}
       </select>
       <select name="dm" style="min-width:110px">
-        <option value="">DM 待定</option>
+        <option value="">DM 待定（可留空）</option>
         {% for d in dms %}<option value="{{ d.phone }}">{{ d.username }}</option>{% endfor %}
       </select>
       <button class="btn btn-sm btn-primary" type="submit">安排</button>

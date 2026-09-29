@@ -97,7 +97,11 @@
           <p class="how3__d">到店报核销码，房间和 DM 都安排好了。玩完再付尾款、打分，一条龙。</p>
         </div>
       </div>
-      <ol class="how3__bar" aria-hidden="true"><li class="is-on"></li><li></li><li></li></ol>
+      <ol class="how3__bar" aria-label="切换步骤">
+        <li><button type="button" class="on" data-step="0" aria-label="第 1 步：挑本"></button></li>
+        <li><button type="button" data-step="1" aria-label="第 2 步：开团"></button></li>
+        <li><button type="button" data-step="2" aria-label="第 3 步：到店"></button></li>
+      </ol>
       <div class="how3__cta">
         <a class="b3 b3--accent" href="{{ url_for('public.scripts') }}">从挑本开始</a>
         <a class="b3" href="{{ url_for('public.car') }}">直接去看拼车</a>

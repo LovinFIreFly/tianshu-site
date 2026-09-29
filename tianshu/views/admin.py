@@ -650,12 +650,19 @@ def booking_arrange(bid):
     if not hit:
         flash('没这条预约', 'warn')
         return redirect(url_for('admin.dashboard') + '#sessions')
-    if hit.get('status') != 'booked' or hit.get('sessionId'):
-        flash('这条预约不在待安排里（可能已取消或已安排过）', 'warn')
+    if hit.get('status') != 'booked':
+        flash('这条预约已经取消 / 玩完了，安排不了', 'warn')
         return redirect(url_for('admin.dashboard') + '#sessions')
     room = business.clean(request.form.get('roomId'), 20)
     dm = business.clean(request.form.get('dm'), 20)
     ts, tm = hit.get('ts') or 0, hit.get('time') or '19:00'
+    # 已经安排过（多半是又点了一次）：当成"改安排 / 补房间补 DM"，不再甩一句失败
+    redo = bool(hit.get('sessionId'))
+    if redo and not room and not dm:
+        _ses = next((s for s in db.rows('sessions') if s.get('id') == hit.get('sessionId')), {})
+        flash('这条已经安排过了（房间 %s · DM %s）。要改就选好房间或 DM 再点一次。'
+              % (_ses.get('roomId') or '待定', _ses.get('dm') or '待定'), 'info')
+        return redirect(url_for('admin.dashboard', ts=ts, view='day') + '#sessions')
 
     sessions = db.rows('sessions')
     ses = next((s for s in sessions if str(s.get('sid')) == str(hit.get('sid'))
@@ -685,7 +692,7 @@ def booking_arrange(bid):
     db.write('sessions', sessions)
     db.write('bookings', bookings)
     dm_row = next((u for u in db.rows('users') if str(u.get('phone')) == str(dm)), {})
-    business.notify(hit.get('phone'), '已为你安排房间 ✅',
+    business.notify(hit.get('phone'), '你的场次有更新 🔁' if redo else '已为你安排房间 ✅',
                     '《%s》%s %s 安排在 %s，DM：%s —— 到店报核销码就行。'
                     % (hit.get('title'), hit.get('day'), tm, room or '房间待定',
                        (dm_row.get('profile') or {}).get('nick') or dm_row.get('username') or '待定'), 'arrange')
@@ -696,7 +703,8 @@ def booking_arrange(bid):
                            int(hit.get('players') or 0)), 'sched')
     business.audit(current_user().get('username'), role(), '安排《%s》%s %s → %s · DM %s'
                    % (hit.get('title'), hit.get('day'), tm, room or '待定', dm or '待定'))
-    flash('安排好了：%s · %s · DM %s' % (tm, room or '待定', dm or '待定'), 'ok')
+    flash('%s：%s · %s · DM %s'
+          % ('已更新安排' if redo else '安排好了', tm, room or '待定', dm or '待定'), 'ok')
     return redirect(url_for('admin.dashboard', ts=ts, view='day') + '#sessions')
 
 
