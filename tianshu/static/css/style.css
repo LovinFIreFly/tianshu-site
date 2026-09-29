@@ -424,11 +424,15 @@ input[type=file]:hover::file-selector-button{background:var(--ink);color:var(--p
 
 /* ============================ 11. 认证页 ============================ */
 .auth-bg{min-height:100vh;background:var(--paper);display:flex;flex-direction:column}
-.auth-top{display:flex;align-items:center;justify-content:space-between;padding:var(--sp-3) var(--sp-4);
-  border-bottom:3px double var(--ink)}
-.auth-top,.auth-card{max-width:var(--container);margin:0 auto;width:100%}
-.auth-stage{flex:1;display:flex;align-items:center;justify-content:center;padding:var(--sp-6) var(--sp-4)}
-.auth-body{width:100%;max-width:420px}
+/* 登录页三件套（top / 卡片 / foot）**纵向居中**排列。
+   ⚠️ 2026-09 踩过的坑：这里曾改成横向 row、420px 约束放在模板没用的 .auth-body 上 ——
+   结果三件套被挤成三条竖排窄条（线上截图）。约束必须写在真正渲染的元素自己身上。 */
+.auth-stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:var(--sp-6) var(--sp-4)}
+.auth-top{width:420px;max-width:100%;display:flex;justify-content:space-between;align-items:center;
+  padding:var(--sp-2) 0;border-bottom:0}
+.auth-card{width:420px;max-width:100%;background:var(--paper-3);border:2px solid var(--ink);
+  padding:var(--sp-6);box-shadow:var(--sh-hard)}
 .auth-brand{display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-4)}
 .auth-brand .logo{width:44px;height:44px;display:flex;align-items:center;justify-content:center;
   background:var(--ink);color:var(--paper);font-family:var(--serif);font-size:22px;font-weight:700}
