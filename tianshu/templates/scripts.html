@@ -1,31 +1,38 @@
 {% extends 'base.html' %}
 {% block title %}剧本库 · {{ settings.shopName }}{% endblock %}
+{# 剧本库：全宽 tile + 胶囊搜索 + 胶囊筛选 + poster-grid；SPA 不跳页，只换网格。 #}
+{% block main_class %}{% endblock %}
 {% block body %}
-<div class="between">
-  <div>
-    <h1>剧本库</h1>
-    <p class="sub">共 {{ scripts|length }} 个本子{% if q or tag or diff or only_fav %}（筛选中）{% endif %}</p>
+
+<section class="tile tile--warm" style="padding-top:calc(var(--site-nav-height) + var(--space-7))">
+  <div class="tile__inner">
+    <header class="sec-head">
+      <span class="sec-no">剧本库</span>
+      <h1 class="heading-section">全部本子</h1>
+      <span class="body-secondary">共 {{ scripts|length }} 个{% if q or tag or diff or only_fav %} · 筛选中{% endif %}</span>
+    </header>
+
+    <form class="capsule-search spa-search" method="get" style="max-width:520px">
+      <div class="capsule-search__segment">
+        <label>搜剧本</label>
+        <input name="q" value="{{ q }}" placeholder="名字 / 简介 / 类型">
+      </div>
+      <span class="capsule-search__divider"></span>
+      <button class="capsule-search__btn" type="submit" aria-label="搜索">⌕</button>
+    </form>
+
+    <div class="row spa-filters mt-5" style="gap:8px;flex-wrap:wrap">
+      <button type="button" class="pill {{ 'on' if not tag and not diff and not only_fav }}" data-filter="all">全部</button>
+      {% for t in tags %}
+      <button type="button" class="pill {{ 'on' if tag == t }}" data-filter="tag" data-val="{{ t }}">{{ t }}</button>
+      {% endfor %}
+      <button type="button" class="pill {{ 'on' if diff == '1' }}" data-filter="diff" data-val="1">新手友好</button>
+      <button type="button" class="pill {{ 'on' if only_fav }}" data-filter="fav" data-val="1">❤ 我的想玩</button>
+    </div>
+
+    <div id="scriptGrid" class="mt-7">{% include '_scripts_grid.html' %}</div>
   </div>
-  <form class="form-inline spa-search" method="get" style="max-width:520px">
-    <div class="field"><input name="q" value="{{ q }}" placeholder="搜名字 / 简介"></div>
-    <button class="btn btn-primary" type="submit">搜索</button>
-  </form>
-</div>
-
-{# 分类/难度/收藏 全部改成「前端无刷新」的按钮：点了只换卡片网格，网址一直是 /scripts。
-   不再是 <a href="/scripts?tag=恐怖"> —— 那样每点一次都整页跳，用户说太卡。
-   当前选中的状态由 JS 维护（初始值从后端渲染时的 class 反推），点「全部」清掉所有筛选。 #}
-<div class="row mt spa-filters" style="gap:6px;flex-wrap:wrap">
-  <button type="button" class="pill {{ 'on' if not tag and not diff and not only_fav }}" data-filter="all">全部</button>
-  {% for t in tags %}
-    <button type="button" class="pill {{ 'on' if tag == t }}" data-filter="tag" data-val="{{ t }}">{{ t }}</button>
-  {% endfor %}
-  <button type="button" class="pill {{ 'on' if diff == '1' }}" data-filter="diff" data-val="1">新手友好</button>
-  <button type="button" class="pill {{ 'on' if only_fav }}" data-filter="fav" data-val="1">❤ 我的想玩</button>
-</div>
-
-{# 卡片网格：初始由后端渲染，之后前端点了筛选用 fetch 拉 _scripts_grid.html 片段原地替换 #}
-<div id="scriptGrid" class="grid-wrap">{% include '_scripts_grid.html' %}</div>
+</section>
 
 <script>
 {# 剧本库 SPA：分类标签 + 搜索都不跳页，只换网格 + 入场动画 + URL 用 replaceState 保持 /scripts #}
@@ -46,11 +53,11 @@
 
   function playIn(html) {
     wrap.innerHTML = html;
-    var items = wrap.querySelectorAll('.juben, [data-anim]');
+    var items = wrap.querySelectorAll('.poster-card, [data-anim]');
     Array.prototype.forEach.call(items, function (el, i) {
       if (el.animate) el.animate(
-        [{opacity: 0, transform: 'translateY(12px)'}, {opacity: 1, transform: 'none'}],
-        {duration: 420, delay: i * 35, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'both'});
+        [{opacity: 0, transform: 'translateY(16px) scale(.98)'}, {opacity: 1, transform: 'none'}],
+        {duration: 420, delay: i * 40, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'both'});
     });
   }
 
@@ -62,7 +69,6 @@
       .catch(function () {});
   }
 
-  // 分类按钮：同组排他（tag 之间互斥、diff/fav 各自独立），「全部」清所有
   filters.addEventListener('click', function (e) {
     var b = e.target.closest('[data-filter]');
     if (!b) return;
@@ -82,7 +88,6 @@
     load();
   });
 
-  // 搜索：拦截提交，走 fetch 不跳页
   var sf = document.querySelector('.spa-search');
   if (sf) sf.addEventListener('submit', function (e) {
     e.preventDefault();

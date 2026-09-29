@@ -513,6 +513,10 @@ h1,h2,h3,h4,h5,h6,p{margin:0}
 .badge--brand{background:var(--brand-light);color:var(--brand-dark)}
 .badge--dark{background:var(--ink);color:#fff}
 
+.pill{cursor:pointer;transition:background var(--duration-fast), color var(--duration-fast), transform var(--duration-fast)}
+.pill.on{background:var(--ink);color:var(--bg)}
+.pill:hover:not(.on){background:var(--surface-warm)}
+
 /* --------------------------------------------------------------------------
    10. 彩色拼图导航（Dropbox 式）
    -------------------------------------------------------------------------- */

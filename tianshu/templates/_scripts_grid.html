@@ -1,42 +1,38 @@
-{# 剧本库卡片网格片段：scripts 视图在 ?partial=1 时只渲染这段，
-   前端点分类标签用 fetch 拉下来原地替换 .grid，整页不跳。
-   （这是从 scripts.html 抽出来的，结构和那里的 .grid 完全一致） #}
+{# 剧本库卡片网格片段：前端点分类用 fetch 拉这段原地替换，整页不跳。
+   结构与 scripts.html 的 poster-grid 完全一致，保留 data-anim 供入场动画使用。 #}
 {% if scripts %}
-<div class="grid mt" data-spa-grid>
+<div class="poster-grid" data-spa-grid>
   {% for s in scripts %}
-  <div class="juben" data-anim>
+  <article class="poster-card" data-anim>
+    <a href="{{ url_for('public.scripts', t=s.type) }}" class="badge" style="position:absolute;top:var(--space-3);left:var(--space-3);z-index:2">{{ s.type or '剧本' }}</a>
     <a href="{{ url_for('public.script_detail', sid=s.id) }}">
-      <div class="cover">
-        {% if s.img %}<img class="cover-img" src="{{ s.img }}" alt="{{ s.title }}">{% else %}{{ s.emoji or '🎭' }}{% endif %}
-        {% if s.isNew %}<span class="flag" style="background:linear-gradient(135deg,#fb923c,#f97316)">上新</span>
-        {% elif s.diff and s.diff <= 2 %}<span class="flag" style="background:rgba(52,211,153,.9)">新手友好</span>{% endif %}
-        {% if rating.get(s.id|string) %}<span class="score">★ {{ rating[s.id|string] }}</span>{% endif %}
-      </div>
-      <div class="body">
-        <h4>{{ s.title }}</h4>
-        <div class="meta">{{ s.players or '—' }} · {{ s.dur or '—' }} · {{ s.type or '盒装' }}</div>
-        <div class="foot">
-          <span class="price">¥{{ s.price|int }}<small>/人</small></span>
-          <span class="book">去看看</span>
-        </div>
-      </div>
+      {% if s.img %}
+      <img class="poster-card__cover" src="{{ s.img }}" alt="{{ s.title }}">
+      {% else %}
+      <div class="poster-card__emoji">{{ s.emoji or '🎭' }}</div>
+      {% endif %}
     </a>
-    {% if s.allowRolePick or s.tags %}
-    <div class="meta" style="padding:0 16px 14px">
-      {% if s.allowRolePick %}<span class="badge">可提前选角</span>{% endif %}
-      {% for t in (s.tags or [])[:2] %}<span class="badge">{{ t }}</span>{% endfor %}
+    <div class="poster-card__body">
+      <h3 class="poster-card__title"><a href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.title }}</a></h3>
+      <p class="poster-card__meta">{{ s.players or '—' }} · {{ s.dur or '—' }} · 难度 {{ s.diff or 3 }}/5</p>
+      <div class="poster-card__tags">
+        {% if s.isNew %}<span class="badge badge--brand">上新</span>{% endif %}
+        {% if s.diff and s.diff <= 2 %}<span class="badge badge--brand">新手友好</span>{% endif %}
+        {% if rating.get(s.id|string) %}<span class="badge">★ {{ rating[s.id|string] }}</span>{% endif %}
+        <span class="badge badge--dark">¥{{ s.price|int }}/人</span>
+      </div>
     </div>
-    {% endif %}
-    {# 右上角那颗心：data-ajax-fav 让全局 JS 走 fetch，不刷新整页 #}
-    <form method="post" action="{{ url_for('public.fav', sid=s.id) }}" data-ajax-fav>
-      <button class="fav-btn {{ 'on' if s.id|string in favs }}" type="submit"
-              title="{{ '取消收藏' if s.id|string in favs else '收藏这个本' }}" aria-label="收藏">
+    <form method="post" action="{{ url_for('public.fav', sid=s.id) }}" data-ajax-fav style="position:absolute;top:0;right:0;z-index:3">
+      <button class="poster-card__heart fav-btn {{ 'on' if s.id|string in favs }}" type="submit" aria-label="收藏">
         {{ '❤' if s.id|string in favs else '♡' }}
       </button>
     </form>
-  </div>
+  </article>
   {% endfor %}
 </div>
 {% else %}
-<div class="panel empty" data-anim>没找到符合条件的本子，换个词试试</div>
+<div class="panel empty text-center mt-8" data-anim>
+  <div style="font-size:var(--fs-h3);font-weight:700">没找到本子</div>
+  <p class="body-secondary mt-3">换个筛选条件试试</p>
+</div>
 {% endif %}
