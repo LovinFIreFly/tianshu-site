@@ -79,6 +79,12 @@
   --d-s7:var(--sp-7,32px); --d-s8:var(--sp-8,40px); --d-s9:var(--sp-9,56px);
   --d-s10:var(--sp-10,72px);
 
+  /* 暗场色：暖炭棕（比纯黑舒服，像放映厅的墙，不是黑洞）。
+     皮肤表如果自己设了 --stage，这里不抢；但默认这几档都走暖色。 */
+  --d-night-1:#2E2722;
+  --d-night-2:#251F1A;
+  --d-night-3:#1D1815;
+
   /* 尺寸 */
   --d-max:var(--container,1280px);
   --d-pad:clamp(16px,4vw,44px);
@@ -176,11 +182,13 @@ img{max-width:100%}
    -------------------------------------------------------------------------- */
 /* 首屏：一块**固定的暗场**（不跟款式飘），红印点缀 + 细金线。
    款式只影响页面主体；首屏永远是一张"戏票正面"，这样不会出现暗底暗字/灰底灰字。 */
-.dhero{position:relative;overflow:hidden;background:var(--d-stage);color:var(--d-stage-ink);
-  border-bottom:0;padding:calc(var(--d-nav-h) + clamp(20px,3vw,42px)) 0 clamp(24px,3.4vw,44px)}
+/* 首屏：暖炭棕渐变（不用纯黑），底边和下面的"怎么玩"用同一个色值收口，
+   所以两块接缝看不见 —— 不会再有"红被切一刀"的硬边 */
+.dhero{position:relative;overflow:hidden;color:var(--d-stage-ink);border-bottom:0;
+  background:linear-gradient(176deg,var(--d-night-1) 0%,var(--d-night-2) 55%,var(--d-night-3) 100%);
+  padding:calc(var(--d-nav-h) + clamp(20px,3vw,42px)) 0 clamp(24px,3.4vw,44px)}
 .dhero::before{content:"";position:absolute;inset:0;pointer-events:none;
-  background:radial-gradient(80% 60% at 8% 0%,var(--d-accent-05),transparent 62%),
-             linear-gradient(180deg,rgba(255,255,255,.045),transparent 38%)}
+  background:radial-gradient(80% 60% at 8% 0%,var(--d-accent-05),transparent 62%)}
 .dhero__grid{display:grid;gap:clamp(18px,2.4vw,34px)}
 .dhero__kicker{display:flex;align-items:center;gap:var(--d-s3);justify-content:center;
   font-family:var(--d-mono);font-size:11px;letter-spacing:var(--d-track-kicker);
@@ -201,13 +209,22 @@ img{max-width:100%}
 .dhero__title .ln:nth-child(2) > i{animation-delay:.22s}
 .dhero__title .ln:nth-child(3) > i{animation-delay:.34s}
 @keyframes d-lineup{to{transform:translateY(0)}}
-/* 首屏底色缓慢呼吸（Stripe 式渐变流动，慢到像没动） */
-.dhero::after{content:"";position:absolute;inset:-25% -12%;pointer-events:none;z-index:0;
-  background:radial-gradient(38% 30% at 18% 26%,var(--d-accent-05),transparent 62%),
-             radial-gradient(32% 26% at 78% 14%,rgba(255,255,255,.055),transparent 62%);
+/* 首屏底色缓慢呼吸（Stripe 式渐变流动，慢到像没动）。
+   底部用 mask 收淡 —— 之前 inset 超出被 overflow 一刀切，成了"红被挡上"的硬边 */
+.dhero::after{content:"";position:absolute;inset:-18% -10% 0 -10%;pointer-events:none;z-index:0;
+  background:radial-gradient(40% 34% at 16% 22%,var(--d-accent-05),transparent 64%),
+             radial-gradient(34% 28% at 80% 12%,rgba(255,255,255,.05),transparent 64%);
+  -webkit-mask-image:linear-gradient(180deg,#000 0%,#000 42%,transparent 92%);
+  mask-image:linear-gradient(180deg,#000 0%,#000 42%,transparent 92%);
   animation:d-drift 20s ease-in-out infinite alternate}
 @keyframes d-drift{from{transform:translate3d(-2%,-1.5%,0) scale(1.02)}
   to{transform:translate3d(3%,2%,0) scale(1.07)}}
+
+/* 光标跟随光斑：首屏和"怎么玩"共用一套（暗场里最出效果） */
+.glow3{position:absolute;inset:0;pointer-events:none;z-index:0;opacity:0;transition:opacity .5s var(--d-ease);
+  background:radial-gradient(300px 220px at var(--mx,16%) var(--my,26%),var(--d-accent-05),transparent 72%)}
+.dhero:hover .glow3,.how3__pin:hover .glow3{opacity:1}
+
 @media(prefers-reduced-motion:reduce){
   .dhero__title .ln > i{transform:none;animation:none}
   .dhero::after{animation:none}
@@ -320,7 +337,8 @@ img{max-width:100%}
 /* 交替区块不再铺满一层底：底色一铺就是一条"又宽又空"的大带子。
    改成一条稍重的分隔线，靠线的粗细造节奏（印刷感），页面留一整片干净纸面。 */
 .dsec--alt{background:transparent;border-top:1px solid var(--d-rule-2)}
-.dsec--stage{background:var(--d-stage);color:var(--d-stage-ink);border-bottom-color:var(--d-hair)}
+.dsec--stage{color:var(--d-stage-ink);border-bottom-color:var(--d-hair);
+  background:linear-gradient(180deg,var(--d-night-2) 0%,var(--d-night-3) 100%)}
 .dsec--stage .dsec__title,.dsec--stage .dsec__no{color:var(--d-stage-ink)}
 .dsec--stage .dsec__meta,.dsec--stage .copy-mute{color:var(--d-hair)}
 .dsec--stage .dsec__rule{background:var(--d-hair)}
@@ -552,8 +570,8 @@ img{max-width:100%}
 /* --------------------------------------------------------------------------
    11. 页脚 .dfoot —— 目录式三栏 + 底部等宽小字
    -------------------------------------------------------------------------- */
-.dfoot{background:var(--d-stage);color:var(--d-stage-ink);padding:clamp(24px,3.2vw,42px) 0 clamp(18px,2.2vw,28px);
-  margin-top:0}
+.dfoot{color:var(--d-stage-ink);padding:clamp(24px,3.2vw,42px) 0 clamp(18px,2.2vw,28px);margin-top:0;
+  background:linear-gradient(180deg,var(--d-night-2) 0%,#1B1613 100%)}
 .dfoot__grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:clamp(20px,3vw,44px)}
 @media(max-width:760px){.dfoot__grid{grid-template-columns:1fr;gap:var(--d-s5)}}
 .dfoot__brand{font-family:var(--d-serif);font-size:clamp(20px,2.4vw,30px);font-weight:700;letter-spacing:-.02em;line-height:1.1}
@@ -628,9 +646,12 @@ img{max-width:100%}
    —— 滚动时整块钉在视口里，三步依次换场；窄屏自动退化成普通三段，
       不钉、不占高，手机上不会被一屏卡住。
    -------------------------------------------------------------------------- */
-.how3{background:var(--d-stage);color:var(--d-stage-ink);height:190vh;position:relative}
+/* 起始色 = 首屏结束色（#1D1815），两块接缝彻底看不见 */
+.how3{color:var(--d-stage-ink);height:220vh;position:relative;
+  background:linear-gradient(180deg,var(--d-night-3) 0%,#262019 48%,#1B1613 100%)}
 .how3__pin{position:sticky;top:0;height:100vh;display:flex;align-items:center;overflow:hidden;
   padding-top:var(--d-nav-h)}
+.how3__pin > .wrap3{position:relative;z-index:1;width:100%}
 .how3__k{margin:0;font-family:var(--d-mono);font-size:10.5px;letter-spacing:.22em;
   text-transform:uppercase;color:var(--d-hair)}
 .how3__stage{position:relative;margin-top:clamp(18px,2.6vw,32px);min-height:clamp(210px,30vh,300px)}

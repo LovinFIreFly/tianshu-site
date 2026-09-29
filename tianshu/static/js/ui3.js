@@ -13,6 +13,8 @@
 (function () {
   'use strict';
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* 桌面鼠标（有精确指针）才做吸附和磁吸：触屏上这两样只会帮倒忙 */
+  var finePtr = !!(window.matchMedia && window.matchMedia('(pointer:fine)').matches);
   function $(s, r) { return (r || document).querySelector(s); }
   function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
 
@@ -151,16 +153,16 @@
   });
 
   /* ---------------------------------------------------------------- ⑥ 光斑 */
-  var hero = $('.dhero');
-  if (hero && !reduce) {
-    var glow = $('.dhero__glow', hero);
-    if (glow) {
-      hero.addEventListener('pointermove', function (e) {
-        var r = hero.getBoundingClientRect();
-        hero.style.setProperty('--mx', (e.clientX - r.left) + 'px');
-        hero.style.setProperty('--my', (e.clientY - r.top) + 'px');
-      });
-    }
+  /* 首屏和"怎么玩"共用：光标在暗场里带一团印色光（--mx/--my 喂给 .glow3） */
+  if (!reduce) {
+    $$('.dhero, .how3').forEach(function (sec) {
+      var box = sec.classList.contains('how3') ? ($('.how3__pin', sec) || sec) : sec;
+      sec.addEventListener('pointermove', function (e) {
+        var r = box.getBoundingClientRect();
+        sec.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+        sec.style.setProperty('--my', (e.clientY - r.top) + 'px');
+      }, { passive: true });
+    });
   }
 
   /* ------------------------------------------------- ⑦ 首页"怎么玩"滚动分镜
@@ -188,10 +190,65 @@
     }
   }
 
-  /* ---------------------------------------------------------------- ⑧ 磁吸 */
+  /* ------------------------------------------------- ⑧ 吸附：一划一下，稳稳落到下一屏
+     首屏往下划 → 平滑迅速对齐到"怎么玩"的开头；
+     在分镜里每停一次 → 吸附到当前这一步的起点（0 / 1/3 / 2/3 / 结尾）。
+     只在桌面（分镜真的钉住时）启用；手机上分镜会退化成普通三段，这里自动不生效。 */
+  if (how && !reduce && finePtr) {
+    var howPin = $('.how3__pin', how);
+    var howTop = 0, howStep = 0, howTotal = 0, howGuard = 0, howTmr = null, howAnchor = null;
+    var lastY = 0, scrollDir = 0;
+    function measure() {
+      howTop = how.getBoundingClientRect().top + (window.pageYOffset || 0);
+      howTotal = Math.max(0, how.offsetHeight - window.innerHeight);
+      howStep = howTotal / Math.max(1, how.querySelectorAll('.how3__step').length);
+    }
+    function glide(top) {
+      howGuard = Date.now() + 800;
+      howAnchor = top;
+      window.scrollTo({ top: top, behavior: 'smooth' });
+    }
+    function snap() {
+      if (!howPin || window.getComputedStyle(howPin).position !== 'sticky') return;
+      var y = window.pageYOffset || 0;
+      if (Date.now() < howGuard) return;
+      var dir = scrollDir;          /* 方向在滚动时记下来（延时后 lastY 已经等于 y 了） */
+
+      /* ① 还在首屏：往下划超过大半屏，就平滑对齐到分镜开头 */
+      if (y < howTop - 6) {
+        if (dir === 1 && y > howTop - window.innerHeight * 0.5) glide(howTop);
+        return;
+      }
+      /* ② 已经划出去了，不再管 */
+      if (y > howTop + howTotal + 6) return;
+
+      /* ③ 在分镜里：滚过 1/4 步才算"翻页"，否则吸回原位
+            （这样鼠标滚一格就是稳稳一步，不会一格一格被弹回来） */
+      if (howAnchor === null) {
+        howAnchor = howTop + Math.round((y - howTop) / howStep) * howStep;
+      }
+      var d = y - howAnchor;
+      var near = Math.abs(d) < howStep * 0.26
+        ? howAnchor
+        : howAnchor + Math.round(d / howStep) * howStep;
+      near = Math.max(howTop, Math.min(howTop + howTotal, near));
+      if (Math.abs(near - y) < 8) { howAnchor = near; return; }
+      glide(near);
+    }
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', function () {
+      var y = window.pageYOffset || 0;
+      if (y > lastY) scrollDir = 1; else if (y < lastY) scrollDir = -1;
+      lastY = y;
+      if (howTmr) clearTimeout(howTmr);
+      howTmr = setTimeout(snap, 150);
+    }, { passive: true });
+  }
+
+  /* ---------------------------------------------------------------- ⑨ 磁吸 */
   /* 桌面鼠标才做：按钮朝光标方向偏 3~4px，松开回位（Duolingo 式微交互） */
-  var fine = window.matchMedia && window.matchMedia('(pointer:fine)').matches;
-  if (!reduce && fine) {
+  if (!reduce && finePtr) {
     $$('.b3, .btn').forEach(function (btn) {
       btn.addEventListener('pointermove', function (e) {
         var r = btn.getBoundingClientRect();
