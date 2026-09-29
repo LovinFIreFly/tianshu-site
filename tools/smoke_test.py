@@ -1139,8 +1139,8 @@ check('「我的」里能看到自己写过的评价（星级 + 内容）',
 _s, _ui3 = guest.get('/static/js/ui3.js')
 check('光斑是缓动跟随（rAF 每帧靠近），不是瞬移贴上去',
       'requestAnimationFrame(frame)' in _ui3)
-check('光斑强度给够了（原来 8% 透明度，深底上等于没画）',
-      'rgba(200,50,30,.26)' in _css3 and 'rgba(255,120,86,.16)' in _css3)
+check('光斑强度给够了（原来 8% 透明度，深底上等于没画；现在压到不刺眼）',
+      'rgba(200,50,30,.16)' in _css3 and 'rgba(255,120,86,.10)' in _css3)
 for _p in ('/?browse=1', '/scripts/%s' % sc['id'], '/welcome'):
     _s, _h = guest.get(_p)
     check('暗场首屏挂了光斑层 %s' % _p, _s == 200 and 'glow3' in _h, 'HTTP %s' % _s)

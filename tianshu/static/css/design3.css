@@ -236,8 +236,8 @@ img{max-width:100%}
 .glow3{position:absolute;inset:0;pointer-events:none;z-index:0;opacity:0;
   transition:opacity .5s var(--d-ease);
   background:
-    radial-gradient(180px 140px at var(--mx,16%) var(--my,26%),rgba(255,120,86,.16),transparent 70%),
-    radial-gradient(560px 420px at var(--mx,16%) var(--my,26%),rgba(200,50,30,.26),transparent 72%)}
+    radial-gradient(180px 140px at var(--mx,16%) var(--my,26%),rgba(255,120,86,.10),transparent 70%),
+    radial-gradient(460px 340px at var(--mx,16%) var(--my,26%),rgba(200,50,30,.16),transparent 72%)}
 .dhero:hover .glow3,.how3__pin:hover .glow3{opacity:1}
 /* 暗场版块（剧本详情 / 车队详情 / 欢迎页的首屏）也吃这团光：
    得自己 position:relative + overflow:hidden，否则那层绝对定位会跑去认 body 当爹 */
@@ -314,11 +314,8 @@ img{max-width:100%}
 .ticker3 span{display:block;margin-top:3px;font-family:var(--d-mono);font-size:10px;letter-spacing:.14em;
   text-transform:uppercase;color:var(--d-ink-4)}
 
-/* 光标跟随光斑（桌面） */
-.dhero__glow{position:absolute;inset:0;pointer-events:none;z-index:0;opacity:0;transition:opacity .4s;
-  background:radial-gradient(280px 200px at var(--mx,50%) var(--my,20%),var(--d-accent-05),transparent 70%)}
-.dhero:hover .dhero__glow{opacity:1}
-.dhero > *:not(.dhero__glow){position:relative;z-index:1}
+/* 光标跟随光斑：内容必须压在光斑上面，光斑 itself 不参与交互 */
+.dhero > *:not(.glow3),.how3__pin > *:not(.glow3){position:relative;z-index:1}
 
 /* 宽屏：首屏改成**非对称两栏** —— 左边字压左基线，右边挂场次牌（不再居中对齐） */
 @media(min-width:1000px){

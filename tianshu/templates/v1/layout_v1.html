@@ -77,17 +77,18 @@
 <main class="page {% block main_class %}{% endblock %}">{% block body %}{% endblock %}</main>
 
 {% set in_tianshu_app = 'TianshuApp' in (request.headers.get('User-Agent') or '') %}
+{% set in_app_v1 = in_tianshu_app or in_shell %}
 <footer class="site-foot">
   <div class="site-foot__inner">
     <span>{{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}</span>
-    {% if _admin %}
+    {% if _admin and not in_app_v1 %}
     <div class="skin-bar">
       <span>版式预览：</span>
       <a href="{{ request.path }}?ui=2" class="{{ 'on' if ui_ver != '1' }}">二代 · 新骨架</a>
       <a href="{{ request.path }}?ui=1" class="{{ 'on' if ui_ver == '1' }}">一代 · 老版式</a>
     </div>
     {% endif %}
-    {% if _admin and _skins %}
+    {% if _admin and _skins and not in_app_v1 %}
     <div class="skin-bar">
       <span>款式预览：</span>
       <a href="{{ request.path }}" class="{{ 'on' if cur_skin == 'playbill' }}">默认</a>

@@ -145,14 +145,15 @@
            download="甜薯剧本杀-电脑版.exe">💻 电脑版下载</a>
       </span>
       {% endif %}
-      {% if _admin %}
+      {# 版式/款式预览只在**电脑浏览器**里给管理员看；客户端壳里不要出现 #}
+      {% if _admin and not in_app %}
       <div class="skin-bar">
         <span>版式预览：</span>
         <a href="{{ request.path }}?ui=2" class="{{ 'on' if ui_ver != '1' }}">二代 · 新骨架</a>
         <a href="{{ request.path }}?ui=1" class="{{ 'on' if ui_ver == '1' }}">一代 · 老版式</a>
       </div>
       {% endif %}
-      {% if _admin and _skins %}
+      {% if _admin and _skins and not in_app %}
       <div class="skin-bar">
         <span>款式预览：</span>
         <a href="{{ request.path }}" class="{{ 'on' if cur_skin == 'playbill' }}">默认</a>
