@@ -1136,12 +1136,18 @@ def my_messages(user, limit=20):
 
 
 def community_posts(limit=60, me_phone=''):
-    """社区帖子，顺便标出"我点过赞没"（模板里好显示）"""
+    """社区帖子，顺便标出"我点过赞没"（模板里好显示）。
+    同时把发帖人头像/昵称带出来，社区页能显示头像。"""
     rows = sorted(db.rows('posts'), key=lambda x: -(x.get('at') or 0))[:limit]
+    users = {str(u.get('phone')): u for u in db.rows('users')}
     for p in rows:
         likes = [str(x) for x in p.get('likes') or []]
         p['likeCount'] = len(likes)
         p['liked'] = bool(me_phone) and me_phone in likes
+        author = users.get(str(p.get('phone') or ''))
+        profile = (author or {}).get('profile') or {}
+        p['avatar'] = profile.get('avatar') or ''
+        p['nick'] = profile.get('nick') or p.get('username') or '玩家'
     return rows
 
 
