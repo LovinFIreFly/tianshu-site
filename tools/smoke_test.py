@@ -223,8 +223,9 @@ s, _ = cus.post('/book', {'sid': sc['id'], 'ts_day': iso_of(day), 'time': '19:00
 bk = next((b for b in jread('bookings') if b.get('sid') == sc['id'] and b.get('ts') == day
            and b.get('status') == 'booked'), None)
 check('下单成功（日期是日历交的 ts_day）', bool(bk), (bk or {}).get('verifyCode'))
-check('拼车定金统一 ¥50（跟人数、总价都无关）',
-      bk and int(bk.get('deposit') or 0) == 50, '定金 ¥%s' % (bk or {}).get('deposit'))
+check('定金 = 人数 × 50（一人 50，拼车包车都一样）',
+      bk and int(bk.get('deposit') or 0) == 50 * int(bk.get('players') or 1),
+      '%s 人 → 定金 ¥%s' % ((bk or {}).get('players'), (bk or {}).get('deposit')))
 check('核销码是 6 位', bk and len(str(bk.get('verifyCode'))) == 6)
 check('选角记上了', bk and bk.get('role') == '阿甲')
 # 同一个角色第二个人不能选
@@ -301,20 +302,24 @@ check('确认之后客人才看得到核销码', s == 200 and str(bk.get('verify
 s, html = admin.get('/admin/bookings?status=all')
 check('管理员/后台一直能看到核销码', str(bk.get('verifyCode')) in html)
 
-# 包车还是按比例算定金（一口价只给拼车）
+# 包车：定金同样一人 50；游玩费 = 单价 × 人数（玩完再付）
 cus.post('/book', {'sid': sc['id'], 'ts': ts_in(4), 'time': '20:00', 'players': 2, 'mode': '包车'})
 bk2 = next((b for b in jread('bookings') if b.get('sid') == sc['id'] and b.get('ts') == ts_in(4)
             and b.get('status') == 'booked'), None)
-check('包车定金仍按比例（总价 × 30%）',
-      bk2 and int(bk2.get('deposit') or 0) == round(int(bk2.get('amount') or 0) * 0.3),
-      '%s × 30%% = %s' % ((bk2 or {}).get('amount'), (bk2 or {}).get('deposit')))
+check('包车定金也按人头（一人 50）',
+      bk2 and int(bk2.get('deposit') or 0) == 50 * int(bk2.get('players') or 1),
+      '%s 人 → 定金 ¥%s' % ((bk2 or {}).get('players'), (bk2 or {}).get('deposit')))
+check('游玩费 = 单价 × 人数（定金不抵进去，它是要退回的）',
+      bk2 and int(bk2.get('amount') or 0) == 100 * int(bk2.get('players') or 1),
+      '游玩费 ¥%s' % (bk2 or {}).get('amount'))
 o2 = next((x for x in jread('pays') if x.get('bid') == (bk2 or {}).get('id')), None)
 cus.post('/order/%s/pay' % (o2 or {}).get('id'), {})       # 前台现金收的，可以直接标已付
 s, html = cus.post('/order/%s/refund' % (o2 or {}).get('id'), {})
 o2 = next((x for x in jread('pays') if x.get('id') == (o2 or {}).get('id')), {})
 check('提前 4 天取消 → 全额退定金', o2.get('status') == 'refunded', '状态=%s' % o2.get('status'))
 
-# 尾款流程（2026-09 新规矩）：核销后不弹评分 → 「立即支付尾款」→ 小客服页提交 → 客服/DM 确认 → 解锁点评
+# 游玩费流程（2026-09 门店规矩）：核销后不弹评分 → 「支付游玩费」→ 小客服页提交 →
+# 客服/DM 确认 → 定金按规矩退回 + 解锁点评
 # 用一个干净的新号走全流程（cus 的名下还有别的单，页面断言会被干扰）
 cus7 = Client()
 cus7.post('/register', {'phone': '13900007666', 'username': '尾款测试号', 'password': '123456',
@@ -324,26 +329,29 @@ cus7.post('/book', {'sid': sc['id'], 'ts_day': iso_of(day), 'time': '19:00', 'pl
 _bk9 = next((b for b in jread('bookings') if b.get('phone') == '13900007666'
              and b.get('status') == 'booked'), None)
 _o9 = next((x for x in jread('pays') if x.get('bid') == (_bk9 or {}).get('id')), None)
-check('尾款 = 总价 - 定金（>0 才有得收）',
-      _o9 and int(_o9.get('amount') or 0) - int(_o9.get('deposit') or 0) > 0,
-      '总价 %s 定金 %s' % ((_o9 or {}).get('amount'), (_o9 or {}).get('deposit')))
+check('游玩费 = 总价（定金是要退回的，不在这里抵）',
+      _o9 and int(_o9.get('amount') or 0) > 0,
+      '游玩费 %s 定金 %s' % ((_o9 or {}).get('amount'), (_o9 or {}).get('deposit')))
 s, html = cus7.get('/me')
-check('玩完之前不显示「立即支付尾款」', '立即支付尾款' not in html)
+check('玩完之前不显示「支付游玩费」', '支付游玩费' not in html)
 admin.post('/admin/verify', {'code': (_bk9 or {}).get('verifyCode')})
 s, html = cus7.get('/me')
-check('核销后出现「立即支付尾款」，且不再有「取消 / 退定金」',
-      '立即支付尾款' in html and '取消 / 退定金' not in html)
-_bal9 = int((_o9 or {}).get('amount') or 0) - int((_o9 or {}).get('deposit') or 0)
+check('核销后出现「支付游玩费」，且不再有「取消 / 退定金」',
+      '支付游玩费' in html and '取消 / 退定金' not in html)
+_bal9 = int((_o9 or {}).get('amount') or 0)
 s, html = cus7.get('/me/pay/%s' % (_o9 or {}).get('id'))
-check('尾款支付页走小客服，金额是尾款', s == 200 and '尾款' in html and ('¥%d' % _bal9) in html)
+check('游玩费支付页走小客服，金额是游玩费',
+      s == 200 and '游玩费' in html and ('¥%d' % _bal9) in html)
 s, _ = cus7.post('/order/%s/claim-bal' % (_o9 or {}).get('id'), {})
 _o9 = next((x for x in jread('pays') if x.get('id') == (_o9 or {}).get('id')), {})
-check('点完成 → 尾款待确认', _o9.get('balStatus') == 'claimed', '状态=%s' % _o9.get('balStatus'))
+check('点完成 → 游玩费待确认', _o9.get('balStatus') == 'claimed', '状态=%s' % _o9.get('balStatus'))
 s, html = cus7.get('/me')
 check('确认前点评没解锁（没有打几分表单）', '打几分' not in html)
 s, _ = admin.post('/admin/orders/%s/confirm' % (_o9 or {}).get('id'), {})
 _o9 = next((x for x in jread('pays') if x.get('id') == (_o9 or {}).get('id')), {})
-check('客服/DM 确认尾款', _o9.get('balStatus') == 'paid', '状态=%s' % _o9.get('balStatus'))
+check('客服/DM 确认游玩费', _o9.get('balStatus') == 'paid', '状态=%s' % _o9.get('balStatus'))
+check('确认游玩费时，定金自动退回（门店规矩）', bool(_o9.get('depositBack')),
+      'depositBack=%s' % _o9.get('depositBack'))
 s, html = cus7.get('/me')
 check('确认后点评解锁（打几分出现了）', '打几分' in html)
 

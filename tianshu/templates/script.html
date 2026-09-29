@@ -218,7 +218,8 @@
               <option value="new">自己单开一辆车（我来组队）</option>
               <option value="join"{{ ' disabled' if not open_cars }}>加入已有的车（现在 {{ open_cars|length }} 辆有位）</option>
             </select>
-            <span class="sub">拼车定金统一 ¥{{ car_deposit|int }}，先付定金占住位子；付完等小客服确认到账，核销码才会出现</span>
+            <span class="sub">定金 ¥{{ car_deposit|int }} / 人，先付定金占住位子（<b>玩完由小客服退回</b>；没到场或中途跳车不退）；
+              付完等小客服确认到账，核销码才会出现</span>
             {% if settings.carTags %}
             <label style="display:block;margin-top:10px">给这车贴标签（可多选）</label>
             <div class="chips3" style="margin-top:6px">
@@ -276,8 +277,8 @@
 
           {% if me %}
           <button class="b3 b3--accent b3--wide" type="submit">提交预约</button>
-          <p class="sub">拼车定金统一 ¥{{ car_deposit|int }}；包车定金 = 总价 × {{ (settings.depositRatio * 100)|int }}%。
-            付完定金、小客服确认到账后，核销码才会显示。</p>
+          <p class="sub">定金 ¥{{ car_deposit|int }} / 人（拼车、包车都一样）：付完定金、小客服确认到账后核销码才显示；
+            <b>玩完由小客服退回</b>，没到场或中途跳车的不退。游玩费玩完再付（也可用券抵）。</p>
           {% else %}
           <a class="b3 b3--solid b3--wide" href="{{ url_for('user.login', next=request.path) }}">登录后预约</a>
           {% endif %}
@@ -327,7 +328,8 @@
 
           <div class="note3" style="margin-top:var(--d-s5)">
             <b>到店流程</b><br>
-            下单 → 付定金 → 小客服确认到账 → 到店报 6 位核销码 → 玩完再付尾款、打分。
+            下单 → 付定金（一人 ¥{{ car_deposit|int }}）→ 小客服确认到账 → 到店报 6 位核销码 →
+            玩完付游玩费（<b>定金由小客服退回</b>）→ 小客服确认到账后给剧本和 DM 打分。
           </div>
         </div>
       </div>

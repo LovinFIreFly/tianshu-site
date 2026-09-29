@@ -84,11 +84,9 @@
 
     <h3>定金与券</h3>
     <div class="form-grid">
-      <div class="field"><label>定金比例（0.3 = 30%，包车用）</label>
-        <input name="depositRatio" value="{{ settings.depositRatio }}"></div>
-      <div class="field"><label>拼车定金（元，一口价）</label>
+      <div class="field"><label>定金（元 / 人：拼车包车都一样。<b>玩完由小客服退回</b>；没到场或中途跳车不退）</label>
         <input name="carDeposit" value="{{ settings.carDeposit }}"></div>
-      <div class="field"><label>邀请返利券（元，双方各得一张）</label>
+      <div class="field"><label>邀请返利券（元，双方各得一张 · 付游玩费时抵扣）</label>
         <input name="inviteCoupon" value="{{ settings.inviteCoupon }}"></div>
       <div class="field"><label>免费取消时限（小时）</label>
         <input name="freeCancelHours" value="{{ settings.freeCancelHours }}"></div>
@@ -169,6 +167,33 @@
 
     <button class="btn btn-primary" type="submit">保存设置</button>
     <p class="sub mt">改完点这颗保存，立刻生效（也存在 data/settings.json 里，能直接改文件）。</p>
+  </form>
+</div>
+
+{# ---------------------------------------------------------------- 门店群二维码
+   单独一个表单：HTML 里表单不能嵌套，而且这里要收文件（/settings 那个是纯文本字段）。 #}
+<h2>门店群二维码</h2>
+<div class="panel">
+  <p class="sub" style="margin:0 0 14px">
+    客人点「支付定金」或「支付游玩费」那一页，会显示这张图 —— 方便他们进群约本、问进度。
+    建议 500×500 左右的 png / jpg（微信、QQ、支付宝的群二维码都行）。
+  </p>
+  {% if settings.groupQr %}
+  <img src="{{ settings.groupQr }}" alt="门店群二维码"
+       style="width:150px;border:1px solid var(--rule);border-radius:var(--d-r);display:block;margin:0 0 14px">
+  {% else %}
+  <p class="sub" style="margin:0 0 14px">还没传 —— 支付页上就不会出现这一块。</p>
+  {% endif %}
+  <form method="post" action="{{ url_for('admin.settings_group_qr') }}" enctype="multipart/form-data"
+        class="row" style="gap:12px;align-items:flex-end">
+    <div class="field" style="flex:0 1 320px">
+      <label>上传二维码图片（png / jpg / webp，≤700KB）</label>
+      <input type="file" name="qr" accept="image/png,image/jpeg,image/webp">
+    </div>
+    <button class="b3 b3--sm b3--solid" type="submit">保存二维码</button>
+    {% if settings.groupQr %}
+    <button class="b3 b3--sm" type="submit" name="remove" value="1">删掉这张</button>
+    {% endif %}
   </form>
 </div>
 

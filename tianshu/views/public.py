@@ -233,10 +233,10 @@ def review_like(rid):
 
 @bp.get('/img/<sub>/<name>')
 def upload_img(sub, name):
-    """读上传的图片（封面 / 头像 / 形象照）。只让读 data/img/ 里这几类，别的一律不给"""
+    """读上传的图片（封面 / 头像 / 形象照 / 门店群二维码）。只让读 data/img/ 里这几类，别的一律不给"""
     from flask import abort, send_from_directory
     from config import IMG_DIR
-    if sub not in ('cover', 'avatar', 'role', 'dm') or '/' in name or '..' in name:
+    if sub not in ('cover', 'avatar', 'role', 'dm', 'qr') or '/' in name or '..' in name:
         abort(404)
     return send_from_directory(os.path.join(IMG_DIR, sub), name)
 

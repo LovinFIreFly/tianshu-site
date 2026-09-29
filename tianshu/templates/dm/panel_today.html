@@ -15,15 +15,15 @@
 </div>
 
 {% if bal_wait %}
-{# 客人在支付页点过"我已完成支付"的尾款 —— 谁在场谁顺手确认，确认完客人才能点评 #}
+{# 客人在支付页点过"我已完成支付"的游玩费 —— 谁在场谁顺手确认，确认完客人才解锁点评 #}
 <div class="panel mt">
-  <h3>待确认尾款（{{ bal_wait|length }}）</h3>
+  <h3>待确认游玩费（{{ bal_wait|length }}）</h3>
   {% for x in bal_wait %}
   <div class="between" style="padding:var(--sp-2) 0;border-top:1px dashed var(--rule)">
     <span>{{ x.b.title }} · {{ x.b.day }} {{ x.b.time }} · {{ x.b.username }}
       <b class="price">¥{{ x.bal }}</b></span>
     <form method="post" action="{{ url_for('dm.confirm_bal', oid=x.o.id) }}" style="display:inline">
-      <button class="btn btn-sm btn-primary" type="submit">确认收尾款</button></form>
+      <button class="btn btn-sm btn-primary" type="submit">确认收游玩费</button></form>
   </div>
   {% endfor %}
 </div>

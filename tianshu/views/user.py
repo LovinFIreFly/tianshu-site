@@ -410,11 +410,12 @@ def pay_deposit(oid):
     if not o:
         flash('没找到这一单（可能已经取消了）', 'warn')
         return redirect(url_for('user.me'))
-    # 这页两用：玩之前是"定金"，玩完（核销）之后是"尾款" —— 金额和文案跟着变
+    # 这页两用：玩之前是"定金"（一人 50，玩完退回），玩完（核销）之后是"游玩费"（全价）
     b = next((x for x in db.rows('bookings') if str(x.get('id')) == str(o.get('bid'))), {})
     if str(b.get('status')) in ('arrived', 'done') and o.get('balStatus') != 'paid':
-        o['due'] = max(0, int(o.get('amount') or 0) - int(o.get('deposit') or 0))
-        o['dueKind'] = '尾款'
+        # 玩完付的是**游玩费全价**：定金是要退回的，不在这里抵
+        o['due'] = max(0, int(o.get('amount') or 0))
+        o['dueKind'] = '游玩费'
         o['dueAct'] = 'claim-bal'
     else:
         o['due'] = int(o.get('payable') if o.get('payable') is not None else o.get('deposit') or 0)

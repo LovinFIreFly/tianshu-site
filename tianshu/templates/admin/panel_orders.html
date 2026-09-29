@@ -52,7 +52,7 @@
         {% if o.status in ('unpaid', 'claimed') or o.balStatus == 'claimed' %}
         <form method="post" action="{{ url_for('admin.order_confirm', oid=o.id) }}" style="display:inline">
           <button class="btn btn-sm {{ 'btn-primary' if (o.status == 'claimed' or o.balStatus == 'claimed') else '' }}"
-                  type="submit">{{ '确认收尾款' if o.balStatus == 'claimed' else '确认支付定金' }}</button></form>
+                  type="submit">{{ '确认收游玩费' if o.balStatus == 'claimed' else '确认支付定金' }}</button></form>
         {% else %}<span class="sub">—</span>{% endif %}
       </td>
     </tr>

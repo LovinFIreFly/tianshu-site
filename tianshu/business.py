@@ -251,6 +251,15 @@ def car_deposit(st=None):
         return 50
 
 
+def deposit_per_person(st=None):
+    """定金：**一个人收多少钱**（默认 50，后台设置里能改）。
+
+    门店规矩：定金是押位子的钱，玩完由小客服退回；没到场 / 中途跳车的不退。
+    所以它跟"玩完再付的游玩费"是两笔钱，不能互相抵。
+    """
+    return car_deposit(st)
+
+
 def audit(who, role_name, text):
     """操作日志：谁在什么时候干了什么。后台「日志」页能看到"""
     rows = db.rows('logs')
@@ -1191,13 +1200,15 @@ def create_booking(user, form):
         price = float(join_car.get('price') or sc.get('price') or 0)     # 上车跟着车价，不另算指定 DM 加价
     else:
         price = float(sc.get('price') or 0) + (float(st['dmFee']) if form.get('dmPhone') else 0)
-    # 拼车：**每人各付各的** —— 这一单的总价就是自己那一份（单价），
-    # 尾款 = 单价 - 定金；同一辆车里别人那份由别人自己的单子付。
-    # 包车：车头一个人付所有人的钱 —— 总价 = 单价 × 人数，定金按比例。
-    amount = round(price) if mode == '拼车' else round(price * players)
-    deposit = car_deposit(st) if mode == '拼车' else round(amount * float(st['depositRatio']))
+    # 门店收费规则（2026-09 定的）：
+    #   · 定金：**统一一个人 50**（拼车、包车都一样）—— 这是押位子的钱，玩完由小客服退回；
+    #     没到场 / 中途跳车的，定金不退。
+    #   · 游玩费：玩完再付（= 单价 × 人数），也走小客服确认那一步。
+    #   · 优惠券抵的是游玩费（定金是要退回去的，抵它没意义）。
+    amount = round(price * players)                    # 游玩费（玩完再付）
+    deposit = deposit_per_person(st) * players         # 定金 = 一人 50 × 人数
     if coupon:
-        deposit = max(0, deposit - int(coupon.get('amount') or 0))
+        amount = max(0, amount - int(coupon.get('amount') or 0))
 
     # ⑤ 会员余额抵扣：充过钱的客人可以直接用余额顶定金（顶完剩下的才需要付现）
     used = 0
@@ -1242,16 +1253,18 @@ def create_booking(user, form):
                % (user.get('username'), sc.get('title'), booking['day'], tm), 'car')
     # 通知里**不写核销码**：得等定金确认了才给客人看，不然等于白送一个码
     notify(user.get('phone'), '预约成功，等付定金',
-           '《%s》%s %s 先给你留着位子了，定金 ¥%d。付完定金、小客服确认到账后，'
+           '《%s》%s %s 先给你留着位子了，定金 ¥%d（一人 %d 元）。付完定金、小客服确认到账后，'
            '核销码才会出现在「我的预约」里。'
-           % (sc.get('title'), booking['day'], tm, deposit), 'booking')
+           '玩完由小客服把定金退回；没到场或中途跳车的不退。'
+           % (sc.get('title'), booking['day'], tm, deposit, deposit_per_person(st)), 'booking')
     # 门店这边也要第一时间知道：客人挑好时间了，去排期页给这条安排房间和 DM
     notify_staff('有新预约待安排',
                  '%s 约《%s》%s %s（%s · %d 人）—— 去排期页给这条安排房间和 DM'
                  % (user.get('username'), sc.get('title'), booking['day'], tm, mode, players), 'booking')
     audit(user.get('username'), role_of(user),
           '%s《%s》%s %s' % ('上车' if join_car else '预约', sc.get('title'), booking['day'], tm))
-    return True, '预约成功！定金 ¥%d —— 付完等小客服确认，核销码就会显示' % deposit, booking
+    return True, ('预约成功！定金 ¥%d（一人 %d 元，玩完退回）—— 付完等小客服确认，核销码就会显示'
+                  % (deposit, deposit_per_person(st))), booking
 
 
 # ---------------------------------------------------------------- 订单 ★
@@ -1296,36 +1309,44 @@ def order_action(user, order_id, action, is_staff=False):
                % (order.get('title'), order.get('day'), order.get('time'), order.get('deposit')), 'pay')
         return True, '已确认收到定金 —— 客人那边现在能看到核销码了'
 
-    # 尾款：玩完（核销）之后结清剩下的钱。客人点"我已完成支付"→ claimed；
-    # 客服 / DM 确认到账 → paid，**这时客人的点评才解锁**（玩完直接跑单的口子堵上）。
+    # 游玩费：玩完（核销）之后付的钱 = 总价（定金是要退回的，不在这里抵）。
+    # 客人点"我已完成支付" → claimed；客服 / DM 确认到账 → paid，
+    # **这时定金按规矩退回，客人的点评也解锁**（玩完直接跑单的口子堵上）。
     if action == 'claim-bal':
-        bal = max(0, int(order.get('amount') or 0) - int(order.get('deposit') or 0))
+        bal = max(0, int(order.get('amount') or 0))
         if order.get('balStatus') == 'paid':
-            return False, '尾款已经确认过了，不用再交'
+            return False, '游玩费已经确认过了，不用再交'
         if bal <= 0:
-            return False, '这一单没有尾款要交'
+            return False, '这一单没有游玩费要交'
         order.update(balStatus='claimed', balClaimedAt=now_ms())
         db.write('pays', pays)
-        notify(order.get('phone'), '尾款已提交，等门店确认',
-               '《%s》%s 的尾款 ¥%d —— 小客服确认到账后，就能去「我的预约」点评这场啦。'
+        notify(order.get('phone'), '游玩费已提交，等门店确认',
+               '《%s》%s 的游玩费 ¥%d —— 小客服确认到账后，就能去「我的预约」点评这场啦。'
                % (order.get('title'), order.get('day'), bal), 'pay')
-        notify_staff('有客人提交了尾款，去确认一下',
-                     '%s《%s》的尾款 ¥%d 待确认 —— 确认完客人才能点评。'
+        notify_staff('有客人提交了游玩费，去确认一下',
+                     '%s《%s》的游玩费 ¥%d 待确认 —— 确认完客人的点评才解锁。'
                      % (order.get('username'), order.get('title'), bal), 'pay')
         return True, '已提交，等小客服确认到账（确认后就能点评了）'
 
     if action == 'pay-bal':
-        bal = max(0, int(order.get('amount') or 0) - int(order.get('deposit') or 0))
+        bal = max(0, int(order.get('amount') or 0))
         if order.get('balStatus') == 'paid':
-            return False, '这单的尾款已经确认过了'
+            return False, '这单的游玩费已经确认过了'
+        # 玩完 → 定金按门店规矩退回（没到场 / 中途跳车的单不会被核销，所以走不到这里）
+        back = 0 if order.get('depositBack') else int(order.get('deposit') or 0)
         order.update(balStatus='paid', balPaidAt=now_ms())
+        if back:
+            order['depositBack'] = now_ms()
         db.write('pays', pays)
-        notify(order.get('phone'), '尾款已确认 ✅',
-               '《%s》%s 的尾款 ¥%d 收到了 —— 去「我的预约」点评这场吧，等你一句话～'
-               % (order.get('title'), order.get('day'), bal), 'pay')
+        notify(order.get('phone'), '游玩费已确认 ✅',
+               '《%s》%s 的游玩费 ¥%d 收到了。%s去「我的预约」给剧本和 DM 打分吧，等你一句话～'
+               % (order.get('title'), order.get('day'), bal,
+                  ('定金 ¥%d 也一起原路退回了。' % back) if back else ''), 'pay')
         audit((user or {}).get('username') or '门店', 'staff',
-              '确认《%s》尾款 ¥%d' % (order.get('title'), bal))
-        return True, '已确认收到尾款 —— 客人那边的点评解锁了'
+              '确认《%s》游玩费 ¥%d%s' % (order.get('title'), bal,
+                                        ('、退定金 ¥%d' % back) if back else ''))
+        return True, ('已确认收到游玩费%s —— 客人那边的点评解锁了'
+                      % ('、定金已退回' if back else ''))
 
     if action == 'refund':
         if order.get('status') not in ('paid', 'unpaid', 'claimed'):

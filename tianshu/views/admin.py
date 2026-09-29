@@ -537,6 +537,31 @@ def mail_test():
     return redirect(url_for('admin.dashboard'))
 
 
+@bp.post('/settings/group-qr')
+@staff_required
+def settings_group_qr():
+    """门店群二维码：传一张图，客人「支付定金 / 游玩费」那一页就会显示它。
+
+    单独一个路由（不是塞进 /settings）：HTML 里表单不能嵌套，而且这里要收文件。
+    """
+    rows = db.read('settings') or {}
+    if request.form.get('remove'):
+        rows['groupQr'] = ''
+        db.write('settings', rows)
+        business.audit(current_user().get('username'), role(), '删掉了门店群二维码')
+        flash('群二维码删掉了（支付页不再显示）', 'ok')
+        return redirect(url_for('admin.dashboard') + '#dash')
+    url, err = business.save_upload(request.files.get('qr'), 'qr')
+    if not url:
+        flash('二维码没传上：%s' % err, 'warn')
+    else:
+        rows['groupQr'] = url
+        db.write('settings', rows)
+        business.audit(current_user().get('username'), role(), '换了门店群二维码')
+        flash('群二维码换好了（客人的支付页立刻能看到）', 'ok')
+    return redirect(url_for('admin.dashboard') + '#dash')
+
+
 @bp.post('/settings')
 @staff_required
 def settings():

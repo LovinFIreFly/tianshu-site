@@ -1,11 +1,12 @@
 {% extends 'base.html' %}
 {% block title %}支付{{ o.dueKind }} · {{ settings.shopName }}{% endblock %}
-{# 支付（定金 / 尾款）3.0：金额当主角，流程写在下面。字段与 action 全部保留。 #}
+{# 支付页（定金 / 游玩费共用）：金额当主角，客服微信 + 门店群二维码，流程写在下面。
+   字段与 action 全部保留。 #}
 {% block body %}
 
 <section class="dsec" style="border-bottom:0;padding:calc(var(--d-nav-h) + clamp(26px,5vw,64px)) 0 clamp(44px,7vw,96px)">
   <div class="wrap3 wrap3--tight">
-    <div style="max-width:560px;margin:0 auto">
+    <div style="max-width:600px;margin:0 auto">
 
       <p class="pagehead3__k">支付{{ o.dueKind }} · Payment</p>
       <h1 class="heading-hero" style="margin-top:var(--d-s3);font-size:clamp(44px,9vw,88px);color:var(--d-accent)">
@@ -14,6 +15,16 @@
       <p class="body-large" style="margin-top:var(--d-s4)">
         《{{ o.title }}》{{ o.day }} {{ o.time }} · {{ o.players }} 人
       </p>
+
+      {% if o.dueKind == '定金' %}
+      <p class="sub" style="margin-top:10px">
+        定金 ¥{{ settings.carDeposit }} / 人 —— 押个位子。<b>玩完由小客服退回</b>；没到场或中途跳车的不退。
+      </p>
+      {% else %}
+      <p class="sub" style="margin-top:10px">
+        玩完这一场再付游玩费（总价 ¥{{ o.amount }}，用券已抵掉的部分不算在内）。定金会另外退回。
+      </p>
+      {% endif %}
 
       <div class="note3" style="margin-top:clamp(20px,3vw,30px);border-left-color:var(--d-ink)">
         <div class="row" style="gap:12px;align-items:flex-start">
@@ -27,6 +38,22 @@
         </div>
       </div>
 
+      {% if settings.groupQr %}
+      <div class="note3" style="margin-top:var(--d-s4)">
+        <div class="row" style="gap:16px;align-items:flex-start;flex-wrap:nowrap">
+          <img src="{{ settings.groupQr }}" alt="{{ settings.shopName }} 顾客群二维码"
+               style="width:148px;flex:none;border:1px solid var(--d-rule);border-radius:var(--d-r)">
+          <div>
+            <b>{{ settings.shopName }} · 顾客群</b>
+            <p class="sub" style="margin-top:6px">
+              扫码进群：约本、拼车、问进度都在群里。<br>
+              加不上小客服微信的时候，群里也能找到人。
+            </p>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
       <form style="margin-top:var(--d-s5)" method="post" action="{{ url_for('user.order_act', oid=o.id, action=o.dueAct) }}">
         <button class="b3 b3--accent b3--wide" type="submit" style="height:52px">我已完成支付</button>
       </form>
@@ -35,7 +62,7 @@
         {% if o.dueKind == '定金' %}
         点完这一单会显示「待小客服确认」。小客服确认到账后，核销码才会出现在「我的预约」里。
         {% else %}
-        点完这一单会显示「待小客服确认」。客服 / DM 确认到账后，就可以去「我的预约」点评这场了。
+        点完这一单会显示「待小客服确认」。小客服确认到账后，就能去「我的预约」给剧本和 DM 打分了。
         {% endif %}
       </p>
 

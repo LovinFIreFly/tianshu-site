@@ -68,10 +68,8 @@
           </div>
 
           <p class="body-secondary" style="margin:12px 0 0">
-            {{ b.players }} 人 · 总价 ¥{{ b.amount or 0 }} · 定金 ¥{{ b.deposit or 0 }}
-            {% if b.mode == '拼车' %}（拼车各付各的：这里是<b>你自己那一份</b>，同车别人付各自的）{% endif %}
-            {% if b.mode == '包车' %}（包车：车头一个人付全车的钱）{% endif %}
-            {% if o %} · 订单：{{ {'unpaid':'待付定金','claimed':'待小客服确认','paid':'已付定金','refunded':'已退款','closed':'已关闭'}.get(o.status, o.status) }}{% endif %}
+            {{ b.players }} 人 · 游玩费 ¥{{ b.amount or 0 }} · 定金 ¥{{ b.deposit or 0 }}<span class="caption">（一人 ¥{{ settings.carDeposit }}，玩完退回）</span>
+            {% if o %} · 定金：{{ {'unpaid':'待付定金','claimed':'待小客服确认','paid':'已付定金','refunded':'已退款','closed':'已关闭'}.get(o.status, o.status) }}{% endif %}
           </p>
 
           {% if b.status != 'cancelled' %}
@@ -111,9 +109,9 @@
           </details>
           {% endif %}
 
-          {% if b.status in ('arrived', 'done') and b.id not in reviewed
-                and (not o or o.balStatus == 'paid' or (o.amount or 0) - (o.deposit or 0) <= 0) %}
-          <form class="row" method="post" action="{{ url_for('user.review', bid=b.id) }}"
+          {# 点评解锁条件：玩过（已核销）＋ 游玩费已被小客服确认到账 #}
+          {% if b.status in ('arrived', 'done') and b.id not in reviewed and o and o.balStatus == 'paid' %}
+          <form id="rev-{{ b.id }}" class="row" method="post" action="{{ url_for('user.review', bid=b.id) }}"
                 style="margin-top:14px;gap:10px;align-items:flex-end;flex-wrap:wrap;
                        border-top:1px solid var(--d-rule);padding-top:14px">
             <div class="field">
@@ -152,13 +150,21 @@
             <a class="b3 b3--sm" href="{{ url_for('user.pay_deposit', oid=o.id) }}">再看支付方式</a>
             {% endif %}
             {% if b.status in ('arrived', 'done') %}
-              {% set _bal = ((o.amount or 0) - (o.deposit or 0)) if o else 0 %}
+              {# 玩完这一场：先付游玩费（全价）→ 等小客服确认 → 确认后定金退回，按钮变成"去评价" #}
+              {% set _bal = (o.amount or 0) if o else 0 %}
               {% if o and o.balStatus == 'paid' %}
-                <span class="tag3 tag3--ok">已结清 ✓</span>
+                {% if b.id not in reviewed %}
+                <a class="b3 b3--sm b3--accent" href="#rev-{{ b.id }}">去评价（给剧本 / DM 打分）</a>
+                {% else %}
+                <span class="tag3 tag3--ok">已评价 ✓</span>
+                {% endif %}
+                <span class="tag3">游玩费已结清</span>
+                {% if o.depositBack %}<span class="tag3 tag3--ok">定金 ¥{{ o.deposit }} 已退回</span>{% endif %}
               {% elif o and o.balStatus == 'claimed' %}
-                <a class="b3 b3--sm" href="{{ url_for('user.pay_deposit', oid=o.id) }}">尾款待确认 · 再看支付方式</a>
-              {% elif _bal > 0 %}
-                <a class="b3 b3--sm b3--accent" href="{{ url_for('user.pay_deposit', oid=o.id) }}">立即支付尾款 ¥{{ _bal }}</a>
+                <span class="tag3">游玩费待小客服确认</span>
+                <a class="b3 b3--sm" href="{{ url_for('user.pay_deposit', oid=o.id) }}">再看支付方式</a>
+              {% elif o and o.status == 'paid' and _bal > 0 %}
+                <a class="b3 b3--sm b3--accent" href="{{ url_for('user.pay_deposit', oid=o.id) }}">支付游玩费 ¥{{ _bal }}</a>
               {% endif %}
             {% elif b.status != 'cancelled' %}
               {% if o and o.status in ('unpaid','paid') %}
@@ -358,7 +364,7 @@
               <div class="row" style="justify-content:space-between;padding:6px 0">
                 <span class="body-secondary">我的邀请码</span><b class="copy-mono" style="font-size:14px">{{ me.invite or '—' }}</b></div>
               <p class="body-secondary" style="margin:12px 0 0">朋友填你的邀请码注册，你俩各得一张 ¥{{ settings.inviteCoupon }} 抵扣券
-                （直接抵定金，90 天内有效）。</p>
+                （付游玩费时直接抵掉，90 天内有效）。</p>
             </div>
           </div>
 
