@@ -10,17 +10,19 @@
 
 <div class="adm">
   <aside class="adm-side" data-tabs="dm">
-    <div class="brand"><span>DM 工作台</span></div>
+    <div class="adm-brand"><span class="adm-brand-ic">🗡</span><span>DM 工作台</span></div>
+    <nav class="adm-navi">
     {% for key, name in NAVI %}
     <button type="button" class="navi {{ 'on' if loop.first }}" data-tab="{{ key }}">
-      <span class="mono" style="font-size:11px;color:var(--ink-4)">{{ '%02d' % loop.index }}</span>
-      <span>{{ name }}</span></button>
+      <span class="navi-no">{{ '%02d' % loop.index }}</span><span class="navi-name">{{ name }}</span></button>
     {% endfor %}
-    <div class="sp"></div>
-    {# 以前指向 admin 的 DM 结算页 —— 但 DM 不是员工，点进去直接 403「这块只有员工能进」。
-       改成跳自己工作台的结算块（今日面板底部那块，锚点 #my-pay）。 #}
-    <a class="navi" href="{{ url_for('dm.index') }}#my-pay"><span>→</span><span>我这个月能拿多少</span></a>
-    <a class="navi" href="{{ url_for('public.home') }}"><span>←</span><span>回到网站</span></a>
+    </nav>
+    <div class="adm-foot">
+      {# 以前指向 admin 的 DM 结算页 —— 但 DM 不是员工，点进去直接 403「这块只有员工能进」。
+         改成跳自己工作台的结算块（今日面板底部那块，锚点 #my-pay）。 #}
+      <a class="navi" href="{{ url_for('dm.index') }}#my-pay"><span>→</span><span>我这个月能拿多少</span></a>
+      <a class="navi" href="{{ url_for('public.home') }}"><span>←</span><span>回到网站</span></a>
+    </div>
   </aside>
 
   <main class="adm-main">
