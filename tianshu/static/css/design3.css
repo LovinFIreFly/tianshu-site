@@ -176,8 +176,8 @@ img{max-width:100%}
 /* 鼠标移到屏幕顶部时，栏目条自动滑回来（不用往上滚） */
 .tnav.nav-open .tnav__strip{height:32px;opacity:1;border-top-color:var(--d-rule);
   transition:height .26s var(--d-ease),opacity .2s}
-.tnav__strip a{position:relative;font-family:var(--d-mono);font-size:11.5px;letter-spacing:.16em;
-  text-transform:uppercase;color:var(--d-ink-3);padding:8px 0;white-space:nowrap;transition:color .2s}
+.tnav__strip a{position:relative;font-family:var(--d-sans);font-size:13.5px;letter-spacing:.04em;
+  color:var(--d-ink-3);padding:8px 0;white-space:nowrap;transition:color .2s}
 .tnav__strip a::after{content:"";position:absolute;left:0;right:0;bottom:4px;height:1.5px;background:var(--d-accent);
   transform:scaleX(0);transform-origin:left;transition:transform .28s var(--d-ease)}
 .tnav__strip a:hover{color:var(--d-ink)}
@@ -819,6 +819,12 @@ html.ts-leaving body{opacity:0;transform:translateY(-10px) scale(.995);
   padding:10px 12px;font-size:14px;color:var(--d-ink);transition:border-color .2s,background .2s}
 .adm-main .field > input:focus,.adm-main .field > select:focus,.adm-main .field > textarea:focus{
   border-color:var(--d-accent);background:var(--d-paper-3);outline:0}
+/* 文件选择框：原生控件也要走主题色，避免暗底上看不见文件名 */
+input[type="file"]{width:100%;color:var(--d-ink);font-size:13px}
+input[type="file"]::file-selector-button{padding:6px 12px;border:1px solid var(--d-rule);border-radius:var(--d-r);
+  background:var(--d-paper-2);color:var(--d-ink);font-family:var(--d-sans);font-size:12px;cursor:pointer;margin-right:10px;
+  transition:background .2s}
+input[type="file"]::file-selector-button:hover{background:var(--d-paper-3)}
 .adm-main .field .sub{margin:0;font-size:12px;line-height:1.6;color:var(--d-ink-4)}
 .adm-main code{font-family:var(--d-mono);font-size:12px;padding:1px 5px;background:var(--d-paper-2);
   border-radius:2px;color:var(--d-ink-2)}
@@ -835,8 +841,8 @@ html.ts-leaving body{opacity:0;transform:translateY(-10px) scale(.995);
 .adm-main .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;
   background:var(--d-rule);border:1px solid var(--d-rule);margin-bottom:clamp(14px,2vw,22px)}
 .adm-main .stats > *{background:var(--d-paper-3);padding:var(--d-s4) var(--d-s5)}
-.adm-main .stats b{display:block;font-family:var(--d-mono);font-size:clamp(18px,2.2vw,26px);letter-spacing:-.02em}
-.adm-main .stats span{display:block;margin-top:4px;font-family:var(--d-mono);font-size:10.5px;
+.adm-main .stats b{display:block;font-family:var(--d-mono);font-size:clamp(18px,2.2vw,26px);letter-spacing:-.02em;color:var(--d-ink)}
+.adm-main .stats span{display:block;margin-top:4px;font-family:var(--d-mono);font-size:11px;letter-spacing:.02em;color:var(--d-ink-3);text-transform:uppercase}
   letter-spacing:.12em;text-transform:uppercase;color:var(--d-ink-4)}
 /* 后台外壳：整体让出固定顶栏的高度（之前侧栏和第一屏标题被顶栏压住）。
    侧栏是"永远暗底"，所以它的字色不能用 --ink（某些款式把 --ink 设成近黑，就成了暗底暗字） */
@@ -1008,6 +1014,8 @@ html.ts-leaving body{opacity:0;transform:translateY(-10px) scale(.995);
 .badge,.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid var(--d-rule);
   border-radius:var(--d-pill);font-family:var(--d-mono);font-size:10.5px;letter-spacing:.06em;
   color:var(--d-ink-3);background:transparent;white-space:nowrap}
+.pill.on{background:var(--d-ink);color:var(--d-paper-3);border-color:var(--d-ink)}
+.pill:hover,.pill.on:hover{background:var(--d-paper-3);color:var(--d-ink)}
 .badge--brand,.badge--hot{background:var(--d-ink);border-color:var(--d-ink);color:var(--d-paper-3)}
 .badge--dark{background:var(--d-ink);border-color:var(--d-ink);color:var(--d-paper-3)}
 .badge--ok{background:var(--d-ok-bg);border-color:var(--d-ok);color:var(--d-ok)}
