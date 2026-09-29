@@ -37,17 +37,38 @@
           </form>
           <a class="b3 b3--sm b3--accent" href="#book">直接预约 ↓</a>
         </div>
+
+        {# 费用口径说清楚：页面上这个价是"游玩费"，不是定金 —— 不然客人会以为 ¥100 就能占位 #}
+        <p class="sub" style="margin:16px 0 0;color:var(--d-hair);max-width:52ch">
+          ¥{{ sc.price|int }} 是<b style="color:var(--d-stage-ink)">游玩费</b>（玩完再付）；
+          先付定金 ¥{{ car_deposit|int }}/人 占位 —— <b style="color:var(--d-stage-ink)">玩完由小客服退回</b>，
+          没到场 / 中途跳车的不退。
+        </p>
       </div>
 
       <div>
-        {# 封面：竖版 3:4，和海报卡一致 #}
+        {# 封面：竖版 3:4。有图就用图；没图就**现印一张戏单海报**（原来只放一个 emoji，
+           3:4 的大块头会空成一个黑洞）。海报用的全是已有字段，所以每本都自带封面。 #}
+        {% if sc.img %}
         <div style="border:1px solid var(--d-hair);border-radius:var(--d-r);overflow:hidden;background:rgba(255,255,255,.04)">
-          {% if sc.img %}
           <img src="{{ sc.img }}" alt="{{ sc.title }}" style="width:100%;aspect-ratio:3/4;object-fit:cover;display:block">
-          {% else %}
-          <div style="aspect-ratio:3/4;display:grid;place-items:center;font-size:104px">{{ sc.emoji or '🎭' }}</div>
-          {% endif %}
         </div>
+        {% else %}
+        {% set d = (sc.diff or 3)|int %}
+        <div class="poster3">
+          <span class="poster3__wm">{{ sc.emoji or '🎭' }}</span>
+          <p class="poster3__k">{{ sc.type or '剧本' }} · No.{{ sc.id }}</p>
+          <p class="poster3__t">{{ sc.title }}</p>
+          {% if sc.desc %}<p class="poster3__d">{{ sc.desc }}</p>{% endif %}
+          <div class="poster3__row">
+            <span class="poster3__m">
+              <b>{{ sc.players or '—' }}</b> 人 · <b>{{ sc.dur or '待定' }}</b> · 难度 {{ d }}/5
+              <span class="dots3">{% for i in range(5) %}<i class="{{ 'on' if i < d }}"></i>{% endfor %}</span>
+            </span>
+            <span class="poster3__s">{{ settings.shopName }}</span>
+          </div>
+        </div>
+        {% endif %}
       </div>
     </div>
   </div>

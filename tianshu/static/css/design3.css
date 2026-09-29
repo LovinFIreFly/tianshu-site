@@ -1043,6 +1043,43 @@ h2.heading-section{margin:0 0 var(--d-s3)}
 .auth-body .m-close{border:0;background:transparent;cursor:pointer;font-size:16px;color:var(--d-ink-3)}
 
 /* --------------------------------------------------------------------------
+   16e. 没封面时的「戏单海报」.poster3
+   ----------------------------------------------------------------------------
+   封面区是 3:4 的大块头，没图就空成一个黑洞。这里用剧本自己的信息现印一张海报：
+   类型 + 编号（顶部等宽小字）/ 巨字水印 / 剧本名 / 一句简介 / 底部规格条 + 店名。
+   数据全都已有，所以每一本都能"自带封面"，不依赖店主传图。
+   -------------------------------------------------------------------------- */
+.poster3{position:relative;aspect-ratio:3/4;display:flex;flex-direction:column;
+  padding:clamp(16px,2.2vw,26px);overflow:hidden;border:1px solid var(--d-hair);
+  border-radius:var(--d-r);background:linear-gradient(155deg,rgba(255,255,255,.075),
+  rgba(255,255,255,.022) 58%,transparent)}
+.poster3__wm{position:absolute;right:-.06em;top:50%;transform:translateY(-52%);
+  font-size:clamp(112px,17vw,200px);line-height:.78;opacity:.13;pointer-events:none;
+  user-select:none}
+.poster3__k{margin:0;font-family:var(--d-mono);font-size:11px;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--d-hair)}
+.poster3__t{margin:auto 0 0;font-family:var(--d-serif);font-weight:700;
+  font-size:clamp(26px,3.6vw,42px);line-height:1.05;letter-spacing:-.02em;
+  color:var(--d-stage-ink);overflow-wrap:anywhere}
+.poster3__d{margin:.55em 0 0;font-size:12.5px;line-height:1.62;color:var(--d-hair);
+  display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.poster3__row{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-top:clamp(12px,1.6vw,18px);padding-top:clamp(10px,1.4vw,14px);
+  border-top:1px solid var(--d-hair)}
+.poster3__m{font-family:var(--d-mono);font-size:11.5px;letter-spacing:.04em;color:var(--d-hair);
+  display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.poster3__m b{color:var(--d-stage-ink)}
+.poster3__s{font-family:var(--d-mono);font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--d-hair);text-align:right}
+/* 窄屏：海报不再竖着占半屏，横过来一行放下，省一屏滚动 */
+@media(max-width:620px){
+  .poster3{aspect-ratio:16/10;padding:14px}
+  .poster3__wm{font-size:104px;opacity:.1}
+  .poster3__t{font-size:22px}
+  .poster3__d{display:none}
+}
+
+/* --------------------------------------------------------------------------
    17. 一款到底
    ----------------------------------------------------------------------------
    只做**一套**版式（就是上面第 3 节那套：非对称编辑排版 + 细线编号 + 班次表）。
