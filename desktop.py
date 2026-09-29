@@ -65,6 +65,11 @@ def main():
         return
 
     url, why = pick_url(args)
+    # 告诉网站"我是从壳里进来的"：网址带一次 ?shell=desktop，
+    # 服务端记进 session（之后翻页都记得），页面上的「下载电脑版 / 装 App」就不显示了 ——
+    # 都在用客户端了，不用再下一遍。（手机壳 App 走 UA 里的 TianshuApp 标记）
+    if 'shell=' not in url:
+        url = url + ('&' if '?' in url else '?') + 'shell=desktop'
     print('%s · 正在打开：%s（%s）' % (APP_NAME, url, why))
 
     try:

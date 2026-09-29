@@ -8,8 +8,9 @@
 import os
 import secrets
 from datetime import timedelta
+from urllib.parse import urlencode
 
-from flask import Flask, abort, g, jsonify, render_template, request
+from flask import Flask, abort, g, jsonify, redirect, render_template, request, session
 from jinja2 import BaseLoader, FileSystemLoader, TemplateNotFound
 
 from config import IMG_DIR, ROOMS_DEFAULT, SEED_USERS, SESSION_DAYS, SETTINGS_DEFAULT, TEMPLATES_AUTO_RELOAD
@@ -111,6 +112,8 @@ def create_app():
                 'settings': business.get_settings(),
                 'unread': business.unread_count(u) if u else 0,
                 'dev_env': business.is_dev_request(),      # 本机开发才显示"通用码 1234"这类提示
+                # 在"客户端壳"里打开的？（电脑版 exe / 手机壳 App）—— 是的话就不显示"下载客户端"按钮
+                'in_shell': bool(session.get('shell')),
                 'ui_ver': business.ui_ver(),               # 这次渲染的是"一代"还是"二代"界面
                 'ui_versions': business.UI_VERSIONS,
                 'day_label': business.day_label, 'year': _t.strftime('%Y'),
@@ -131,6 +134,23 @@ def create_app():
             except Exception:
                 pass
             env._ui_ver = v
+
+    @app.before_request
+    def mark_shell():
+        """从**客户端壳**里进来的（网址带 ?shell=desktop）—— 记一笔。
+
+        壳里（电脑版 exe / 手机壳 App）的用户已经在用客户端了，
+        不该再看到「下载电脑版 / 装 App」这类按钮。记进 session 而不是网址：
+        翻页、跳转都跟着走；然后把网址擦干净跳回去，客人看不到多余的参数。
+
+        （手机壳 App 走的是 User-Agent 里的 TianshuApp 标记，见模板里的 in_app）
+        """
+        v = str(request.args.get('shell') or '').strip().lower()
+        if v in ('desktop', 'app', 'mobile'):
+            session['shell'] = 'mobile' if v == 'mobile' else 'desktop'
+            rest = {k: val for k, val in request.args.items() if k != 'shell'}
+            qs = urlencode(rest)
+            return redirect(request.path + (('?' + qs) if qs else ''))
 
     @app.before_request
     def csrf_guard():

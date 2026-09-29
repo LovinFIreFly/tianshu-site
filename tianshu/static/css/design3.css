@@ -621,9 +621,13 @@ img{max-width:100%}
 /* 款式预览条（只有管理员看得见） */
 .skin-bar{display:flex;flex-wrap:wrap;align-items:center;gap:7px;font-family:var(--d-mono);font-size:11px;
   letter-spacing:.06em;color:var(--d-stage-2)}
-/* 「电脑版下载」只在电脑上出现：手机那边有底栏的「装App」，别两个一起挤 */
+/* 「电脑版下载」只在电脑上出现、「装 App」只在手机上出现 —— 不要两个一起挤 */
 .desk-dl{display:inline}
-@media(max-width:760px){.desk-dl{display:none}}
+.phone-dl{display:none}
+@media(max-width:760px){
+  .desk-dl{display:none}
+  .phone-dl{display:inline}
+}
 /* 款式预览条在暗底页脚里：必须自己带底色，否则会白底白字看不见 */
 .skin-bar a{display:inline-block;padding:4px 10px;border:1px solid var(--d-hair);border-radius:var(--d-pill);
   background:rgba(255,255,255,.07);color:var(--d-stage-ink);white-space:nowrap;
@@ -1099,8 +1103,12 @@ h2.heading-section{margin:0 0 var(--d-s3)}
 .code-tip{margin:0;font-family:var(--d-mono);font-size:11.5px;color:var(--d-ok)}
 .code-tip.bad{color:var(--d-bad)}
 .agree{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--d-ink-3);cursor:pointer}
-.agree input{width:auto}
-.agree .dot{display:none}
+/* 原生复选框藏起来，勾选的样子由 .dot 画（样式在上面那段里）。
+   ⚠️ 这里原本还跟着一条"把 .dot 设为 display:none"的规则，它排在上面那段
+   .dot 样式**后面**、权重又一样，直接把勾选框盖没了 ——
+   于是"记住我"只剩一行文字（用户截图问过"那个小确认框在哪里"）。
+   改这块记住：可以藏原生 input，但**永远不要再把 .dot 藏起来**。 */
+.agree input{position:absolute;opacity:0;width:0;height:0}
 .hint-dev{margin:0;font-size:12.5px;color:var(--d-ink-4)}
 .foot-line{margin:var(--d-s5) 0 0;font-size:13px;color:var(--d-ink-3)}
 .back{display:inline-block;margin-bottom:var(--d-s4);font-family:var(--d-mono);font-size:11.5px;

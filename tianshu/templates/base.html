@@ -89,6 +89,9 @@
 <main class="page {% block main_class %}{% endblock %}">{% block body %}{% endblock %}</main>
 
 {% set in_tianshu_app = 'TianshuApp' in (request.headers.get('User-Agent') or '') %}
+{# 在客户端壳里（手机壳 App 看 UA，电脑版 exe 看 session 里的 shell 标记）——
+   已经在用客户端了，就别再显示"下载客户端"的按钮 #}
+{% set in_app = in_tianshu_app or in_shell %}
 {% set _ep = request.endpoint or '' %}
 {# 后台 / DM 工作台不铺整站页脚：那是店里干活的界面，
    页脚又高、又会跟左边那栏目录挤在一起（截图里已经叠上了）。 #}
@@ -132,8 +135,9 @@
       <span>{{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}</span>
       <span class="grow"></span>
       {# 电脑上给「电脑版下载」（套壳的 exe，双击就是独立窗口）；
-         手机上不显示 —— 手机那边有底栏那颗「装App」（apk）。 #}
-      {% if not in_tianshu_app %}
+         手机上不显示 —— 手机那边有底栏那颗「装App」（apk）。
+         壳里（正在用客户端）的人也不显示。 #}
+      {% if not in_app %}
       <span class="desk-dl">
         <a class="b3 b3--sm b3--ghost" style="border-color:var(--d-hair);color:inherit"
            href="{{ url_for('static', filename='app/tianshu-desktop.exe',
@@ -167,7 +171,7 @@
   <a href="{{ url_for('public.scripts') }}" class="{{ 'on' if (request.endpoint or '').startswith('public.script') }}"><span class="ico">📚</span><span>剧本库</span></a>
   <a href="{{ url_for('public.car') }}" class="{{ 'on' if request.endpoint == 'public.car' }}"><span class="ico">🚗</span><span>拼车</span></a>
   <a href="{{ url_for('user.me') }}" class="{{ 'on' if request.endpoint == 'user.me' }}"><span class="ico">👤</span><span>我的</span></a>
-  {% if not in_tianshu_app %}<a id="install-btn" class="js-install" href="{{ url_for('static', filename='app/tianshu.apk', v=static_v('app/tianshu.apk')) }}" download="甜薯剧本杀.apk"><span class="ico">📱</span><span>装App</span></a>{% endif %}
+  {% if not in_app %}<a id="install-btn" class="js-install" href="{{ url_for('static', filename='app/tianshu.apk', v=static_v('app/tianshu.apk')) }}" download="甜薯剧本杀.apk"><span class="ico">📱</span><span>装App</span></a>{% endif %}
 </nav>
 
 <script>

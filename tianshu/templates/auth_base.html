@@ -46,16 +46,22 @@
 
     {% block card %}{% endblock %}
 
-    {# 登录/注册页的页脚：同样是客人看的，不写"数据都在 data/ 里"这类实现细节 #}
-    {# 装 App 的入口：浏览器里 = 直接下载安装包；我们 App 里（UA 带 TianshuApp/1.0）不渲染 #}
-    {% if 'TianshuApp' not in (request.headers.get('User-Agent') or '') %}
-    <p class="auth-foot js-install">{{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}
-      <a class="btn btn-sm btn-ghost" style="margin-left:8px"
+    {# 登录/注册页的页脚：同样是客人看的，不写"数据都在 data/ 里"这类实现细节。
+       下载入口：**电脑上给电脑版**（套壳 exe，双击就是独立窗口）、**手机上给安装包**（apk）。
+       已经在壳里用的（UA 带 TianshuApp 的手机壳 / 带过 ?shell=desktop 的电脑版）不显示 ——
+       都在用客户端了，不需要再下一遍。 #}
+    {% set _ua = request.headers.get('User-Agent') or '' %}
+    {% set _in_app = ('TianshuApp' in _ua) or in_shell %}
+    <p class="auth-foot">{{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}
+      {% if not _in_app %}
+      <a class="btn btn-sm btn-ghost desk-dl" style="margin-left:8px"
+         href="{{ url_for('static', filename='app/tianshu-desktop.exe',
+                          v=static_v('app/tianshu-desktop.exe')) }}"
+         download="甜薯剧本杀-电脑版.exe">💻 电脑版下载</a>
+      <a class="btn btn-sm btn-ghost phone-dl" style="margin-left:8px"
          href="{{ url_for('static', filename='app/tianshu.apk', v=static_v('app/tianshu.apk')) }}"
-         download="甜薯剧本杀.apk">📱 装 App</a></p>
-    {% else %}
-    <p class="auth-foot">{{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}</p>
-    {% endif %}
+         download="甜薯剧本杀.apk">📱 装 App</a>
+      {% endif %}</p>
   </div>
 
   <script src="{{ url_for('static', filename='js/csrf.js') }}"></script>

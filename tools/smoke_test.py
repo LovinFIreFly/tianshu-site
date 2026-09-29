@@ -1154,6 +1154,22 @@ s, html = guest.get('/scripts')
 check('电脑页脚有「电脑版下载」入口', 'tianshu-desktop.exe' in html and '电脑版下载' in html)
 check('手机端会藏起「电脑版下载」（那边有装App）', '.desk-dl{display:none}' in _css3)
 
+# ⑪ 下载入口：电脑网页看得到、壳里看不到；"记住我"的勾选框要在
+s, html = guest.get('/login')
+check('登录页底部有「电脑版下载」',
+      s == 200 and 'tianshu-desktop.exe' in html and '电脑版下载' in html, 'HTTP %s' % s)
+check('登录页底部也有手机版安装包（窄屏时才显示）',
+      'tianshu.apk' in html and 'phone-dl' in html)
+_shell = Client()
+s, html = _shell.get('/login?shell=desktop')
+check('壳里（?shell=desktop）不显示任何下载按钮',
+      'tianshu-desktop.exe' not in html and 'tianshu.apk' not in html, 'HTTP %s' % s)
+s, html = _shell.get('/scripts')
+check('壳的标记跟着翻页走（页脚也不显示下载）',
+      'tianshu-desktop.exe' not in html and 'tianshu.apk' not in html)
+check('"记住我"的勾选框没被藏掉（别再有 .agree .dot{display:none}）',
+      '.agree .dot{display:none}' not in _css3 and '.agree .dot{display:inline-block' in _css3)
+
 print('')
 print('=' * 46)
 if fails:
