@@ -1,89 +1,105 @@
 {% extends 'base.html' %}
 {% block title %}拼车大厅 · {{ settings.shopName }}{% endblock %}
-{% block main_class %}{% endblock %}
+{# 拼车大厅 3.0：页头 + 卡片流。空态改用 .empty3（走令牌，换款式时底色/文字一起换）。 #}
 {% block body %}
 
-<section class="tile tile--warm" style="padding-top:calc(var(--site-nav-height) + var(--space-7))">
-  <div class="tile__inner">
-    <header class="sec-head">
-      <span class="sec-no">拼</span>
-      <h1 class="heading-section">拼车大厅</h1>
-      <a class="btn btn--ghost" href="{{ url_for('public.scripts') }}">我要开一车</a>
-    </header>
-    <p class="body-secondary">同一本、同一时段凑一车；满员可排候补，有人退就喊你</p>
-
-    {% if cars %}
-    <div class="mt-7" style="display:flex;flex-direction:column;gap:var(--space-4)">
-      {% for c in cars %}
-      <article class="card reveal" style="animation-delay:{{ loop.index0 * 60 }}ms">
-        <div style="display:grid;grid-template-columns:1fr auto;gap:var(--space-4);align-items:start">
-          <div>
-            <div style="display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap">
-              <span class="heading-section" style="font-size:var(--fs-h3)">{{ c.title }}</span>
-              {% if c.full %}<span class="badge badge--brand">满员</span>
-              {% elif c.need %}<span class="badge badge--brand">还差 {{ c.need }} 人</span>
-              {% else %}<span class="badge">已成局</span>{% endif %}
-              {% for t in c.tags %}<span class="badge">{{ t }}</span>{% endfor %}
-            </div>
-            <p class="body-secondary mt-2">
-              {{ c.day }} {{ c.time }} · 车主 {{ c.owner }} · <b>{{ c.joined }}/{{ c.cap }}</b> 人
-              {% if c.reserved %} · 车主留了 {{ c.reserved }} 个熟人位{% endif %}
-            </p>
-            <div style="height:6px;border-radius:999px;background:var(--bg-3);margin-top:var(--space-3);max-width:320px;overflow:hidden">
-              <div style="height:100%;width:{{ (c.joined * 100 / (c.cap or 8))|round|int }}%;background:var(--brand);border-radius:999px"></div>
-            </div>
-          </div>
-
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:var(--space-3)">
-            {% if not me %}
-              <a class="btn btn--sm btn--primary" href="{{ url_for('user.login', next=request.path) }}">登录后上车</a>
-            {% elif c.mine %}
-              <span class="badge">你在这车上</span>
-              {% if not c.owner == (me.username) %}
-              <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='quit') }}">
-                <button class="btn btn--sm" type="submit">下车</button></form>
-              {% endif %}
-            {% elif c.full %}
-              <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='wait') }}">
-                <button class="btn btn--sm btn--ghost" type="submit">排候补</button></form>
-            {% else %}
-              <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='join') }}">
-                <button class="btn btn--sm btn--primary" type="submit">上车</button></form>
-            {% endif %}
-            <a class="lnk" href="{{ url_for('public.car_detail', cid=c.id) }}">进车队 →</a>
-          </div>
-        </div>
-
-        <details class="mt-4">
-          <summary style="cursor:pointer;font-size:var(--fs-sm);color:var(--ink-3)">车上的人（{{ c.members|length }}）</summary>
-          <div class="mt-3" style="display:flex;flex-wrap:wrap;gap:var(--space-2)">
-            {% for m in c.members %}
-            <span class="badge">{{ m.nick }}{% if m.owner %} · 车主{% endif %}{% if m.gender %} · {{ m.gender }}{% endif %}{% if m.ageBucket %} · {{ m.ageBucket }}{% endif %}</span>
-            {% endfor %}
-          </div>
-          <p class="caption mt-3">只显示昵称、性别、年龄段 —— 电话这类信息车上看不到，保护隐私。</p>
-        </details>
-      </article>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="panel empty text-center mt-7">
-      <div style="font-size:var(--fs-h3);font-weight:700">还没有车</div>
-      <p class="body-secondary mt-3">想拼车很简单：去剧本页选一个本、把「玩法」选成<b>拼车</b>下单，你的车就会出现在这儿</p>
-      <div class="mt-5"><a class="btn btn--primary" href="{{ url_for('public.scripts') }}">去挑个本子</a></div>
-    </div>
-    {% endif %}
-
-    {% if tags %}
-    <details class="mt-8">
-      <summary style="cursor:pointer;font-size:var(--fs-sm);color:var(--ink-3)">车队标签是什么意思</summary>
-      <div class="mt-3" style="display:flex;flex-wrap:wrap;gap:var(--space-2)">
-        {% for t in tags %}<span class="badge">{{ t }}</span>{% endfor %}
-      </div>
-      <p class="caption mt-3">车主开单时能选这些标签，标明这车是什么风格，方便大家判断合不合得来。</p>
-    </details>
-    {% endif %}
+<section class="pagehead3">
+  <div class="wrap3">
+    <p class="pagehead3__k">拼车大厅 · Share a Table</p>
+    <h1 class="pagehead3__t">拼车大厅</h1>
+    <p class="pagehead3__lead">同一本、同一时段凑一车。<b>满员即开</b>；满了还能排候补，有人退位就先喊你。</p>
   </div>
 </section>
+
+<div class="wrap3">
+  <div class="toolbar3">
+    <span class="copy-mono">在等搭子的车 · {{ cars|length }}</span>
+    <div class="toolbar3__end">
+      <a class="b3 b3--solid b3--sm" href="{{ url_for('public.scripts') }}">我要开一车</a>
+    </div>
+  </div>
+
+  {% if cars %}
+  <div class="mason3" style="padding:clamp(18px,2.6vw,30px) 0 0">
+    {% for c in cars %}
+    <article class="ccard3 rv" style="--i:{{ loop.index0 }}">
+      <div class="ccard3__top">
+        <span class="ccard3__tag">{{ c.day }} {{ c.time }}</span>
+        {% if c.full %}<span class="tag3 tag3--accent">满员</span>
+        {% elif c.need %}<span class="tag3 tag3--accent">还差 {{ c.need }} 人</span>
+        {% else %}<span class="tag3 tag3--ok">已成局</span>{% endif %}
+      </div>
+
+      <h3 class="ccard3__title">{{ c.title }}</h3>
+
+      <div class="ccard3__meta">
+        <span>车主 <b>{{ c.owner }}</b></span>
+        <span><b>{{ c.joined }}</b>/{{ c.cap }} 人</span>
+        {% if c.reserved %}<span>熟人留位 <b>{{ c.reserved }}</b></span>{% endif %}
+      </div>
+
+      {% if c.tags %}
+      <div class="ccard3__people">{% for t in c.tags %}<i>{{ t }}</i>{% endfor %}</div>
+      {% endif %}
+
+      <div class="bar3"><i style="width:{{ (c.joined * 100 / (c.cap or 8))|round|int }}%"></i></div>
+
+      <div class="ccard3__foot">
+        <a class="b3 b3--sm b3--ghost" href="{{ url_for('public.car_detail', cid=c.id) }}">进车队 →</a>
+        {% if not me %}
+          <a class="b3 b3--sm b3--solid" href="{{ url_for('user.login', next=request.path) }}">登录后上车</a>
+        {% elif c.mine %}
+          <span class="tag3 tag3--ok">你在这车上</span>
+          {% if not c.owner == (me.username) %}
+          <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='quit') }}">
+            <button class="b3 b3--sm b3--ghost" type="submit">下车</button></form>
+          {% endif %}
+        {% elif c.full %}
+          <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='wait') }}">
+            <button class="b3 b3--sm" type="submit">排候补</button></form>
+        {% else %}
+          <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='join') }}">
+            <button class="b3 b3--sm b3--solid" type="submit">上车</button></form>
+        {% endif %}
+      </div>
+
+      <details>
+        <summary class="copy-mono" style="cursor:pointer;color:var(--d-ink-4)">车上的人（{{ c.members|length }}）</summary>
+        <div class="ccard3__people" style="margin-top:10px">
+          {% for m in c.members %}
+          <i>{{ m.nick }}{% if m.owner %} · 车主{% endif %}{% if m.gender %} · {{ m.gender }}{% endif %}{% if m.ageBucket %} · {{ m.ageBucket }}{% endif %}</i>
+          {% endfor %}
+        </div>
+        <p class="empty3__p" style="font-size:12.5px;margin-top:10px">
+          只显示昵称、性别、年龄段 —— 电话这类信息车上看不到，保护隐私。
+        </p>
+      </details>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty3 rv" style="margin-top:clamp(18px,2.6vw,30px)">
+    <p class="empty3__k">No Cars Yet</p>
+    <h3 class="empty3__t">还没有车</h3>
+    <p class="empty3__p">想拼车很简单：去剧本页选一个本、把「玩法」选成<b>拼车</b>下单，你的车就会出现在这儿。</p>
+    <div class="empty3__a">
+      <a class="b3 b3--solid" href="{{ url_for('public.scripts') }}">去挑个本子</a>
+      <a class="b3" href="{{ url_for('public.comm') }}">去社区问问</a>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if tags %}
+  <details class="rv" style="margin:clamp(24px,3vw,40px) 0 clamp(40px,6vw,80px)">
+    <summary class="copy-mono" style="cursor:pointer;color:var(--d-ink-4)">车队标签是什么意思</summary>
+    <div class="chips3" style="margin-top:12px">
+      {% for t in tags %}<span class="tag3">{{ t }}</span>{% endfor %}
+    </div>
+    <p class="empty3__p" style="font-size:13px;margin-top:12px">
+      车主开单时能选这些标签，标明这车是什么风格，方便大家判断合不合得来。
+    </p>
+  </details>
+  {% endif %}
+</div>
 
 {% endblock %}

@@ -1,112 +1,127 @@
 {% extends 'base.html' %}
 {% block title %}{{ car.title }} · 车队{% endblock %}
+{# 车队详情 3.0：暗场抬头 + 两栏（左：成员与上下车；右：聊天与车主设置）。 #}
 {% block body %}
 
-<section class="tile tile--dark" style="padding-top:calc(var(--site-nav-height) + var(--space-6));padding-bottom:var(--space-6)">
-  <div class="tile__inner">
-    <div class="between" style="align-items:flex-start">
-      <div>
-        <span class="kicker">车队详情</span>
-        <h1 class="heading-title" style="color:#fff;margin-top:var(--space-2)">{{ car.emoji }} {{ car.title }}</h1>
-        <p class="caption" style="color:rgba(247,246,242,.72);margin-top:var(--space-3)">
-          {{ car.day }} {{ car.time }} · 车主 {{ car.owner }} · {{ car.joined }}/{{ car.cap }} 人
-          {% if car.need %}<span class="badge new">还差 {{ car.need }} 人</span>
-          {% else %}<span class="badge ok">已成局</span>{% endif %}
-        </p>
+<section class="dsec--stage on-stage" style="border-bottom:0;
+  padding:calc(var(--d-nav-h) + clamp(20px,3.2vw,40px)) 0 clamp(20px,3vw,36px)">
+  <div class="wrap3">
+    <div class="row" style="justify-content:space-between;align-items:flex-start;gap:var(--d-s5)">
+      <div style="min-width:0">
+        <p class="pagehead3__k" style="color:var(--d-hair)">车队详情 · Car</p>
+        <h1 class="heading-hero" style="margin-top:10px;font-size:min(var(--d-fs-display),8vw,88px)">
+          {{ car.emoji }} {{ car.title }}
+        </h1>
+        <div class="row" style="margin-top:16px;gap:10px">
+          <span class="tag3">{{ car.day }} {{ car.time }}</span>
+          <span class="tag3">车主 {{ car.owner }}</span>
+          <span class="tag3">{{ car.joined }}/{{ car.cap }} 人</span>
+          {% if car.need %}<span class="tag3 tag3--accent">还差 {{ car.need }} 人</span>
+          {% else %}<span class="tag3 tag3--ok">已成局</span>{% endif %}
+          {% for t in car.tags %}<span class="tag3">{{ t }}</span>{% endfor %}
+          {% if car.reserved %}<span class="tag3">熟人位 {{ car.reserved }}</span>{% endif %}
+        </div>
       </div>
-      <a class="btn btn--sm btn--ghost" href="{{ url_for('public.car') }}">← 回大厅</a>
+      <a class="b3 b3--sm" href="{{ url_for('public.car') }}">← 回大厅</a>
     </div>
-
-    {% if car.tags %}
-    <div class="row mt-3" style="gap:6px">
-      {% for t in car.tags %}<span class="badge">{{ t }}</span>{% endfor %}
-      {% if car.reserved %}<span class="pill">车主留了 {{ car.reserved }} 个熟人位</span>{% endif %}
-    </div>
-    {% endif %}
   </div>
 </section>
 
-<section class="tile tile--warm" style="padding-top:var(--space-6);padding-bottom:var(--space-9)">
-  <div class="tile__inner">
-    <div class="two">
+<div class="wrap3">
+  <div class="split3" style="padding:clamp(22px,3vw,40px) 0 clamp(44px,6vw,84px)">
 
-      <div>
-        <h2 class="heading-section">车上的成员</h2>
-        <div class="card">
-          {% for m in car.members %}
-          <div class="between" style="padding:8px 0;border-bottom:1px solid var(--rule)">
-            <span><a href="{{ url_for('public.user_profile', username=(m.nick or '')) }}">{{ m.nick }}</a>{% if m.owner %} 👑 车主{% endif %}</span>
-            <span class="sub">{{ m.players }} 人{% if m.gender %} · {{ m.gender }}{% endif %}{% if m.ageBucket %} · {{ m.ageBucket }}{% endif %}</span>
-          </div>
-          {% endfor %}
+    {# —— 左：成员 + 上下车 —— #}
+    <div>
+      <p class="sidehead3">车上的成员（{{ car.members|length }}）<span class="line"></span></p>
+      <div class="sheet3">
+        {% for m in car.members %}
+        <div class="sheet3__row" style="grid-template-columns:1fr auto">
+          <span class="sheet3__m">
+            <b><a class="lnk" href="{{ url_for('public.user_profile', username=(m.nick or '')) }}">{{ m.nick }}</a>{% if m.owner %} 👑 车主{% endif %}</b>
+            <span>{{ m.players }} 人{% if m.gender %} · {{ m.gender }}{% endif %}{% if m.ageBucket %} · {{ m.ageBucket }}{% endif %}</span>
+          </span>
+          <span class="sheet3__cap">{% if m.owner %}组队中{% else %}已上车{% endif %}</span>
         </div>
+        {% endfor %}
+      </div>
 
+      <div style="margin-top:var(--d-s5)">
         {% if not car.mine and not car.full %}
-        <form class="mt-4" method="post" action="{{ url_for('user.car_act', cid=car.id, action='join') }}">
-          <button class="btn btn--primary btn-block" type="submit">我也上车</button>
+        <form method="post" action="{{ url_for('user.car_act', cid=car.id, action='join') }}">
+          <button class="b3 b3--accent b3--wide" type="submit">我也上车</button>
         </form>
         {% elif car.mine %}
-        <form class="mt-4" method="post" action="{{ url_for('user.car_act', cid=car.id, action='quit') }}">
-          <button class="btn btn-block btn--ghost" type="submit">我要下车</button>
+        <form method="post" action="{{ url_for('user.car_act', cid=car.id, action='quit') }}">
+          <button class="b3 b3--wide" type="submit">我要下车</button>
         </form>
         {% else %}
-        <form class="mt-4" method="post" action="{{ url_for('user.car_act', cid=car.id, action='wait') }}">
-          <button class="btn btn-block" type="submit">⏳ 排个候补</button>
+        <form method="post" action="{{ url_for('user.car_act', cid=car.id, action='wait') }}">
+          <button class="b3 b3--wide" type="submit">⏳ 排个候补</button>
         </form>
         {% endif %}
       </div>
 
-      <div>
-        <h2 class="heading-section">车队聊天</h2>
-        <div class="card scroll" style="max-height:340px;overflow-y:auto">
-          {% for m in msgs %}
-          <div style="padding:8px 0;border-bottom:1px solid var(--rule)">
-            <div class="between">
-              <b>{{ m.by }}{% if m.mine %}（我）{% endif %}</b>
-              <span class="sub">{{ day_label(m.at) }}</span>
-            </div>
-            <p class="body-secondary mt-2">{{ m.text }}</p>
-          </div>
-          {% else %}
-          <p class="sub">还没人说话，打个招呼吧</p>
-          {% endfor %}
-        </div>
-
-        {% if me %}
-        <form class="row mt-3" method="post" action="{{ url_for('user.car_act', cid=car.id, action='msg') }}" style="gap:8px">
-          <input class="input" name="text" placeholder="说点什么…" style="flex:1">
-          <button class="btn btn--sm btn--primary" type="submit">发</button>
-        </form>
-        {% else %}
-        <a class="btn btn-block mt-3" href="{{ url_for('user.login', next=request.path) }}">登录后说话</a>
-        {% endif %}
-
-        {% if is_owner %}
-        <div class="card mt-4">
-          <h3 class="heading-section" style="font-size:var(--fs-h4)">我是车主：车队设置</h3>
-          <form method="post" action="{{ url_for('user.car_act', cid=car.id, action='tags') }}">
-            <div class="field"><label>车队标签（让人一眼看懂这车什么风格）</label>
-              <div class="row" style="gap:6px;flex-wrap:wrap">
-                {% for t in tags %}
-                <label class="pill" style="cursor:pointer">
-                  <input type="checkbox" name="tags" value="{{ t }}" style="width:auto" {{ 'checked' if t in car.tags }}> {{ t }}
-                </label>
-                {% endfor %}
-              </div></div>
-            <button class="btn btn--sm btn--primary" type="submit">存标签</button>
-          </form>
-
-          <form class="row mt-3" method="post" action="{{ url_for('user.car_act', cid=car.id, action='reserved') }}"
-                style="gap:8px;align-items:flex-end;border-top:1px solid var(--rule);padding-top:10px">
-            <div class="field" style="max-width:110px;margin:0"><label>熟人预留位</label>
-              <input class="input" name="n" type="number" min="0" max="3" value="{{ car.reserved or 0 }}"></div>
-            <button class="btn btn--sm" type="submit">保存</button>
-          </form>
-        </div>
-        {% endif %}
+      <div class="note3" style="margin-top:var(--d-s5)">
+        车上只显示昵称、性别、年龄段和人数 —— 电话这类信息车上看不到，保护隐私。
       </div>
-
     </div>
+
+    {# —— 右：聊天 + 车主设置 —— #}
+    <div>
+      <p class="sidehead3">车队聊天<span class="line"></span></p>
+      <div style="max-height:340px;overflow-y:auto;border-top:1px solid var(--d-rule)">
+        {% for m in msgs %}
+        <div style="padding:12px 0;border-bottom:1px solid var(--d-rule)">
+          <div class="row" style="justify-content:space-between;gap:8px">
+            <b style="font-family:var(--d-serif)">{{ m.by }}{% if m.mine %}（我）{% endif %}</b>
+            <span class="caption">{{ day_label(m.at) }}</span>
+          </div>
+          <p class="rev3__t" style="margin-top:6px">{{ m.text }}</p>
+        </div>
+        {% else %}
+        <p class="sub" style="padding:14px 0">还没人说话，打个招呼吧。</p>
+        {% endfor %}
+      </div>
+
+      {% if me %}
+      <form class="row" style="margin-top:12px;gap:8px" method="post" action="{{ url_for('user.car_act', cid=car.id, action='msg') }}">
+        <input class="input" name="text" placeholder="说点什么…" style="flex:1;min-width:140px">
+        <button class="b3 b3--sm b3--solid" type="submit">发</button>
+      </form>
+      {% else %}
+      <a class="b3 b3--wide" style="margin-top:12px" href="{{ url_for('user.login', next=request.path) }}">登录后说话</a>
+      {% endif %}
+
+      {% if is_owner %}
+      <div class="note3" style="margin-top:var(--d-s6);border-left-color:var(--d-ink)">
+        <b>我是车主：车队设置</b>
+        <form style="margin-top:14px" method="post" action="{{ url_for('user.car_act', cid=car.id, action='tags') }}">
+          <div class="field">
+            <label>车队标签（让人一眼看懂这车什么风格）</label>
+            <div class="chips3">
+              {% for t in tags %}
+              <label class="chip-check">
+                <input type="checkbox" name="tags" value="{{ t }}" {{ 'checked' if t in car.tags }}><span>{{ t }}</span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+          <button class="b3 b3--sm b3--solid" style="margin-top:12px" type="submit">存标签</button>
+        </form>
+
+        <form class="row" style="margin-top:16px;gap:8px;align-items:flex-end;
+              border-top:1px solid var(--d-rule);padding-top:14px"
+              method="post" action="{{ url_for('user.car_act', cid=car.id, action='reserved') }}">
+          <div class="field" style="max-width:130px">
+            <label>熟人预留位</label>
+            <input name="n" type="number" min="0" max="3" value="{{ car.reserved or 0 }}">
+          </div>
+          <button class="b3 b3--sm" type="submit">保存</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+
   </div>
-</section>
+</div>
 {% endblock %}

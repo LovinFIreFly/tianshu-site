@@ -1,87 +1,111 @@
 {% extends 'base.html' %}
 {% block title %}玩家社区 · {{ settings.shopName }}{% endblock %}
-{% block main_class %}{% endblock %}
+{# 社区 3.0：左边信息流（细线分隔，像论坛/报纸），右边固定栏放发帖框与规则 —— 不再是单列堆卡片。 #}
 {% block body %}
 {% set TYPE_NAME = {'chat': '动态', 'diary': '日记', 'guide': '攻略', 'ask': '组队'} %}
 
-<section class="tile tile--warm" style="padding-top:calc(var(--site-nav-height) + var(--space-7))">
-  <div class="tile__inner">
-    <header class="sec-head">
-      <span class="sec-no">社</span>
-      <h1 class="heading-section">玩家社区</h1>
-    </header>
-    <p class="body-secondary">动态、日记、攻略、组队 —— 别剧透不标注就行（会被删）</p>
+<section class="pagehead3">
+  <div class="wrap3">
+    <p class="pagehead3__k">玩家社区 · Community</p>
+    <h1 class="pagehead3__t">玩家社区</h1>
+    <p class="pagehead3__lead">动态、日记、攻略、组队。别剧透不标注就行 —— 被举报会被删。</p>
+  </div>
+</section>
 
-    {# 分类筛选 #}
-    <nav class="tabbar" style="margin-top:var(--space-5)">
-      <a href="{{ url_for('public.comm') }}" class="{{ 'on' if not t }}">全部</a>
+<div class="wrap3">
+  <div class="toolbar3">
+    <div class="chips3">
+      <span class="chips3__lab">分类</span>
+      <a class="chip3 {{ 'on' if not t }}" href="{{ url_for('public.comm') }}">全部</a>
       {% for k, n in TYPE_NAME.items() %}
-      <a href="{{ url_for('public.comm', t=k) }}" class="{{ 'on' if t == k }}">{{ n }}（{{ counts.get(k, 0) }}）</a>
+      <a class="chip3 {{ 'on' if t == k }}" href="{{ url_for('public.comm', t=k) }}">{{ n }}（{{ counts.get(k, 0) }}）</a>
       {% endfor %}
-    </nav>
-
-    {% if me %}
-    <div class="card mt-5 reveal">
-      <header class="sec-head" style="margin-bottom:var(--space-4)">
-        <span class="sec-no">发帖</span>
-        <h2 class="heading-section" style="font-size:var(--fs-h3)">发一条</h2>
-      </header>
-      <form method="post" action="{{ url_for('public.post_create') }}">
-        <div style="display:flex;gap:var(--space-3);flex-wrap:wrap">
-          <div class="field" style="flex:1 1 200px"><label>发到哪一类</label>
-            <select name="type">
-              <option value="chat">动态（随便聊两句）</option>
-              <option value="diary">日记（这局的战报）</option>
-              <option value="guide">攻略（带规格说明那种）</option>
-              <option value="ask">组队（找人拼一场）</option>
-            </select></div>
-          <div class="field" style="flex:1 1 200px"><label>标题（可留空）</label>
-            <input name="title" placeholder="一句话标题"></div>
-        </div>
-        <div class="field"><label>内容</label>
-          <textarea name="text" rows="3" placeholder="想说什么？求拼车的话把时间本子写清楚"></textarea></div>
-        <button class="btn btn--primary" type="submit">发出去</button>
-      </form>
     </div>
-    {% else %}
-    <div class="card mt-5 between">
-      <span class="body-secondary">登录之后就能发帖、点赞</span>
-      <a class="btn btn--sm btn--primary" href="{{ url_for('user.login', next='/comm') }}">去登录</a>
-    </div>
-    {% endif %}
+  </div>
 
-    <div class="mt-6" style="display:flex;flex-direction:column;gap:var(--space-4)">
-      {% for p in posts %}<article class="card post-card reveal" style="animation-delay:{{ loop.index0 * 50 }}ms">
-        <div style="display:flex;justify-content:space-between;gap:var(--space-2);align-items:flex-start">
-          <div style="display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap">
-            <b>{{ p.title or TYPE_NAME.get(p.type, '动态') }}</b>
-            <span class="badge">{{ TYPE_NAME.get(p.type, '动态') }}</span>
-            <span class="pill">{{ p.username or '玩家' }}</span>
-          </div>
+  <div class="split3" style="padding:clamp(20px,2.8vw,34px) 0 clamp(44px,6vw,84px)">
+
+    {# —— 左：帖子流 —— #}
+    <div>
+      {% for p in posts %}
+      <article class="rev3 rv" style="--i:{{ loop.index0 }}">
+        <div class="rev3__h">
+          <span class="row" style="gap:8px">
+            <span class="rev3__w">{{ p.title or TYPE_NAME.get(p.type, '动态') }}</span>
+            <span class="tag3">{{ TYPE_NAME.get(p.type, '动态') }}</span>
+            <span class="tag3">{{ p.username or '玩家' }}</span>
+          </span>
           <span class="caption">{{ day_label(p.at) }}</span>
         </div>
-        <p class="body-secondary mt-3" style="white-space:pre-wrap">{{ p.text }}</p>
-        <div class="mt-4" style="display:flex;gap:8px;flex-wrap:wrap">
+        <p class="rev3__t" style="white-space:pre-wrap">{{ p.text }}</p>
+        <div class="rev3__a">
           <form method="post" action="{{ url_for('public.post_like', pid=p.id) }}">
-            <button class="btn btn--sm btn--ghost" type="submit">{{ '❤' if p.liked else '♡' }} {{ p.likeCount }}</button>
+            <button class="b3 b3--sm b3--ghost" type="submit">{{ '❤' if p.liked else '♡' }} {{ p.likeCount }}</button>
           </form>
           <form method="post" action="{{ url_for('public.post_report', pid=p.id) }}"
                 onsubmit="var r=prompt('举报原因（如：广告 / 剧透不标注 / 人身攻击）'); if(!r){return false;} this.reason.value=r; return true;">
             <input type="hidden" name="reason" value="">
-            <button class="btn btn--sm btn--ghost" type="submit">举报</button>
+            <button class="b3 b3--sm b3--ghost" type="submit">举报</button>
           </form>
           {% if my_admin %}
           <form method="post" action="{{ url_for('admin.post_del', pid=p.id) }}" onsubmit="return confirm('删掉这条帖子？')">
-            <button class="btn btn--sm" type="submit">删除</button>
+            <button class="b3 b3--sm" type="submit">删除</button>
           </form>
           {% endif %}
         </div>
       </article>
       {% else %}
-      <div class="panel empty text-center">还没人发帖，你可以来发第一条</div>
+      <div class="empty3">
+        <p class="empty3__k">Empty</p>
+        <h3 class="empty3__t">还没人发帖</h3>
+        <p class="empty3__p">你可以来发第一条：今晚想拼的本、上次那局的战报、或者一份新手攻略。</p>
+      </div>
       {% endfor %}
     </div>
+
+    {# —— 右：发帖 + 规矩 —— #}
+    <div>
+      <div class="sticky3">
+        {% if me %}
+        <p class="sidehead3">发一条<span class="line"></span></p>
+        <form method="post" action="{{ url_for('public.post_create') }}" class="form-stack">
+          <div class="field">
+            <label>发到哪一类</label>
+            <select name="type">
+              <option value="chat">动态（随便聊两句）</option>
+              <option value="diary">日记（这局的战报）</option>
+              <option value="guide">攻略（带规格说明那种）</option>
+              <option value="ask">组队（找人拼一场）</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>标题（可留空）</label>
+            <input name="title" placeholder="一句话标题">
+          </div>
+          <div class="field">
+            <label>内容</label>
+            <textarea name="text" rows="5" placeholder="想说什么？求拼车的话把时间本子写清楚"></textarea>
+          </div>
+          <button class="b3 b3--solid b3--wide" type="submit">发出去</button>
+        </form>
+        {% else %}
+        <div class="note3">
+          <b>登录之后就能发帖、点赞</b><br>
+          发帖、点赞、举报都要先登录。
+          <div style="margin-top:12px">
+            <a class="b3 b3--sm b3--solid" href="{{ url_for('user.login', next='/comm') }}">去登录</a>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="note3" style="margin-top:var(--d-s5)">
+          <b>发帖规矩</b><br>
+          ① 剧透必须标「有剧透」；② 不骂人、不发广告；③ 求拼车请写清本子、日期、时间。
+          被举报核实后直接删。
+        </div>
+      </div>
+    </div>
   </div>
-</section>
+</div>
 
 {% endblock %}

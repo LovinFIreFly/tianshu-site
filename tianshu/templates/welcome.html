@@ -1,6 +1,5 @@
-{# 进站第一屏（欢迎页）：剧场幕布拉开动画 + 舞台入口。
-   继承 base.html 保持全站骨架一致；未登录用户看到此页。
-   点击/自动拉开幕布后显示登录/注册/闲逛入口。 #}
+{# 进站第一屏：幕布拉开 → 舞台入口。未登录用户看到此页。
+   骨架与全站一致（base.html），只是内容换成"剧场门口"那一屏。 #}
 {% extends 'base.html' %}
 {% block title %}{{ settings.shopName }}{% endblock %}
 {% block main_class %}{% endblock %}
@@ -13,23 +12,37 @@
   <div class="curtain__logo">{{ settings.shopName }}</div>
 </div>
 
-<section class="welcome-stage" style="padding-top:calc(var(--site-nav-height) + var(--space-7))">
-  <span style="font-size:72px;animation:fade-up .8s var(--ease-out) both">🍠</span>
-  <h1 class="welcome-stage__title">{{ settings.shopName }}</h1>
-  <p class="welcome-stage__subtitle">沉浸式剧本体验 · 一场好戏从甜薯开始</p>
+<section class="dsec--stage on-stage" style="border-bottom:0;min-height:100svh;display:flex;align-items:center;
+  padding:calc(var(--d-nav-h) + clamp(28px,6vw,72px)) 0 clamp(40px,6vw,80px)">
+  <div class="wrap3">
+    <div style="max-width:940px">
+      <p class="pagehead3__k" style="color:var(--d-hair)">甜薯剧场 · 沉浸式剧本体验</p>
+      <h1 class="heading-hero" style="margin-top:clamp(12px,2vw,22px);
+          font-size:min(var(--d-fs-display),12vw,150px)">{{ settings.shopName }}</h1>
+      <p class="body-large" style="margin-top:18px;color:var(--d-hair);max-width:46ch">
+        沉浸式剧本体验 · 一场好戏从甜薯开始
+      </p>
 
-  <div class="welcome-stage__actions">
-    <a class="btn btn--primary" href="{{ url_for('user.login') }}">登 录</a>
-    <a class="btn btn--ghost" href="{{ url_for('user.register') }}">注册新账号</a>
+      <div class="row" style="margin-top:clamp(26px,4vw,40px);gap:12px">
+        <a class="b3 b3--accent" href="{{ url_for('user.login') }}">登 录</a>
+        <a class="b3" href="{{ url_for('user.register') }}">注册新账号</a>
+      </div>
+
+      <p style="margin-top:clamp(22px,3vw,34px)">
+        <a class="lnk" href="{{ url_for('public.home', browse=1) }}" style="color:var(--d-stage-ink)">先随便逛逛 →</a>
+      </p>
+
+      <p class="copy-mono" style="margin-top:clamp(20px,3vw,32px);color:var(--d-hair)">
+        已上架 {{ meta.scripts }} 部剧本 · 今天 {{ meta.today }} 场 · 支持拼车和包车
+      </p>
+    </div>
   </div>
-
-  <p class="mt-6"><a class="lnk" href="{{ url_for('public.home', browse=1) }}">先随便逛逛 →</a></p>
-  <p class="caption mt-4">已上架 {{ meta.scripts }} 部剧本 · 今天 {{ meta.today }} 场 · 支持拼车和包车</p>
 </section>
 
 <script>
   (function(){
     var curtain = document.getElementById('curtain');
+    if (!curtain) return;
     function open(){ curtain.classList.add('open'); }
     setTimeout(open, 900);
     curtain.addEventListener('click', open);

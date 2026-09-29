@@ -92,6 +92,8 @@ def scripts():
     all_rows = db.rows('scripts')
     q = (request.args.get('q') or '').strip()
     tag = request.args.get('tag') or ''
+    # 多选标签：?tags=情感,硬核 —— 命中任意一个就算（OR）。老的 ?tag= 单选仍然管用。
+    sel_tags = [x.strip() for x in (request.args.get('tags') or '').split(',') if x.strip()]
     diff = request.args.get('diff') or ''
     only_fav = request.args.get('fav') == '1'
     u = current_user()
@@ -103,7 +105,10 @@ def scripts():
             continue
         if q and q not in str(s.get('title', '')) and q not in str(s.get('desc', '')):
             continue
-        if tag and tag not in (s.get('tags') or []):
+        if sel_tags:
+            if not any(t in (s.get('tags') or []) for t in sel_tags):
+                continue
+        elif tag and tag not in (s.get('tags') or []):
             continue
         if diff and str(s.get('diff')) != diff:
             continue
@@ -124,7 +129,7 @@ def scripts():
     if request.args.get('partial') == '1':
         return render_template('_scripts_grid.html', scripts=rows, favs=favs, rating=rating)
     return render_template('scripts.html', scripts=rows, tags=tags,
-                           q=q, tag=tag, diff=diff, only_fav=only_fav, favs=favs,
+                           q=q, tag=tag, sel_tags=sel_tags, diff=diff, only_fav=only_fav, favs=favs,
                            rating=rating)
 
 

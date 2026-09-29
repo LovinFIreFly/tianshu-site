@@ -2,22 +2,28 @@
 {% block title %}找回密码 · {{ settings.shopName }}{% endblock %}
 {% block card %}
 <div class="auth-card">
-  <div class="auth-brand"><span class="logo">🍠</span><span>{{ settings.shopName }}</span></div>
+  <div class="auth-brand"><span class="logo">🍠</span><span>{{ settings.shopName }} · 找回密码</span></div>
   <a class="back" href="{{ url_for('user.login') }}">‹ 返回登录</a>
   <h2>找回密码</h2>
   <p class="sub">用注册时填的邮箱收验证码，验证通过就能重置密码</p>
 
   <form method="post">
-    <div class="field"><span class="ico" aria-hidden="true">📱</span>
-      <input name="phone" type="tel" maxlength="11" placeholder="注册手机号（用来找到你的账号）" aria-label="手机号" required
-             value="{{ request.form.get('phone','') }}"></div>
-    <div class="field"><span class="ico" aria-hidden="true">📧</span>
-      <input name="email" type="email" placeholder="注册邮箱（验证码发到这里）" aria-label="邮箱"
-             value="{{ request.form.get('email','') }}"></div>
+    <div class="field">
+      <label>注册手机号（用来找到你的账号）</label>
+      <input name="phone" type="tel" maxlength="11" placeholder="11 位手机号" aria-label="手机号" required
+             value="{{ request.form.get('phone','') }}">
+    </div>
+    <div class="field">
+      <label>注册邮箱（验证码发到这里）</label>
+      <input name="email" type="email" placeholder="you@example.com" aria-label="邮箱"
+             value="{{ request.form.get('email','') }}">
+    </div>
 
     <div class="code-row">
-      <div class="field"><span class="ico" aria-hidden="true">🔑</span>
-        <input name="code" type="tel" maxlength="6" placeholder="验证码" aria-label="验证码" required></div>
+      <div class="field">
+        <label>验证码</label>
+        <input name="code" type="tel" maxlength="6" placeholder="6 位验证码" aria-label="验证码" required>
+      </div>
       {# type=button（不是 submit）：点它只发验证码，不该触发整表校验 —— 见 auth_base.html 里的脚本 #}
       <button class="btn-code" type="button" data-code-btn data-purpose="reset"
               data-url="{{ url_for('user.code_send') }}">获取验证码</button>
@@ -26,14 +32,20 @@
     <input type="hidden" name="purpose" value="reset">
     {# 静态提示删了：发码结果由按钮下面那行动态提示说（见 auth_base.html），别重复 #}
 
-    <div class="field"><span class="ico" aria-hidden="true">🔒</span>
-      <input name="password" type="password" placeholder="新密码（至少 6 位）" aria-label="新密码"
-             autocomplete="new-password" required></div>
-    <div class="field"><span class="ico" aria-hidden="true">🔒</span>
-      <input name="password2" type="password" placeholder="确认新密码" aria-label="确认新密码"
-             autocomplete="new-password" enterkeyhint="go" required></div>
+    <div class="form-grid">
+      <div class="field">
+        <label>新密码（至少 6 位）</label>
+        <input name="password" type="password" placeholder="新密码" aria-label="新密码"
+               autocomplete="new-password" required>
+      </div>
+      <div class="field">
+        <label>确认新密码</label>
+        <input name="password2" type="password" placeholder="再输一遍" aria-label="确认新密码"
+               autocomplete="new-password" enterkeyhint="go" required>
+      </div>
+    </div>
 
-    <button class="btn btn-primary" type="submit">重置密码</button>
+    <button class="b3 b3--accent b3--wide" type="submit">重置密码</button>
   </form>
 
   <p class="foot-line">想起来了？<a class="lnk" href="{{ url_for('user.login') }}">去登录 →</a></p>

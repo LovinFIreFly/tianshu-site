@@ -12,6 +12,7 @@
   {# v=文件修改时间：样式一改 URL 就变，手机上的旧缓存自动失效 #}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=static_v('css/style.css')) }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/design2.css', v=2) }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/design3.css', v=1) }}">
 {# 外观款式（skin）：后台统一设置 → 全站（登录页/注册页/欢迎页也包括）同时生效。
    注意：这里不能依赖 base.html 的 block，所以把同一段逻辑复制过来。 #}
 {% set _skins = skins if skins is defined else {} %}

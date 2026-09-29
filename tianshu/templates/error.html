@@ -1,10 +1,19 @@
 {% extends 'base.html' %}
 {% block title %}{{ code }} · {{ settings.shopName }}{% endblock %}
+{# 错误页 3.0：像剧院的"此门不通"告示 —— 大号码 + 一句人话 + 两个出口。 #}
 {% block body %}
-<div class="panel" style="max-width:520px;margin:60px auto;text-align:center">
-  <div style="font-size:52px">{{ '🚧' if code == 404 else ('🔒' if code == 403 else '💥') }}</div>
-  <h1>{{ code }}</h1>
-  <p class="sub">{{ msg }}</p>
-  <a class="btn btn-primary mt" href="{{ url_for('public.home') }}">回首页</a>
-</div>
+
+<section class="dsec" style="border-bottom:0;padding:calc(var(--d-nav-h) + clamp(40px,8vw,110px)) 0 clamp(60px,10vw,140px)">
+  <div class="wrap3 wrap3--tight" style="text-align:center">
+    <p class="copy-mono" style="color:var(--d-ink-4);margin:0">
+      {{ '页面走丢了' if code == 404 else ('这里不让你进' if code == 403 else '出了一点问题') }}
+    </p>
+    <div class="heading-hero" style="font-size:clamp(72px,16vw,180px);margin-top:var(--d-s3)">{{ code }}</div>
+    <p class="body-large" style="max-width:46ch;margin:var(--d-s5) auto 0">{{ msg }}</p>
+    <div class="row" style="justify-content:center;margin-top:clamp(24px,3.4vw,38px);gap:12px">
+      <a class="b3 b3--solid" href="{{ url_for('public.home') }}">回首页</a>
+      <a class="b3" href="{{ url_for('public.scripts') }}">去剧本库</a>
+    </div>
+  </div>
+</section>
 {% endblock %}

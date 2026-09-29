@@ -1,29 +1,27 @@
-{# 剧本库卡片网格片段：前端点分类用 fetch 拉这段原地替换，整页不跳。
-   结构与 scripts.html 的 poster-grid 完全一致，保留 data-anim 供入场动画使用。 #}
+{# 剧本库网格片段：前端点标签用 fetch 拉这段原地替换，整页不跳。
+   data-count 给外层更新「N 本」计数；data-anim 给入场动画用。 #}
 {% if scripts %}
-<div class="poster-grid" data-spa-grid>
+<div class="grid3" data-spa-grid data-count="{{ scripts|length }}">
   {% for s in scripts %}
-  <article class="poster-card" data-anim>
-    <a href="{{ url_for('public.scripts', t=s.type) }}" class="badge" style="position:absolute;top:var(--space-3);left:var(--space-3);z-index:2">{{ s.type or '剧本' }}</a>
-    <a href="{{ url_for('public.script_detail', sid=s.id) }}">
-      {% if s.img %}
-      <img class="poster-card__cover" src="{{ s.img }}" alt="{{ s.title }}">
-      {% else %}
-      <div class="poster-card__emoji">{{ s.emoji or '🎭' }}</div>
-      {% endif %}
+  <article class="pcard3" data-anim>
+    <a class="pcard3__cover" href="{{ url_for('public.script_detail', sid=s.id) }}">
+      {% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}" loading="lazy">
+      {% else %}<span class="pcard3__ph">{{ s.emoji or '🎭' }}</span>{% endif %}
+      <span class="pcard3__type">{{ s.type or '剧本' }}</span>
     </a>
-    <div class="poster-card__body">
-      <h3 class="poster-card__title"><a href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.title }}</a></h3>
-      <p class="poster-card__meta">{{ s.players or '—' }} · {{ s.dur or '—' }} · 难度 {{ s.diff or 3 }}/5</p>
-      <div class="poster-card__tags">
-        {% if s.isNew %}<span class="badge badge--brand">上新</span>{% endif %}
-        {% if s.diff and s.diff <= 2 %}<span class="badge badge--brand">新手友好</span>{% endif %}
-        {% if rating.get(s.id|string) %}<span class="badge">★ {{ rating[s.id|string] }}</span>{% endif %}
-        <span class="badge badge--dark">¥{{ s.price|int }}/人</span>
+    <div class="pcard3__body">
+      <h3 class="pcard3__title"><a href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.title }}</a></h3>
+      <p class="pcard3__meta">{{ s.players or '—' }} · {{ s.dur or '—' }} · 难度 {{ s.diff or 3 }}/5</p>
+      <div class="pcard3__foot">
+        <span class="pcard3__price">¥{{ s.price|int }}<span style="color:var(--d-ink-4);font-size:11px">/人</span></span>
+        {% if rating.get(s.id|string) %}<span class="tag3">★ {{ rating[s.id|string] }}</span>
+        {% elif s.diff and s.diff <= 2 %}<span class="tag3 tag3--accent">新手友好</span>
+        {% elif s.isNew %}<span class="tag3 tag3--accent">上新</span>
+        {% else %}<span class="tag3">{{ s.type or '开本' }}</span>{% endif %}
       </div>
     </div>
-    <form method="post" action="{{ url_for('public.fav', sid=s.id) }}" data-ajax-fav style="position:absolute;top:0;right:0;z-index:3">
-      <button class="poster-card__heart fav-btn {{ 'on' if s.id|string in favs }}" type="submit" aria-label="收藏">
+    <form class="pcard3__fav" method="post" action="{{ url_for('public.fav', sid=s.id) }}" data-ajax-fav>
+      <button class="fav-btn {{ 'on' if s.id|string in favs }}" type="submit" aria-label="收藏">
         {{ '❤' if s.id|string in favs else '♡' }}
       </button>
     </form>
@@ -31,8 +29,9 @@
   {% endfor %}
 </div>
 {% else %}
-<div class="panel empty text-center mt-8" data-anim>
-  <div style="font-size:var(--fs-h3);font-weight:700">没找到本子</div>
-  <p class="body-secondary mt-3">换个筛选条件试试</p>
+<div class="empty3" data-anim data-count="0">
+  <p class="empty3__k">No Match</p>
+  <h3 class="empty3__t">没找到本子</h3>
+  <p class="empty3__p">换个关键词，或者去掉几个标签再试。标签是多选：选得少，命中少；去掉一个就宽一点。</p>
 </div>
 {% endif %}

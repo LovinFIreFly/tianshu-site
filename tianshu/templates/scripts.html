@@ -1,99 +1,64 @@
 {% extends 'base.html' %}
 {% block title %}剧本库 · {{ settings.shopName }}{% endblock %}
-{# 剧本库：全宽 tile + 胶囊搜索 + 胶囊筛选 + poster-grid；SPA 不跳页，只换网格。 #}
-{% block main_class %}{% endblock %}
+{# 剧本库 3.0：页头 + 工具条 + 多选标签 chips + 网格。
+   筛选全走前端（fetch 只换网格那段），网址始终 /scripts，不整页跳。 #}
 {% block body %}
 
-<section class="tile tile--warm" style="padding-top:calc(var(--site-nav-height) + var(--space-7))">
-  <div class="tile__inner">
-    <header class="sec-head">
-      <span class="sec-no">剧本库</span>
-      <h1 class="heading-section">全部本子</h1>
-      <span class="body-secondary">共 {{ scripts|length }} 个{% if q or tag or diff or only_fav %} · 筛选中{% endif %}</span>
-    </header>
-
-    <form class="capsule-search spa-search" method="get" style="max-width:520px">
-      <div class="capsule-search__segment">
-        <label>搜剧本</label>
-        <input name="q" value="{{ q }}" placeholder="名字 / 简介 / 类型">
-      </div>
-      <span class="capsule-search__divider"></span>
-      <button class="capsule-search__btn" type="submit" aria-label="搜索">⌕</button>
-    </form>
-
-    <div class="row spa-filters mt-5" style="gap:8px;flex-wrap:wrap">
-      <button type="button" class="pill {{ 'on' if not tag and not diff and not only_fav }}" data-filter="all">全部</button>
-      {% for t in tags %}
-      <button type="button" class="pill {{ 'on' if tag == t }}" data-filter="tag" data-val="{{ t }}">{{ t }}</button>
-      {% endfor %}
-      <button type="button" class="pill {{ 'on' if diff == '1' }}" data-filter="diff" data-val="1">新手友好</button>
-      <button type="button" class="pill {{ 'on' if only_fav }}" data-filter="fav" data-val="1">❤ 我的想玩</button>
-    </div>
-
-    <div id="scriptGrid" class="mt-7">{% include '_scripts_grid.html' %}</div>
+<section class="pagehead3">
+  <div class="wrap3">
+    <p class="pagehead3__k">剧本库 · Library</p>
+    <h1 class="pagehead3__t">全部本子</h1>
+    <p class="pagehead3__lead">标签<b>可以多选</b>：选中几个，就把这几类的本子一起摆上（命中任意一个即算）。
+      选好的条件会留在网址上，方便收藏、转发给搭子。</p>
   </div>
 </section>
 
+<div class="wrap3">
+
+  <div class="toolbar3">
+    <form class="sform3 sform3--wide spa-search" method="get" action="{{ url_for('public.scripts') }}" role="search">
+      <input class="sform3__in" name="q" value="{{ q }}" placeholder="名字 / 简介 / 类型" aria-label="搜剧本">
+      <button class="sform3__btn" type="submit">搜 ↗</button>
+    </form>
+    <div class="toolbar3__end">
+      <span class="copy-mono" id="hitCount">{{ scripts|length }} 本</span>
+      <button type="button" class="b3 b3--sm b3--ghost" id="clearAll">清空条件</button>
+    </div>
+  </div>
+
+  <div class="toolbar3" style="border-bottom:0">
+    <div class="chips3 spa-filters" id="filters">
+      <span class="chips3__lab">标签</span>
+      {% for t in tags %}
+      <button type="button" class="chip3 {{ 'on' if (t in sel_tags) or tag == t }}"
+              data-tag="{{ t }}" aria-pressed="{{ 'true' if (t in sel_tags) or tag == t else 'false' }}">{{ t }}</button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="toolbar3" style="border-top:0;padding-top:0">
+    <div class="chips3">
+      <span class="chips3__lab">其他</span>
+      <button type="button" class="chip3 {{ 'on' if diff == '1' }}" data-flag="diff"
+              aria-pressed="{{ 'true' if diff == '1' else 'false' }}">新手友好</button>
+      <button type="button" class="chip3 {{ 'on' if only_fav }}" data-flag="fav"
+              aria-pressed="{{ 'true' if only_fav else 'false' }}">❤ 我的想玩</button>
+    </div>
+  </div>
+
+  <div id="scriptGrid" style="padding:clamp(18px,2.6vw,30px) 0 clamp(44px,6vw,84px)">
+    {% include '_scripts_grid.html' %}
+  </div>
+</div>
+
 <script>
-{# 剧本库 SPA：分类标签 + 搜索都不跳页，只换网格 + 入场动画 + URL 用 replaceState 保持 /scripts #}
-(function () {
-  var wrap = document.getElementById('scriptGrid');
-  if (!wrap) return;
-  var filters = document.querySelector('.spa-filters');
-  var state = {q: '{{ q }}', tag: '{{ tag }}', diff: '{{ diff }}', fav: '{{ '1' if only_fav else '' }}'};
-
-  function buildQS() {
-    var p = [];
-    if (state.q) p.push('q=' + encodeURIComponent(state.q));
-    if (state.tag) p.push('tag=' + encodeURIComponent(state.tag));
-    if (state.diff) p.push('diff=' + state.diff);
-    if (state.fav) p.push('fav=' + state.fav);
-    return p.join('&');
-  }
-
-  function playIn(html) {
-    wrap.innerHTML = html;
-    var items = wrap.querySelectorAll('.poster-card, [data-anim]');
-    Array.prototype.forEach.call(items, function (el, i) {
-      if (el.animate) el.animate(
-        [{opacity: 0, transform: 'translateY(16px) scale(.98)'}, {opacity: 1, transform: 'none'}],
-        {duration: 420, delay: i * 40, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'both'});
-    });
-  }
-
-  function load() {
-    var qs = buildQS();
-    fetch('/scripts?partial=1' + (qs ? '&' + qs : ''), {headers: {'X-Requested-With': 'fetch'}})
-      .then(function (r) { return r.text(); })
-      .then(function (html) { playIn(html); history.replaceState(null, '', '/scripts'); })
-      .catch(function () {});
-  }
-
-  filters.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-filter]');
-    if (!b) return;
-    var f = b.getAttribute('data-filter');
-    if (f === 'all') { state.tag = state.diff = state.fav = ''; }
-    else if (f === 'tag') { state.tag = (state.tag === b.getAttribute('data-val')) ? '' : b.getAttribute('data-val'); state.diff = state.fav = ''; }
-    else if (f === 'diff') { state.diff = state.diff ? '' : '1'; }
-    else if (f === 'fav') { state.fav = state.fav ? '' : '1'; }
-    filters.querySelectorAll('.pill').forEach(function (p) {
-      var pf = p.getAttribute('data-filter');
-      var on = pf === 'all' ? (!state.tag && !state.diff && !state.fav)
-              : pf === 'tag' ? (state.tag === p.getAttribute('data-val'))
-              : pf === 'diff' ? !!state.diff
-              : pf === 'fav' ? !!state.fav : false;
-      p.classList.toggle('on', on);
-    });
-    load();
-  });
-
-  var sf = document.querySelector('.spa-search');
-  if (sf) sf.addEventListener('submit', function (e) {
-    e.preventDefault();
-    state.q = (sf.querySelector('[name=q]') || {}).value || '';
-    load();
-  });
-})();
+  /* 把当前筛选条件交给前端脚本（避免在 HTML 里拼字符串出注入问题，用 tojson） */
+  window.TS_LIB = {
+    q: {{ q|tojson }},
+    tags: {{ sel_tags|tojson }},
+    diff: {{ ('1' if diff == '1' else '')|tojson }},
+    fav: {{ ('1' if only_fav else '')|tojson }}
+  };
 </script>
+<script src="{{ url_for('static', filename='js/library.js', v=1) }}" defer></script>
 {% endblock %}

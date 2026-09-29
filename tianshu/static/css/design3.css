@@ -1,0 +1,833 @@
+/* ============================================================================
+   甜薯剧场 3.0 —— 全新骨架（Design 3）
+   ----------------------------------------------------------------------------
+   【为什么又重写】2.0 是把"通用网页习惯"换了张皮：居中大标题 + 圆角卡片 +
+   等距色块 + 柔和阴影。看久了还是"AI 味"。这一版换的是**骨架**，不是颜色：
+
+     ① 版式：从"居中对称"改成**非对称编辑排版** —— 左边大标题压左侧基线，
+        右边挂一块"今夜场次牌"，像戏院门口的排期板，不是 hero 图。
+     ② 分隔：靠**细线 + 编号**（01 / 02 / 03）分区，不靠圆角色块。
+     ③ 卡片：**直角(0-2px) + 1px 描边 + 硬投影**，不用柔光阴影；封面 hover
+        缓慢推近、卡片抬起 2px —— 力度来自线，不来自模糊。
+     ④ 排版：小字用等宽大写 + 大字距（像票根/节目单），大字用紧字距大落差。
+     ⑤ 动效：入场**错位升起**、横向**轨道滑动带进度条**、数字**滚动计数**、
+        顶栏滚动时**第二行折叠**、首屏**光标跟随光斑**。
+     ⑥ 皮肤：所有颜色只走令牌（--paper / --ink / --vermilion / --r / --sh-*），
+        所以换款式是**整套换骨**，不是换个点缀色。
+        五套款式连**首屏版式**都不一样（见文件末尾 [data-skin] 段）。
+
+   加载顺序：style.css → design2.css → **design3.css** → skin-*.css
+   （皮肤表最后加载，皮肤永远有最终决定权）
+   约束：不改功能类名、不动表单 action、不动 data-tab / mobtab 结构。
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   0. 令牌桥：把「皮肤令牌」接进新骨架
+   -------------------------------------------------------------------------- */
+:root{
+  /* 色 */
+  --d-paper:var(--paper,#F4F1EA);
+  --d-paper-2:var(--paper-2,#EAE4D8);
+  --d-paper-3:var(--paper-3,#FBF9F4);
+  --d-ink:var(--ink,#141312);
+  --d-ink-2:var(--ink-2,#26231F);
+  --d-ink-3:var(--ink-3,#4A453E);
+  --d-ink-4:var(--ink-4,#78726A);
+  --d-stage:var(--stage,#141312);
+  --d-stage-ink:var(--stage-ink,#F4F1EA);
+  --d-hair:var(--stage-hair,rgba(244,241,234,.18));
+  --d-rule:var(--rule,rgba(20,19,18,.28));
+  --d-rule-2:var(--rule-strong,rgba(20,19,18,.55));
+  --d-accent:var(--vermilion,#C8321E);
+  --d-accent-2:var(--vermilion-600,#A6240F);
+  --d-accent-05:var(--vermilion-050,rgba(200,50,30,.08));
+  --d-gold:var(--gold,#A8802A);
+  --d-ok:var(--ok,#2F6B3A);   --d-ok-bg:var(--ok-bg,rgba(47,107,58,.1));
+  --d-bad:var(--bad,#B02A16); --d-bad-bg:var(--bad-bg,rgba(176,42,22,.1));
+  --d-warn:var(--warn,#8A5A00);
+  --d-info:var(--info,#2C4A73);
+
+  /* 字 */
+  --d-serif:var(--serif,Georgia,serif);
+  --d-sans:var(--sans,system-ui,sans-serif);
+  --d-mono:var(--mono,ui-monospace,monospace);
+  --d-fs-display:var(--fs-display,clamp(44px,11vw,104px));
+  --d-lh-display:var(--lh-display,.92);
+  --d-track-display:var(--track-display,-.03em);
+  --d-fs-title:var(--fs-title,clamp(26px,4.4vw,40px));
+  --d-fs-h2:var(--fs-h2,clamp(20px,2.6vw,25px));
+  --d-fs-h3:var(--fs-h3,18px);
+  --d-fs-body:var(--fs-body,16.5px);
+  --d-fs-sm:var(--fs-sm,14px);
+  --d-fs-xs:var(--fs-xs,12.5px);
+  --d-fs-num:var(--fs-num,13px);
+  --d-track-kicker:var(--track-kicker,.28em);
+
+  /* 形状与力 */
+  --d-r:var(--r,0px);
+  --d-r-lg:var(--r-lg,0px);
+  --d-pill:var(--r-pill,0px);
+  --d-round:var(--r-round,100%);
+  --d-sh1:var(--sh-1,0 1px 2px rgba(20,19,18,.06));
+  --d-sh2:var(--sh-2,0 4px 14px rgba(20,19,18,.10));
+  --d-sh3:var(--sh-3,0 12px 34px rgba(20,19,18,.16));
+  --d-sh-hard:var(--sh-hard,2px 2px 0 0 var(--d-ink));
+
+  /* 间距（跟随皮肤刻度） */
+  --d-s1:var(--sp-1,4px);  --d-s2:var(--sp-2,8px);  --d-s3:var(--sp-3,12px);
+  --d-s4:var(--sp-4,16px); --d-s5:var(--sp-5,20px); --d-s6:var(--sp-6,24px);
+  --d-s7:var(--sp-7,32px); --d-s8:var(--sp-8,40px); --d-s9:var(--sp-9,56px);
+  --d-s10:var(--sp-10,72px);
+
+  /* 尺寸 */
+  --d-max:var(--container,1280px);
+  --d-pad:clamp(16px,4vw,44px);
+  --d-nav-h:96px;              /* 顶栏两行总高（桌面） */
+  --d-ease:cubic-bezier(.22,1,.36,1);
+
+  /* 兼容：全站统一顶栏高度变量（旧页面靠它留白） */
+  --site-nav-height:96px;
+}
+@media(max-width:833px){
+  :root{--d-nav-h:64px;--site-nav-height:64px}
+}
+
+/* --------------------------------------------------------------------------
+   1. 基础：只在没被皮肤接管的地方做最小修正
+   -------------------------------------------------------------------------- */
+html{-webkit-text-size-adjust:100%}
+body{background:var(--d-paper);color:var(--d-ink)}
+::selection{background:var(--d-accent);color:var(--d-paper-3)}
+a{text-decoration:none;color:inherit}
+img{max-width:100%}
+/* 焦点圈：只在键盘操作时出现（鼠标点不闪一圈） */
+:focus-visible{outline:2px solid var(--d-accent);outline-offset:2px}
+/* 锚点定位别被固定顶栏吃掉 */
+[id]{scroll-margin-top:calc(var(--d-nav-h) + 16px)}
+.copy-mono{font-family:var(--d-mono);font-size:var(--d-fs-num);letter-spacing:.06em;text-transform:uppercase}
+.copy-mute{color:var(--d-ink-3)}
+.rule3{height:1px;background:var(--d-rule);border:0;margin:0}
+
+/* 版心：比旧版略宽，左右留白跟着视口走 */
+.wrap3{width:100%;max-width:var(--d-max);margin-inline:auto;padding-inline:var(--d-pad)}
+.wrap3--tight{max-width:960px}
+
+/* --------------------------------------------------------------------------
+   2. 顶栏 .tnav —— 第一行「字标 + 搜索 + 账户」，第二行「栏目条 + 期号」
+   （旧版是"单行：左字标 / 中导航 / 右搜索"，这一版把栏目单独拎成一行）
+   -------------------------------------------------------------------------- */
+.tnav{position:fixed;inset:0 0 auto 0;z-index:1000;background:color-mix(in srgb,var(--d-paper) 82%,transparent);
+  -webkit-backdrop-filter:saturate(180%) blur(18px);backdrop-filter:saturate(180%) blur(18px);
+  border-bottom:1px solid transparent;transition:background .3s var(--d-ease),border-color .3s var(--d-ease)}
+.tnav.scrolled{background:color-mix(in srgb,var(--d-paper) 94%,transparent);border-bottom-color:var(--d-rule)}
+.tnav__bar{display:flex;align-items:center;gap:var(--d-s4);height:64px}
+.tnav__brand{display:flex;align-items:center;gap:10px;min-width:0}
+.tnav__mark{width:34px;height:34px;flex:none;display:grid;place-items:center;font-size:17px;
+  background:var(--d-accent);color:var(--d-paper-3);border-radius:var(--d-r)}
+.tnav__names{display:flex;flex-direction:column;line-height:1.05;min-width:0}
+.tnav__names b{font-family:var(--d-serif);font-size:19px;font-weight:700;letter-spacing:-.01em;white-space:nowrap}
+.tnav__names i{font-style:normal;font-family:var(--d-mono);font-size:9.5px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--d-ink-4);white-space:nowrap}
+.tnav__spacer{flex:1}
+
+/* 搜索：默认细底线，聚焦时展开成一条完整搜索带（Airbnb「搜索优先」的做法） */
+.tnav__search{display:none;align-items:center;gap:var(--d-s2);position:relative;
+  border-bottom:1px solid var(--d-rule-2);padding:4px 2px;transition:border-color .2s}
+@media(min-width:900px){.tnav__search{display:flex;width:clamp(200px,26vw,340px)}}
+.tnav__search:focus-within{border-bottom-color:var(--d-accent)}
+.tnav__search input{flex:1;border:0;background:transparent;font-size:var(--d-fs-sm);color:var(--d-ink);outline:0}
+.tnav__search input::placeholder{color:var(--d-ink-4)}
+.tnav__search button{border:0;background:transparent;cursor:pointer;color:var(--d-ink-3);
+  font-family:var(--d-mono);font-size:12px;letter-spacing:.08em;padding:2px 0;transition:color .2s,transform .2s}
+.tnav__search button:hover{color:var(--d-accent);transform:translateX(2px)}
+
+.tnav__acts{display:flex;align-items:center;gap:var(--d-s2)}
+.tnav__ic{width:34px;height:34px;display:grid;place-items:center;position:relative;
+  border:1px solid transparent;border-radius:var(--d-r);color:var(--d-ink-2);font-size:15px;
+  transition:background .2s,border-color .2s,color .2s,transform .2s}
+.tnav__ic:hover{background:var(--d-paper-2);border-color:var(--d-rule)}
+.tnav__ic:active{transform:translateY(1px)}
+.tnav__ic .dot{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;
+  display:grid;place-items:center;background:var(--d-accent);color:var(--d-paper-3);
+  border-radius:var(--d-round);font-family:var(--d-mono);font-size:9.5px;line-height:1}
+.tnav__who{display:none;align-items:center;gap:8px;padding:5px 10px;border:1px solid var(--d-rule);
+  border-radius:var(--d-pill);font-size:var(--d-fs-sm);color:var(--d-ink);transition:border-color .2s,background .2s}
+@media(min-width:1100px){.tnav__who{display:flex}}
+.tnav__who:hover{border-color:var(--d-ink);background:var(--d-paper-2)}
+.tnav__who img{width:22px;height:22px;border-radius:var(--d-round);object-fit:cover}
+
+/* 第二行：栏目条（等宽大写 + 期号），滚动时折叠 */
+.tnav__strip{height:32px;display:none;align-items:center;gap:var(--d-s5);
+  border-top:1px solid var(--d-rule);overflow:hidden;transition:height .32s var(--d-ease),opacity .2s}
+@media(min-width:834px){.tnav__strip{display:flex}}
+.tnav.scrolled .tnav__strip{height:0;opacity:0;border-top-color:transparent}
+.tnav__strip a{position:relative;font-family:var(--d-mono);font-size:11.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--d-ink-3);padding:8px 0;white-space:nowrap;transition:color .2s}
+.tnav__strip a::after{content:"";position:absolute;left:0;right:0;bottom:4px;height:1.5px;background:var(--d-accent);
+  transform:scaleX(0);transform-origin:left;transition:transform .28s var(--d-ease)}
+.tnav__strip a:hover{color:var(--d-ink)}
+.tnav__strip a.on{color:var(--d-ink)}
+.tnav__strip a.on::after{transform:scaleX(1)}
+.tnav__meta{margin-left:auto;font-family:var(--d-mono);font-size:11px;letter-spacing:.1em;color:var(--d-ink-4);white-space:nowrap}
+
+/* --------------------------------------------------------------------------
+   3. 首屏 .dhero —— 默认（playbill：戏单 / 报头）
+   其余四套款式在文件末尾 [data-skin] 段覆盖成完全不同的版式
+   -------------------------------------------------------------------------- */
+.dhero{position:relative;overflow:hidden;background:var(--d-paper);color:var(--d-ink);
+  border-bottom:3px double var(--d-rule-2);padding:calc(var(--d-nav-h) + clamp(28px,5vw,64px)) 0 clamp(28px,4vw,56px)}
+.dhero__grid{display:grid;gap:clamp(24px,3vw,48px)}
+.dhero__kicker{display:flex;align-items:center;gap:var(--d-s3);justify-content:center;
+  font-family:var(--d-mono);font-size:11px;letter-spacing:var(--d-track-kicker);text-transform:uppercase;color:var(--d-ink-4)}
+.dhero__kicker::before,.dhero__kicker::after{content:"";flex:1;height:1px;background:var(--d-rule);max-width:80px}
+.dhero__title{margin:clamp(14px,2vw,26px) auto clamp(12px,1.6vw,20px);text-align:center;
+  font-family:var(--d-serif);font-weight:700;font-size:var(--d-fs-display);line-height:var(--d-lh-display);
+  letter-spacing:var(--d-track-display)}
+.dhero__title em{font-style:normal;position:relative;white-space:nowrap}
+.dhero__title em::after{content:"";position:absolute;left:-2%;right:-2%;bottom:.08em;height:.09em;
+  background:var(--d-accent);opacity:.9;transform:scaleX(0);transform-origin:left;
+  animation:d-swipe .8s .5s var(--d-ease) forwards}
+.dhero__sub{margin:0 auto;text-align:center;max-width:46ch;font-size:var(--d-fs-body);line-height:1.7;color:var(--d-ink-3)}
+.dhero__lead{margin-top:clamp(12px,1.6vw,20px);text-align:center;font-family:var(--d-mono);
+  font-size:11.5px;letter-spacing:.12em;color:var(--d-ink-4)}
+
+/* 搜索带 */
+.sform3{display:flex;align-items:stretch;gap:var(--d-s3);width:min(620px,100%);margin:clamp(20px,2.6vw,30px) auto 0;
+  border:1px solid var(--d-rule-2);border-radius:var(--d-r);background:var(--d-paper-3);
+  padding:6px 6px 6px var(--d-s4);box-shadow:var(--d-sh1);transition:border-color .2s,box-shadow .3s,transform .3s}
+.sform3:focus-within{border-color:var(--d-ink);box-shadow:var(--d-sh2);transform:translateY(-1px)}
+.sform3__in{flex:1;min-width:0;border:0;background:transparent;outline:0;color:var(--d-ink);
+  font-size:var(--d-fs-body);padding:10px 0}
+.sform3__in::placeholder{color:var(--d-ink-4)}
+.sform3__btn{flex:none;display:inline-flex;align-items:center;gap:8px;border:1px solid var(--d-ink);
+  background:var(--d-ink);color:var(--d-paper-3);border-radius:var(--d-r);padding:10px 18px;cursor:pointer;
+  font-size:var(--d-fs-sm);font-weight:500;letter-spacing:.02em;
+  transition:background .2s,color .2s,transform .18s,box-shadow .2s}
+.sform3__btn:hover{background:var(--d-accent);border-color:var(--d-accent);color:#fff;box-shadow:var(--d-sh2)}
+.sform3__btn:active{transform:translateY(1px)}
+
+/* CTA */
+.dhero__cta{display:flex;flex-wrap:wrap;gap:var(--d-s3);justify-content:center;margin-top:var(--d-s5)}
+
+/* 首屏右侧「今夜场次牌」：默认（playbill）三栏编号条目 */
+.dhero__side{margin-top:clamp(20px,3vw,36px)}
+.board3{border-top:1px solid var(--d-rule-2);padding-top:var(--d-s4)}
+.board3__head{display:flex;align-items:baseline;gap:var(--d-s3);margin-bottom:var(--d-s3)}
+.board3__head h2{margin:0;font-family:var(--d-mono);font-size:11.5px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--d-ink-3);font-weight:400}
+.board3__head .line{flex:1;height:1px;background:var(--d-rule)}
+.board3__list{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.board3__row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:var(--d-s4);
+  padding:var(--d-s3) 0;border-bottom:1px solid var(--d-rule);transition:background .2s,padding .2s}
+.board3__row:hover{background:var(--d-accent-05);padding-inline:8px}
+.board3__t{font-family:var(--d-mono);font-size:var(--d-fs-sm);color:var(--d-ink);letter-spacing:.02em}
+.board3__n{font-family:var(--d-serif);font-size:17px;font-weight:700;color:var(--d-ink)}
+.board3__n small{display:block;font-family:var(--d-sans);font-size:12px;font-weight:400;color:var(--d-ink-4);margin-top:2px}
+.board3__s{font-family:var(--d-mono);font-size:11.5px;color:var(--d-ink-3);text-align:right;white-space:nowrap}
+.board3__s b{color:var(--d-accent);font-size:13px}
+.board3__empty{padding:var(--d-s4) 0;color:var(--d-ink-3);font-size:var(--d-fs-sm)}
+.board3__foot{margin-top:var(--d-s4);display:flex;justify-content:space-between;align-items:center;gap:var(--d-s3)}
+
+/* 底部数据带：等宽小字，横向铺满，隔一条线 */
+.ticker3{margin-top:clamp(24px,3vw,44px);border-top:1px solid var(--d-rule);border-bottom:1px solid var(--d-rule);
+  display:flex;flex-wrap:wrap;gap:0}
+.ticker3 > *{flex:1 1 0;min-width:120px;padding:var(--d-s4) var(--d-s3);text-align:center;
+  border-left:1px solid var(--d-rule)}
+.ticker3 > *:first-child{border-left:0}
+.ticker3 b{display:block;font-family:var(--d-mono);font-size:clamp(20px,2.4vw,30px);letter-spacing:-.02em;color:var(--d-ink)}
+.ticker3 span{display:block;margin-top:4px;font-family:var(--d-mono);font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--d-ink-4)}
+
+/* 光标跟随光斑（桌面） */
+.dhero__glow{position:absolute;inset:0;pointer-events:none;z-index:0;opacity:0;transition:opacity .4s;
+  background:radial-gradient(280px 200px at var(--mx,50%) var(--my,20%),var(--d-accent-05),transparent 70%)}
+.dhero:hover .dhero__glow{opacity:1}
+.dhero > *:not(.dhero__glow){position:relative;z-index:1}
+
+/* 宽屏：首屏改成**非对称两栏** —— 左边字压左基线，右边挂场次牌（不再居中对齐） */
+@media(min-width:1000px){
+  .dhero__grid{grid-template-columns:minmax(0,1fr) minmax(320px,420px);
+    gap:clamp(28px,4vw,64px);align-items:end}
+  .dhero__kicker{justify-content:flex-start}
+  .dhero__kicker::before{max-width:56px}
+  .dhero__kicker::after{display:none}
+  .dhero__title{text-align:left;margin-left:0;margin-right:0;
+    font-size:min(var(--d-fs-display),11vw,140px)}
+  .dhero__sub{text-align:left;margin-left:0}
+  .dhero__lead{text-align:left}
+  .sform3{margin-left:0;margin-right:0}
+  .dhero__cta{justify-content:flex-start}
+  .dhero__side{margin-top:0}
+}
+
+/* --------------------------------------------------------------------------
+   4. 章节 .dsec —— 编号 + 标题 + 右侧动作，靠细线分隔（不再居中）
+   -------------------------------------------------------------------------- */
+.dsec{padding:clamp(40px,6vw,88px) 0;border-bottom:1px solid var(--d-rule)}
+.dsec--alt{background:var(--d-paper-2)}
+.dsec--stage{background:var(--d-stage);color:var(--d-stage-ink);border-bottom-color:var(--d-hair)}
+.dsec--stage .dsec__title,.dsec--stage .dsec__no{color:var(--d-stage-ink)}
+.dsec--stage .dsec__meta,.dsec--stage .copy-mute{color:var(--d-hair)}
+.dsec--stage .dsec__rule{background:var(--d-hair)}
+.dsec__head{display:grid;grid-template-columns:auto 1fr auto;align-items:end;gap:var(--d-s4) var(--d-s5);
+  margin-bottom:clamp(20px,3vw,40px)}
+.dsec__no{font-family:var(--d-mono);font-size:11.5px;letter-spacing:.2em;color:var(--d-accent);white-space:nowrap}
+.dsec__title{margin:0;font-family:var(--d-serif);font-weight:700;font-size:var(--d-fs-title);
+  line-height:1.08;letter-spacing:-.02em}
+.dsec__meta{margin:0;font-family:var(--d-mono);font-size:11.5px;letter-spacing:.1em;color:var(--d-ink-4);
+  text-align:right;white-space:nowrap}
+.dsec__rule{grid-column:1/-1;height:1px;background:var(--d-rule);margin-top:var(--d-s3)}
+.dsec__lead{margin:-8px 0 clamp(20px,3vw,34px);max-width:60ch;color:var(--d-ink-3);font-size:var(--d-fs-body);line-height:1.7;text-align:left}
+@media(max-width:640px){
+  .dsec__head{grid-template-columns:auto 1fr}
+  .dsec__meta{grid-column:1/-1;text-align:left}
+}
+
+/* --------------------------------------------------------------------------
+   5. 横向轨道 .rail3 —— 海报横向滑动：拖动 + 进度条 + 两端箭头
+   -------------------------------------------------------------------------- */
+.rail3{position:relative}
+.rail3__track{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(196px,236px);gap:clamp(12px,1.6vw,22px);
+  overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 4px 20px;scrollbar-width:none;cursor:grab}
+.rail3__track::-webkit-scrollbar{display:none}
+.rail3__track.dragging{cursor:grabbing;scroll-snap-type:none}
+.rail3__track > *{scroll-snap-align:start}
+.rail3__bar{height:2px;background:var(--d-rule);position:relative;margin-top:2px}
+.rail3__bar i{position:absolute;left:0;top:0;bottom:0;width:20%;background:var(--d-accent);transition:transform .12s linear}
+.rail3__nav{position:absolute;top:-58px;right:0;display:flex;gap:6px}
+@media(max-width:900px){.rail3__nav{display:none}}
+.rail3__nav button{width:34px;height:34px;border:1px solid var(--d-rule);background:var(--d-paper);
+  color:var(--d-ink);border-radius:var(--d-r);cursor:pointer;font-size:15px;
+  transition:background .2s,color .2s,border-color .2s,transform .2s}
+.rail3__nav button:hover{background:var(--d-ink);color:var(--d-paper);border-color:var(--d-ink)}
+.rail3__nav button:active{transform:translateY(1px)}
+
+/* 海报卡 .pcard3 —— 直角 + 1px 线 + 封面推近 */
+.pcard3{position:relative;display:flex;flex-direction:column;background:var(--d-paper-3);
+  border:1px solid var(--d-rule);border-radius:var(--d-r);overflow:hidden;
+  transition:transform .34s var(--d-ease),box-shadow .34s var(--d-ease),border-color .2s}
+.pcard3:hover{transform:translateY(-3px);box-shadow:var(--d-sh2);border-color:var(--d-rule-2)}
+.pcard3__cover{position:relative;display:block;aspect-ratio:3/4;overflow:hidden;background:var(--d-paper-2)}
+.pcard3__cover img{width:100%;height:100%;object-fit:cover;transition:transform .8s var(--d-ease);display:block}
+.pcard3:hover .pcard3__cover img{transform:scale(1.055)}
+.pcard3__ph{position:absolute;inset:0;display:grid;place-items:center;font-size:44px;
+  background:linear-gradient(150deg,var(--d-paper-2),var(--d-paper-3))}
+.pcard3__type{position:absolute;top:0;left:0;z-index:2;padding:4px 9px;background:var(--d-ink);color:var(--d-paper-3);
+  font-family:var(--d-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase}
+.pcard3__fav{position:absolute;top:0;right:0;z-index:3}
+.pcard3__fav button{width:34px;height:34px;display:grid;place-items:center;border:0;cursor:pointer;
+  background:color-mix(in srgb,var(--d-paper-3) 82%,transparent);color:var(--d-ink-3);font-size:15px;
+  line-height:1;transition:color .2s,transform .2s,background .2s}
+.pcard3__fav button:hover{color:var(--d-accent);transform:scale(1.12)}
+.pcard3__fav button.on{color:var(--d-accent)}
+.pcard3__body{padding:var(--d-s3) var(--d-s4) var(--d-s4);display:flex;flex-direction:column;gap:6px;flex:1}
+.pcard3__title{margin:0;font-family:var(--d-serif);font-size:17px;font-weight:700;line-height:1.25}
+.pcard3__title a{transition:color .2s}
+.pcard3__title a:hover{color:var(--d-accent)}
+.pcard3__meta{margin:0;font-family:var(--d-mono);font-size:11px;letter-spacing:.04em;color:var(--d-ink-4)}
+.pcard3__foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:var(--d-s2);
+  padding-top:var(--d-s3);border-top:1px solid var(--d-rule)}
+.pcard3__price{font-family:var(--d-mono);font-size:14px;color:var(--d-ink)}
+.pcard3__price s{color:var(--d-ink-4);margin-right:6px;font-size:12px}
+
+/* --------------------------------------------------------------------------
+   6. 场次牌 / 排期表 .sheett3 —— 等宽数字的"班次表"
+   -------------------------------------------------------------------------- */
+.sheet3{border-top:1px solid var(--d-rule-2)}
+.sheet3__row{display:grid;grid-template-columns:96px 1fr auto auto;align-items:center;gap:var(--d-s4);
+  padding:var(--d-s4) var(--d-s2);border-bottom:1px solid var(--d-rule);position:relative;
+  transition:background .22s,padding-left .22s}
+.sheet3__row::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--d-accent);
+  transform:scaleY(0);transform-origin:top;transition:transform .28s var(--d-ease)}
+.sheet3__row:hover{background:var(--d-accent-05);padding-left:var(--d-s4)}
+.sheet3__row:hover::before{transform:scaleY(1)}
+.sheet3__t{font-family:var(--d-mono);font-size:19px;letter-spacing:-.02em;color:var(--d-ink)}
+.sheet3__m{min-width:0}
+.sheet3__m b{display:block;font-family:var(--d-serif);font-size:17px;font-weight:700}
+.sheet3__m span{display:block;margin-top:3px;font-size:12.5px;color:var(--d-ink-4)}
+.sheet3__cap{font-family:var(--d-mono);font-size:12px;color:var(--d-ink-3);text-align:right;white-space:nowrap}
+.sheet3__act{white-space:nowrap}
+@media(max-width:720px){
+  .sheet3__row{grid-template-columns:74px 1fr;gap:var(--d-s3) var(--d-s4)}
+  .sheet3__cap,.sheet3__act{grid-column:2;text-align:left}
+}
+/* 班次表落在暗场里时，线要用舞台发丝线，字要用舞台字色（否则暗底暗字看不见） */
+.dsec--stage .sheet3,.dsec--stage .sheet3__row{border-color:var(--d-hair)}
+.dsec--stage .sheet3__t,.dsec--stage .sheet3__m b{color:var(--d-stage-ink)}
+.dsec--stage .sheet3__m span,.dsec--stage .sheet3__cap{color:var(--d-hair)}
+.dsec--stage .sheet3__row:hover{background:rgba(255,255,255,.06)}
+.dsec--stage .sheet3__row::before{background:var(--d-accent)}
+.dsec--stage .dsec__lead{color:var(--d-hair)}
+
+/* 余位点阵：满/空一眼看出来（Uber 的"系统可见性"） */
+.dots3{display:inline-flex;gap:3px;vertical-align:middle}
+.dots3 i{width:6px;height:6px;border-radius:var(--d-round);background:var(--d-rule-2);display:block}
+.dots3 i.on{background:var(--d-accent)}
+
+/* --------------------------------------------------------------------------
+   6b. 内页页头 .pagehead3 + 工具条 + 卡片网格
+   -------------------------------------------------------------------------- */
+.pagehead3{padding:calc(var(--d-nav-h) + clamp(22px,3.6vw,50px)) 0 clamp(16px,2.4vw,28px);
+  border-bottom:1px solid var(--d-rule)}
+.pagehead3__k{display:flex;align-items:center;gap:var(--d-s3);margin:0;
+  font-family:var(--d-mono);font-size:11px;letter-spacing:var(--d-track-kicker);
+  text-transform:uppercase;color:var(--d-ink-4)}
+.pagehead3__t{margin:clamp(10px,1.4vw,16px) 0 0;font-family:var(--d-serif);font-weight:700;
+  font-size:var(--d-fs-title);line-height:1.06;letter-spacing:-.02em}
+.pagehead3__lead{margin:var(--d-s4) 0 0;max-width:64ch;font-size:var(--d-fs-body);
+  line-height:1.72;color:var(--d-ink-3)}
+.toolbar3{display:flex;align-items:center;gap:var(--d-s3);flex-wrap:wrap;
+  padding:var(--d-s4) 0;border-bottom:1px solid var(--d-rule)}
+.toolbar3__end{margin-left:auto;display:flex;align-items:center;gap:var(--d-s3);flex-wrap:wrap}
+.grid3{display:grid;grid-template-columns:repeat(auto-fill,minmax(206px,1fr));gap:clamp(12px,1.8vw,22px)}
+@media(max-width:600px){.grid3{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}}
+.sform3--wide{width:min(560px,100%);margin:0;padding:5px 5px 5px var(--d-s4)}
+.sform3--wide .sform3__in{font-size:var(--d-fs-sm);padding:8px 0}
+.sform3--wide .sform3__btn{padding:8px 14px;font-size:12.5px}
+
+/* --------------------------------------------------------------------------
+   7. 编号清单 .idx3 —— 大条目 + 编号 + 箭头（首页"好戏入口"用）
+   -------------------------------------------------------------------------- */
+.idx3{list-style:none;margin:0;padding:0;border-top:1px solid var(--d-rule)}
+.idx3 li{border-bottom:1px solid var(--d-rule)}
+.idx3 a{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:var(--d-s5);
+  padding:clamp(16px,2.4vw,28px) var(--d-s2);position:relative;transition:padding-left .3s var(--d-ease),background .2s}
+.idx3 a::before{content:"";position:absolute;left:0;top:0;bottom:0;width:0;background:var(--d-accent-05);
+  transition:width .3s var(--d-ease)}
+.idx3 a:hover{padding-left:var(--d-s5)}
+.idx3 a:hover::before{width:100%}
+.idx3 a > *{position:relative;z-index:1}
+.idx3__no{font-family:var(--d-mono);font-size:11.5px;letter-spacing:.16em;color:var(--d-accent)}
+.idx3__main{min-width:0}
+.idx3__main b{display:block;font-family:var(--d-serif);font-size:clamp(19px,2.4vw,28px);font-weight:700;letter-spacing:-.01em}
+.idx3__main span{display:block;margin-top:4px;font-size:13px;color:var(--d-ink-3)}
+.idx3__arrow{font-family:var(--d-mono);font-size:15px;color:var(--d-ink-4);transition:transform .3s var(--d-ease),color .2s}
+.idx3 a:hover .idx3__arrow{transform:translateX(6px);color:var(--d-accent)}
+
+/* --------------------------------------------------------------------------
+   8. 瀑布流 .mason3 —— 拼车 / 社区用它做"卡片流"（Pinterest 式）
+   -------------------------------------------------------------------------- */
+.mason3{columns:3;column-gap:clamp(12px,1.8vw,22px)}
+@media(max-width:1000px){.mason3{columns:2}}
+@media(max-width:620px){.mason3{columns:1}}
+.mason3 > *{break-inside:avoid;margin-bottom:clamp(12px,1.8vw,22px);display:block}
+
+/* 拼车卡 .ccard3 */
+.ccard3{border:1px solid var(--d-rule);border-radius:var(--d-r);background:var(--d-paper-3);padding:var(--d-s5);
+  display:flex;flex-direction:column;gap:var(--d-s3);position:relative;overflow:hidden;
+  transition:transform .3s var(--d-ease),box-shadow .3s var(--d-ease),border-color .2s}
+.ccard3:hover{transform:translateY(-2px);box-shadow:var(--d-sh2);border-color:var(--d-rule-2)}
+.ccard3__top{display:flex;align-items:center;justify-content:space-between;gap:var(--d-s3)}
+.ccard3__tag{font-family:var(--d-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--d-ink-4)}
+.ccard3__title{margin:0;font-family:var(--d-serif);font-size:19px;font-weight:700;line-height:1.25}
+.ccard3__meta{display:flex;flex-wrap:wrap;gap:var(--d-s2) var(--d-s4);font-family:var(--d-mono);
+  font-size:11.5px;color:var(--d-ink-3)}
+.ccard3__meta b{color:var(--d-ink)}
+.ccard3__foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:var(--d-s3);
+  padding-top:var(--d-s3);border-top:1px solid var(--d-rule)}
+.ccard3__people{display:flex;flex-wrap:wrap;gap:6px}
+.ccard3__people i{font-style:normal;font-size:11.5px;padding:2px 7px;border:1px solid var(--d-rule);
+  border-radius:var(--d-pill);color:var(--d-ink-3)}
+
+/* 进度条（余位） */
+.bar3{height:4px;background:var(--d-paper-2);border-radius:var(--d-pill);overflow:hidden}
+.bar3 i{display:block;height:100%;background:var(--d-accent);width:0;transition:width .8s var(--d-ease)}
+
+/* --------------------------------------------------------------------------
+   9. 按钮 .b3 —— 直角 + 1px 墨边 + 硬投影（"可按"的力），按压下沉 1px
+   -------------------------------------------------------------------------- */
+.b3{display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
+  padding:11px 20px;border:1px solid var(--d-rule-2);border-radius:var(--d-r);background:var(--d-paper-3);
+  color:var(--d-ink);font-size:var(--d-fs-sm);font-weight:500;font-family:var(--d-sans);line-height:1.2;
+  white-space:nowrap;text-align:center;transition:background .2s,color .2s,border-color .2s,transform .16s,box-shadow .2s}
+.b3:hover{border-color:var(--d-ink);box-shadow:var(--d-sh1)}
+.b3:active{transform:translateY(1px);box-shadow:none}
+.b3--solid{background:var(--d-ink);border-color:var(--d-ink);color:var(--d-paper-3)}
+.b3--solid:hover{background:var(--d-accent);border-color:var(--d-accent);color:#fff;box-shadow:var(--d-sh2)}
+.b3--accent{background:var(--d-accent);border-color:var(--d-accent);color:var(--d-paper-3)}
+.b3--accent:hover{background:var(--d-accent-2);border-color:var(--d-accent-2);color:#fff;box-shadow:var(--d-sh2)}
+.b3--ghost{background:transparent;border-color:var(--d-rule)}
+.b3--ghost:hover{background:var(--d-paper-2)}
+.b3--sm{padding:7px 13px;font-size:12.5px}
+.b3--wide{width:100%}
+.b3--link{border:0;background:transparent;padding:0;box-shadow:none}
+.b3--link:hover{color:var(--d-accent);box-shadow:none}
+.b3[disabled],.b3.is-off{opacity:.45;pointer-events:none}
+/* 暗底上的按钮（首屏 stage 区 / noir） */
+.on-stage .b3{background:transparent;border-color:var(--d-hair);color:var(--d-stage-ink)}
+.on-stage .b3:hover{background:var(--d-stage-ink);color:var(--d-stage);border-color:var(--d-stage-ink)}
+.on-stage .b3--accent{background:var(--d-accent);border-color:var(--d-accent);color:#fff}
+
+/* 小标签 .tag3 */
+.tag3{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid var(--d-rule);
+  border-radius:var(--d-pill);font-family:var(--d-mono);font-size:10.5px;letter-spacing:.06em;
+  color:var(--d-ink-3);background:transparent;white-space:nowrap}
+.tag3--accent{border-color:var(--d-accent);color:var(--d-accent);background:var(--d-accent-05)}
+.tag3--solid{background:var(--d-ink);border-color:var(--d-ink);color:var(--d-paper-3)}
+.tag3--ok{border-color:var(--d-ok);color:var(--d-ok);background:var(--d-ok-bg)}
+
+/* --------------------------------------------------------------------------
+   10. 筛选：多选标签 chips（剧本库）
+   -------------------------------------------------------------------------- */
+.chips3{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chips3__lab{font-family:var(--d-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--d-ink-4);margin-right:2px}
+.chip3{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;cursor:pointer;
+  border:1px solid var(--d-rule);background:transparent;border-radius:var(--d-pill);
+  font-size:12.5px;color:var(--d-ink-3);font-family:var(--d-sans);
+  transition:background .18s,color .18s,border-color .18s,transform .18s}
+.chip3:hover{border-color:var(--d-ink);color:var(--d-ink);transform:translateY(-1px)}
+.chip3.on{background:var(--d-ink);border-color:var(--d-ink);color:var(--d-paper-3)}
+.chip3.on:hover{background:var(--d-accent);border-color:var(--d-accent);color:#fff}
+.chip3__x{font-family:var(--d-mono);font-size:11px;opacity:.7}
+
+/* --------------------------------------------------------------------------
+   11. 页脚 .dfoot —— 目录式三栏 + 底部等宽小字
+   -------------------------------------------------------------------------- */
+.dfoot{background:var(--d-stage);color:var(--d-stage-ink);padding:clamp(36px,5vw,64px) 0 clamp(24px,3vw,36px);
+  margin-top:0}
+.dfoot__grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:clamp(20px,3vw,44px)}
+@media(max-width:760px){.dfoot__grid{grid-template-columns:1fr;gap:var(--d-s5)}}
+.dfoot__brand{font-family:var(--d-serif);font-size:clamp(24px,3.4vw,40px);font-weight:700;letter-spacing:-.02em;line-height:1.05}
+.dfoot__slogan{margin-top:var(--d-s3);font-size:13.5px;color:var(--d-hair);max-width:34ch;line-height:1.7}
+.dfoot h4{margin:0 0 var(--d-s3);font-family:var(--d-mono);font-size:10.5px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--d-hair);font-weight:400}
+.dfoot ul{list-style:none;margin:0;padding:0;display:grid;gap:9px}
+.dfoot ul a{font-size:14px;color:var(--d-stage-ink);opacity:.86;transition:opacity .2s,transform .2s;display:inline-block}
+.dfoot ul a:hover{opacity:1;transform:translateX(3px);color:var(--d-accent)}
+.dfoot__bar{margin-top:clamp(24px,3vw,40px);padding-top:var(--d-s4);border-top:1px solid var(--d-hair);
+  display:flex;flex-wrap:wrap;gap:var(--d-s3) var(--d-s5);align-items:center;
+  font-family:var(--d-mono);font-size:11px;letter-spacing:.08em;color:var(--d-hair)}
+.dfoot__bar .grow{flex:1}
+
+/* 款式预览条（只有管理员看得见） */
+.skin-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-family:var(--d-mono);font-size:11px;
+  letter-spacing:.08em;color:var(--d-hair)}
+.skin-bar a{padding:3px 9px;border:1px solid var(--d-hair);border-radius:var(--d-pill);color:var(--d-stage-ink)}
+.skin-bar a.on{background:var(--d-accent);border-color:var(--d-accent);color:#fff}
+
+/* --------------------------------------------------------------------------
+   12. 提示条 .flash —— 从"顶部悬浮"改成**底部条**（不再遮内容）
+   -------------------------------------------------------------------------- */
+.flash-wrap{position:fixed;left:50%;bottom:calc(var(--mobtab-height) + 14px);top:auto;transform:translateX(-50%);
+  z-index:1200;display:flex;flex-direction:column;gap:8px;width:min(92vw,520px);
+  pointer-events:none;animation:d-rise-sm .34s var(--d-ease) both}
+@media(min-width:834px){.flash-wrap{bottom:20px}}
+.flash{pointer-events:auto;display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:var(--d-r);
+  background:var(--d-ink);color:var(--d-paper-3);border:1px solid var(--d-ink);box-shadow:var(--d-sh3);
+  font-size:13.5px;line-height:1.5;animation:d-rise-sm .34s var(--d-ease) both}
+.flash::before{content:"●";font-size:9px;color:var(--d-accent);line-height:1}
+.flash.ok{background:var(--d-ok);border-color:var(--d-ok);color:#fff}
+.flash.ok::before{color:#fff;opacity:.7}
+.flash.error,.flash.warn{background:var(--d-bad);border-color:var(--d-bad);color:#fff}
+.flash.error::before,.flash.warn::before{color:#fff;opacity:.7}
+.flash.info{background:var(--d-info);border-color:var(--d-info);color:#fff}
+.flash.is-out{animation:d-fade-out .32s var(--d-ease) forwards}
+
+/* --------------------------------------------------------------------------
+   13. 入场动效
+   -------------------------------------------------------------------------- */
+@keyframes d-rise-sm{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes d-swipe{to{transform:scaleX(1)}}
+@keyframes d-fade-out{to{opacity:0;transform:translateY(8px)}}
+@keyframes d-fadein{from{opacity:0}to{opacity:1}}
+@keyframes d-marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes d-blink{0%,100%{opacity:1}50%{opacity:.25}}
+/* 入场：JS 给 .rv 加 .in，子项用 --i 错位 */
+.rv{opacity:0;transform:translateY(18px)}
+.rv.in{animation:d-rise .62s var(--d-ease) both;animation-delay:calc(var(--i,0) * 70ms)}
+@keyframes d-rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.rv-x{opacity:0;transform:translateX(-14px)}
+.rv-x.in{animation:d-rise-x .6s var(--d-ease) both;animation-delay:calc(var(--i,0) * 60ms)}
+@keyframes d-rise-x{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+/* 数字滚动计数 */
+.count3{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+/* 顶栏进度条：滚动时显示阅读进度 */
+.scrollbar3{position:fixed;top:0;left:0;height:2px;background:var(--d-accent);z-index:1100;width:0;
+  transition:width .1s linear}
+@media(prefers-reduced-motion:reduce){
+  .rv,.rv-x{opacity:1;transform:none;animation:none}
+  .dhero__title em::after{animation:none;transform:scaleX(1)}
+  *{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}
+
+/* --------------------------------------------------------------------------
+   14. 后台 / DM 面板：留白与层级修补（修「文字顶头」「挤成一片」）
+   -------------------------------------------------------------------------- */
+.adm-main{padding:clamp(18px,2.6vw,34px) clamp(16px,2.6vw,38px) clamp(48px,8vw,120px)}
+.adm-main > .between{margin:0 0 clamp(16px,2.4vw,26px);align-items:flex-end}
+.adm-main > .between h1{margin:0;font-family:var(--d-serif);font-size:clamp(22px,3vw,32px);
+  font-weight:700;letter-spacing:-.01em;line-height:1.1}
+.adm-main .panel{padding:clamp(16px,2.4vw,28px);margin-bottom:clamp(14px,2vw,22px);
+  border:1px solid var(--d-rule);border-radius:var(--d-r);background:var(--d-paper-3)}
+.adm-main .panel > h3:first-child{margin-top:0}
+.adm-main h3{margin:clamp(20px,2.6vw,30px) 0 6px;font-family:var(--d-serif);font-size:clamp(16px,1.9vw,20px);
+  font-weight:700;letter-spacing:-.005em;line-height:1.3;padding-top:2px}
+.adm-main h3 + .sub{margin:0 0 clamp(12px,1.8vw,18px)}
+.adm-main .sub{color:var(--d-ink-3);font-size:13px;line-height:1.7;max-width:74ch}
+/* 表单网格：标签在上、说明在下，字段之间松一点（原来是"标签挤在输入框头上"） */
+.adm-main .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(14px,1.8vw,22px) clamp(14px,2vw,26px)}
+@media(max-width:760px){.adm-main .form-grid{grid-template-columns:1fr}}
+.adm-main .form-grid .field{min-width:0;display:flex;flex-direction:column;gap:6px}
+.adm-main .form-grid .field.full{grid-column:1/-1}
+.adm-main .field label{display:block;font-size:12.5px;line-height:1.55;color:var(--d-ink-3);
+  letter-spacing:.01em;margin:0}
+.adm-main .field label b{color:var(--d-ink)}
+.adm-main .field > input,.adm-main .field > select,.adm-main .field > textarea{width:100%;
+  border:1px solid var(--d-rule);border-radius:var(--d-r);background:var(--d-paper);
+  padding:10px 12px;font-size:14px;color:var(--d-ink);transition:border-color .2s,background .2s}
+.adm-main .field > input:focus,.adm-main .field > select:focus,.adm-main .field > textarea:focus{
+  border-color:var(--d-accent);background:var(--d-paper-3);outline:0}
+.adm-main .field .sub{margin:0;font-size:12px;line-height:1.6;color:var(--d-ink-4)}
+.adm-main code{font-family:var(--d-mono);font-size:12px;padding:1px 5px;background:var(--d-paper-2);
+  border-radius:2px;color:var(--d-ink-2)}
+/* 分隔：一组设置一条细线，段落感出来了就不"顶头" */
+.adm-main .panel + h3,.adm-main form > h3 + .sub + .form-grid{border-top:0}
+.adm-main .panel h3:not(:first-child){border-top:1px solid var(--d-rule);padding-top:clamp(16px,2.2vw,26px)}
+/* 表格：等宽数字 + 行线 */
+.adm-main table{width:100%;border-collapse:collapse;font-size:13.5px}
+.adm-main th{font-family:var(--d-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--d-ink-4);font-weight:400;text-align:left;padding:8px 10px;border-bottom:1px solid var(--d-rule-2)}
+.adm-main td{padding:10px;border-bottom:1px solid var(--d-rule);vertical-align:middle}
+.adm-main tr:hover td{background:var(--d-accent-05)}
+/* 后台 / DM 的区块标题不再贴在屏幕边上 */
+.adm-main .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;
+  background:var(--d-rule);border:1px solid var(--d-rule);margin-bottom:clamp(14px,2vw,22px)}
+.adm-main .stats > *{background:var(--d-paper-3);padding:var(--d-s4) var(--d-s5)}
+.adm-main .stats b{display:block;font-family:var(--d-mono);font-size:clamp(18px,2.2vw,26px);letter-spacing:-.02em}
+.adm-main .stats span{display:block;margin-top:4px;font-family:var(--d-mono);font-size:10.5px;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--d-ink-4)}
+
+/* --------------------------------------------------------------------------
+   15. 空态 .empty3 —— 用"线 + 编号"，不用虚线框（不同款式靠令牌自动换色）
+   -------------------------------------------------------------------------- */
+.empty3{border-top:1px solid var(--d-rule-2);border-bottom:1px solid var(--d-rule-2);
+  background:var(--d-paper-2);padding:clamp(28px,4vw,56px) clamp(18px,3vw,40px);text-align:left}
+.empty3__k{font-family:var(--d-mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--d-accent)}
+.empty3__t{margin:10px 0 0;font-family:var(--d-serif);font-size:clamp(22px,3vw,34px);font-weight:700;line-height:1.15}
+.empty3__p{margin:12px 0 0;max-width:56ch;color:var(--d-ink-3);font-size:14.5px;line-height:1.75}
+.empty3__a{margin-top:20px;display:flex;flex-wrap:wrap;gap:10px}
+
+/* --------------------------------------------------------------------------
+   16. 响应式收尾
+   -------------------------------------------------------------------------- */
+@media(max-width:833px){
+  .dhero{padding-top:calc(var(--d-nav-h) + 24px)}
+  .dhero__title{font-size:clamp(40px,11vw,64px)}
+  .ticker3 > *{min-width:50%;flex:1 1 50%;border-top:1px solid var(--d-rule)}
+  .ticker3 > *:nth-child(-n+2){border-top:0}
+  .ticker3 > *:nth-child(odd){border-left:0}
+  .dfoot{margin-bottom:0}
+}
+
+/* --------------------------------------------------------------------------
+   16b. 表单字段（全站统一）：标签在上、说明在下、输入框独立成行
+   -------------------------------------------------------------------------- */
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field > label,.field > .lab{font-size:12.5px;line-height:1.55;color:var(--d-ink-3);letter-spacing:.01em}
+.field > label b{color:var(--d-ink)}
+.field > input,.field > select,.field > textarea,.field > .input{
+  width:100%;border:1px solid var(--d-rule);border-radius:var(--d-r);background:var(--d-paper-3);
+  padding:10px 12px;font-size:14px;color:var(--d-ink);font-family:var(--d-sans);
+  transition:border-color .2s,background .2s,box-shadow .2s}
+.field > input:focus,.field > select:focus,.field > textarea:focus{
+  border-color:var(--d-accent);outline:0;box-shadow:0 0 0 3px var(--d-accent-05)}
+.field .sub,.field > .sub{margin:0;font-size:12px;line-height:1.6;color:var(--d-ink-4)}
+.field--full{grid-column:1/-1}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(14px,1.8vw,22px)}
+@media(max-width:700px){.form-grid{grid-template-columns:1fr}}
+.form-stack{display:grid;gap:clamp(14px,1.8vw,20px)}
+.form-inline{display:flex;gap:var(--d-s3);align-items:flex-end;flex-wrap:wrap}
+/* 复选 chip（拼车标签那类） */
+.chip-check{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--d-rule);border-radius:var(--d-pill);
+  padding:6px 12px;cursor:pointer;font-size:12.5px;color:var(--d-ink-3);transition:border-color .2s,background .2s,color .2s}
+.chip-check:hover{border-color:var(--d-ink);color:var(--d-ink)}
+.chip-check input{position:absolute;opacity:0;pointer-events:none}
+.chip-check:has(input:checked){background:var(--d-ink);border-color:var(--d-ink);color:var(--d-paper-3)}
+.lnk{border-bottom:1px solid var(--d-rule-2);transition:border-color .2s,color .2s}
+.lnk:hover{color:var(--d-accent);border-color:var(--d-accent)}
+.sub{color:var(--d-ink-4);font-size:12.5px;line-height:1.6}
+.caption{font-family:var(--d-mono);font-size:11px;letter-spacing:.06em;color:var(--d-ink-4)}
+.input{width:100%;border:1px solid var(--d-rule);border-radius:var(--d-r);background:var(--d-paper-3);
+  padding:10px 12px;font-size:14px;color:var(--d-ink);font-family:var(--d-sans)}
+.input:focus{border-color:var(--d-accent);outline:0;box-shadow:0 0 0 3px var(--d-accent-05)}
+
+/* 角色卡 */
+.role3{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:clamp(10px,1.6vw,18px)}
+.role3__c{border:1px solid var(--d-rule);border-radius:var(--d-r);overflow:hidden;background:var(--d-paper-3);
+  transition:transform .3s var(--d-ease),box-shadow .3s var(--d-ease),border-color .2s}
+.role3__c:hover{transform:translateY(-2px);box-shadow:var(--d-sh2)}
+.role3__c.is-taken{opacity:.55}
+.role3__ph{aspect-ratio:1/1;display:grid;place-items:center;background:var(--d-paper-2);
+  font-family:var(--d-serif);font-size:34px;color:var(--d-ink-3)}
+.role3__c img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;transition:transform .7s var(--d-ease)}
+.role3__c:hover img{transform:scale(1.05)}
+.role3__b{padding:9px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px}
+.role3__b b{font-family:var(--d-serif);font-size:15px}
+
+/* 评价条目 */
+.rev3{border-top:1px solid var(--d-rule);padding:var(--d-s5) 0}
+.rev3__h{display:flex;align-items:baseline;gap:10px;justify-content:space-between;flex-wrap:wrap}
+.rev3__w{font-family:var(--d-serif);font-weight:700;font-size:16px}
+.rev3__t{margin:9px 0 0;font-size:14.5px;line-height:1.78;color:var(--d-ink-2)}
+.rev3__d{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.rev3__q{margin:10px 0 0;padding-left:10px;border-left:2px solid var(--d-accent);
+  font-size:13px;line-height:1.7;color:var(--d-ink-3)}
+.rev3__a{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+
+/* 两栏工作区（左主右辅） */
+.split3{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);
+  gap:clamp(22px,3.4vw,52px);align-items:start}
+@media(max-width:960px){.split3{grid-template-columns:1fr}}
+.sticky3{position:sticky;top:calc(var(--d-nav-h) + 18px)}
+@media(max-width:960px){.sticky3{position:static}}
+/* 侧栏小标题 */
+.sidehead3{display:flex;align-items:baseline;gap:10px;margin:0 0 var(--d-s4);
+  font-family:var(--d-mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--d-ink-4)}
+.sidehead3 .line{flex:1;height:1px;background:var(--d-rule)}
+
+/* 说明性小卡（规则、提示） */
+.note3{border:1px solid var(--d-rule);border-left:3px solid var(--d-accent);background:var(--d-paper-2);
+  padding:var(--d-s4) var(--d-s5);border-radius:var(--d-r);font-size:13px;line-height:1.75;color:var(--d-ink-2)}
+
+/* --------------------------------------------------------------------------
+   16c. 旧类对齐：设计 2 遗留下来的原子类，统一到新语言
+        （只动"原子"：按钮 / 标签 / 徽章 / 输入框。卡片、面板交给皮肤与新组件。）
+   -------------------------------------------------------------------------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
+  padding:11px 20px;border:1px solid var(--d-rule-2);border-radius:var(--d-r);background:var(--d-paper-3);
+  color:var(--d-ink);font-size:var(--d-fs-sm);font-weight:500;line-height:1.2;white-space:nowrap;
+  transition:background .2s,color .2s,border-color .2s,transform .16s,box-shadow .2s}
+.btn:hover{border-color:var(--d-ink);box-shadow:var(--d-sh1);filter:none}
+.btn:active{transform:translateY(1px);box-shadow:none}
+.btn--primary,.btn-accent{background:var(--d-accent);border-color:var(--d-accent);color:var(--d-paper-3)}
+.btn--primary:hover,.btn-accent:hover{background:var(--d-accent-2);border-color:var(--d-accent-2);color:#fff;box-shadow:var(--d-sh2)}
+.btn--dark{background:var(--d-ink);border-color:var(--d-ink);color:var(--d-paper-3)}
+.btn--ghost{background:transparent;border-color:var(--d-rule)}
+.btn--ghost:hover{background:var(--d-paper-2)}
+.btn--sm{padding:7px 13px;font-size:12.5px}
+.btn--block{width:100%}
+.bi{font-size:30px;line-height:1}
+.badge,.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid var(--d-rule);
+  border-radius:var(--d-pill);font-family:var(--d-mono);font-size:10.5px;letter-spacing:.06em;
+  color:var(--d-ink-3);background:transparent;white-space:nowrap}
+.badge--brand,.badge--hot{background:var(--d-ink);border-color:var(--d-ink);color:var(--d-paper-3)}
+.badge--dark{background:var(--d-ink);border-color:var(--d-ink);color:var(--d-paper-3)}
+.badge--ok{background:var(--d-ok-bg);border-color:var(--d-ok);color:var(--d-ok)}
+.badge--warn{background:var(--d-bad-bg);border-color:var(--d-bad);color:var(--d-bad)}
+.heading-hero{font-family:var(--d-serif);font-weight:700;font-size:min(var(--d-fs-display),9vw,104px);
+  line-height:1.02;letter-spacing:var(--d-track-display);margin:0}
+.heading-section{font-family:var(--d-serif);font-weight:700;font-size:var(--d-fs-h2);
+  line-height:1.15;letter-spacing:-.02em;margin:0}
+.heading-display{font-family:var(--d-serif);font-weight:700;letter-spacing:-.02em;margin:0}
+.sec-head{display:flex;align-items:baseline;gap:var(--d-s4);flex-wrap:wrap;
+  padding-bottom:var(--d-s3);margin-bottom:var(--d-s5);border-bottom:1px solid var(--d-rule)}
+.sec-no{font-family:var(--d-mono);font-size:11.5px;letter-spacing:.2em;color:var(--d-accent)}
+.mt{margin-top:var(--d-s4)}
+.mt-2{margin-top:var(--d-s2)}.mt-3{margin-top:var(--d-s3)}.mt-4{margin-top:var(--d-s4)}
+.mt-5{margin-top:var(--d-s5)}.mt-6{margin-top:var(--d-s6)}.mt-7{margin-top:var(--d-s7)}.mt-8{margin-top:var(--d-s8)}
+.row{display:flex;align-items:center;gap:var(--d-s3);flex-wrap:wrap}
+.between{display:flex;align-items:center;justify-content:space-between;gap:var(--d-s4);flex-wrap:wrap}
+.text-center{text-align:center}
+.body-secondary,.body-large{color:var(--d-ink-3);line-height:1.72}
+.body-large{font-size:var(--d-fs-body)}
+
+/* --------------------------------------------------------------------------
+   16c2. 「我的」：左栏身份卡 + 纵向胶囊导航（改成"目录 + 细线"）
+   -------------------------------------------------------------------------- */
+.block3{border:1px solid var(--d-rule);border-radius:var(--d-r);background:var(--d-paper-3);
+  padding:clamp(14px,2vw,22px);margin-bottom:var(--d-s4)}
+.block3--tint{background:var(--d-paper-2)}
+.block3 > h3:first-child,.block3 > h2:first-child{margin-top:0}
+.me-wrap{max-width:var(--d-max);margin:0 auto;display:grid;grid-template-columns:290px minmax(0,1fr);
+  gap:clamp(20px,3vw,44px);align-items:start}
+@media(max-width:900px){.me-wrap{grid-template-columns:1fr}}
+.me-card{border:1px solid var(--d-rule);border-radius:var(--d-r);background:var(--d-paper-3);
+  padding:var(--d-s5)}
+.me-card .avatar{width:56px;height:56px;border-radius:var(--d-round);overflow:hidden;display:grid;
+  place-items:center;background:var(--d-ink);color:var(--d-paper-3);
+  font-family:var(--d-serif);font-size:22px}
+.me-card h3{margin:var(--d-s4) 0 4px;font-family:var(--d-serif);font-size:19px;font-weight:700}
+.p-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--d-rule);
+  border:1px solid var(--d-rule);margin-top:var(--d-s4)}
+.p-stats > *{background:var(--d-paper-3);padding:10px 6px;text-align:center}
+.p-stats b{display:block;font-family:var(--d-mono);font-size:17px;letter-spacing:-.02em}
+.p-stats span{display:block;margin-top:3px;font-size:10.5px;letter-spacing:.06em;color:var(--d-ink-4)}
+.me-nav{display:flex;flex-direction:column;gap:0;position:sticky;top:calc(var(--d-nav-h) + 16px);
+  border-top:1px solid var(--d-rule-2);margin-top:var(--d-s5)}
+@media(max-width:900px){
+  .me-nav{position:static;flex-direction:row;overflow-x:auto;border-top:1px solid var(--d-rule-2)}
+  .me-nav .mi{width:auto;white-space:nowrap}
+}
+.me-nav .mi{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;
+  padding:12px 10px;border:0;border-bottom:1px solid var(--d-rule);background:transparent;
+  font-size:14px;color:var(--d-ink-3);cursor:pointer;font-family:var(--d-sans);
+  transition:color .2s,background .2s,padding-left .24s var(--d-ease)}
+.me-nav .mi:hover{color:var(--d-ink);background:var(--d-accent-05);padding-left:14px}
+.me-nav .mi.on{color:var(--d-ink);font-weight:600;box-shadow:inset 2px 0 0 var(--d-accent)}
+.me-nav .mi span{font-family:var(--d-mono);font-size:10.5px;letter-spacing:.05em;color:var(--d-ink-4);white-space:nowrap}
+.tabpane{display:none}
+.tabpane.on{display:block}
+.tabpane.on > *{animation:d-rise .5s var(--d-ease) both}
+.code-big{font-family:var(--d-mono);font-size:clamp(20px,2.6vw,28px);letter-spacing:.2em;color:var(--d-accent)}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(16px,2.4vw,30px)}
+@media(max-width:820px){.two{grid-template-columns:1fr}}
+h2.heading-section{margin:0 0 var(--d-s3)}
+
+/* --------------------------------------------------------------------------
+   16d. 登录 / 注册 / 找回密码（独立布局，不套站内顶栏）
+   -------------------------------------------------------------------------- */
+.auth-body{background:var(--d-paper);color:var(--d-ink)}
+.auth-stage{max-width:460px;margin:0 auto;padding:clamp(26px,5vw,60px) var(--d-pad) clamp(30px,5vw,56px);
+  min-height:100vh;display:flex;flex-direction:column;justify-content:center}
+.auth-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--d-s5)}
+.auth-home{font-family:var(--d-mono);font-size:11.5px;letter-spacing:.1em;color:var(--d-ink-3)}
+.auth-home:hover{color:var(--d-accent)}
+.theme-btn{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--d-rule);
+  border-radius:var(--d-r);font-size:14px}
+.auth-card{border:1px solid var(--d-rule);border-radius:var(--d-r);background:var(--d-paper-3);
+  padding:clamp(20px,4vw,34px);box-shadow:var(--d-sh1)}
+.auth-card h2{margin:0;font-family:var(--d-serif);font-size:clamp(22px,4vw,30px);font-weight:700;letter-spacing:-.02em}
+.auth-card > .sub{margin:8px 0 0}
+.auth-card form{margin-top:clamp(18px,3vw,26px);display:grid;gap:clamp(12px,1.8vw,16px)}
+.auth-brand{display:flex;align-items:center;gap:9px;font-family:var(--d-mono);font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--d-ink-4);margin-bottom:var(--d-s4)}
+.auth-brand .logo{font-size:18px}
+.code-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
+.btn-code{border:1px solid var(--d-rule-2);background:transparent;color:var(--d-ink);border-radius:var(--d-r);
+  padding:11px 14px;font-size:12.5px;cursor:pointer;white-space:nowrap;transition:background .2s,border-color .2s}
+.btn-code:hover:not(:disabled){background:var(--d-paper-2);border-color:var(--d-ink)}
+.btn-code:disabled{opacity:.55;cursor:default}
+.code-tip{margin:0;font-family:var(--d-mono);font-size:11.5px;color:var(--d-ok)}
+.code-tip.bad{color:var(--d-bad)}
+.agree{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--d-ink-3);cursor:pointer}
+.agree input{width:auto}
+.agree .dot{display:none}
+.hint-dev{margin:0;font-size:12.5px;color:var(--d-ink-4)}
+.foot-line{margin:var(--d-s5) 0 0;font-size:13px;color:var(--d-ink-3)}
+.back{display:inline-block;margin-bottom:var(--d-s4);font-family:var(--d-mono);font-size:11.5px;
+  letter-spacing:.08em;color:var(--d-ink-4)}
+.auth-foot{margin-top:var(--d-s5);text-align:center;font-family:var(--d-mono);font-size:11px;
+  letter-spacing:.06em;color:var(--d-ink-4)}
+.auth-bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(120% 80% at 50% -10%,var(--d-paper-3),var(--d-paper))}
+/* 装到桌面引导弹窗：只改登录布局里的，后台弹窗不动 */
+.auth-body .mask{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;place-items:center;z-index:1300;padding:20px}
+.auth-body .mask.show{display:grid}
+.auth-body .modal{background:var(--d-paper-3);border:1px solid var(--d-rule);border-radius:var(--d-r);
+  max-width:420px;width:100%;padding:var(--d-s5);box-shadow:var(--d-sh3)}
+.auth-body .m-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.auth-body .m-close{border:0;background:transparent;cursor:pointer;font-size:16px;color:var(--d-ink-3)}
+
+/* --------------------------------------------------------------------------
+   17. 一款到底
+   ----------------------------------------------------------------------------
+   只做**一套**版式（就是上面第 3 节那套：非对称编辑排版 + 细线编号 + 班次表）。
+   换款式（skin）时不再换骨架 —— 颜色/圆角/字体/字号全部走令牌（--paper / --ink /
+   --vermilion / --r / --sh-* / --fs-display …），皮肤表一换，整套版式的
+   底、字、线、印色就跟着换，但版式语言始终是同一套、始终好看。
+   -------------------------------------------------------------------------- */
+/* 首页场次牌：编号条目在三栏里排（宽屏），窄屏落回单栏 */
+.board3__list{grid-template-columns:repeat(3,minmax(0,1fr));column-gap:clamp(14px,2.4vw,34px)}
+@media(max-width:860px){.board3__list{grid-template-columns:1fr}}
+.board3__row{grid-template-columns:auto 1fr}
+.board3__s{grid-column:1/-1;text-align:left;margin-top:6px}
