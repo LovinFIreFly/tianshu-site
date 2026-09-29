@@ -9,6 +9,7 @@
   <button type="button" class="pill" data-show="unpaid">待付定金</button>
   <button type="button" class="pill" data-show="paid">已付定金</button>
   <button type="button" class="pill" data-show="refunded">已退款</button>
+  <button type="button" class="pill" data-show="closed">未到 · 定金不退</button>
 </div>
 
 {# 流程：客人点「支付定金」→ 加小客服微信付款 → 点「我已完成支付」（状态变 待客服确认）
@@ -16,6 +17,9 @@
    所以「待客服确认」这类单子是要处理的活儿，别当它已付。 #}
 <p class="sub mt">「待客服确认」是客人在支付页点过「我已完成支付」的单子 —— 钱到账了再点
   <b>确认支付定金</b>，点完客人才能在「我的预约」里看到核销码。</p>
+<p class="sub">客人没到、或者玩到一半跳车：点那一单的 <b>标记未到 · 定金不退</b> ——
+  单子直接关掉、定金按规矩留下、位子放回池子，客人会收到一条说明。
+  （定金只会在客人玩完、你确认游玩费那一下自动退回，所以「没到」不需要额外做什么，标记一下留个记录就行。）</p>
 
 <h2>每天收了多少钱（按场次日期）</h2>
 <div class="scroll panel">
@@ -42,18 +46,28 @@
       <td>¥{{ o.amount or 0 }}</td>
       <td class="price">¥{{ o.deposit or 0 }}</td>
       <td>
-        {% if o.status == 'paid' %}<span class="badge ok">已付</span>
+        {% if o.forfeitAt %}<span class="badge bad">未到 · 不退</span>
+        {% elif o.status == 'paid' %}<span class="badge ok">已付</span>
         {% elif o.status == 'claimed' %}<span class="badge warn">待客服确认</span>
         {% elif o.status == 'unpaid' %}<span class="badge">待付</span>
         {% elif o.status == 'refunded' %}<span class="badge bad">已退</span>
         {% else %}<span class="badge">{{ o.status }}</span>{% endif %}
       </td>
       <td>
-        {% if o.status in ('unpaid', 'claimed') or o.balStatus == 'claimed' %}
+        {% set canConfirm = o.status in ('unpaid', 'claimed') or o.balStatus == 'claimed' %}
+        {% set canForfeit = o.status in ('paid', 'claimed') and not o.forfeitAt %}
+        {% if canConfirm %}
         <form method="post" action="{{ url_for('admin.order_confirm', oid=o.id) }}" style="display:inline">
           <button class="btn btn-sm {{ 'btn-primary' if (o.status == 'claimed' or o.balStatus == 'claimed') else '' }}"
                   type="submit">{{ '确认收游玩费' if o.balStatus == 'claimed' else '确认支付定金' }}</button></form>
-        {% else %}<span class="sub">—</span>{% endif %}
+        {% endif %}
+        {% if canForfeit %}
+        <form method="post" action="{{ url_for('admin.order_forfeit', oid=o.id) }}"
+              style="display:inline;margin-left:6px"
+              onsubmit="return confirm('标记「未到 / 中途跳车」？\n定金 ¥{{ o.deposit or 0 }} 按门店规矩不退，单子会关掉、位子放回池子。')">
+          <button class="btn btn-sm" type="submit">标记未到 · 定金不退</button></form>
+        {% endif %}
+        {% if not canConfirm and not canForfeit %}<span class="sub">—</span>{% endif %}
       </td>
     </tr>
     {% else %}

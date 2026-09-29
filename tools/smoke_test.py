@@ -294,6 +294,8 @@ check('待确认时客人还是看不到核销码', str(bk.get('verifyCode')) no
 check('页面上显示「待小客服确认」', '待小客服确认' in html)
 s, html = admin.get('/admin/orders')
 check('后台订单页能看到这单要确认', '确认支付定金' in html and '待客服确认' in html)
+check('后台订单页有「标记未到 · 定金不退」（没到场 / 中途跳车的定金按规矩不退）',
+      '标记未到' in html and '定金不退' in html)
 s, _ = admin.post('/admin/orders/%s/confirm' % o['id'], {})   # 管理员确认到账
 o = next((x for x in jread('pays') if x.get('id') == o['id']), {})
 check('管理员点「确认支付定金」', o.get('status') == 'paid', '状态=%s' % o.get('status'))

@@ -519,6 +519,20 @@ def order_confirm(oid):
     return redirect(url_for('admin.dashboard') + '#orders')
 
 
+@bp.post('/orders/<int:oid>/forfeit')
+@staff_required
+def order_forfeit(oid):
+    """标记未到 / 中途跳车：定金按门店规矩不退（这笔钱门店收了）。
+
+    一键做完三件事：单子关掉、位子放回池子（人没来的话）、通知客人 + 留操作日志。
+    只给门店点（staff_required）—— 钱的事不让 DM 或客人自己操作。
+    """
+    ok, msg = business.order_action(current_user(), oid, 'forfeit', is_staff=True,
+                                    reason=(request.form.get('reason') or '').strip())
+    flash(msg, 'ok' if ok else 'warn')
+    return redirect(url_for('admin.dashboard') + '#orders')
+
+
 @bp.post('/mail/test')
 @staff_required
 def mail_test():

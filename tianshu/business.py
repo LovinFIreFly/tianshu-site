@@ -1268,7 +1268,7 @@ def create_booking(user, form):
 
 
 # ---------------------------------------------------------------- 订单 ★
-def order_action(user, order_id, action, is_staff=False):
+def order_action(user, order_id, action, is_staff=False, reason=''):
     """付定金 / 退定金。能不能退、退多少、扣不扣信用分，全看这里"""
     st = get_settings()
     pays, bookings = db.rows('pays'), db.rows('bookings')
@@ -1370,6 +1370,37 @@ def order_action(user, order_id, action, is_staff=False):
                ('《%s》定金 ¥%d 退给你了' % (order.get('title'), order.get('deposit'))) if free
                else ('《%s》的预约取消了，超时定金不退' % order.get('title')), 'pay')
         return True, '已退款' if free else '已取消（超时定金不退）'
+
+    # 标记未到 / 中途跳车：按门店规矩**定金不退**（这笔钱门店收了）。
+    # 只有门店能点（staff_required）：钱的事不能让客人自己操作。
+    # 人没来的话顺手把这条预约取消掉，把位子放回池子；已经核销过的（玩到一半跳车）不动预约。
+    if action == 'forfeit':
+        if not is_staff:
+            return False, '只有门店能标记未到'
+        # 「已经处理过」要先判：处理完状态会变成 closed，不然重复点会误报成"定金没到账"
+        if order.get('forfeitAt') or order.get('status') in ('refunded', 'closed'):
+            return False, '这单已经处理过了（不用再点）'
+        if order.get('status') not in ('paid', 'claimed'):
+            return False, '这单的定金还没确认到账，先确认收款或直接取消'
+        lost = int(order.get('deposit') or 0)
+        tag = clean(reason, 30) or '未到 / 中途跳车'
+        order.update(status='closed', forfeitAt=now_ms(), forfeitReason=tag, refundAmount=0)
+        db.write('pays', pays)
+        if booking and booking.get('status') not in ('arrived', 'done'):
+            booking.update(status='cancelled', cancelAt=now_ms(), cancelBy='noshow')
+            db.write('bookings', bookings)
+        notify(order.get('phone'), '这一单的定金不退',
+               '《%s》%s %s 这一场没有到场（或中途离开），按门店规矩定金 ¥%d 不退。'
+               '位子当时一直给你留着，下次提前说一声就好～'
+               % (order.get('title'), order.get('day'), order.get('time') or '', lost), 'pay')
+        notify_staff('已标记未到 · 定金不退',
+                     '%s《%s》%s %s —— 定金 ¥%d 按规矩不退（%s）。'
+                     % (order.get('username'), order.get('title'), order.get('day'),
+                        order.get('time') or '', lost, tag), 'pay')
+        audit((user or {}).get('username') or '门店', 'staff',
+              '标记《%s》%s 未到 · 定金 ¥%d 不退（%s）'
+              % (order.get('title'), order.get('day'), lost, tag))
+        return True, '已标记未到：定金 ¥%d 不退，单子关掉了' % lost
 
     return False, '不认识这个操作'
 
