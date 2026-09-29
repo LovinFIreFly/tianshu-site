@@ -12,7 +12,12 @@
 
       <div class="dhero__main">
         <p class="dhero__kicker rv">剧本 · 场地 · DM</p>
-        <h1 class="dhero__title rv" style="--i:1">今晚，<em>换一个人</em>活一次。</h1>
+        {# 文字遮罩升起（Awwwards 获奖站最常用的一招）：每行藏在一条框里往上推 #}
+        <h1 class="dhero__title">
+          <span class="ln"><i>今晚，</i></span>
+          <span class="ln"><i><em>换一个人</em></i></span>
+          <span class="ln"><i>活一次。</i></span>
+        </h1>
         <p class="dhero__sub rv" style="--i:2">挑本、开团、到店，剩下的交给我们。全城最好的一本，今晚就等你落座。</p>
 
         <form class="sform3 rv" style="--i:3" method="get" action="{{ url_for('public.scripts') }}" role="search">
@@ -69,18 +74,36 @@
   </div>
 </section>
 
-{# ============ 滚动条幅：暗场走字带（纯装饰） ============ #}
-<div class="marquee3" aria-hidden="true">
-  <div class="marquee3__in">
-    {# 循环次数必须是偶数：动画位移是 -50%，两半必须一模一样才不会"跳帧" #}
-    {% for i in range(4) %}
-    <span>今晚换一个人活一次</span>
-    <span>拼车满员即开</span>
-    <span>挑本 · 开团 · 到店</span>
-    <span>好本子只演一次</span>
-    {% endfor %}
+{# ============ 怎么玩：滚动分镜（Apple 式 sticky 叙事，抄 CSSDA 获奖站的"沉浸式滚动"） ============ #}
+<section class="how3" id="how" aria-label="怎么玩">
+  <div class="how3__pin">
+    <div class="wrap3">
+      <p class="how3__k">怎么玩 · How it works</p>
+      <div class="how3__stage">
+        <div class="how3__step is-on">
+          <p class="how3__no">01 / 挑本</p>
+          <h2 class="how3__t">先挑一个<br>今晚想活的本。</h2>
+          <p class="how3__d">剧本库按类型、人数、难度筛。标签可以多选 —— 选几个，就把这几类一起摆上来。</p>
+        </div>
+        <div class="how3__step">
+          <p class="how3__no">02 / 开团</p>
+          <h2 class="how3__t">凑不齐人？<br>那就拼一车。</h2>
+          <p class="how3__d">定好日期时间下单，一个人也能开一辆车。满员即开，有人退位就先喊你。</p>
+        </div>
+        <div class="how3__step">
+          <p class="how3__no">03 / 到店</p>
+          <h2 class="how3__t">报 6 位码，<br>然后交给 DM。</h2>
+          <p class="how3__d">到店报核销码，房间和 DM 都安排好了。玩完再付尾款、打分，一条龙。</p>
+        </div>
+      </div>
+      <ol class="how3__bar" aria-hidden="true"><li class="is-on"></li><li></li><li></li></ol>
+      <div class="how3__cta">
+        <a class="b3 b3--accent" href="{{ url_for('public.scripts') }}">从挑本开始</a>
+        <a class="b3" href="{{ url_for('public.car') }}">直接去看拼车</a>
+      </div>
+    </div>
   </div>
-</div>
+</section>
 
 {# ============ 01 本子上新：横向海报轨 ============ #}
 <section class="dsec">
@@ -144,8 +167,8 @@
   </div>
 </section>
 
-{# ============ 02 今天这几场：班次表（暗场） ============ #}
-<section class="dsec dsec--stage on-stage">
+{# ============ 02 今天这几场：班次表（细线表，不再拉一条大黑横幅） ============ #}
+<section class="dsec">
   <div class="wrap3">
     <header class="dsec__head rv">
       <span class="dsec__no">02</span>
@@ -284,16 +307,15 @@
   </div>
 </section>
 
-{# ============ 收尾：一句台词 + 两个动作 ============ #}
-<section class="dsec dsec--stage on-stage" style="border-bottom:0">
+{# ============ 收尾：一句台词 + 两个动作（浅底 + 印色引句，不拉横幅） ============ #}
+<section class="dsec" style="border-bottom:0;border-top:1px solid var(--d-rule-2)">
   <div class="wrap3" style="text-align:center">
-    <p class="rv" style="margin:0;font-family:var(--d-mono);font-size:11.5px;letter-spacing:.24em;
-       text-transform:uppercase;color:var(--d-hair)">好本子只演一次</p>
+    <p class="rv copy-mono" style="margin:0;color:var(--d-accent)">好本子只演一次</p>
     <h2 class="rv" style="--i:1;margin:14px 0 0;font-family:var(--d-serif);font-weight:700;
-        font-size:var(--d-fs-title);line-height:1.15;letter-spacing:-.02em">
+        font-size:min(var(--d-fs-title),5vw,40px);line-height:1.16;letter-spacing:-.02em">
       “好本子只演一次，好搭子只凑一回。”
     </h2>
-    <div class="rv" style="--i:2;margin-top:26px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+    <div class="rv" style="--i:2;margin-top:24px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
       <a class="b3 b3--accent" href="{{ url_for('public.scripts') }}">现在挑本子</a>
       <a class="b3" href="{{ url_for('public.car') }}">去拼车大厅</a>
     </div>

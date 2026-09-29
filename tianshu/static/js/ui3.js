@@ -162,4 +162,45 @@
       });
     }
   }
+
+  /* ------------------------------------------------- ⑦ 首页"怎么玩"滚动分镜
+     整块钉在视口里，按滚动进度换场（0-1/3-2/3-1）。窄屏时 CSS 已退化，
+     这里算出来也是 1，不会把手机坑住。 */
+  var how = $('.how3');
+  if (how) {
+    var hsteps = $$('.how3__step', how);
+    var hbars = $$('.how3__bar li', how);
+    var hbusy = false;
+    var paintHow = function () {
+      var r = how.getBoundingClientRect();
+      var total = r.height - window.innerHeight;
+      var p = total > 0 ? Math.min(0.999, Math.max(0, -r.top / total)) : 1;
+      var idx = Math.floor(p * hsteps.length);
+      hsteps.forEach(function (el, k) { el.classList.toggle('is-on', k === idx); });
+      hbars.forEach(function (el, k) { el.classList.toggle('is-on', k <= idx); });
+      hbusy = false;
+    };
+    if (hsteps.length) {
+      window.addEventListener('scroll', function () {
+        if (!hbusy) { hbusy = true; window.requestAnimationFrame(paintHow); }
+      }, { passive: true });
+      paintHow();
+    }
+  }
+
+  /* ---------------------------------------------------------------- ⑧ 磁吸 */
+  /* 桌面鼠标才做：按钮朝光标方向偏 3~4px，松开回位（Duolingo 式微交互） */
+  var fine = window.matchMedia && window.matchMedia('(pointer:fine)').matches;
+  if (!reduce && fine) {
+    $$('.b3, .btn').forEach(function (btn) {
+      btn.addEventListener('pointermove', function (e) {
+        var r = btn.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        var dx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
+        var dy = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
+        btn.style.transform = 'translate(' + (dx * 4).toFixed(2) + 'px,' + (dy * 3).toFixed(2) + 'px)';
+      });
+      btn.addEventListener('pointerleave', function () { btn.style.transform = ''; });
+    });
+  }
 })();

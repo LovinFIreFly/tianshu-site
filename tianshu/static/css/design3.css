@@ -192,7 +192,26 @@ img{max-width:100%}
 .dhero__title em{font-style:normal;position:relative;white-space:nowrap}
 .dhero__title em::after{content:"";position:absolute;left:-2%;right:-2%;bottom:.08em;height:.09em;
   background:var(--d-accent);opacity:.9;transform:scaleX(0);transform-origin:left;
-  animation:d-swipe .8s .5s var(--d-ease) forwards}
+  animation:d-swipe .85s 1.05s var(--d-ease) forwards}
+/* 文字遮罩升起（Awwwards 获奖站最常用的一招）：每行藏一条框，往上推出来 */
+.dhero__title .ln{display:block;overflow:hidden;padding-bottom:.08em}
+.dhero__title .ln > i{display:block;font-style:normal;transform:translateY(114%);
+  animation:d-lineup 1s var(--d-ease) forwards}
+.dhero__title .ln:nth-child(1) > i{animation-delay:.10s}
+.dhero__title .ln:nth-child(2) > i{animation-delay:.22s}
+.dhero__title .ln:nth-child(3) > i{animation-delay:.34s}
+@keyframes d-lineup{to{transform:translateY(0)}}
+/* 首屏底色缓慢呼吸（Stripe 式渐变流动，慢到像没动） */
+.dhero::after{content:"";position:absolute;inset:-25% -12%;pointer-events:none;z-index:0;
+  background:radial-gradient(38% 30% at 18% 26%,var(--d-accent-05),transparent 62%),
+             radial-gradient(32% 26% at 78% 14%,rgba(255,255,255,.055),transparent 62%);
+  animation:d-drift 20s ease-in-out infinite alternate}
+@keyframes d-drift{from{transform:translate3d(-2%,-1.5%,0) scale(1.02)}
+  to{transform:translate3d(3%,2%,0) scale(1.07)}}
+@media(prefers-reduced-motion:reduce){
+  .dhero__title .ln > i{transform:none;animation:none}
+  .dhero::after{animation:none}
+}
 .dhero__sub{margin:0 auto;text-align:center;max-width:44ch;font-size:var(--d-fs-body);line-height:1.68;color:var(--d-hair)}
 .dhero__lead{margin-top:clamp(10px,1.4vw,16px);text-align:center;font-family:var(--d-mono);
   font-size:11.5px;letter-spacing:.12em;color:var(--d-hair)}
@@ -332,17 +351,7 @@ img{max-width:100%}
 .rail3__bar i{position:absolute;left:0;top:0;bottom:0;width:20%;background:var(--d-accent);transition:transform .12s linear}
 .rail3__nav{position:absolute;top:-46px;right:0;display:flex;gap:6px}
 
-/* 印色小带子：首页首屏下面那条走字带 —— 一根 accent 色细带 + 等宽小字，
-   像剧院门口的电子屏，不是一条粗黑横幅（粗黑横幅压在上面太沉） */
-.marquee3{background:var(--d-accent);color:#fff;border:0;overflow:hidden;padding:7px 0;position:relative}
-/* 间距放在每段里面（不用 gap）：这样 -50% 位移正好等于"半个内容"，
-   前后两半一模一样，滚动永远不会跳帧 */
-.marquee3__in{display:flex;gap:0;white-space:nowrap;width:max-content;
-  animation:d-marquee 46s linear infinite}
-.marquee3 span{display:inline-flex;align-items:center;gap:10px;padding-right:22px;
-  font-family:var(--d-mono);font-size:11.5px;letter-spacing:.2em;font-weight:500;color:#fff;opacity:.94}
-.marquee3 span::after{content:"◆";font-size:7px;line-height:1;opacity:.55}
-@media(prefers-reduced-motion:reduce){.marquee3__in{animation:none}}
+
 @media(max-width:900px){.rail3__nav{display:none}}
 .rail3__nav button{width:34px;height:34px;border:1px solid var(--d-rule);background:var(--d-paper);
   color:var(--d-ink);border-radius:var(--d-r);cursor:pointer;font-size:15px;
@@ -613,6 +622,46 @@ img{max-width:100%}
   .dhero__title em::after{animation:none;transform:scaleX(1)}
   *{animation-duration:.01ms !important;transition-duration:.01ms !important}
 }
+
+/* --------------------------------------------------------------------------
+   13b. 首页"怎么玩"：滚动分镜（Apple 式 sticky 叙事）
+   —— 滚动时整块钉在视口里，三步依次换场；窄屏自动退化成普通三段，
+      不钉、不占高，手机上不会被一屏卡住。
+   -------------------------------------------------------------------------- */
+.how3{background:var(--d-stage);color:var(--d-stage-ink);height:190vh;position:relative}
+.how3__pin{position:sticky;top:0;height:100vh;display:flex;align-items:center;overflow:hidden;
+  padding-top:var(--d-nav-h)}
+.how3__k{margin:0;font-family:var(--d-mono);font-size:10.5px;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--d-hair)}
+.how3__stage{position:relative;margin-top:clamp(18px,2.6vw,32px);min-height:clamp(210px,30vh,300px)}
+.how3__step{position:absolute;inset:0;opacity:0;transform:translateY(28px);pointer-events:none;
+  transition:opacity .62s var(--d-ease),transform .62s var(--d-ease)}
+.how3__step.is-on{opacity:1;transform:none;pointer-events:auto}
+.how3__no{margin:0;font-family:var(--d-mono);font-size:11.5px;letter-spacing:.2em;color:var(--d-accent)}
+.how3__t{margin:clamp(10px,1.6vw,18px) 0 0;font-family:var(--d-serif);font-weight:700;
+  line-height:1.06;letter-spacing:var(--d-track-display);
+  font-size:min(var(--d-fs-display),5.2vw,62px)}
+.how3__d{margin:clamp(12px,1.8vw,20px) 0 0;max-width:46ch;font-size:15px;line-height:1.75;color:var(--d-hair)}
+.how3__bar{display:flex;gap:10px;list-style:none;margin:clamp(18px,2.6vw,30px) 0 0;padding:0}
+.how3__bar li{flex:0 0 52px;height:2px;background:var(--d-hair);transition:background .5s var(--d-ease)}
+.how3__bar li.is-on{background:var(--d-accent)}
+.how3__cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:clamp(18px,2.6vw,30px)}
+.how3 .b3{background:transparent;border-color:var(--d-hair);color:var(--d-stage-ink)}
+.how3 .b3:hover{background:var(--d-stage-ink);border-color:var(--d-stage-ink);color:var(--d-stage)}
+.how3 .b3--accent{background:var(--d-accent);border-color:var(--d-accent);color:#fff}
+.how3 .b3--accent:hover{background:var(--d-accent-2);border-color:var(--d-accent-2);color:#fff}
+@media(max-width:833px){
+  .how3{height:auto}
+  .how3__pin{position:static;height:auto;padding:clamp(30px,7vw,52px) 0}
+  .how3__stage{position:static;min-height:0}
+  .how3__step{position:static;opacity:1;transform:none;margin-bottom:22px}
+  .how3__bar{display:none}
+}
+
+/* 区块分隔线"画出来"：滚动进入时从左往右长出来（细节，但一眼就看得出讲究） */
+.dsec__head.rv .dsec__rule{transform:scaleX(0);transform-origin:left;
+  transition:transform 1s .12s var(--d-ease)}
+.dsec__head.rv.in .dsec__rule{transform:scaleX(1)}
 
 /* --------------------------------------------------------------------------
    14. 后台 / DM 面板：留白与层级修补（修「文字顶头」「挤成一片」）
