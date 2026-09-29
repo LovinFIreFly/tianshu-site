@@ -675,6 +675,22 @@ h1,h2,h3,h4,h5,h6,p{margin:0}
 .tabbar a:hover{background:var(--surface-warm);color:var(--ink)}
 .tabbar a.on{background:var(--ink);color:var(--bg)}
 
+/* --------------------------------------------------------------------------
+   17. 我的（/me）：两栏 + 纵向胶囊导航
+   -------------------------------------------------------------------------- */
+.me-wrap{max-width:var(--container);margin:0 auto;display:grid;grid-template-columns:300px 1fr;gap:var(--space-7);align-items:start}
+.me-nav{display:flex;flex-direction:column;gap:var(--space-2);position:sticky;top:calc(var(--site-nav-height) + var(--space-4))}
+.me-nav .mi{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);width:100%;padding:var(--space-3) var(--space-4);border:0;border-radius:var(--radius-xl);background:var(--surface);box-shadow:var(--shadow-1);font-size:var(--fs-body);font-weight:var(--fw-medium);color:var(--ink);cursor:pointer;transition:background var(--duration-fast), box-shadow var(--duration-fast), transform var(--duration-fast)}
+.me-nav .mi:hover{box-shadow:var(--shadow-2)}
+.me-nav .mi.on{background:var(--ink);color:var(--bg)}
+.me-nav .mi span{font-size:var(--fs-sm);opacity:.7}
+.profile{text-align:center;padding:var(--space-6)}
+.profile .avatar{width:84px;height:84px;border-radius:50%;margin:0 auto var(--space-3);background:var(--bg-3);display:grid;place-items:center;font-size:34px;font-weight:var(--fw-bold);color:var(--ink)}
+.p-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-3);margin-top:var(--space-4);text-align:center}
+.p-stats b{display:block;font-size:var(--fs-h3);font-weight:var(--fw-bold)}
+.p-stats span{font-size:var(--fs-xs);color:var(--ink-3)}
+@media(max-width:860px){.me-wrap{grid-template-columns:1fr;gap:var(--space-5)}.me-nav{position:static;flex-direction:row;overflow-x:auto}.me-nav .mi{flex:0 0 auto}}
+
 /* 动画减弱 */
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
