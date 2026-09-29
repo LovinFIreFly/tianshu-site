@@ -14,9 +14,16 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=static_v('css/style.css')) }}">
 {# 外观款式（skin）：由**后台「门店设置 → 外观款式」统一指定**，全站（手机端 + 电脑端）
    同时生效，不是每个人自己选的。它只是叠在主样式之上的一层覆盖：只换设计语言，
-   不动结构、不动功能。管理员可以用 ?skin=xxx 先预览再决定（客人看不到这个开关）。 #}
-{% set cur_skin = (request.args.get('skin') if my_admin and request.args.get('skin') in skins
-                   else (settings.skin if settings.skin in skins else 'playbill')) %}
+   不动结构、不动功能。管理员可以用 ?skin=xxx 先预览再决定（客人看不到这个开关）。
+
+   ⚠️ 下面全部用 `is defined` 防御：模板比 Python 新（pull 了忘了重启）时，
+   `skins`/`my_admin` 可能还不存在 —— 直接用会 Jinja UndefinedError，
+   页面渲染到一半挂掉 = 用户看到"只有背景色的半张页面"（2026-09 线上踩过）。 #}
+{% set _skins = skins if skins is defined else {} %}
+{% set _admin = my_admin if my_admin is defined else False %}
+{% set _q_skin = request.args.get('skin') if request.args.get('skin') is defined else none %}
+{% set cur_skin = (_q_skin if (_admin and _q_skin in _skins)
+                   else (settings.skin if settings.skin in _skins else 'playbill')) %}
 {% if cur_skin != 'playbill' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/skin-' ~ cur_skin ~ '.css',
                                    v=static_v('css/skin-' ~ cur_skin ~ '.css')) }}">
@@ -96,11 +103,11 @@
 <footer class="foot">
   {{ settings.shopName }} · 沉浸式剧本体验 · © {{ year }}
   {# 款式预览条：**只有管理员看得到**（客人看不到）。正式切换在「后台 → 门店设置 → 外观款式」。 #}
-  {% if my_admin %}
+  {% if _admin and _skins %}
   <div class="skin-bar">
     <span>款式预览：</span>
     <a href="{{ request.path }}" class="{{ 'on' if cur_skin == 'playbill' }}">戏单</a>
-    {% for k, label in skins.items() %}
+    {% for k, label in _skins.items() %}
     <a href="{{ request.path }}?skin={{ k }}" class="{{ 'on' if cur_skin == k }}">{{ label.split('（')[0] }}</a>
     {% endfor %}
   </div>
