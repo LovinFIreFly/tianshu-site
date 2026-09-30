@@ -30,6 +30,10 @@
 {% if _is_mobile %}
   {# 手机原生布局 + 流畅动效层：只在手机端加载，叠在 design3 之上、皮肤之下 #}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css', v=static_v('css/mobile.css')) }}">
+  {% if settings.mobileMode == 'zine' %}
+  {# 第三版：zine 皮肤（纸底 / 墨字 / 朱红点缀 / 发丝线卡片），叠在 mobile.css 之上、皮肤之下 #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-zine.css', v=static_v('css/mobile-zine.css')) }}">
+  {% endif %}
 {% endif %}
 {% if cur_skin != 'playbill' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/skin-' ~ cur_skin ~ '.css',

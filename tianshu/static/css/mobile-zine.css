@@ -1,0 +1,218 @@
+/* ============================================================================
+   甜薯 · 第三版手机皮肤（mobile-zine.css）
+   定位：旧原生层的全部功能不动，只把设计语言换成「撕角海报斜切 zine」——
+   米纸底 / 墨字 / 单一朱红只点在行动位 / 发丝线卡片 / 大字标题。
+   叠在 mobile.css 之上、后台皮肤之下；只管好看，不管结构。
+   ========================================================================== */
+
+/* —— 展示字体（和独立手机站同源） —— */
+@import url('https://miaoda.feishu.cn/fonts/css2?family=ZCOOL+QingKe+HuangYou&family=Noto+Sans+SC:wght@400;500;700;900&display=swap');
+
+html[data-device="mobile"] {
+  /* zine 色板：直接改写 design3 的舞台令牌，全站跟着换气 */
+  --z-paper: #F1EDE4;
+  --z-paper-deep: #E4DECF;
+  --z-ink: #17140F;
+  --z-ink-soft: #6B6559;
+  --z-line: #D6CFC0;
+  --z-accent: #BD3318;
+  --z-accent-deep: #8E2413;
+  --z-tint: #F7E2DA;
+  --z-display: 'ZCOOL QingKe HuangYou', 'Noto Serif SC', serif;
+
+  --d-stage: var(--z-paper);
+  --d-stage-2: var(--z-ink-soft);
+  --d-stage-ink: var(--z-ink);
+  --d-ink: var(--z-ink);
+  --d-hair: var(--z-line);
+  --d-accent: var(--z-accent);
+  --d-accent-2: #EE560F;
+  --d-r: 10px;
+  --d-r-lg: 12px;
+}
+
+/* —— 底纸与文字 —— */
+html[data-device="mobile"] body {
+  background: var(--z-paper);
+  color: var(--z-ink);
+}
+html[data-device="mobile"] ::selection { background: var(--z-tint); }
+
+/* —— 大标题：铅字海报感 —— */
+html[data-device="mobile"] .dhero__title,
+html[data-device="mobile"] h1,
+html[data-device="mobile"] h2 {
+  font-family: var(--z-display);
+  font-weight: 400;
+  letter-spacing: .14em;
+  line-height: 1.1;
+}
+html[data-device="mobile"] .dhero__title em,
+html[data-device="mobile"] h1 em { color: var(--z-accent); font-style: normal; }
+html[data-device="mobile"] .dhero__kicker {
+  color: var(--z-ink-soft);
+  letter-spacing: .22em;
+  font-size: 12px;
+}
+
+/* —— 顶栏：纸玻璃 + 发丝线，不要毛玻璃冷灰 —— */
+html[data-device="mobile"] .tnav {
+  background: color-mix(in srgb, var(--z-paper) 92%, transparent);
+  border-bottom: 1px solid var(--z-ink);
+}
+html[data-device="mobile"] .tnav__names b {
+  font-family: var(--z-display);
+  letter-spacing: .16em;
+}
+
+/* —— 卡片：白纸卡 + 墨色发丝线，直角一点，去圆胖 —— */
+html[data-device="mobile"] .block3,
+html[data-device="mobile"] .pcard3,
+html[data-device="mobile"] .ccard3,
+html[data-device="mobile"] .rev3,
+html[data-device="mobile"] .me-card {
+  background: #FFFFFF;
+  border: 1px solid var(--z-line);
+  border-radius: var(--d-r-lg);
+  box-shadow: none;
+}
+html[data-device="mobile"] .block3 > h2,
+html[data-device="mobile"] .block3 > b,
+html[data-device="mobile"] .sec-title {
+  font-family: var(--z-display);
+  letter-spacing: .1em;
+}
+html[data-device="mobile"] .pcard3 { overflow: hidden; }
+html[data-device="mobile"] .pcard3:active { transform: scale(.99); }
+
+/* —— 按钮：胶囊，墨底为次、朱红为主，触感回弹 —— */
+html[data-device="mobile"] .b3 {
+  border-radius: 9999px;
+  font-weight: 700;
+  min-height: 44px;
+  transition: transform .12s cubic-bezier(.22,1,.36,1), background .12s;
+}
+html[data-device="mobile"] .b3:active { transform: scale(.97); }
+html[data-device="mobile"] .b3--accent { background: var(--z-accent); }
+html[data-device="mobile"] .b3--accent:hover { background: var(--z-accent-deep); }
+html[data-device="mobile"] .b3:not(.b3--accent) {
+  background: transparent;
+  color: var(--z-ink);
+  border: 1px solid var(--z-ink);
+}
+
+/* —— 表单：墨线框，聚焦变红 —— */
+html[data-device="mobile"] .field input,
+html[data-device="mobile"] .field select,
+html[data-device="mobile"] .field textarea {
+  border: 1px solid var(--z-ink);
+  border-radius: 10px;
+  background: #FFFFFF;
+  font-size: 16px;              /* 16px 防 iOS 聚焦缩放 */
+}
+html[data-device="mobile"] .field input:focus,
+html[data-device="mobile"] .field select:focus,
+html[data-device="mobile"] .field textarea:focus {
+  border-color: var(--z-accent);
+  outline: none;
+}
+html[data-device="mobile"] .field label {
+  color: var(--z-ink-soft);
+  letter-spacing: .05em;
+  font-size: 12px;
+}
+
+/* —— 标签 / 徽章：细线胶囊 —— */
+html[data-device="mobile"] .tag,
+html[data-device="mobile"] .badge,
+html[data-device="mobile"] .chip {
+  border: 1px solid var(--z-line);
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--z-ink-soft);
+  font-size: 12px;
+}
+
+/* —— 底部 Tab：白纸条 + 墨色发丝顶线，选中朱红 —— */
+html[data-device="mobile"] .mobtab {
+  background: #FFFFFF;
+  border-top: 1px solid var(--z-ink);
+  box-shadow: none;
+}
+html[data-device="mobile"] .mobtab a {
+  color: var(--z-ink-soft);
+  font-size: 11px;
+  letter-spacing: .06em;
+  min-height: 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  position: relative;
+}
+html[data-device="mobile"] .mobtab a.on,
+html[data-device="mobile"] .mobtab a[aria-current] {
+  color: var(--z-accent-deep);
+  font-weight: 700;
+}
+html[data-device="mobile"] .mobtab a.on::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 25%;
+  right: 25%;
+  height: 2px;
+  background: var(--z-accent);
+}
+html[data-device="mobile"] .mobtab a span,
+html[data-device="mobile"] .mobtab a i {
+  max-width: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: normal;
+}
+html[data-device="mobile"] .mobtab img,
+html[data-device="mobile"] .mobtab svg {
+  filter: grayscale(1) contrast(1.05);   /* 彩色小图标统一压成墨色，贴合 zine */
+  opacity: .75;
+}
+html[data-device="mobile"] .mobtab a.on img,
+html[data-device="mobile"] .mobtab a.on svg {
+  filter: none;
+  opacity: 1;
+}
+
+/* —— 唠嗑 / 评价：时间线发丝线 —— */
+html[data-device="mobile"] .rev3,
+html[data-device="mobile"] .talk3 {
+  border-bottom: 1px solid var(--z-line);
+  border-radius: 0;
+  background: transparent;
+}
+
+/* —— 链接：朱红下划线偏移 —— */
+html[data-device="mobile"] .lnk {
+  color: var(--z-accent-deep);
+  text-underline-offset: 3px;
+}
+
+/* —— 编号式小节（有 .sec-no 的地方统一朱红铅字） —— */
+html[data-device="mobile"] .sec-no,
+html[data-device="mobile"] .pagehead3__k b {
+  color: var(--z-accent);
+  font-family: var(--z-display);
+}
+
+/* —— 图片：直角一点，轻描边，别再大圆角卡片风 —— */
+html[data-device="mobile"] .pcard3 img,
+html[data-device="mobile"] .ccard3 img,
+html[data-device="mobile"] .cover3 {
+  border-radius: 8px;
+}
+
+/* —— 减少动态偏好 —— */
+@media (prefers-reduced-motion: reduce) {
+  html[data-device="mobile"] * { animation: none !important; transition: none !important; }
+}
