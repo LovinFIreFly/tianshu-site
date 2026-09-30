@@ -14,6 +14,7 @@
 """
 import os
 import re
+import time
 
 from flask import Blueprint, Response, current_app, jsonify, request
 from tianshu import business
@@ -40,6 +41,22 @@ _GRADS = [
 
 def _grad(i):
     return _GRADS[(int(i) if str(i).isdigit() else 0) % len(_GRADS)]
+
+
+def _ago(ts):
+    """毫秒时间戳 → 友好相对时间（唠嗑区用）"""
+    if not ts:
+        return ""
+    s = (int(time.time() * 1000) - int(ts)) // 1000
+    if s < 60:
+        return "刚刚"
+    if s < 3600:
+        return "%d 分钟前" % (s // 60)
+    if s < 86400:
+        return "%d 小时前" % (s // 3600)
+    if s < 86400 * 7:
+        return "%d 天前" % (s // 86400)
+    return time.strftime("%m-%d", time.localtime(ts / 1000))
 
 
 def _mask_phone(p):
@@ -147,6 +164,16 @@ def api_me():
         initial = str(avatar)[:1]
     else:
         initial = avatar
+    recs = []
+    _titles = {str(x.get("id")): x.get("title") for x in db.rows("scripts")}
+    _stmap = {"booked": "待开演", "arrived": "已入场", "done": "已结束", "cancelled": "已取消"}
+    for b in bookings:
+        if str(b.get("phone")) == str(phone) and b.get("status") != "cancelled":
+            recs.append({
+                "name": b.get("title") or _titles.get(str(b.get("sid")) or "", "剧本"),
+                "time": _ago(b.get("ts")),
+                "state": _stmap.get(b.get("status"), "已预约"),
+            })
     return jsonify({
         "guest": False,
         "name": prof.get("nick") or u.get("username") or "玩家",
@@ -155,7 +182,66 @@ def api_me():
         "id": u.get("invite") or "",
         "credit": u.get("credit") or 0,
         "stats": {"bookings": len(bookings), "reviews": len(reviews), "spent": spent},
+        "records": recs[:20],
     })
+
+
+@bp.get("/m/api/talks")
+def api_talks():
+    """唠嗑区：社区帖子（公开可读）"""
+    out = []
+    for p in business.community_posts(60):
+        out.append({
+            "id": p.get("id"),
+            "name": p.get("nick") or p.get("username") or "玩家",
+            "avatar": p.get("avatar") or "",
+            "text": p.get("text") or "",
+            "ago": _ago(p.get("at")),
+        })
+    return jsonify(out)
+
+
+@bp.post("/m/api/talks")
+def api_talks_create():
+    """唠嗑区发帖（需登录）。数据结构复用桌面社区 posts。"""
+    u = current_user()
+    if not u:
+        return jsonify({"error": "请先登录"}), 401
+    text = business.clean(request.form.get("text"), 200)
+    if not text:
+        return jsonify({"error": "写点内容再发"}), 400
+    db.update("posts", lambda rows: [{
+        "id": business.now_ms(), "type": "chat", "title": "", "text": text,
+        "imgs": [], "username": (u.get("profile") or {}).get("nick") or u.get("username"),
+        "phone": u.get("phone"), "at": business.now_ms(), "likes": [],
+    }] + rows, 500)
+    return jsonify({"ok": True})
+
+
+@bp.post("/m/api/cars")
+def api_cars_create():
+    """发起拼车（需登录）。写入 bookings（carNew=True），拼车大厅直接能读到。"""
+    u = current_user()
+    if not u:
+        return jsonify({"error": "请先登录"}), 401
+    f = request.form
+    ts = int(f.get("ts") or 0)
+    if ts <= 0:
+        return jsonify({"error": "请选择出发日期"}), 400
+    need = max(1, int(f.get("need") or 4))
+    tags = [t.strip() for t in (f.get("tags") or "").split(",") if t.strip()]
+    bookings = db.rows("bookings")
+    bid = business.now_ms()
+    bookings.append({
+        "id": bid, "carNew": True, "status": "booked",
+        "phone": u.get("phone"), "username": u.get("username"),
+        "sid": f.get("sid") or "0", "title": f.get("title") or "剧本",
+        "ts": ts, "day": business.day_label(ts), "time": f.get("time") or "",
+        "players": 1, "price": 0, "carCap": need + 1, "carMin": need,
+        "carTags": tags, "emoji": "🎭", "at": business.now_ms(),
+    })
+    db.write("bookings", bookings)
+    return jsonify({"ok": True, "id": bid})
 
 
 # 简单的内容类型，避免依赖 Flask 的复杂猜测

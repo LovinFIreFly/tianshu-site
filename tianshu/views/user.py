@@ -137,7 +137,7 @@ def register():
             session['phone'] = phone
             flash('注册好了，你的邀请码是 %s（朋友用它注册，你俩各得一张 %s 元券）'
                   % (my_invite, invite_amount), 'ok')
-            return redirect(url_for('public.home'))
+            return redirect(request.args.get('next') or url_for('public.home'))
     return render_template('register.html')
 
 
@@ -170,7 +170,7 @@ def forgot():
             db.write('users', users)
             business.audit(u.get('username'), business.role_of(u), '用「找回密码」重设了密码')
             flash('密码重设好了，去登录吧', 'ok')
-            return redirect(url_for('user.login'))
+            return redirect(request.args.get('next') or url_for('user.login'))
     return render_template('forgot.html')
 
 

@@ -1,81 +1,200 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
-  <meta name="theme-color" content="#0B0B0D">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>甜薯剧本杀</title>
-  <link rel="stylesheet" href="/m/styles.css?v=7">
-  <script>
-    window.__mobileErrors = [];
-    function showErr(msg){
-      window.__mobileErrors.push(msg);
-      var b = document.getElementById('jsError');
-      if(!b){
-        b = document.createElement('div');
-        b.id = 'jsError';
-        b.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#0B0B0D;color:#FF6B6B;padding:20px;white-space:pre-wrap;overflow:auto;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace';
-        document.body.appendChild(b);
-      }
-      b.textContent += msg + '\n' + ('—'.repeat(20)) + '\n';
-    }
-    window.onerror = function(msg, url, line, col, err){
-      showErr((url||'') + ':' + (line||0) + ':' + (col||0) + ' ' + msg + '\n' + (err && err.stack || ''));
-    };
-    window.addEventListener('error', function(e){
-      if(e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK'))
-        showErr('资源加载失败: ' + (e.target.src || e.target.href || ''));
-    });
-  </script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F1EDE4">
+<title>甜薯剧本杀 · 手机版</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2317140F'/%3E%3Cpath d='M32 14l17 34H15z' fill='%23BD3318'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=ZCOOL+QingKe+HuangYou&family=Noto+Sans+SC:wght@400;500;700;900&display=swap">
+<link rel="stylesheet" href="/m/styles.css?v=8">
 </head>
 <body>
-  <div id="app">
-    <!-- 顶部：苹果/Stripe 式极简文字导航，无底部 Tab -->
-    <header class="topbar">
-      <div class="topbar__brand" id="brandName">甜薯剧本杀</div>
-      <nav class="topnav" id="topnav">
-        <a data-key="home">首页</a>
-        <a data-key="scripts">挑本</a>
-        <a data-key="car">拼车</a>
-        <a data-key="group">组局</a>
-        <a data-key="me">我的</a>
-      </nav>
-    </header>
+<div id="app">
+<div class="rail">甜薯剧本杀 · 今晚换个人活一次</div>
 
-    <main>
-      <section class="view" id="view-home" data-view="home"></section>
-      <section class="view" id="view-scripts" data-view="scripts"></section>
-      <section class="view" id="view-car" data-view="car"></section>
-      <section class="view" id="view-group" data-view="group"></section>
-      <section class="view" id="view-me" data-view="me"></section>
-    </main>
+  <header class="mast">
+    <div class="brand-mark"><b>甜薯剧本杀</b><i>推开社团门，下课换身份</i></div>
+    <button class="btn-entry" data-action="login">入场登记</button>
+  </header>
 
-    <!-- 发起：右下极小胶囊（非 Tab） -->
-    <button class="fab" id="fab" type="button" aria-label="发起">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-      <span>发起</span>
+  <main>
+    <!-- ===== 大厅 ===== -->
+    <section id="view-home" class="view active">
+      <div class="hero v-in" style="--d:0ms">
+        <div class="hero-kicker">甜薯剧本杀 · 社团开本中</div>
+        <h1 class="hero-title">今晚<br><span class="l2">换个人活一次</span></h1>
+        <p class="hero-sub">上架的本周新本，一本夜里查房，一把椅子等人坐。你来了，局就开。</p>
+        <div class="hero-imgs" id="hero-imgs"></div>
+        <div class="hero-cap" id="hero-cap"></div>
+      </div>
+
+      <div class="marquee v-in" style="--d:120ms">
+        <div class="marquee-track">
+          <span>校园 <i>·</i> 悬疑 <i>·</i> 欢乐 <i>·</i> 拼车 <i>·</i> 包场 <i>·</i> 内测 <i>·</i>&nbsp;</span>
+          <span>校园 <i>·</i> 悬疑 <i>·</i> 欢乐 <i>·</i> 拼车 <i>·</i> 包场 <i>·</i> 内测 <i>·</i>&nbsp;</span>
+        </div>
+      </div>
+
+      <div class="sec v-in" style="--d:180ms">
+        <div class="sec-head"><span class="sec-no">01</span><h2 class="sec-title">今日排期</h2><span class="sec-note" id="tonight-note">今夜发车</span></div>
+        <div class="tonight" id="tonight"></div>
+      </div>
+
+      <div class="sec v-in" style="--d:240ms">
+        <div class="sec-head"><span class="sec-no">02</span><h2 class="sec-title">上架剧本</h2><span class="sec-note" id="collage-note">已上架</span></div>
+        <div class="collage" id="collage"></div>
+      </div>
+
+      <div class="sec v-in" style="--d:300ms">
+        <div class="sec-head"><span class="sec-no">03</span><h2 class="sec-title">最近唠嗑</h2><span class="sec-note">开本前说两句</span></div>
+        <div class="feed" id="home-talks"></div>
+      </div>
+    </section>
+
+    <!-- ===== 本本墙 ===== -->
+    <section id="view-scripts" class="view">
+      <div class="searchbar v-in" style="--d:0ms">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B6559" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="search" id="search-input" placeholder="搜剧本名，比如夜班日志" aria-label="搜索剧本">
+      </div>
+      <div class="chips v-in" id="chips-row" style="--d:60ms" role="tablist" aria-label="剧本分类"></div>
+      <div class="slist v-in" id="scripts-grid" style="--d:120ms"></div>
+      <div class="empty" id="scripts-empty" hidden>
+        <h3>没有匹配的剧本</h3>
+        <p>换个关键词，或者清掉筛选再看看。</p>
+        <button class="btn btn-ghost" data-action="clear-filter">清掉筛选</button>
+      </div>
+    </section>
+
+    <!-- ===== 拼车局 ===== -->
+    <section id="view-carpool" class="view">
+      <div class="sec v-in" style="--d:0ms">
+        <div class="sec-head"><span class="sec-no">04</span><h2 class="sec-title">拼车局</h2><span class="sec-note">人齐就发车</span></div>
+      </div>
+      <div id="carpool-body"></div>
+    </section>
+
+    <!-- ===== 唠嗑区 ===== -->
+    <section id="view-talk" class="view">
+      <div class="sec v-in" style="--d:0ms">
+        <div class="sec-head"><span class="sec-no">05</span><h2 class="sec-title">唠嗑区</h2><span class="sec-note">翻台间隙说两句</span></div>
+      </div>
+      <div class="feed" id="talk-list"></div>
+      <div class="empty" id="talk-empty" hidden>
+        <h3>还没人说话</h3>
+        <p>第一条留言，从你开始。</p>
+      </div>
+      <div class="tinput v-in" style="--d:120ms">
+        <textarea id="talk-input" maxlength="200" placeholder="说点什么…" aria-label="留言内容" rows="1"></textarea>
+        <button id="talk-send">发</button>
+      </div>
+    </section>
+
+    <!-- ===== 我的 ===== -->
+    <section id="view-me" class="view">
+      <div id="me-card"></div>
+      <div class="sec v-in" style="--d:80ms">
+        <div class="sec-head"><span class="sec-no">06</span><h2 class="sec-title">打本记录</h2><span class="sec-note" id="record-note">0 条</span></div>
+        <div class="rlist" id="record-list"></div>
+        <div class="empty" id="record-empty" hidden>
+          <h3>还没有打本记录</h3>
+          <p>挑个本，凑齐人，记录就来了。</p>
+        </div>
+      </div>
+      <div class="sec v-in" style="--d:140ms">
+        <div class="sec-head"><span class="sec-no">07</span><h2 class="sec-title">账号</h2></div>
+        <div class="menu">
+          <button class="mitem" data-action="login"><span>入场登记 / 登录</span><em>去登记</em></button>
+          <button class="mitem" data-action="signup"><span>注册新账号</span><em>去注册</em></button>
+          <button class="mitem" data-action="forgot"><span>忘记密码</span><em>找回来</em></button>
+        </div>
+      </div>
+      <p class="foot">甜薯剧本杀 · 学校社团活动室</p>
+    </section>
+  </main>
+
+  <!-- ===== 悬浮胶囊 Tab + 中央凸起拼车钮 ===== -->
+  <nav class="tabbar" aria-label="主导航">
+    <button class="tab on" data-tab="home" aria-label="大厅">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+      <span>大厅</span>
     </button>
-  </div>
-
-  <!-- 底部 Sheet（Airbnb/Uber：次级操作收进来） -->
-  <div class="sheet-mask" id="sheetMask"></div>
-  <div class="sheet" id="sheet" role="dialog" aria-modal="true">
-    <div class="sheet__grip"></div>
-    <div class="sheet__title" id="sheetTitle"></div>
-    <div class="sheet__body" id="sheetBody"></div>
-  </div>
-
-  <!-- 全屏详情（Netflix/Spotify 画布） -->
-  <div class="detail" id="detail">
-    <button class="detail__back" id="detailBack" type="button" aria-label="返回">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    <button class="tab" data-tab="scripts" aria-label="本本墙">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v16H5z"/><path d="M5 9h14M5 14h14"/></svg>
+      <span>本本墙</span>
     </button>
-    <div class="detail__scroll" id="detailContent"></div>
+    <button class="tab-fab" data-tab="carpool" aria-label="拼车局">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="17" r="2.5"/><circle cx="17" cy="17" r="2.5"/><path d="M4 17H2v-4l2-4h9v8M13 11h4l3 4v2"/></svg>
+      <span>拼车</span>
+    </button>
+    <button class="tab" data-tab="talk" aria-label="唠嗑区">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 01-8 8H4l2-3a8 8 0 1115-5z"/></svg>
+      <span>唠嗑区</span>
+    </button>
+    <button class="tab" data-tab="me" aria-label="我的">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5"/></svg>
+      <span>我的</span>
+    </button>
+  </nav>
+
+  <!-- ===== 剧本详情 Sheet ===== -->
+  <div class="mask" id="sheet-mask"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="剧本详情">
+    <div class="sheet-grip"></div>
+    <div class="sheet-img"><div class="photo" id="sheet-photo"></div></div>
+    <button class="sheet-close" id="sheet-close" aria-label="关闭详情">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <div class="sheet-body" id="sheet-body"></div>
   </div>
 
-  <script src="/m/data.js?v=7"></script>
-  <script src="/m/app.js?v=7"></script>
+  <!-- ===== 发起拼车 Sheet ===== -->
+  <div class="mask" id="car-mask"></div>
+  <div class="sheet" id="car-sheet" role="dialog" aria-modal="true" aria-label="发起拼车">
+    <div class="sheet-grip"></div>
+    <div class="sheet-body">
+      <div class="sheet-no">04</div>
+      <h2 class="sheet-title">发起拼车</h2>
+      <p class="sheet-desc">填好本子和出发时间，人齐就发车。发完可在「拼车局」看到。</p>
+      <form class="form" id="car-form" action="/m/api/cars" method="post">
+        <div class="field">
+          <label for="car-script">拼哪个本</label>
+          <select id="car-script" name="sid" required></select>
+        </div>
+        <div class="field">
+          <label for="car-date">出发日期</label>
+          <input type="date" id="car-date" name="date" required>
+        </div>
+        <div class="field">
+          <label for="car-time">出发时间</label>
+          <input type="time" id="car-time" name="time" required>
+        </div>
+        <div class="field">
+          <label for="car-need">还差几人发车</label>
+          <input type="number" id="car-need" name="need" min="1" max="11" value="3" required>
+        </div>
+        <div class="field">
+          <label for="car-tags">标签（逗号分隔，可选）</label>
+          <input type="text" id="car-tags" name="tags" placeholder="校园,悬疑">
+        </div>
+        <div class="err" id="car-err"></div>
+        <button class="btn btn-primary btn-block" type="submit">发车</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== 登录 / 注册 / 找回 Sheet ===== -->
+  <div class="mask" id="auth-mask"></div>
+  <div class="sheet" id="auth-sheet" role="dialog" aria-modal="true" aria-label="入场登记">
+    <div class="sheet-grip"></div>
+    <div class="sheet-body" id="auth-body"></div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+
+<script src="/m/data.js?v=8"></script>
+<script src="/m/app.js?v=8"></script>
 </body>
 </html>
