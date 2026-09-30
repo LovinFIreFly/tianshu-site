@@ -150,15 +150,20 @@ def api_cars():
         note = "%d 人已上车 · 还差 %d 人发车" % (c.get("joined") or 0, c.get("need") or 0)
         out.append({
             "id": c.get("id"),
+            "sid": c.get("sid"),
             "who": c.get("owner") or "玩家",
             "av": av,
             "script": c.get("title") or "剧本",
             "time": "%s %s" % (c.get("day") or "", c.get("time") or ""),
             "have": c.get("joined") or 0,
+            "cap": c.get("cap") or 8,
             "need": c.get("need") or 0,
+            "price": c.get("price") or 0,
             "tags": list(c.get("tags") or []),
+            "members": [m.get("nick") or "玩家" for m in (c.get("members") or [])][:8],
             "note": note,
             "full": bool(c.get("full")),
+            "mine": bool(c.get("mine")),
         })
     return jsonify(out)
 
@@ -183,14 +188,34 @@ def api_me():
     recs = []
     _titles = {str(x.get("id")): x.get("title") for x in db.rows("scripts")}
     _stmap = {"booked": "待开演", "arrived": "已入场", "done": "已结束", "cancelled": "已取消"}
-    for b in bookings:
-        if str(b.get("phone")) == str(phone) and b.get("status") != "cancelled":
-            recs.append({
-                "id": b.get("id"),
-                "name": b.get("title") or _titles.get(str(b.get("sid")) or "", "剧本"),
-                "time": _ago(b.get("ts")),
-                "state": _stmap.get(b.get("status"), "已预约"),
-            })
+    pays = db.rows("pays")
+    my_reviews = [r for r in db.rows("reviews") if r.get("username") == u.get("username")]
+    for b in db.rows("bookings"):
+        if str(b.get("phone")) != str(phone):
+            continue
+        status = b.get("status") or "booked"
+        pay = next((p for p in pays if str(p.get("bid")) == str(b.get("id"))), None)
+        pay_status = (pay or {}).get("status") or "unpaid"
+        reviewed = any(str(r.get("sid")) == str(b.get("sid"))
+                       and (r.get("createdAt") or 0) > (b.get("createdAt") or 0) for r in my_reviews)
+        recs.append({
+            "id": b.get("id"),
+            "sid": b.get("sid"),
+            "emoji": b.get("emoji") or "🎭",
+            "name": b.get("title") or _titles.get(str(b.get("sid")) or "", "剧本"),
+            "day": b.get("day") or business.day_label(b.get("ts")),
+            "time": b.get("time") or "",
+            "players": b.get("players") or 1,
+            "mode": b.get("mode") or ("拼车" if b.get("carNew") else ""),
+            "state": _stmap.get(status, status),
+            "raw": status,
+            "amount": b.get("amount") or 0,
+            "deposit": b.get("deposit") or 0,
+            "payStatus": pay_status,
+            "code": str(b.get("verifyCode") or "") if pay_status == "paid" else "",
+            "reviewed": reviewed,
+            "cancelable": status == "booked",
+        })
     now = business.now_ms()
     coupons = [c for c in db.rows("coupons")
                if str(c.get("phone")) == str(phone) and not c.get("used") and (c.get("exp") or 0) > now]
@@ -202,7 +227,8 @@ def api_me():
         "phone": _mask_phone(phone),
         "id": u.get("invite") or "",
         "credit": u.get("credit") or 0,
-        "coupons": [{"id": c.get("id"), "name": c.get("name") or "优惠券", "amount": c.get("amount") or 0} for c in coupons],
+        "staff": (u.get("role") or "user") in ("admin", "staff", "dm") or bool(u.get("super")),
+        "coupons": [{"id": c.get("id"), "name": c.get("name") or c.get("from") or "抵扣券", "amount": c.get("amount") or 0} for c in coupons],
         "stats": {"bookings": len(bookings), "reviews": len(reviews), "spent": spent},
         "records": recs[:20],
     })
@@ -283,7 +309,8 @@ def api_reviews():
 
 @bp.post("/m/api/book")
 def api_book():
-    """预约占位（需登录）。表单：sid, sessionId, players, who, note, couponId"""
+    """预约占位（需登录）。字段直接透传给 business.create_booking：
+    sid / ts_day / time / players / mode(拼车|包车) / carTags / sessionId"""
     u = current_user()
     if not u:
         return jsonify({"error": "请先登录"}), 401
@@ -291,24 +318,20 @@ def api_book():
     sid = f.get("sid") or f.get("sessionId")
     if not sid:
         return jsonify({"error": "缺少剧本"}), 400
-    session_id = f.get("sessionId")
-    ts = f.get("ts")
-    # 如果给了场次 id，把场次日期/time 补到表单，让 create_booking 省心
-    if session_id:
-        s = next((x for x in db.rows("sessions") if str(x.get("id")) == str(session_id)), None)
-        if s:
-            ts = s.get("ts")
-            # create_booking 用 ts_day 或 ts；把 time 作为 note 的一部分
-    ok, msg, booking = business.create_booking(u, {
-        "sid": sid,
-        "sessionId": session_id or "",
-        "ts": ts or "",
-        "players": f.get("players") or "1",
-        "who": f.get("who") or (u.get("profile") or {}).get("nick") or u.get("username") or "玩家",
-        "note": f.get("note") or "",
-        "couponId": f.get("couponId") or "0",
-    })
+    ok, msg, booking = business.create_booking(u, f)
     return jsonify({"ok": ok, "msg": msg, "id": booking.get("id") if booking else None})
+
+
+@bp.post("/m/api/car/<car_id>/<action>")
+def api_car_action(car_id, action):
+    """上车 / 下车 / 候补。直接复用桌面端 business.car_action"""
+    u = current_user()
+    if not u:
+        return jsonify({"error": "请先登录"}), 401
+    if action not in ("join", "quit", "wait"):
+        return jsonify({"error": "不支持的操作"}), 400
+    ok, msg = business.car_action(u, car_id, action, request.form)
+    return jsonify({"ok": ok, "msg": msg})
 
 
 @bp.post("/m/api/booking/<int:bid>/cancel")

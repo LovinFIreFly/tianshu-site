@@ -7,7 +7,7 @@
 <title>甜薯剧本杀 · 手机版</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2317140F'/%3E%3Cpath d='M32 14l17 34H15z' fill='%23BD3318'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=ZCOOL+QingKe+HuangYou&family=Noto+Sans+SC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="/m/styles.css?v=8">
+<link rel="stylesheet" href="/m/styles.css?v=9">
 </head>
 <body>
 <div id="app">
@@ -15,7 +15,7 @@
 
   <header class="mast">
     <div class="brand-mark"><b>甜薯剧本杀</b><i>推开社团门，下课换身份</i></div>
-    <button class="btn-entry" data-action="login">入场登记</button>
+    <button class="btn-entry" data-action="login" id="mast-entry">入场登记</button>
   </header>
 
   <main>
@@ -70,9 +70,16 @@
     <!-- ===== 拼车局 ===== -->
     <section id="view-carpool" class="view">
       <div class="sec v-in" style="--d:0ms">
-        <div class="sec-head"><span class="sec-no">04</span><h2 class="sec-title">拼车局</h2><span class="sec-note">人齐就发车</span></div>
+        <div class="sec-head"><span class="sec-no">04</span><h2 class="sec-title">拼车局</h2>
+          <button class="btn btn-ink" style="min-height:34px;padding:0 var(--s4);font-size:var(--fs-meta);margin-left:auto" data-action="open-car-create">发起拼车</button>
+        </div>
       </div>
-      <div id="carpool-body"></div>
+      <div class="clist" id="carpool-body"></div>
+      <div class="empty" id="carpool-empty" hidden>
+        <h3>还没有车</h3>
+        <p>挑个本，发一车，等凑齐人就开。</p>
+        <button class="btn btn-primary" data-action="open-car-create">发第一辆车</button>
+      </div>
     </section>
 
     <!-- ===== 唠嗑区 ===== -->
@@ -94,27 +101,35 @@
     <!-- ===== 我的 ===== -->
     <section id="view-me" class="view">
       <div id="me-card"></div>
+      <div id="me-coupons-sec" hidden>
+        <div class="sec v-in">
+          <div class="sec-head"><span class="sec-no">06</span><h2 class="sec-title">可用券</h2><span class="sec-note" id="coupon-note"></span></div>
+        </div>
+        <div class="coupons" id="coupon-list"></div>
+      </div>
       <div class="sec v-in" style="--d:80ms">
-        <div class="sec-head"><span class="sec-no">06</span><h2 class="sec-title">打本记录</h2><span class="sec-note" id="record-note">0 条</span></div>
-        <div class="rlist" id="record-list"></div>
+        <div class="sec-head"><span class="sec-no">07</span><h2 class="sec-title">我的预约</h2><span class="sec-note" id="record-note">0 条</span></div>
+        <div id="record-list"></div>
         <div class="empty" id="record-empty" hidden>
-          <h3>还没有打本记录</h3>
-          <p>挑个本，凑齐人，记录就来了。</p>
+          <h3>还没有预约</h3>
+          <p>挑个本，凑齐人，预约就来了。</p>
         </div>
       </div>
       <div class="sec v-in" style="--d:140ms">
-        <div class="sec-head"><span class="sec-no">07</span><h2 class="sec-title">账号</h2></div>
+        <div class="sec-head"><span class="sec-no">08</span><h2 class="sec-title">账号</h2></div>
         <div class="menu">
-          <button class="mitem" data-action="login"><span>入场登记 / 登录</span><em>去登记</em></button>
+          <button class="mitem" data-action="login" id="menu-login"><span>入场登记 / 登录</span><em>去登记</em></button>
           <button class="mitem" data-action="signup"><span>注册新账号</span><em>去注册</em></button>
           <button class="mitem" data-action="forgot"><span>忘记密码</span><em>找回来</em></button>
+          <button class="mitem" data-action="logout" id="menu-logout" hidden><span>退出登录</span><em>再见</em></button>
+          <button class="mitem" data-action="admin" id="menu-admin" hidden><span>员工 / 管理后台</span><em>进入</em></button>
         </div>
       </div>
       <p class="foot">甜薯剧本杀 · 学校社团活动室</p>
     </section>
   </main>
 
-  <!-- ===== 悬浮胶囊 Tab + 中央凸起拼车钮 ===== -->
+  <!-- ===== 五等分底部导航（拼车并排） ===== -->
   <nav class="tabbar" aria-label="主导航">
     <button class="tab on" data-tab="home" aria-label="大厅">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
@@ -124,9 +139,9 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v16H5z"/><path d="M5 9h14M5 14h14"/></svg>
       <span>本本墙</span>
     </button>
-    <button class="tab-fab" data-tab="carpool" aria-label="拼车局">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="17" r="2.5"/><circle cx="17" cy="17" r="2.5"/><path d="M4 17H2v-4l2-4h9v8M13 11h4l3 4v2"/></svg>
-      <span>拼车</span>
+    <button class="tab" data-tab="carpool" aria-label="拼车局">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="17" r="2.5"/><circle cx="17" cy="17" r="2.5"/><path d="M4 17H2v-4l2-4h9v8M13 11h4l3 4v2"/></svg>
+      <span>拼车局</span>
     </button>
     <button class="tab" data-tab="talk" aria-label="唠嗑区">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 01-8 8H4l2-3a8 8 0 1115-5z"/></svg>
@@ -138,9 +153,9 @@
     </button>
   </nav>
 
-  <!-- ===== 剧本详情 Sheet ===== -->
+  <!-- ===== 剧本 / 场次详情 Sheet ===== -->
   <div class="mask" id="sheet-mask"></div>
-  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="剧本详情">
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="详情">
     <div class="sheet-grip"></div>
     <div class="sheet-img"><div class="photo" id="sheet-photo"></div></div>
     <button class="sheet-close" id="sheet-close" aria-label="关闭详情">
@@ -149,52 +164,29 @@
     <div class="sheet-body" id="sheet-body"></div>
   </div>
 
+  <!-- ===== 预约 Sheet ===== -->
+  <div class="mask" id="book-mask"></div>
+  <div class="sheet" id="book-sheet" role="dialog" aria-modal="true" aria-label="预约">
+    <div class="sheet-grip"></div>
+    <div class="sheet-body" id="book-body"></div>
+  </div>
+
   <!-- ===== 发起拼车 Sheet ===== -->
   <div class="mask" id="car-mask"></div>
   <div class="sheet" id="car-sheet" role="dialog" aria-modal="true" aria-label="发起拼车">
     <div class="sheet-grip"></div>
-    <div class="sheet-body">
-      <div class="sheet-no">04</div>
-      <h2 class="sheet-title">发起拼车</h2>
-      <p class="sheet-desc">填好本子和出发时间，人齐就发车。发完可在「拼车局」看到。</p>
-      <form class="form" id="car-form" action="/m/api/cars" method="post">
-        <div class="field">
-          <label for="car-script">拼哪个本</label>
-          <select id="car-script" name="sid" required></select>
-        </div>
-        <div class="field">
-          <label for="car-date">出发日期</label>
-          <input type="date" id="car-date" name="date" required>
-        </div>
-        <div class="field">
-          <label for="car-time">出发时间</label>
-          <input type="time" id="car-time" name="time" required>
-        </div>
-        <div class="field">
-          <label for="car-need">还差几人发车</label>
-          <input type="number" id="car-need" name="need" min="1" max="11" value="3" required>
-        </div>
-        <div class="field">
-          <label for="car-tags">标签（逗号分隔，可选）</label>
-          <input type="text" id="car-tags" name="tags" placeholder="校园,悬疑">
-        </div>
-        <div class="err" id="car-err"></div>
-        <button class="btn btn-primary btn-block" type="submit">发车</button>
-      </form>
-    </div>
+    <div class="sheet-body" id="car-body"></div>
   </div>
 
-  <!-- ===== 登录 / 注册 / 找回 Sheet ===== -->
+  <!-- ===== 登录 Sheet ===== -->
   <div class="mask" id="auth-mask"></div>
-  <div class="sheet" id="auth-sheet" role="dialog" aria-modal="true" aria-label="入场登记">
+  <div class="sheet" id="auth-sheet" role="dialog" aria-modal="true" aria-label="登录">
     <div class="sheet-grip"></div>
     <div class="sheet-body" id="auth-body"></div>
   </div>
-
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
-<script src="/m/data.js?v=8"></script>
-<script src="/m/app.js?v=8"></script>
+<script src="/m/data.js?v=9"></script>
+<script src="/m/app.js?v=9"></script>
 </body>
 </html>

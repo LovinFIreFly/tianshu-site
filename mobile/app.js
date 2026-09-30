@@ -1,459 +1,560 @@
-/* 甜薯剧本杀 · 手机端 v5 · 数据驱动（示范页 zine 设计 + 真实接口） */
+/* 甜薯剧本杀 · 手机端 v3 · zine 设计 × 旧版全功能（数据驱动） */
 (function () {
   'use strict';
 
-  var STATIC = window.MOBILE_STATIC || {
-    scripts: [], sessions: [], cars: [], talks: [], me: { guest: true }
-  };
-
   var D = {
-    scripts: STATIC.scripts.slice(),
-    sessions: STATIC.sessions.slice(),
-    cars: STATIC.cars.slice(),
-    talks: STATIC.talks.slice(),
-    me: STATIC.me,
-    ready: false
+    scripts: [], sessions: [], cars: [], talks: [],
+    me: { guest: true }, ready: false
   };
-
   var curTab = 'home', curCat = '全部', query = '';
-  var TAB_TITLES = { home: '大厅', scripts: '本本墙', carpool: '拼车局', talk: '唠嗑区', me: '我的' };
+  var bookCtx = { sid: '', day: '', time: '', players: 1, mode: '拼车', tags: [] };
+  var carCtx = { sid: '', day: '', time: '', players: 1, tags: [] };
+  var TIMES = ['14:00', '16:00', '18:30', '19:00', '20:30'];
+  var CAR_TAGS = ['欢乐局', '新手友好', '剧情党', '推理控', '恐怖胆大'];
 
   function $(s) { return document.querySelector(s); }
-  function $$(s) { return document.querySelectorAll(s); }
-  function esc(t) {
-    return String(t == null ? '' : t)
+  function $$(s) { return Array.prototype.slice.call(document.querySelectorAll(s)); }
+  function esc(s) {
+    return String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
+  function toast(msg) {
+    var t = $('#toast') || (function () {
+      var d = document.createElement('div'); d.id = 'toast'; d.className = 'toast';
+      document.body.appendChild(d); return d;
+    })();
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(t._tm); t._tm = setTimeout(function () { t.classList.remove('show'); }, 2400);
+  }
 
+  /* ---------- 图片 / 头像 ---------- */
   function isImageUrl(u) {
     u = String(u || '').trim();
-    if (!u) return false;
-    // 过滤掉占位字符串/表情也走兜底
-    if (/^(avatar|placeholder|none|null|undefined|🎭)$/i.test(u)) return false;
+    if (!u || /^(avatar|placeholder|none|null|undefined|🎭)$/i.test(u)) return false;
     return /^https?:\/\//i.test(u) || /^\/(img|static|upload|m)\//i.test(u);
   }
   function coverURL(s, idx) {
     var u = (s && (s.cover || s.img || s.poster)) || '';
     if (isImageUrl(u)) return u;
-    // 没图时按顺序复用两张示范海报，避免全站只有渐变
     var posters = ['/m/poster-n01.jpg', '/m/poster-n02.jpg'];
     return posters[(idx == null ? 0 : idx) % posters.length];
   }
   function avatarHTML(cls, av, initial) {
     if (isImageUrl(av))
-      return '<div class="' + cls + '"><img src="' + esc(av) + '" alt="" onerror="this.parentNode.innerHTML=\'' + esc(initial || '玩') + '\'"></div>';
-    return '<div class="' + cls + '">' + esc(initial || '玩') + '</div>';
+      return '<div class="' + cls + '"><img src="' + esc(av) + '" alt=""></div>';
+    return '<div class="' + cls + '">' + esc(String(initial || '玩').slice(0, 1)) + '</div>';
+  }
+  function bgStyle(s, idx) {
+    var grad = (s && s.grad) || 'linear-gradient(160deg,#3a2b4d,#15131f)';
+    return 'background-image:url(' + coverURL(s, idx) + '),' + grad;
   }
 
-  function uniqueTags() {
-    var set = [];
-    D.scripts.forEach(function (s) {
-      (s.tags || []).forEach(function (t) { if (set.indexOf(t) < 0) set.push(t); });
-    });
-    return set;
+  /* ---------- 数据 ---------- */
+  function fetchJSON(url) {
+    return fetch(url, { credentials: 'same-origin' }).then(function (r) { return r.json(); });
   }
-
-  function loadOne(url, fb) {
-    return fetch(url, { credentials: 'same-origin' })
-      .then(function (r) { return r.ok ? r.json() : fb; })
-      .catch(function () { return fb; });
-  }
-  function ensureData() {
-    if (D.ready) return Promise.resolve();
+  function ensureData(force) {
+    if (D.ready && !force) return Promise.resolve();
     return Promise.all([
-      loadOne('/m/api/scripts', STATIC.scripts),
-      loadOne('/m/api/sessions', STATIC.sessions),
-      loadOne('/m/api/cars', STATIC.cars),
-      loadOne('/m/api/talks', STATIC.talks),
-      loadOne('/m/api/me', STATIC.me)
+      fetchJSON('/m/api/scripts'),
+      fetchJSON('/m/api/sessions'),
+      fetchJSON('/m/api/cars'),
+      fetchJSON('/m/api/talks'),
+      fetchJSON('/m/api/me')
     ]).then(function (r) {
-      D.scripts = r[0];
-      D.sessions = (r[1] && r[1].sessions) ? r[1].sessions : (r[1] || []);
-      D.cars = r[2]; D.talks = r[3]; D.me = r[4];
+      D.scripts = Array.isArray(r[0]) ? r[0] : [];
+      D.sessions = (r[1] && r[1].sessions) ? r[1].sessions : (Array.isArray(r[1]) ? r[1] : []);
+      D.cars = Array.isArray(r[2]) ? r[2] : [];
+      D.talks = Array.isArray(r[3]) ? r[3] : [];
+      D.me = r[4] || { guest: true };
       D.ready = true;
+      renderAll();
+    }).catch(function () {
+      var fb = window.MOBILE_STATIC || {};
+      D.scripts = fb.scripts || []; D.sessions = fb.sessions || [];
+      D.cars = fb.cars || []; D.talks = fb.talks || []; D.me = fb.me || { guest: true };
+      renderAll();
     });
   }
 
+  /* ---------- 视图切换 ---------- */
+  function switchTab(name) {
+    curTab = name;
+    $$('.view').forEach(function (v) { v.classList.remove('active'); });
+    var view = $('#view-' + name); if (view) view.classList.add('active');
+    $$('.tab').forEach(function (t) { t.classList.toggle('on', t.getAttribute('data-tab') === name); });
+    window.scrollTo(0, 0);
+  }
+
+  /* ---------- 大厅 ---------- */
   function renderHome() {
     var ss = D.scripts.slice(0, 2);
     var hi = $('#hero-imgs'), hc = $('#hero-cap');
     if (ss.length) {
-      var durl = coverURL(ss[0], 0), burl = coverURL(ss[1] || {}, 1);
-      hi.innerHTML = '<div class="photo hero-dark" style="background-image:url(\'' + esc(durl) + '\'),' + esc(ss[0].grad) + '"></div>' +
-        (ss[1] ? '<div class="photo hero-bright" style="background-image:url(\'' + esc(burl) + '\'),' + esc(ss[1].grad) + '"></div>' : '');
+      hi.innerHTML = '<div class="photo hero-dark" style="' + bgStyle(ss[0], 0) + '"></div>' +
+        (ss[1] ? '<div class="photo hero-bright" style="' + bgStyle(ss[1], 1) + '"></div>' : '');
       hc.innerHTML = ss.map(function (s, i) {
         return '<span><b>NO.0' + (i + 1) + '</b> ' + esc(s.title) + '</span>';
       }).join('');
     } else { hi.innerHTML = ''; hc.innerHTML = ''; }
 
-    var t = $('#tonight');
-    if (D.sessions.length) {
-      $('#tonight-note').textContent = '今夜 ' + D.sessions.length + ' 场';
-      var rows = D.sessions.slice(0, 6).map(function (s) {
-        return '<div class="trow" role="button" tabindex="0" data-action="session" data-id="' + esc(s.id) + '">' +
-          '<span class="tt">' + esc(s.time || '') + '</span>' +
-          '<div class="tn"><b>' + esc(s.name || '未命名场次') + '</b><small>' + esc(s.room || '') + '</small></div>' +
-          '<span class="ts">余 ' + (s.left || 0) + '</span></div>';
-      }).join('');
-      t.innerHTML = '<div class="tonight-row"><span class="big-zero">' + D.sessions.length + '</span><span class="big-unit">场</span></div>' +
-        '<p class="tonight-line">今晚这些场次要开本，挑一个凑进去。</p>' +
-        '<div class="tonight-list">' + rows + '</div>' +
-        '<div class="cta-row"><button class="btn btn-primary btn-block" data-action="carpool">发起拼车</button>' +
-        '<button class="btn btn-ghost btn-block" data-action="book">包下整场</button></div>';
-    } else {
-      $('#tonight-note').textContent = '今夜发车';
-      t.innerHTML = '<div class="tonight-row"><span class="big-zero">0</span><span class="big-unit">场</span></div>' +
-        '<p class="tonight-line">今晚还没人发车。想玩的话，你来开一局。</p>' +
-        '<div class="cta-row"><button class="btn btn-primary btn-block" data-action="carpool">发起拼车</button>' +
-        '<button class="btn btn-ghost btn-block" data-action="book">包下整场</button></div>';
-    }
+    $('#tonight-note').textContent = D.sessions.length ? '今夜发车' : '今夜暂无排期';
+    $('#tonight').innerHTML = D.sessions.slice(0, 6).map(function (s) {
+      var left = (s.left == null) ? Math.max(0, (s.cap || 0) - (s.have || 0)) : s.left;
+      return '<button class="trow" data-action="open-session" data-id="' + esc(s.id) + '">' +
+        '<span class="tt">' + esc(s.time || '') + '</span>' +
+        '<span class="tn"><b>' + esc(s.name || '未命名场次') + '</b><small>' + esc(s.room || '') + ' · ' + esc(s.script || '') + '</small></span>' +
+        '<span class="ts' + (left <= 1 ? ' low' : '') + '">余 ' + left + '</span></button>';
+    }).join('') || '<p class="sheet-note">今天没排场，去本本墙挑一本约起来。</p>';
 
-    var cs = D.scripts.slice(0, 3);
     $('#collage-note').textContent = '已上架 ' + D.scripts.length + ' 部';
+    var cs = D.scripts.slice(0, 4);
     $('#collage').innerHTML = cs.map(function (s, i) {
-      var cls = i % 2 ? 'pcard-b' : 'pcard-a';
-      return '<article class="pcard ' + cls + '" data-id="' + esc(s.id) + '" role="button" tabindex="0" aria-label="查看剧本：' + esc(s.title) + '">' +
-        '<div class="pcard-img"><div class="photo" style="background-image:url(\'' + esc(coverURL(s, i)) + '\'),' + esc(s.grad) + '"></div>' +
+      return '<article class="pcard" data-action="open-script" data-id="' + esc(s.id) + '" role="button" tabindex="0">' +
+        '<div class="pcard-img"><div class="photo" style="' + bgStyle(s, i) + '"></div>' +
         '<span class="pcard-no">0' + (i + 1) + '</span><span class="pcard-v">甜薯剧本杀</span></div>' +
         '<div class="pcard-info"><div class="pcard-name">' + esc(s.title) + '</div>' +
-        '<div class="pcard-meta">' + esc(s.players) + ' · ' + esc(s.duration) + '</div>' +
-        '<div class="pcard-tags">' + (s.tags || []).map(function (x) { return '<span class="tag">' + esc(x) + '</span>'; }).join('') +
-        (s.hot ? '<span class="tag tag-ok">热门</span>' : '') + '</div></div></article>';
+        '<div class="pcard-meta">' + esc(s.players || '') + ' · ' + esc(s.duration || '') + '</div></div></article>';
     }).join('');
 
-    var ht = D.talks.slice(0, 2).map(talkHTML).join('');
-    $('#home-talks').innerHTML = ht || '<p class="tonight-line">还没人唠嗑，去唠嗑区开个头。</p>';
+    var ht = D.talks.slice(0, 3);
+    $('#home-talks').innerHTML = ht.map(talkHTML).join('') ||
+      '<p class="sheet-note">还没人说话，去唠嗑区开个头。</p>';
   }
 
+  /* ---------- 本本墙 ---------- */
+  function uniqueTags() {
+    var set = [];
+    D.scripts.forEach(function (s) { (s.tags || []).forEach(function (t) { if (set.indexOf(t) < 0) set.push(t); }); });
+    return set;
+  }
   function renderScripts() {
-    var chips = ['全部'].concat(uniqueTags());
-    $('#chips-row').innerHTML = chips.map(function (c) {
-      return '<button class="chip' + (c === curCat ? ' on' : '') + '" data-chip="' + esc(c) + '">' + esc(c) + '</button>';
+    var tags = uniqueTags();
+    var chips = ['全部'].concat(tags);
+    $('#chips-row').innerHTML = chips.map(function (t) {
+      return '<button class="chip' + (t === curCat ? ' on' : '') + '" role="tab" aria-selected="' +
+        (t === curCat) + '" data-cat="' + esc(t) + '">' + esc(t) + '</button>';
     }).join('');
+    var q = query.toLowerCase();
     var list = D.scripts.filter(function (s) {
-      var okCat = curCat === '全部' || (s.tags || []).indexOf(curCat) > -1;
-      var okQ = !query || (s.title || '').indexOf(query) > -1;
+      var okCat = curCat === '全部' || (s.tags || []).indexOf(curCat) >= 0;
+      var okQ = !q || String(s.title || '').toLowerCase().indexOf(q) >= 0;
       return okCat && okQ;
     });
-    $('#scripts-grid').innerHTML = list.map(function (s, i) {
-      return '<div class="srow" data-id="' + esc(s.id) + '" role="button" tabindex="0" aria-label="查看剧本：' + esc(s.title) + '">' +
-        '<span class="srow-no">0' + (i + 1) + '</span>' +
-        '<div class="srow-thumb" style="background-image:url(\'' + esc(coverURL(s, i)) + '\'),' + esc(s.grad) + '"></div>' +
-        '<div class="srow-main"><div class="srow-name">' + esc(s.title) + '</div>' +
-        '<div class="srow-meta">' + esc(s.players) + ' · ' + esc(s.duration) +
-        ' <span class="tag">' + esc(s.difficulty) + '</span></div></div></div>';
-    }).join('');
     $('#scripts-empty').hidden = list.length > 0;
+    $('#scripts-grid').innerHTML = list.map(function (s, i) {
+      return '<button class="srow" data-action="open-script" data-id="' + esc(s.id) + '">' +
+        '<span class="srow-no">0' + (i + 1) + '</span>' +
+        '<span class="srow-thumb" style="' + bgStyle(s, i) + '"></span>' +
+        '<span class="srow-main"><span class="srow-name">' + esc(s.title) + '</span>' +
+        '<span class="srow-meta">' + esc(s.players || '') + ' · ' + esc(s.duration || '') +
+        ' <span class="tag">' + esc(s.difficulty || '') + '</span>' +
+        ((s.price ? ' <span class="tag">¥' + esc(s.price) + '/人</span>' : '')) + '</span></span>' +
+        '<span class="srow-go">详情 ›</span></button>';
+    }).join('');
   }
 
-  function renderCars() {
-    var body = $('#carpool-body');
-    var head = '<div class="cta-row" style="padding:var(--s4) var(--page-pad) 0"><button class="btn btn-primary btn-block" data-action="carpool">发起拼车</button></div>';
-    if (!D.cars.length) {
-      body.innerHTML = '<div class="carpool-empty"><div class="zero">0</div><h3>今晚还没有局</h3><p>你是第一个想玩的人。发个车，等人上车。</p></div>';
-      return;
+  /* ---------- 剧本 / 场次详情 ---------- */
+  function findScript(id) {
+    return D.scripts.filter(function (x) { return String(x.id) === String(id); })[0];
+  }
+  function openScriptSheet(id) {
+    var s = findScript(id); if (!s) { toast('剧本信息没找到'); return; }
+    $('#sheet-photo').style.cssText = bgStyle(s);
+    $('#sheet-body').innerHTML =
+      '<div class="sheet-no">剧本</div><h2 class="sheet-title">' + esc(s.title) + '</h2>' +
+      '<div class="sheet-tags">' +
+      (s.tags || []).map(function (x) { return '<span class="tag">' + esc(x) + '</span>'; }).join('') +
+      '<span class="tag">' + esc(s.players || '') + '</span><span class="tag">' + esc(s.duration || '') + '</span>' +
+      '<span class="tag">难度 ' + esc(s.difficulty || '') + '</span>' +
+      (s.price ? '<span class="tag">¥' + esc(s.price) + ' / 人</span>' : '') + '</div>' +
+      '<p class="sheet-desc">' + esc(s.desc || '') + '</p>' +
+      '<div class="sheet-cta">' +
+      '<button class="btn btn-primary btn-block" data-action="open-book" data-id="' + esc(s.id) + '">立即预约</button>' +
+      '<button class="btn btn-ghost btn-block" data-action="open-car-create" data-id="' + esc(s.id) + '">拿这个本发一车</button>' +
+      '</div><div id="sheet-reviews" class="reviews"></div>';
+    openSheet('#sheet', '#sheet-mask');
+    fetchReviews(s.id);
+  }
+  function openSessionSheet(id) {
+    var s = D.sessions.filter(function (x) { return String(x.id) === String(id); })[0];
+    if (!s) { toast('场次信息没找到'); return; }
+    if (s.sid && findScript(s.sid)) { openScriptSheet(s.sid); return; }
+    bookCtx = { sid: '', day: '', time: s.time || '', players: 1, mode: '拼车', tags: [] };
+    openBookSheet(bookCtx.sid, s);
+  }
+  function fetchReviews(sid) {
+    var box = $('#sheet-reviews'); if (!box || !sid) return;
+    fetchJSON('/m/api/reviews?sid=' + encodeURIComponent(sid)).then(function (list) {
+      list = list || [];
+      if (!list.length) { box.innerHTML = '<h4 class="rev-head">玩过的人说</h4><p class="sheet-note">还没有评价，做第一个打分的人吧。</p>'; return; }
+      var avg = list.reduce(function (a, r) { return a + (Number(r.rating) || 0); }, 0) / list.length;
+      box.innerHTML = '<h4 class="rev-head">玩过的人说</h4>' +
+        '<div class="score"><b>' + avg.toFixed(1) + '</b><span>' +
+        '<span class="stars">' + '★'.repeat(Math.round(avg)) + '</span><br>共 ' + list.length + ' 条真实评价</span></div>' +
+        list.slice(0, 8).map(function (x) {
+          return '<div class="rev">' + avatarHTML('rev-av', x.avatar, (x.name || '玩')) +
+            '<div class="rev-body"><div class="rev-meta"><b>' + esc(x.name || '玩家') + '</b>' +
+            '<span><span class="stars">' + '★'.repeat(Number(x.rating) || 0) + '</span> ' + esc(x.time || '') + '</span></div>' +
+            '<p>' + esc(x.text || '') + '</p></div></div>';
+        }).join('');
+    }).catch(function () {});
+  }
+
+  /* ---------- 预约 ---------- */
+  function dayChips(sel) {
+    var out = [], base = new Date();
+    for (var i = 0; i < 7; i++) {
+      var d = new Date(base.getTime() + i * 86400000);
+      var iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      var wd = '日一二三四五六'[d.getDay()];
+      out.push('<button class="dchip' + (iso === sel ? ' on' : '') + '" data-day="' + iso + '">' +
+        (i === 0 ? '今天' : (i === 1 ? '明天' : wd)) + '<b>' + (d.getMonth() + 1) + '/' + d.getDate() + '</b></button>');
     }
-    body.innerHTML = head + '<div class="carlist">' + D.cars.map(function (c) {
-      return '<div class="car"><div class="car-top">' + avatarHTML('car-av', c.av, (c.who || '玩')[0]) +
-        '<div class="car-main"><div class="car-name">' + esc(c.script || '剧本') + '</div>' +
-        '<div class="car-sub">' + esc(c.time || '') + ' · 车主 ' + esc(c.who || '玩家') + '</div></div></div>' +
-        '<div class="car-note">' + esc(c.note || '') + '</div>' +
-        '<div class="car-tags">' + (c.tags || []).map(function (x) { return '<span class="tag">' + esc(x) + '</span>'; }).join('') + '</div></div>';
-    }).join('') + '</div>';
+    return out.join('');
   }
-
-  function talkHTML(t) {
-    return '<div class="titem">' + avatarHTML('tav', t.avatar, (t.name || '玩')[0]) +
-      '<div class="tbody"><div class="tmeta"><span class="tname">' + esc(t.name || '玩家') +
-      '</span><span class="ttime">' + esc(t.ago || '') + '</span></div>' +
-      '<p class="ttext">' + esc(t.text || '') + '</p></div></div>';
+  function openBookSheet(sid, preset) {
+    var s = sid ? findScript(sid) : null;
+    bookCtx = { sid: sid || '', day: '', time: (preset && preset.time) || '', players: 1, mode: '拼车', tags: [] };
+    $('#book-body').innerHTML =
+      '<div class="sheet-no">预约</div><h2 class="sheet-title">' + esc(s ? s.title : '选个本开一局') + '</h2>' +
+      '<div class="form">' +
+      '<div class="field"><label>哪天</label><div class="dates" id="bk-days">' + dayChips('') + '</div></div>' +
+      '<div class="field"><label>几点</label><div class="times" id="bk-times">' +
+      TIMES.map(function (t) { return '<button class="dchip" data-time="' + t + '">' + t + '</button>'; }).join('') + '</div></div>' +
+      '<div class="field"><label>几个人</label><div class="stepper">' +
+      '<button type="button" data-step="-1">−</button><b id="bk-players">1</b><button type="button" data-step="1">＋</button></div></div>' +
+      '<div class="field"><label>拼车还是包场</label><div class="seg" id="bk-mode">' +
+      '<button type="button" data-mode="拼车" class="on">拼车 · 等人拼</button><button type="button" data-mode="包车">包场 · 自己包</button></div></div>' +
+      '<div class="err" id="bk-err"></div>' +
+      '<button class="btn btn-primary btn-block" data-action="submit-book">提交预约</button>' +
+      '<p class="sheet-note">定金一人 ¥50（玩完退回）· 开演前 2 小时外取消不影响信用分</p></div>';
+    openSheet('#book-sheet', '#book-mask');
   }
-  function renderTalks() {
-    if (!D.talks.length) { $('#talk-list').innerHTML = ''; $('#talk-empty').hidden = false; return; }
-    $('#talk-empty').hidden = true;
-    $('#talk-list').innerHTML = D.talks.map(talkHTML).join('');
-  }
-  function sendTalk() {
-    var input = $('#talk-input');
-    var text = input.value.trim();
-    if (!text) return;
-    if (D.me && D.me.guest) { toast('登录后才能发帖'); openAuth('login'); return; }
+  function submitBook() {
+    if (D.me && D.me.guest) { toast('请先登录再预约'); openAuth(); return; }
+    if (!bookCtx.day) { $('#bk-err').textContent = '先挑一天'; return; }
+    if (!bookCtx.time) { $('#bk-err').textContent = '再挑个时间'; return; }
     var fd = new FormData();
-    fd.append('text', text);
-    fetch('/m/api/talks', { method: 'POST', body: fd, credentials: 'same-origin' })
-      .then(function (r) { return r.json(); })
-      .then(function (j) {
-        if (j.error) { toast(j.error); openAuth('login'); return; }
-        input.value = ''; toast('已发到唠嗑区'); ensureData().then(renderTalks);
-      })
-      .catch(function () { toast('网络开了小差，待会儿再试'); });
-  }
-
-  function bookSession(btn) {
-    if (D.me && D.me.guest) { toast('请先登录再预约'); openAuth('login'); return; }
-    var fd = new FormData();
-    fd.append('sid', btn.getAttribute('data-sid'));
-    fd.append('sessionId', btn.getAttribute('data-session'));
-    fd.append('players', '1');
+    fd.append('sid', bookCtx.sid);
+    fd.append('ts_day', bookCtx.day);
+    fd.append('time', bookCtx.time);
+    fd.append('players', bookCtx.players);
+    fd.append('mode', bookCtx.mode);
+    bookCtx.tags.forEach(function (t) { fd.append('carTags', t); });
+    fd.append('agree', '1');
     fetch('/m/api/book', { method: 'POST', body: fd, credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (j) {
-        if (j.error) { toast(j.error); return; }
+        if (j.error) { $('#bk-err').textContent = j.error; return; }
         toast(j.msg || '预约成功');
-        closeAllSheets();
-        ensureData().then(function () { renderHome(); renderMe(); });
+        closeSheets();
+        ensureData(true);
       })
-      .catch(function () { toast('网络开了小差，待会儿再试'); });
+      .catch(function () { $('#bk-err').textContent = '网络开了小差，待会儿再试'; });
   }
 
+  /* ---------- 拼车 ---------- */
+  function renderCarpool() {
+    var body = $('#carpool-body'), empty = $('#carpool-empty');
+    empty.hidden = D.cars.length > 0;
+    body.innerHTML = D.cars.map(function (c) {
+      return '<div class="ccard">' +
+        '<div class="chead">' + avatarHTML('car-av', c.av, c.who) +
+        '<div class="chead-main"><b>' + esc(c.script || '剧本') + '</b>' +
+        '<small>' + esc(c.who || '玩家') + ' 发的车 · ' + esc(c.time || '') + '</small></div>' +
+        (c.full ? '<span class="cbadge cbadge-full">满员</span>' : '<span class="cbadge cbadge-go">差 ' + (c.need || 0) + ' 人</span>') +
+        '</div>' +
+        ((c.members && c.members.length) ? '<div class="cmembers">' + c.members.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div>' : '') +
+        '<div class="cmeta">' +
+        (c.price ? '<span>¥' + esc(c.price) + ' / 人</span>' : '') +
+        (c.tags || []).map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join('') + '</div>' +
+        '<div class="cops">' +
+        (c.mine
+          ? '<button class="btn btn-ghost" data-action="car-quit" data-id="' + esc(c.id) + '">下车</button>'
+          : (c.full
+            ? '<button class="btn btn-ghost" data-action="car-wait" data-id="' + esc(c.id) + '">排候补</button>'
+            : '<button class="btn btn-primary" data-action="car-join" data-id="' + esc(c.id) + '">上车</button>')) +
+        '</div></div>';
+    }).join('');
+  }
+  function carAct(id, action) {
+    if (D.me && D.me.guest) { toast('请先登录再上车'); openAuth(); return; }
+    fetch('/m/api/car/' + id + '/' + action, { method: 'POST', credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        toast(j.msg || j.error || '操作完成');
+        if (j.ok) ensureData(true);
+      }).catch(function () { toast('网络开了小差，待会儿再试'); });
+  }
+  function openCarSheet(sid) {
+    var s = sid ? findScript(sid) : null;
+    carCtx = { sid: sid || '', day: '', time: '', players: 1, tags: [] };
+    $('#car-body').innerHTML =
+      '<div class="sheet-no">发车</div><h2 class="sheet-title">' + esc(s ? s.title : '发一辆拼车') + '</h2>' +
+      '<div class="form">' +
+      (s ? '' : '<div class="field"><label>挑个本</label><select id="car-sid">' +
+        D.scripts.map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.title) + '</option>'; }).join('') +
+        '</select></div>') +
+      '<div class="field"><label>哪天</label><div class="dates" id="car-days">' + dayChips('') + '</div></div>' +
+      '<div class="field"><label>几点</label><div class="times" id="car-times">' +
+      TIMES.map(function (t) { return '<button class="dchip" data-time="' + t + '">' + t + '</button>'; }).join('') + '</div></div>' +
+      '<div class="field"><label>你带几个人上车</label><div class="stepper">' +
+      '<button type="button" data-cstep="-1">−</button><b id="car-players">1</b><button type="button" data-cstep="1">＋</button></div></div>' +
+      '<div class="field"><label>想找什么样的队友（可多选）</label><div class="times" id="car-tags">' +
+      CAR_TAGS.map(function (t) { return '<button class="dchip" data-tag="' + t + '">' + t + '</button>'; }).join('') + '</div></div>' +
+      '<div class="err" id="car-err"></div>' +
+      '<button class="btn btn-primary btn-block" data-action="submit-car">发车</button>' +
+      '<p class="sheet-note">发车后等队友上车，人齐了系统会通知全车。</p></div>';
+    openSheet('#car-sheet', '#car-mask');
+  }
+  function submitCar() {
+    if (D.me && D.me.guest) { toast('请先登录再发车'); openAuth(); return; }
+    var sid = carCtx.sid || (($('#car-sid') || {}).value || '');
+    if (!sid) { $('#car-err').textContent = '先挑个本'; return; }
+    if (!carCtx.day) { $('#car-err').textContent = '先挑一天'; return; }
+    if (!carCtx.time) { $('#car-err').textContent = '再挑个时间'; return; }
+    var fd = new FormData();
+    fd.append('sid', sid); fd.append('ts_day', carCtx.day); fd.append('time', carCtx.time);
+    fd.append('players', carCtx.players); fd.append('mode', '拼车');
+    carCtx.tags.forEach(function (t) { fd.append('carTags', t); });
+    fetch('/m/api/book', { method: 'POST', body: fd, credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j.error || j.ok === false) { $('#car-err').textContent = j.msg || j.error || '发车失败'; return; }
+        toast(j.msg || '车发出去了');
+        closeSheets(); ensureData(true); switchTab('carpool');
+      }).catch(function () { $('#car-err').textContent = '网络开了小差，待会儿再试'; });
+  }
+
+  /* ---------- 唠嗑 ---------- */
+  function talkHTML(t) {
+    return '<div class="talk">' + avatarHTML('tav', t.avatar, t.name) +
+      '<div class="tbody"><div class="tmeta"><b>' + esc(t.name || '玩家') + '</b>' + esc(t.ago || '') + '</div>' +
+      '<div class="ttext">' + esc(t.text || '') + '</div></div></div>';
+  }
+  function renderTalks() {
+    $('#talk-list').innerHTML = D.talks.map(talkHTML).join('');
+    $('#talk-empty').hidden = D.talks.length > 0;
+  }
+  function sendTalk() {
+    var input = $('#talk-input'), text = input.value.trim();
+    if (!text) return;
+    if (D.me && D.me.guest) { toast('登录后才能发帖'); openAuth(); return; }
+    var fd = new FormData(); fd.append('text', text);
+    fetch('/m/api/talks', { method: 'POST', body: fd, credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j.error) { toast(j.error); openAuth(); return; }
+        input.value = ''; toast('已发到唠嗑区'); ensureData(true);
+      }).catch(function () { toast('网络开了小差，待会儿再试'); });
+  }
+
+  /* ---------- 我的 ---------- */
+  function payLabel(p) {
+    if (p === 'paid') return '定金已付';
+    if (p === 'closed') return '订单关闭';
+    if (p === 'refunded') return '定金已退';
+    return '定金待付';
+  }
+  function renderMe() {
+    var me = D.me || {}, card = $('#me-card');
+    var logged = !me.guest;
+    $('#menu-logout').hidden = !logged;
+    $('#menu-admin').hidden = !me.staff;
+    $('#menu-login').style.display = logged ? 'none' : '';
+    $('#mast-entry').textContent = logged ? '我的' : '入场登记';
+    if (!logged) {
+      card.innerHTML = '<div class="idcard"><div class="idav">甜</div>' +
+        '<div style="flex:1;min-width:0"><h3>还没入场登记</h3>' +
+        '<p>登记后可以预约、拼车、攒积分、领优惠券</p>' +
+        '<div class="cops"><button class="btn btn-ink" data-action="login">入场登记</button></div></div></div>';
+    } else {
+      card.innerHTML = '<div class="idcard">' + avatarHTML('idav', me.avatar, me.initial || me.name) +
+        '<div style="flex:1;min-width:0"><h3>' + esc(me.name || '玩家') + '</h3>' +
+        '<p>' + esc(me.phone || '') + ' · 邀请码 ' + esc(me.id || '') + '</p>' +
+        '<div class="stats">' +
+        '<div class="stat"><b>' + (me.credit || 0) + '</b><span>信用分</span></div>' +
+        '<div class="stat"><b>' + ((me.coupons || []).length) + '</b><span>可用券</span></div>' +
+        '<div class="stat"><b>' + ((me.stats || {}).bookings || 0) + '</b><span>约过</span></div>' +
+        '</div></div></div>';
+    }
+    var cps = me.coupons || [];
+    $('#me-coupons-sec').hidden = !cps.length;
+    $('#coupon-note').textContent = cps.length + ' 张';
+    $('#coupon-list').innerHTML = cps.map(function (c) {
+      return '<span class="coupon"><b>¥' + esc(c.amount) + '</b> ' + esc(c.name || '抵扣券') + '</span>';
+    }).join('');
+
+    var recs = me.records || [];
+    $('#record-note').textContent = recs.length + ' 条';
+    $('#record-empty').hidden = recs.length > 0;
+    $('#record-list').innerHTML = recs.map(function (b) {
+      var chips = '<span class="bk-chip bk-st ' + (b.payStatus === 'paid' ? 'pay' : 'warn') + '">' + payLabel(b.payStatus) + '</span>' +
+        '<span class="bk-chip bk-st">' + esc(b.state || '') + '</span>' +
+        (b.mode ? '<span class="bk-chip bk-mode">' + esc(b.mode) + '</span>' : '');
+      var ops = '';
+      if (b.cancelable) ops += '<button class="btn btn-ghost" data-action="cancel-booking" data-id="' + esc(b.id) + '">取消预约</button>';
+      if (b.raw === 'done' && !b.reviewed) ops += '<button class="btn btn-ghost" data-action="goto-review" data-id="' + esc(b.id) + '">去评价</button>';
+      if (b.raw === 'done' && b.reviewed) ops += '<span class="bk-chip bk-st pay">已评价 ✓</span>';
+      return '<div class="bkcard">' +
+        '<div class="bk-head"><span class="bk-emoji">' + esc(b.emoji || '🎭') + '</span><b>' + esc(b.name || '剧本') + '</b>' + chips + '</div>' +
+        '<div class="bk-info">' + esc(b.day || '') + ' ' + esc(b.time || '') + ' · ' + (b.players || 1) + ' 人 · 游玩费 ¥' + (b.amount || 0) + ' · 定金 ¥' + (b.deposit || 0) + '</div>' +
+        (b.code ? '<div class="bk-code">到店报这个码 <i>' + esc(b.code) + '</i></div>' : '') +
+        (ops ? '<div class="bk-ops">' + ops + '</div>' : '') + '</div>';
+    }).join('');
+  }
   function cancelBooking(id) {
-    if (!id) return;
-    if (!confirm('确定取消这条预约？')) return;
+    if (!confirm('确定取消这条预约？开演前 2 小时内取消可能影响信用分。')) return;
     fetch('/m/api/booking/' + id + '/cancel', { method: 'POST', credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (j) {
         if (j.error) { toast(j.error); return; }
-        toast('已取消');
-        ensureData().then(renderMe);
-      })
-      .catch(function () { toast('网络开了小差，待会儿再试'); });
+        toast('已取消'); ensureData(true);
+      }).catch(function () { toast('网络开了小差，待会儿再试'); });
   }
 
-  function renderMe() {
-    var me = D.me || {}, card = $('#me-card');
-    if (me.guest) {
-      card.innerHTML = '<div class="idcard"><div class="idav">甜</div><div><h3>还没入场登记</h3><p>登记后能看到你的打本记录、优惠券和积分</p></div></div>';
-    } else {
-      var coupons = (me.coupons || []).slice(0, 3).map(function (c) {
-        return '<span class="cpill">' + esc(c.name) + ' ¥' + (c.amount || 0) + '</span>';
-      }).join('');
-      card.innerHTML = '<div class="idcard">' + avatarHTML('idav', me.avatar, me.initial) +
-        '<div><h3>' + esc(me.name || '玩家') + '</h3><p>' + esc(me.phone || '') + ' · 邀请码 ' + esc(me.id || '') + '</p>' +
-        '<div class="idstat"><span>积分 ' + (me.credit || 0) + '</span>' + coupons + '</div></div></div>';
-    }
-    var recs = me.records || [];
-    $('#record-note').textContent = recs.length + ' 条';
-    if (!recs.length) { $('#record-list').innerHTML = ''; $('#record-empty').hidden = false; }
-    else {
-      $('#record-empty').hidden = true;
-      $('#record-list').innerHTML = recs.map(function (r) {
-        var canCancel = (r.state === '待开演' || r.state === '已预约');
-        return '<div class="rrow" ' + (r.id ? 'data-id="' + esc(r.id) + '"' : '') + '>' +
-          '<div class="rmain"><div class="rname">' + esc(r.name || '剧本') +
-          '</div><div class="rtime">' + esc(r.time || '') + '</div></div>' +
-          '<button class="st ' + (r.state === '已取消' ? 'st-warn' : 'st-ok') + '" ' +
-          (canCancel ? 'data-action="cancel-booking" data-id="' + esc(r.id) + '"' : '') +
-          '>' + esc(r.state || '已预约') + '</button></div>';
-      }).join('');
-    }
+  /* ---------- 登录 ---------- */
+  function openAuth() {
+    $('#auth-body').innerHTML =
+      '<div class="sheet-no">登记</div><h2 class="sheet-title">回到这张桌子</h2>' +
+      '<div class="form">' +
+      '<div class="field"><label>手机号或用户名</label><input id="auth-account" autocomplete="username" placeholder="13800000000"></div>' +
+      '<div class="field"><label>密码</label><input id="auth-pw" type="password" autocomplete="current-password" placeholder="••••••"></div>' +
+      '<div class="err" id="auth-err"></div>' +
+      '<button class="btn btn-primary btn-block" data-action="submit-login">入场</button>' +
+      '<p class="switch">还没有账号？<a href="/register?next=/m/">去注册</a> · <a href="/forgot?next=/m/">忘了密码</a></p></div>';
+    openSheet('#auth-sheet', '#auth-mask');
+  }
+  function submitLogin() {
+    var acc = ($('#auth-account') || {}).value || '';
+    var pw = ($('#auth-pw') || {}).value || '';
+    if (!acc || !pw) { $('#auth-err').textContent = '账号和密码都填一下'; return; }
+    var fd = new FormData();
+    fd.append('account', acc); fd.append('password', pw); fd.append('remember', '1');
+    fetch('/login?next=/m/', { method: 'POST', body: fd, credentials: 'same-origin' })
+      .then(function () { return ensureData(true); })
+      .then(function () {
+        if (D.me && D.me.guest) { $('#auth-err').textContent = '账号或密码不对，再试试'; return; }
+        toast('欢迎回来，' + (D.me.name || '玩家'));
+        closeSheets();
+      }).catch(function () { $('#auth-err').textContent = '网络开了小差，待会儿再试'; });
+  }
+  function logout() {
+    fetch('/logout', { credentials: 'same-origin' })
+      .then(function () { return ensureData(true); })
+      .then(function () { toast('已退出，下次再来'); });
   }
 
-  function showSheet(sel, mask) {
-    $(sel).classList.add('show'); $(mask).classList.add('show'); document.body.style.overflow = 'hidden';
+  /* ---------- Sheet 开关 ---------- */
+  function openSheet(sheetSel, maskSel) {
+    var m = $(maskSel); if (m) m.classList.add('show');
+    var s = $(sheetSel); if (s) s.classList.add('show');
   }
-  function hideSheet(sel, mask) {
-    $(sel).classList.remove('show'); $(mask).classList.remove('show'); document.body.style.overflow = '';
-  }
-  function closeAllSheets() {
-    ['#sheet', '#car-sheet', '#auth-sheet'].forEach(function (s) { $(s).classList.remove('show'); });
-    ['#sheet-mask', '#car-mask', '#auth-mask'].forEach(function (m) { $(m).classList.remove('show'); });
-    document.body.style.overflow = '';
+  function closeSheets() {
+    $$('.sheet').forEach(function (s) { s.classList.remove('show'); });
+    $$('.mask').forEach(function (m) { m.classList.remove('show'); });
   }
 
-  function openSheet(id) {
-    var s = D.scripts.filter(function (x) { return x.id === id; })[0];
-    if (!s) return;
-    $('#sheet-photo').style.backgroundImage = 'url(' + coverURL(s) + '), ' + s.grad;
-    var tags = (s.tags || []).map(function (x) { return '<span class="tag">' + esc(x) + '</span>'; }).join('') +
-      '<span class="tag">' + esc(s.players) + '</span><span class="tag">' + esc(s.duration) + '</span>' +
-      '<span class="tag">难度 ' + esc(s.difficulty) + '</span>';
-    $('#sheet-body').innerHTML = '<div class="sheet-no">' + esc(s.id) + '</div><h2 class="sheet-title">' + esc(s.title) + '</h2>' +
-      '<div class="sheet-tags">' + tags + '</div><p class="sheet-desc">' + esc(s.desc || '') + '</p>' +
-      '<div class="sheet-cta"><button class="btn btn-primary btn-block" data-action="join" data-id="' + esc(s.id) + '">拼车入局</button>' +
-      '<button class="btn btn-ghost btn-block" data-action="book" data-id="' + esc(s.id) + '">包下整场</button></div>' +
-      '<p class="sheet-note">拼车和包场走桌面下单，点完跳过去。</p>';
-    showSheet('#sheet', '#sheet-mask');
-    fetchReviews(s.id);
-  }
-
-  function fetchReviews(sid) {
-    fetch('/m/api/reviews?sid=' + encodeURIComponent(sid), { credentials: 'same-origin' })
-      .then(function (r) { return r.json(); })
-      .then(function (list) {
-        var box = $('#sheet-reviews');
-        if (!box || !list.length) { if (box) box.innerHTML = ''; return; }
-        box.innerHTML = '<h4 class="rev-head">玩过的人说</h4>' + list.map(function (x) {
-          return '<div class="rev">' + avatarHTML('rev-av', x.avatar, (x.name || '玩')[0]) +
-            '<div class="rev-body"><div class="rev-meta"><b>' + esc(x.name) + '</b><span>' + esc(x.time) + '</span></div>' +
-            '<p>' + esc(x.text) + '</p></div></div>';
-        }).join('');
-      })
-      .catch(function () {});
-  }
-
-  function openSessionSheet(id) {
-    var s = D.sessions.filter(function (x) { return String(x.id) === String(id); })[0];
-    if (!s) { toast('场次信息没找到'); return; }
-    var script = D.scripts.filter(function (x) { return String(x.id) === String(s.sid); })[0];
-    $('#sheet-photo').style.backgroundImage = 'url(' + coverURL(script || s, 0) + '), ' + ((script && script.grad) || s.grad || 'var(--paper-deep)');
-    $('#sheet-body').innerHTML = '<div class="sheet-no">场次</div><h2 class="sheet-title">' + esc(s.name || '未命名场次') + '</h2>' +
-      '<p class="sheet-desc">' + esc(s.time || '') + ' · ' + esc(s.room || '') + '<br>剧本：' + esc(s.script || '待定') + '</p>' +
-      '<div class="sheet-cta"><button class="btn btn-primary btn-block" data-action="book-session" data-sid="' + esc(s.sid) + '" data-session="' + esc(s.id) + '">报名占位</button>' +
-      '<button class="btn btn-ghost btn-block" data-action="close-sheet">先不约</button></div>' +
-      '<div id="sheet-reviews" class="reviews"></div>';
-    showSheet('#sheet', '#sheet-mask');
-    if (s.sid) fetchReviews(s.sid);
-  }
-
-  function openCarSheet() {
-    if (D.me && D.me.guest) { toast('请先登录再发车'); openAuth('login'); return; }
-    var sel = $('#car-script');
-    sel.innerHTML = D.scripts.map(function (s) {
-      return '<option value="' + esc(s.id) + '">' + esc(s.title) + '</option>';
-    }).join('');
-    $('#car-err').textContent = '';
-    showSheet('#car-sheet', '#car-mask');
-  }
-
-  function authHead(t, sub) {
-    return '<div class="sheet-no">登记</div><h2 class="sheet-title">' + t + '</h2><p class="sheet-desc">' + sub + '</p>';
-  }
-  function openAuth(mode) {
-    var b = $('#auth-body');
-    if (mode === 'login') {
-      b.innerHTML = authHead('入场登记', '登个记，挑本拼车一条龙') +
-        '<form class="form" action="/login?next=/m/" method="post">' +
-        '<div class="field"><label>手机号 / 用户名</label><input name="account" required></div>' +
-        '<div class="field"><label>密码</label><input name="password" type="password" required></div>' +
-        '<input type="hidden" name="remember" value="1">' +
-        '<button class="btn btn-primary btn-block" type="submit">登录</button></form>' +
-        '<p class="switch">还没账号？<a data-auth="signup">去注册</a> · <a data-auth="forgot">忘密码</a></p>';
-    } else if (mode === 'signup') {
-      b.innerHTML = authHead('注册新账号', '手机号当账号，验证码发到邮箱') +
-        '<form class="form" action="/register?next=/m/" method="post">' +
-        '<div class="field"><label>手机号</label><input name="phone" pattern="1[0-9]{10}" required></div>' +
-        '<div class="field"><label>邮箱</label><input name="email" type="email" required></div>' +
-        '<div class="field"><label>验证码（本地测试填 1234）</label><input name="code" required></div>' +
-        '<div class="field"><label>昵称</label><input name="username" required></div>' +
-        '<div class="field"><label>密码（≥6 位）</label><input name="password" type="password" required></div>' +
-        '<div class="field"><label>再输一次</label><input name="password2" type="password" required></div>' +
-        '<div class="field"><label>邀请码（选填）</label><input name="invite"></div>' +
-        '<input type="hidden" name="agree" value="1">' +
-        '<button class="btn btn-primary btn-block" type="submit">注册</button></form>' +
-        '<p class="switch">已有账号？<a data-auth="login">去登录</a></p>';
-    } else {
-      b.innerHTML = authHead('找回密码', '手机号 + 邮箱验证码重设') +
-        '<form class="form" action="/forgot?next=/m/" method="post">' +
-        '<div class="field"><label>手机号</label><input name="phone" required></div>' +
-        '<div class="field"><label>邮箱</label><input name="email" type="email" required></div>' +
-        '<div class="field"><label>验证码（本地测试填 1234）</label><input name="code" required></div>' +
-        '<div class="field"><label>新密码（≥6 位）</label><input name="password" type="password" required></div>' +
-        '<div class="field"><label>再输一次</label><input name="password2" type="password" required></div>' +
-        '<button class="btn btn-primary btn-block" type="submit">重设密码</button></form>' +
-        '<p class="switch">想起来了？<a data-auth="login">去登录</a></p>';
-    }
-    showSheet('#auth-sheet', '#auth-mask');
-  }
-
-  function goTab(tab) {
-    if (curTab === tab || !$('#view-' + tab)) return;
-    curTab = tab;
-    $$('.tab, .tab-fab').forEach(function (t) { t.classList.toggle('on', t.getAttribute('data-tab') === tab); });
-    $$('.view').forEach(function (v) { v.classList.remove('active'); });
-    $('#view-' + tab).classList.add('active');
-    if (tab === 'home') renderHome();
-    else if (tab === 'scripts') renderScripts();
-    else if (tab === 'carpool') renderCars();
-    else if (tab === 'talk') renderTalks();
-    else if (tab === 'me') renderMe();
-    history.pushState(null, '', '#' + tab);
-    document.title = TAB_TITLES[tab] + ' · 甜薯剧本杀';
-    window.scrollTo(0, 0);
-  }
-
-  var toastTimer = null;
-  function toast(msg) {
-    var t = $('#toast');
-    t.textContent = msg; t.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2500);
-  }
-
+  /* ---------- 事件 ---------- */
   document.addEventListener('click', function (e) {
-    var auth = e.target.closest('[data-auth]');
-    if (auth) { openAuth(auth.getAttribute('data-auth')); return; }
-    var act = e.target.closest('[data-action]');
+    var t = e.target;
+    var mask = t.closest('.mask');
+    if (mask) { closeSheets(); return; }
+    if (t.closest('#sheet-close')) { closeSheets(); return; }
+
+    var tab = t.closest('.tab');
+    if (tab) { switchTab(tab.getAttribute('data-tab')); return; }
+
+    var act = t.closest('[data-action]');
     if (act) {
-      var a = act.getAttribute('data-action');
-      if (a === 'login') openAuth('login');
-      else if (a === 'signup') openAuth('signup');
-      else if (a === 'forgot') openAuth('forgot');
-      else if (a === 'carpool') openCarSheet();
-      else if (a === 'book') toast('包场请到桌面端下单');
-      else if (a === 'join') toast('拼车入局请到桌面端下单');
-      else if (a === 'clear-filter') { curCat = '全部'; query = ''; $('#search-input').value = ''; renderScripts(); }
-      else if (a === 'book-session') { bookSession(act); return; }
-      else if (a === 'cancel-booking') { cancelBooking(act.getAttribute('data-id')); return; }
-      else if (a === 'close-sheet') { closeAllSheets(); return; }
+      var a = act.getAttribute('data-action'), id = act.getAttribute('data-id');
+      if (a === 'open-script') { openScriptSheet(id); return; }
+      if (a === 'open-session') { openSessionSheet(id); return; }
+      if (a === 'open-book') { openBookSheet(id); return; }
+      if (a === 'open-car-create') { openCarSheet(id); return; }
+      if (a === 'submit-book') { submitBook(); return; }
+      if (a === 'submit-car') { submitCar(); return; }
+      if (a === 'car-join') { carAct(id, 'join'); return; }
+      if (a === 'car-quit') { carAct(id, 'quit'); return; }
+      if (a === 'car-wait') { carAct(id, 'wait'); return; }
+      if (a === 'cancel-booking') { cancelBooking(id); return; }
+      if (a === 'goto-review') { window.location.href = '/me'; return; }
+      if (a === 'submit-login') { submitLogin(); return; }
+      if (a === 'login') { if (!D.me.guest) { switchTab('me'); } else { openAuth(); } return; }
+      if (a === 'signup') { window.location.href = '/register?next=/m/'; return; }
+      if (a === 'forgot') { window.location.href = '/forgot?next=/m/'; return; }
+      if (a === 'logout') { logout(); return; }
+      if (a === 'admin') { window.location.href = '/admin'; return; }
+      if (a === 'clear-filter') { curCat = '全部'; query = ''; $('#search-input').value = ''; renderScripts(); return; }
       return;
     }
-    var chip = e.target.closest('.chip');
-    if (chip) { curCat = chip.getAttribute('data-chip'); renderScripts(); return; }
-    var card = e.target.closest('[data-id]');
-    if (card && (card.classList.contains('pcard') || card.classList.contains('srow'))) {
-      openSheet(card.getAttribute('data-id')); return;
+
+    var chip = t.closest('.chip');
+    if (chip) { curCat = chip.getAttribute('data-cat') || '全部'; renderScripts(); return; }
+
+    var dchip = t.closest('.dchip');
+    if (dchip) {
+      if (dchip.hasAttribute('data-day')) {
+        var scope = dchip.closest('.dates').id;
+        $$('#' + scope + ' .dchip').forEach(function (x) { x.classList.remove('on'); });
+        dchip.classList.add('on');
+        if (scope === 'bk-days') bookCtx.day = dchip.getAttribute('data-day');
+        if (scope === 'car-days') carCtx.day = dchip.getAttribute('data-day');
+        return;
+      }
+      if (dchip.hasAttribute('data-time')) {
+        $$('#' + dchip.closest('.times').id + ' .dchip').forEach(function (x) { x.classList.remove('on'); });
+        dchip.classList.add('on');
+        var tm = dchip.getAttribute('data-time');
+        if (dchip.closest('#book-body')) bookCtx.time = tm; else carCtx.time = tm;
+        return;
+      }
+      if (dchip.hasAttribute('data-tag')) {
+        dchip.classList.toggle('on');
+        var tag = dchip.getAttribute('data-tag');
+        var arr = dchip.closest('#car-body') ? carCtx.tags : bookCtx.tags;
+        var i = arr.indexOf(tag);
+        if (i >= 0) arr.splice(i, 1); else arr.push(tag);
+        return;
+      }
     }
-    var sess = e.target.closest('[data-action="session"]');
-    if (sess) { openSessionSheet(sess.getAttribute('data-id')); return; }
-    var tabBtn = e.target.closest('[data-tab]');
-    if (tabBtn) { goTab(tabBtn.getAttribute('data-tab')); return; }
+
+    var step = t.closest('[data-step]');
+    if (step) {
+      bookCtx.players = Math.max(1, Math.min(9, bookCtx.players + Number(step.getAttribute('data-step'))));
+      var bp = $('#bk-players'); if (bp) bp.textContent = bookCtx.players;
+      return;
+    }
+    var cstep = t.closest('[data-cstep]');
+    if (cstep) {
+      carCtx.players = Math.max(1, Math.min(9, carCtx.players + Number(cstep.getAttribute('data-cstep'))));
+      var cp = $('#car-players'); if (cp) cp.textContent = carCtx.players;
+      return;
+    }
+    var mode = t.closest('[data-mode]');
+    if (mode) {
+      $$('#bk-mode button').forEach(function (x) { x.classList.remove('on'); });
+      mode.classList.add('on');
+      bookCtx.mode = mode.getAttribute('data-mode');
+      return;
+    }
   });
 
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') closeAllSheets();
+    if (e.key === 'Escape') closeSheets();
+    var card = e.target.closest('[data-action="open-script"]');
+    if (card && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openScriptSheet(card.getAttribute('data-id')); }
   });
 
-  $('#search-input').addEventListener('input', function () { query = this.value.trim(); renderScripts(); });
+  $('#search-input').addEventListener('input', function () {
+    query = this.value.trim(); renderScripts();
+  });
   $('#talk-send').addEventListener('click', sendTalk);
-  $('#talk-input').addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTalk(); }
-  });
-  $('#sheet-mask').addEventListener('click', closeAllSheets);
-  $('#sheet-close').addEventListener('click', closeAllSheets);
-  $('#car-mask').addEventListener('click', closeAllSheets);
-  $('#auth-mask').addEventListener('click', closeAllSheets);
 
-  $('#car-form').addEventListener('submit', function (e) {
-    e.preventDefault();
-    var f = e.target;
-    var date = f.date.value, time = f.time.value;
-    if (!date || !time) { $('#car-err').textContent = '选好日期和时间'; return; }
-    var ts = new Date(date + 'T' + time).getTime();
-    if (!ts || isNaN(ts)) { $('#car-err').textContent = '日期时间不对'; return; }
-    var fd = new FormData(f);
-    fd.delete('date'); fd.delete('time');
-    fd.append('ts', ts);
-    var picked = D.scripts.filter(function (s) { return s.id === f.sid.value; })[0];
-    fd.append('title', (picked && picked.title) || '剧本');
-    fetch('/m/api/cars', { method: 'POST', body: fd, credentials: 'same-origin' })
-      .then(function (r) { return r.json(); })
-      .then(function (j) {
-        if (j.error) { $('#car-err').textContent = j.error; return; }
-        closeAllSheets(); toast('发车成功，去拼车局看看');
-        ensureData().then(renderCars); goTab('carpool');
-      })
-      .catch(function () { $('#car-err').textContent = '网络开了小差，待会儿再试'; });
-  });
-
-  function paintAll() {
-    renderHome(); renderScripts(); renderCars(); renderTalks(); renderMe();
+  function renderAll() {
+    renderHome(); renderScripts(); renderCarpool(); renderTalks(); renderMe();
   }
-  paintAll();
-  ensureData().then(paintAll);
-  var h = location.hash.replace('#', '');
-  if (h && $('#view-' + h)) goTab(h);
-  window.addEventListener('hashchange', function () {
-    var hh = location.hash.replace('#', '');
-    if (hh && $('#view-' + hh) && hh !== curTab) goTab(hh);
-  });
+
+  ensureData();
 })();
