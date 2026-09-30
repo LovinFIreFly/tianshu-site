@@ -274,9 +274,11 @@ main{padding-bottom:calc(var(--nav-h) + var(--s8) + env(safe-area-inset-bottom))
 .form{display:flex;flex-direction:column;gap:var(--s3);margin-top:var(--s4)}
 .field{display:flex;flex-direction:column;gap:var(--s1);min-width:0}
 .field label{font-size:var(--fs-meta);color:var(--ink-soft);letter-spacing:.04em}
-.field input,.field select{height:var(--inp-h);border-radius:var(--r-md);border:var(--line-w) solid var(--ink);
-  background:var(--card);padding:0 var(--s3);outline:none;font-size:var(--fs-body);color:var(--ink);width:100%}
-.field input:focus,.field select:focus{border-color:var(--accent)}
+.field input,.field select,.field textarea{border-radius:var(--r-md);border:var(--line-w) solid var(--ink);
+  background:var(--card);padding:var(--s2) var(--s3);outline:none;font-size:var(--fs-body);color:var(--ink);width:100%}
+.field input,.field select{height:var(--inp-h)}
+.field textarea{line-height:1.6;resize:vertical;font-family:inherit}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent)}
 .form .err{color:var(--accent-deep);font-size:var(--fs-meta);min-height:18px}
 .frow{display:flex;gap:var(--s2);min-width:0}
 .frow .field{flex:1;min-width:0}
@@ -308,11 +310,17 @@ main{padding-bottom:calc(var(--nav-h) + var(--s8) + env(safe-area-inset-bottom))
 .gate-title span{color:var(--accent)}
 .gate-sub{margin-top:var(--s3);color:var(--ink-soft);font-size:var(--fs-body)}
 #gate .form .btn{min-height:48px}
+.agree-row{display:flex;align-items:center;gap:var(--s2);font-size:var(--fs-meta);color:var(--ink-soft);min-height:32px}
+.agree-row input{width:18px;height:18px;accent-color:var(--accent)}
 
 /* 图片：加载失败自动退回示范海报 */
 .photo,.srow-thumb{position:relative}
 .photo img,.srow-thumb img{width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit}
 .srow-thumb{overflow:hidden}
+/* 头像：img 挂了就露出底下的首字母 */
+.idav,.car-av,.tav,.rev-av{position:relative}
+.av-fb{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);color:var(--paper)}
 
 /* 首次进入引导步骤 */
 .steps{margin-top:var(--s4)}

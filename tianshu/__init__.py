@@ -197,6 +197,16 @@ def create_app():
             return
         if p.startswith(('/admin', '/dm')):
             return
+        # 写操作绝不拦：手机端 POST /login 曾被这里 302 弹回 /m/，
+        # 结果 session 永远建立不起来，登录永远显示"账号或密码有误"（2026-10 踩坑）
+        if request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
+            return
+        # 登录 / 注册 / 找回 / 个人中心这些页面手机用户也要能进
+        # （手机端"去注册""忘密码"链接直接指过来，拦了就死循环）
+        if p.startswith(('/login', '/register', '/forgot', '/logout', '/me',
+                         '/notice', '/booking', '/order', '/review', '/profile',
+                         '/account', '/code', '/car/')):
+            return
         if request.args.get('device') == 'desktop':
             session['device_override'] = 'desktop'
             return

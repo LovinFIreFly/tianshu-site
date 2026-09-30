@@ -41,9 +41,11 @@
     return posters[(idx == null ? 0 : idx) % posters.length];
   }
   function avatarHTML(cls, av, initial) {
+    var fb = '<span class="av-fb">' + esc(String(initial || '玩').slice(0, 1)) + '</span>';
     if (isImageUrl(av))
-      return '<div class="' + cls + '"><img src="' + esc(av) + '" alt=""></div>';
-    return '<div class="' + cls + '">' + esc(String(initial || '玩').slice(0, 1)) + '</div>';
+      return '<div class="' + cls + '">' + fb +
+        '<img src="' + esc(av) + '" alt="" loading="lazy" onerror="this.remove()"></div>';
+    return '<div class="' + cls + '">' + fb + '</div>';
   }
   function gradOf(s) {
     return (s && s.grad) || 'linear-gradient(160deg,#3a2b4d,#15131f)';
@@ -184,6 +186,21 @@
   function findScript(id) {
     return D.scripts.filter(function (x) { return String(x.id) === String(id); })[0];
   }
+  function favOn(id) {
+    return ((D.me && D.me.favs) || []).indexOf(String(id)) >= 0;
+  }
+  function toggleFav(id) {
+    if (D.me && D.me.guest) { toast('登录后才能收藏'); return; }
+    post('/m/api/fav/' + id, new FormData())
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j.error) { toast(j.error); return; }
+        toast(j.on ? '加进「想玩」了' : '已取消收藏');
+        var btn = $('#sheet [data-action="toggle-fav"]');
+        if (btn) btn.textContent = j.on ? '已收藏 · 点一下取消' : '收藏 · 想玩';
+        ensureData(true);
+      }).catch(function () { toast('网络开了小差，待会儿再试'); });
+  }
   function openScriptSheet(id) {
     var s = findScript(id); if (!s) { toast('剧本信息没找到'); return; }
     setSheetPhoto(s);
@@ -198,6 +215,8 @@
       '<div class="sheet-cta">' +
       '<button class="btn btn-primary btn-block" data-action="open-book" data-id="' + esc(s.id) + '">立即预约</button>' +
       '<button class="btn btn-ghost btn-block" data-action="open-car-create" data-id="' + esc(s.id) + '">拿这个本发一车</button>' +
+      '<button class="btn btn-ghost btn-block" data-action="toggle-fav" data-id="' + esc(s.id) + '">' +
+      (favOn(s.id) ? '已收藏 · 点一下取消' : '收藏 · 想玩') + '</button>' +
       '</div><div id="sheet-reviews" class="reviews"></div>';
     openSheet('#sheet', '#sheet-mask');
     fetchReviews(s.id);
@@ -250,7 +269,8 @@
   }
   function openBookSheet(sid, preset) {
     var s = sid ? findScript(sid) : null;
-    bookCtx = { sid: sid || '', day: '', time: (preset && preset.time) || '', players: 1, mode: '拼车', tags: [] };
+    bookCtx = { sid: sid || '', day: '', time: (preset && preset.time) || '', players: 1, mode: '拼车', tags: [], role: '' };
+    var roles = (s && s.allowRolePick && s.roles) ? s.roles : [];
     $('#book-body').innerHTML =
       '<div class="sheet-no">预约</div><h2 class="sheet-title">' + esc(s ? s.title : '选个本开一局') + '</h2>' +
       '<div class="form">' +
@@ -261,6 +281,9 @@
       '<button type="button" data-step="-1">−</button><b id="bk-players">1</b><button type="button" data-step="1">＋</button></div></div>' +
       '<div class="field"><label>拼车还是包场</label><div class="seg" id="bk-mode">' +
       '<button type="button" data-mode="拼车" class="on">拼车 · 等人拼</button><button type="button" data-mode="包车">包场 · 自己包</button></div></div>' +
+      (roles.length ? '<div class="field"><label>提前选角（先到先得）</label><div class="times" id="bk-role">' +
+        roles.map(function (r) { return '<button class="dchip" data-role="' + esc(r) + '">' + esc(r) + '</button>'; }).join('') + '</div></div>' : '') +
+      '<div class="field"><label>指定 DM 手机号（选填）</label><input id="bk-dm" inputmode="numeric" placeholder="有相熟的 DM 就填"></div>' +
       '<div class="err" id="bk-err"></div>' +
       '<button class="btn btn-primary btn-block" data-action="submit-book">提交预约</button>' +
       '<p class="sheet-note">定金一人 ¥50（玩完退回）· 开演前 2 小时外取消不影响信用分</p></div>';
@@ -277,6 +300,9 @@
     fd.append('players', bookCtx.players);
     fd.append('mode', bookCtx.mode);
     bookCtx.tags.forEach(function (t) { fd.append('carTags', t); });
+    if (bookCtx.role) fd.append('role', bookCtx.role);
+    var dm = ($('#bk-dm') || {}).value || '';
+    if (dm) fd.append('dmPhone', dm);
     fd.append('agree', '1');
     post('/m/api/book', fd)
       .then(function (r) { return r.json(); })
@@ -398,6 +424,7 @@
     $('#menu-logout').hidden = !logged;
     $('#menu-admin').hidden = !me.staff;
     $('#menu-profile').hidden = !logged;
+    $('#menu-pwd').hidden = !logged;
     $('#menu-login').style.display = logged ? 'none' : '';
     $('#mast-entry').hidden = logged;   // 登录后右上角不再挂「入场登记」
     applyGate();                        // 未登录时盖登录门页
@@ -431,8 +458,11 @@
         '<span class="bk-chip bk-st">' + esc(b.state || '') + '</span>' +
         (b.mode ? '<span class="bk-chip bk-mode">' + esc(b.mode) + '</span>' : '');
       var ops = '';
-      if (b.cancelable) ops += '<button class="btn btn-ghost" data-action="cancel-booking" data-id="' + esc(b.id) + '">取消预约</button>';
-      if (b.raw === 'done' && !b.reviewed) ops += '<button class="btn btn-ghost" data-action="goto-review" data-id="' + esc(b.id) + '">去评价</button>';
+      if (b.cancelable) {
+        ops += '<button class="btn btn-ghost" data-action="open-resched" data-id="' + esc(b.id) + '">改期</button>';
+        ops += '<button class="btn btn-ghost" data-action="cancel-booking" data-id="' + esc(b.id) + '">取消预约</button>';
+      }
+      if (b.raw === 'done' && !b.reviewed) ops += '<button class="btn btn-ghost" data-action="open-review" data-id="' + esc(b.id) + '">去评价</button>';
       if (b.raw === 'done' && b.reviewed) ops += '<span class="bk-chip bk-st pay">已评价 ✓</span>';
       return '<div class="bkcard">' +
         '<div class="bk-head"><span class="bk-emoji">' + esc(b.emoji || '🎭') + '</span><b>' + esc(b.name || '剧本') + '</b>' + chips + '</div>' +
@@ -551,6 +581,91 @@
       }).catch(function () { toast('网络开了小差，待会儿再试'); });
   }
 
+  function dayToMs(iso) {
+    var p = String(iso || '').split('-');
+    if (p.length !== 3) return 0;
+    return new Date(+p[0], +p[1] - 1, +p[2]).getTime();
+  }
+
+  function openReschedSheet(id) {
+    var b = ((D.me || {}).records || []).filter(function (x) { return String(x.id) === String(id); })[0];
+    if (!b) { toast('预约信息没找到'); return; }
+    $('#book-body').innerHTML =
+      '<div class="sheet-no">改期</div><h2 class="sheet-title">' + esc(b.name || '剧本') + '</h2>' +
+      '<p class="sheet-desc">定金保留，换个时间就行。</p>' +
+      '<div class="form">' +
+      '<div class="field"><label>改到哪天</label><div class="dates" id="bk-days">' + dayChips('') + '</div></div>' +
+      '<div class="field"><label>改到几点</label><div class="times" id="bk-times">' +
+      TIMES.map(function (t) { return '<button class="dchip" data-time="' + t + '">' + t + '</button>'; }).join('') + '</div></div>' +
+      '<div class="err" id="bk-err"></div>' +
+      '<button class="btn btn-primary btn-block" data-action="submit-resched" data-id="' + esc(id) + '">确认改期</button></div>';
+    bookCtx.day = ''; bookCtx.time = '';
+    openSheet('#book-sheet', '#book-mask');
+  }
+  function submitResched(id) {
+    if (!bookCtx.day || !bookCtx.time) { $('#bk-err').textContent = '挑好日期和时间'; return; }
+    var fd = new FormData();
+    fd.append('ts', dayToMs(bookCtx.day));
+    fd.append('time', bookCtx.time);
+    post('/m/api/booking/' + id + '/reschedule', fd)
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        toast(j.msg || j.error || '改期完成');
+        if (j.ok) { closeSheets(); ensureData(true); }
+        else $('#bk-err').textContent = j.msg || j.error || '';
+      }).catch(function () { $('#bk-err').textContent = '网络开了小差，待会儿再试'; });
+  }
+
+  function openReviewSheet(id) {
+    var b = ((D.me || {}).records || []).filter(function (x) { return String(x.id) === String(id); })[0];
+    if (!b) { toast('预约信息没找到'); return; }
+    $('#book-body').innerHTML =
+      '<div class="sheet-no">评价</div><h2 class="sheet-title">' + esc(b.name || '剧本') + '</h2>' +
+      '<div class="form">' +
+      '<div class="field"><label>总体评分</label><div class="times" id="rv-stars">' +
+      [1, 2, 3, 4, 5].map(function (n) { return '<button class="dchip" data-star="' + n + '">' + '★'.repeat(n) + '</button>'; }).join('') + '</div></div>' +
+      '<div class="field"><label>想说的</label><textarea id="rv-text" rows="3" maxlength="800" placeholder="剧情、DM、氛围…… 都可以写"></textarea></div>' +
+      '<label class="agree-row"><input type="checkbox" id="rv-anon"><span>匿名评价</span></label>' +
+      '<div class="err" id="rv-err"></div>' +
+      '<button class="btn btn-primary btn-block" data-action="submit-review" data-id="' + esc(id) + '">提交评价</button></div>';
+    openSheet('#book-sheet', '#book-mask');
+  }
+  function submitReview(id) {
+    var starBtn = $('#rv-stars .on');
+    var fd = new FormData();
+    fd.append('rating', starBtn ? starBtn.getAttribute('data-star') : '5');
+    fd.append('text', ($('#rv-text') || {}).value || '');
+    fd.append('anonymous', ($('#rv-anon') || {}).checked ? '1' : '0');
+    post('/m/api/review/' + id, fd)
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j.error) { $('#rv-err').textContent = j.error; return; }
+        toast(j.msg || '评价已提交'); closeSheets(); ensureData(true);
+      }).catch(function () { $('#rv-err').textContent = '网络开了小差，待会儿再试'; });
+  }
+
+  function openPwdSheet() {
+    $('#book-body').innerHTML =
+      '<div class="sheet-no">密码</div><h2 class="sheet-title">换一个新密码</h2>' +
+      '<div class="form">' +
+      '<div class="field"><label>现在的密码</label><input id="pw-old" type="password" autocomplete="current-password"></div>' +
+      '<div class="field"><label>新密码（至少 6 位）</label><input id="pw-new" type="password" autocomplete="new-password"></div>' +
+      '<div class="err" id="pw-err"></div>' +
+      '<button class="btn btn-primary btn-block" data-action="submit-pwd">保存新密码</button></div>';
+    openSheet('#book-sheet', '#book-mask');
+  }
+  function submitPwd() {
+    var fd = new FormData();
+    fd.append('old', ($('#pw-old') || {}).value || '');
+    fd.append('password', ($('#pw-new') || {}).value || '');
+    post('/m/api/password', fd)
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j.error) { $('#pw-err').textContent = j.error; return; }
+        toast(j.msg || '密码改好了'); closeSheets();
+      }).catch(function () { $('#pw-err').textContent = '网络开了小差，待会儿再试'; });
+  }
+
   /* ---------- 登录 ---------- */
   function openAuth() {
     $('#auth-body').innerHTML =
@@ -572,7 +687,9 @@
     var acc = (accEl || {}).value || '', pw = (pwEl || {}).value || '';
     if (!acc || !pw) { say('账号和密码都填一下'); return; }
     var fd = new FormData();
-    fd.append('account', acc); fd.append('password', pw); fd.append('remember', '1');
+    fd.append('account', acc); fd.append('password', pw);
+    var remember = gate ? ($('#gate-remember') || {}).checked !== false : true;
+    fd.append('remember', remember ? '1' : '0');
     post('/login?next=/m/', fd)
       .then(function (r) {
         if (r.status === 403) { say('页面放太久了，刷新一下再登录'); return null; }
@@ -625,6 +742,13 @@
       if (a === 'car-wait') { carAct(id, 'wait'); return; }
       if (a === 'cancel-booking') { cancelBooking(id); return; }
       if (a === 'goto-review') { window.location.href = '/me'; return; }
+      if (a === 'toggle-fav') { toggleFav(id); return; }
+      if (a === 'open-resched') { openReschedSheet(id); return; }
+      if (a === 'submit-resched') { submitResched(id); return; }
+      if (a === 'open-review') { openReviewSheet(id); return; }
+      if (a === 'submit-review') { submitReview(id); return; }
+      if (a === 'open-pwd') { openPwdSheet(); return; }
+      if (a === 'submit-pwd') { submitPwd(); return; }
       if (a === 'open-profile') { openProfileSheet(); return; }
       if (a === 'submit-profile') { submitProfile(); return; }
       if (a === 'read-notice') { readNotice(id); return; }
@@ -694,6 +818,18 @@
     if (gender) {
       $$('#pf-gender button').forEach(function (x) { x.classList.remove('on'); });
       gender.classList.add('on');
+      return;
+    }
+    var star = t.closest('[data-star]');
+    if (star) {
+      $$('#rv-stars .dchip').forEach(function (x) { x.classList.remove('on'); });
+      star.classList.add('on');
+      return;
+    }
+    var role = t.closest('[data-role]');
+    if (role) {
+      role.classList.toggle('on');
+      bookCtx.role = role.classList.contains('on') ? role.getAttribute('data-role') : '';
       return;
     }
   });

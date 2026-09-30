@@ -78,6 +78,8 @@ def _norm_script(s):
         "desc": s.get("desc") or "",
         "cover": s.get("cover") or s.get("img") or "",
         "grad": s.get("grad") or _grad(s.get("id") or 0),
+        "allowRolePick": bool(s.get("allowRolePick")),
+        "roles": [r.get("name") for r in (s.get("roles") or []) if r.get("name")],
     }
 
 
@@ -414,6 +416,87 @@ def api_notice_read():
         return jsonify({"error": "缺少通知 id"}), 400
     db.update("notices", lambda rows: [dict(n, read=True) if str(n.get("id")) == str(nid) else n for n in rows])
     return jsonify({"ok": True})
+
+
+@bp.post("/m/api/fav/<sid>")
+def api_fav(sid):
+    """收藏 / 取消收藏（想玩）"""
+    u = current_user()
+    if not u:
+        return jsonify({"error": "请先登录"}), 401
+    phone = str(u.get("phone"))
+    rows = db.rows("favs")
+    rec = next((r for r in rows if str(r.get("phone")) == phone), None)
+    if not rec:
+        rec = {"phone": phone, "sids": []}
+        rows.append(rec)
+    sids = [str(x) for x in rec.get("sids") or []]
+    sid = str(sid)
+    if sid in sids:
+        sids.remove(sid)
+        on = False
+    else:
+        sids.append(sid)
+        on = True
+    rec["sids"] = sids
+    db.write("favs", rows)
+    return jsonify({"ok": True, "on": on})
+
+
+@bp.post("/m/api/booking/<int:bid>/reschedule")
+def api_reschedule(bid):
+    """改期：定金保留，新时段没位子就改不了"""
+    u = current_user()
+    if not u:
+        return jsonify({"error": "请先登录"}), 401
+    try:
+        ts = int(request.form.get("ts") or 0)
+    except ValueError:
+        ts = 0
+    ok, msg = business.reschedule(u, bid, ts, request.form.get("time") or "")
+    return jsonify({"ok": ok, "msg": msg})
+
+
+@bp.post("/m/api/review/<int:bid>")
+def api_review(bid):
+    """写评价：到店开本之后（arrived/done），一条预约只能评一次。
+    规则和桌面端 /review/<bid> 完全一致。"""
+    u = current_user()
+    if not u:
+        return jsonify({"error": "请先登录"}), 401
+    bk = next((b for b in db.rows("bookings") if b.get("id") == bid
+               and str(b.get("phone")) == str(u.get("phone"))), None)
+    if not bk:
+        return jsonify({"error": "没找到这条预约"}), 404
+    if bk.get("status") not in ("arrived", "done"):
+        return jsonify({"error": "到店开本之后再来评价哈"}), 400
+    if any(r.get("bid") == bid for r in db.rows("reviews")):
+        return jsonify({"error": "这条已经评过了"}), 400
+    try:
+        rating = max(1, min(5, int(request.form.get("rating") or 5)))
+    except ValueError:
+        rating = 5
+    anon = request.form.get("anonymous") == "1"
+    db.update("reviews", lambda rows: rows + [{
+        "id": business.now_ms(), "sid": bk.get("sid"), "bid": bid,
+        "dmPhone": bk.get("dmPhone") or "",
+        "rating": rating,
+        "text": business.clean(request.form.get("text"), 800),
+        "username": "匿名玩家" if anon else u.get("username"), "anonymous": anon,
+        "dims": {}, "reply": "", "likes": [], "hidden": False, "createdAt": business.now_ms()}])
+    business.notify(u.get("phone"), "评价已提交，谢谢！",
+                    "《%s》的评价收到了，欢迎下次再来" % bk.get("title"), "review")
+    return jsonify({"ok": True, "msg": "评价收到了，谢谢！"})
+
+
+@bp.post("/m/api/password")
+def api_password():
+    """改密码：复用 business.change_password 的校验和通知"""
+    u = current_user()
+    if not u:
+        return jsonify({"error": "请先登录"}), 401
+    ok, msg = business.change_password(u, request.form.get("old"), request.form.get("password"))
+    return jsonify({"ok": ok, "msg": msg})
 
 
 # 简单的内容类型，避免依赖 Flask 的复杂猜测

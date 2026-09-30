@@ -7,7 +7,7 @@
 <title>甜薯剧本杀 · 手机版</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2317140F'/%3E%3Cpath d='M32 14l17 34H15z' fill='%23BD3318'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=ZCOOL+QingKe+HuangYou&family=Noto+Sans+SC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="/m/styles.css?v=11">
+<link rel="stylesheet" href="/m/styles.css?v=12">
 </head>
 <body>
 <div id="app">
@@ -137,6 +137,7 @@
           <button class="mitem" data-action="signup"><span>注册新账号</span><em>去注册</em></button>
           <button class="mitem" data-action="forgot"><span>忘记密码</span><em>找回来</em></button>
           <button class="mitem" data-action="open-profile" id="menu-profile" hidden><span>个人资料</span><em>昵称 / 性别 / 年龄</em></button>
+          <button class="mitem" data-action="open-pwd" id="menu-pwd" hidden><span>修改密码</span><em>换个新的</em></button>
           <button class="mitem" data-action="logout" id="menu-logout" hidden><span>退出登录</span><em>再见</em></button>
           <button class="mitem" data-action="admin" id="menu-admin" hidden><span>管理后台（电脑版）</span><em>新窗口打开</em></button>
         </div>
@@ -213,6 +214,7 @@
           <input id="gate-account" autocomplete="username" placeholder="13800000000" enterkeyhint="next"></div>
         <div class="field"><label>密码</label>
           <input id="gate-pw" type="password" autocomplete="current-password" placeholder="••••••" enterkeyhint="go"></div>
+        <label class="agree-row"><input type="checkbox" id="gate-remember" checked><span>记住我，这台设备半年内不用再登</span></label>
         <div class="err" id="gate-err"></div>
         <button class="btn btn-primary btn-block" data-action="submit-login">入场</button>
         <button class="btn btn-ghost btn-block" data-action="gate-skip">先随便看看</button>
@@ -221,7 +223,7 @@
     </div>
   </div>
 
-<script src="/m/data.js?v=11"></script>
-<script src="/m/app.js?v=11"></script>
+<script src="/m/data.js?v=12"></script>
+<script src="/m/app.js?v=12"></script>
 </body>
 </html>
