@@ -197,6 +197,7 @@
   <a href="{{ url_for('public.home') }}" class="{{ 'on' if request.endpoint == 'public.home' }}"><span class="ico">🏠</span><span>大厅</span></a>
   <a href="{{ url_for('public.scripts') }}" class="{{ 'on' if (request.endpoint or '').startswith('public.script') }}"><span class="ico">📚</span><span>本本墙</span></a>
   <a href="{{ url_for('public.car') }}" class="{{ 'on' if request.endpoint == 'public.car' }}"><span class="ico">🚗</span><span>拼车局</span></a>
+  <a href="{{ url_for('public.comm') }}" class="{{ 'on' if request.endpoint == 'public.comm' }}"><span class="ico">💬</span><span>唠嗑区</span></a>
   <a href="{{ url_for('user.me') }}" class="{{ 'on' if request.endpoint == 'user.me' }}"><span class="ico">👤</span><span>我的打本记录</span></a>
   {% if not in_app %}<a id="install-btn" class="js-install" href="{{ url_for('static', filename='app/tianshu.apk', v=static_v('app/tianshu.apk')) }}" download="甜薯剧本杀.apk"><span class="ico">📱</span><span>揣兜里随时约本</span></a>{% endif %}
 </nav>

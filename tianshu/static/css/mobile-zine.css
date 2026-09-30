@@ -325,6 +325,80 @@ html[data-device="mobile"] .p-stats span { color: var(--z-ink-3); }
 /* 头像圆圈里的字 */
 html[data-device="mobile"] .avatar { background: var(--z-ink); color: var(--z-paper); }
 
+/* ============ 管理后台：手机端横滑导航 + 主内容不溢出 ============ */
+html[data-device="mobile"] .adm { flex-direction: column; min-height: auto; }
+html[data-device="mobile"] .adm-side {
+  display: flex !important;
+  position: relative;
+  top: auto; left: auto; bottom: auto;
+  width: 100%;
+  height: auto;
+  min-height: auto;
+  flex-direction: column;
+  background: var(--z-card);
+  color: var(--z-ink);
+  border-bottom: 1px solid var(--z-line);
+  border-right: none;
+  padding: 10px 0 0;
+}
+html[data-device="mobile"] .adm-brand,
+html[data-device="mobile"] .adm-foot { display: none; }     /* 横条里不需要品牌和返回 */
+html[data-device="mobile"] .adm-mobile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--z-line);
+  background: var(--z-paper);
+}
+html[data-device="mobile"] .adm-navi {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 8px;
+  padding: 0 12px 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+html[data-device="mobile"] .adm-navi::-webkit-scrollbar { display: none; height: 0; }
+html[data-device="mobile"] .adm-side .navi {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  border: 1px solid var(--z-line);
+  border-left-width: 1px;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--z-ink-3);
+  font-size: 13px;
+}
+html[data-device="mobile"] .adm-side .navi .navi-no { color: var(--z-accent); width: auto; margin-right: 4px; font-size: 11px; }
+html[data-device="mobile"] .adm-side .navi.on {
+  background: var(--z-ink);
+  border-color: var(--z-ink);
+  color: var(--z-paper);
+}
+html[data-device="mobile"] .adm-side .navi.on .navi-no { color: var(--z-tint); }
+html[data-device="mobile"] .adm-main {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  padding: 14px 12px calc(60px + env(safe-area-inset-bottom));
+}
+html[data-device="mobile"] .adm-main > .tabpane { width: 100%; overflow-x: hidden; }
+html[data-device="mobile"] .adm-main .panel,
+html[data-device="mobile"] .adm-main .adm-panel {
+  width: 100%;
+  overflow-x: auto;
+}
+html[data-device="mobile"] .adm-main table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+html[data-device="mobile"] .adm-main .form-grid { grid-template-columns: 1fr; }
+
 /* —— 图片：直角一点 —— */
 html[data-device="mobile"] .pcard3 img,
 html[data-device="mobile"] .ccard3 img,
