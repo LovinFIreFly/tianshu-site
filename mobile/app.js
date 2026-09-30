@@ -671,7 +671,7 @@
     $('#auth-body').innerHTML =
       '<div class="sheet-no">登记</div><h2 class="sheet-title">回到这张桌子</h2>' +
       '<div class="form">' +
-      '<div class="field"><label>手机号或用户名</label><input id="auth-account" autocomplete="username" placeholder="13800000000"></div>' +
+      '<div class="field"><label>手机号 / 昵称</label><input id="auth-account" autocomplete="username" placeholder="请输入手机号/昵称"></div>' +
       '<div class="field"><label>密码</label><input id="auth-pw" type="password" autocomplete="current-password" placeholder="••••••"></div>' +
       '<div class="err" id="auth-err"></div>' +
       '<button class="btn btn-primary btn-block" data-action="submit-login">入场</button>' +

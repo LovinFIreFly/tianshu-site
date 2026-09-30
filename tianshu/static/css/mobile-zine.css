@@ -66,6 +66,8 @@ html[data-device="mobile"] .tnav__names b {
 }
 
 /* —— 卡片：白纸卡 + 墨色发丝线，直角一点，去圆胖 —— */
+html[data-device="mobile"] .me-wrap { display: block; max-width: 100%; overflow-x: hidden; }
+html[data-device="mobile"] .me-card { width: auto; max-width: 100%; }
 html[data-device="mobile"] .block3,
 html[data-device="mobile"] .pcard3,
 html[data-device="mobile"] .ccard3,
@@ -191,6 +193,63 @@ html[data-device="mobile"] .talk3 {
   border-radius: 0;
   background: transparent;
 }
+
+/* —— 「我的」页分区导航：横滑胶囊条，滚动条藏掉（那条长灰轨就是它露出来的） —— */
+html[data-device="mobile"] .me-nav {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 2px 0 10px;
+  border: none;
+}
+html[data-device="mobile"] .me-nav::-webkit-scrollbar { display: none; height: 0; }
+html[data-device="mobile"] .me-nav .mi {
+  flex: 0 0 auto;
+  width: auto;
+  max-width: 70vw;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-height: 0;
+  padding: 8px 14px;
+  border: 1px solid var(--z-line);
+  border-radius: 9999px;
+  background: #FFFFFF;
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--z-ink);
+  text-align: left;
+}
+html[data-device="mobile"] .me-nav .mi span {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--z-ink-soft);
+}
+html[data-device="mobile"] .me-nav .mi.on {
+  background: var(--z-ink);
+  color: var(--z-paper);
+  border-color: var(--z-ink);
+}
+html[data-device="mobile"] .me-nav .mi.on span { color: var(--z-tint); }
+
+/* 身份卡三格统计：锁定 3 等分，不挤出屏幕 */
+html[data-device="mobile"] .p-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+}
+html[data-device="mobile"] .p-stats > div {
+  min-width: 0;
+  text-align: center;
+  padding: 8px 4px;
+}
+html[data-device="mobile"] .p-stats b { font-size: 16px; }
 
 /* —— 链接：朱红下划线偏移 —— */
 html[data-device="mobile"] .lnk {
