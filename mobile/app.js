@@ -362,8 +362,9 @@
     var logged = !me.guest;
     $('#menu-logout').hidden = !logged;
     $('#menu-admin').hidden = !me.staff;
+    $('#menu-profile').hidden = !logged;
     $('#menu-login').style.display = logged ? 'none' : '';
-    $('#mast-entry').textContent = logged ? '我的' : '入场登记';
+    $('#mast-entry').hidden = logged;   // 登录后右上角不再挂「入场登记」
     if (!logged) {
       card.innerHTML = '<div class="idcard"><div class="idav">甜</div>' +
         '<div style="flex:1;min-width:0"><h3>还没入场登记</h3>' +
@@ -403,6 +404,101 @@
         (b.code ? '<div class="bk-code">到店报这个码 <i>' + esc(b.code) + '</i></div>' : '') +
         (ops ? '<div class="bk-ops">' + ops + '</div>' : '') + '</div>';
     }).join('');
+
+    var orders = me.orders || [];
+    $('#orders-sec').hidden = !orders.length;
+    $('#orders-note').textContent = orders.length + ' 笔';
+    $('#orders-list').innerHTML = orders.map(function (o) {
+      var st = o.status === 'paid' ? '已付定金' : (o.status === 'closed' ? '已关闭' : '待付定金');
+      return '<div class="bkcard">' +
+        '<div class="bk-head"><b>' + esc(o.title || '剧本') + '</b>' +
+        '<span class="bk-chip bk-st ' + (o.status === 'paid' ? 'pay' : 'warn') + '">' + st + '</span></div>' +
+        '<div class="bk-info">' + esc(o.day || '') + ' ' + esc(o.time || '') + ' · ' + (o.players || 1) + ' 人 · 游玩费 ¥' + (o.amount || 0) + ' · 定金 ¥' + (o.deposit || 0) + '</div>' +
+        (o.status === 'unpaid' ? '<div class="bk-ops"><a class="btn btn-ghost" href="/me/pay/' + esc(o.id) + '">去付定金 ¥' + (o.payable || o.deposit || 0) + '</a></div>' : '') +
+        '</div>';
+    }).join('');
+
+    var favs = (me.favs || []).map(function (id) { return findScript(id); }).filter(Boolean);
+    $('#favs-sec').hidden = !favs.length;
+    $('#favs-note').textContent = favs.length + ' 部';
+    $('#favs-list').innerHTML = favs.map(function (s, i) {
+      return '<button class="srow" data-action="open-script" data-id="' + esc(s.id) + '">' +
+        '<span class="srow-no">0' + (i + 1) + '</span>' +
+        '<span class="srow-thumb" style="' + bgStyle(s, i) + '"></span>' +
+        '<span class="srow-main"><span class="srow-name">' + esc(s.title) + '</span>' +
+        '<span class="srow-meta">' + esc(s.players || '') + ' · ' + esc(s.duration || '') + '</span></span>' +
+        '<span class="srow-go">详情 ›</span></button>';
+    }).join('');
+
+    var notices = me.notices || [];
+    $('#notices-sec').hidden = !notices.length;
+    var unread = notices.filter(function (n) { return !n.read; }).length;
+    $('#notices-note').textContent = unread ? unread + ' 条未读' : '都看过了';
+    $('#notices-list').innerHTML = notices.map(function (n) {
+      return '<button class="bkcard" data-action="read-notice" data-id="' + esc(n.id) + '">' +
+        '<div class="bk-head"><b>' + esc(n.title) + '</b>' +
+        '<span class="bk-chip bk-st ' + (n.read ? '' : 'warn') + '">' + (n.read ? '已读' : '未读') + '</span></div>' +
+        '<div class="bk-info">' + esc(n.at || '') + ' · ' + esc(n.body || '') + '</div></button>';
+    }).join('');
+  }
+
+  function readNotice(id) {
+    var fd = new FormData(); fd.append('id', id);
+    fetch('/m/api/notice/read', { method: 'POST', body: fd, credentials: 'same-origin' })
+      .then(function () { return ensureData(true); })
+      .catch(function () {});
+  }
+
+  function openProfileSheet() {
+    var p = (D.me && D.me.profile) || {};
+    $('#book-body').innerHTML =
+      '<div class="sheet-no">资料</div><h2 class="sheet-title">别人看到的是这些</h2>' +
+      '<div class="form">' +
+      '<div class="field"><label>昵称</label><input id="pf-nick" value="' + esc(p.nick || '') + '" placeholder="拼车时显示的名字"></div>' +
+      '<div class="field"><label>性别</label><div class="seg" id="pf-gender">' +
+      ['', '男', '女'].map(function (g, i) {
+        return '<button type="button" data-gender="' + g + '" class="' + ((p.gender || '') === g ? 'on' : '') + '">' + (i ? g : '不填') + '</button>';
+      }).join('') + '</div></div>' +
+      '<div class="field"><label>年龄</label><input id="pf-age" type="number" inputmode="numeric" value="' + esc(p.age || '') + '" placeholder="选填"></div>' +
+      '<div class="err" id="pf-err"></div>' +
+      '<button class="btn btn-primary btn-block" data-action="submit-profile">保存</button>' +
+      '<p class="sheet-note">性别和年龄只在拼车时用，方便队友互相找人。</p></div>';
+    openSheet('#book-sheet', '#book-mask');
+  }
+  function submitProfile() {
+    var fd = new FormData();
+    fd.append('nick', ($('#pf-nick') || {}).value || '');
+    fd.append('age', ($('#pf-age') || {}).value || '');
+    var gb = $('#pf-gender .on');
+    fd.append('gender', gb ? gb.getAttribute('data-gender') : '');
+    fetch('/m/api/profile', { method: 'POST', body: fd, credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j.error) { $('#pf-err').textContent = j.error; return; }
+        toast('资料已更新'); closeSheets(); ensureData(true);
+      }).catch(function () { $('#pf-err').textContent = '网络开了小差，待会儿再试'; });
+  }
+
+  /* ---------- 首次进入引导 ---------- */
+  function maybeIntro() {
+    var key = 'tsm_intro_v1';
+    var seen = false;
+    try { seen = window.localStorage.getItem(key) === '1'; } catch (e) { seen = true; }
+    if (seen) return;
+    $('#intro-body').innerHTML =
+      '<div class="sheet-no">先看两眼</div><h2 class="sheet-title">这里怎么玩</h2>' +
+      '<div class="steps">' +
+      '<div class="step"><span class="step-no">01</span><div><b>挑本</b><p>本本墙里按人数和难度挑，点开能看真实评价和预约。</p></div></div>' +
+      '<div class="step"><span class="step-no">02</span><div><b>拼车</b><p>一个人也能开，发辆车等人上车；别人的车直接上。</p></div></div>' +
+      '<div class="step"><span class="step-no">03</span><div><b>到店</b><p>付完定金后「我的预约」里会出现核销码，到店报给 DM。</p></div></div>' +
+      '</div>' +
+      '<button class="btn btn-primary btn-block" data-action="close-intro" style="margin-top:var(--s5)">知道了</button>' +
+      '<p class="sheet-note">定金一人 ¥50，玩完退回。</p>';
+    openSheet('#intro-sheet', '#intro-mask');
+  }
+  function closeIntro() {
+    try { window.localStorage.setItem('tsm_intro_v1', '1'); } catch (e) {}
+    closeSheets();
   }
   function cancelBooking(id) {
     if (!confirm('确定取消这条预约？开演前 2 小时内取消可能影响信用分。')) return;
@@ -480,12 +576,17 @@
       if (a === 'car-wait') { carAct(id, 'wait'); return; }
       if (a === 'cancel-booking') { cancelBooking(id); return; }
       if (a === 'goto-review') { window.location.href = '/me'; return; }
+      if (a === 'open-profile') { openProfileSheet(); return; }
+      if (a === 'submit-profile') { submitProfile(); return; }
+      if (a === 'read-notice') { readNotice(id); return; }
+      if (a === 'close-intro') { closeIntro(); return; }
       if (a === 'submit-login') { submitLogin(); return; }
       if (a === 'login') { if (!D.me.guest) { switchTab('me'); } else { openAuth(); } return; }
       if (a === 'signup') { window.location.href = '/register?next=/m/'; return; }
       if (a === 'forgot') { window.location.href = '/forgot?next=/m/'; return; }
       if (a === 'logout') { logout(); return; }
-      if (a === 'admin') { window.location.href = '/admin'; return; }
+      // 后台是电脑版页面，手机上单独开一个标签页，别把手机站顶掉
+      if (a === 'admin') { window.open('/admin', '_blank'); return; }
       if (a === 'clear-filter') { curCat = '全部'; query = ''; $('#search-input').value = ''; renderScripts(); return; }
       return;
     }
@@ -539,6 +640,12 @@
       bookCtx.mode = mode.getAttribute('data-mode');
       return;
     }
+    var gender = t.closest('[data-gender]');
+    if (gender) {
+      $$('#pf-gender button').forEach(function (x) { x.classList.remove('on'); });
+      gender.classList.add('on');
+      return;
+    }
   });
 
   document.addEventListener('keydown', function (e) {
@@ -556,5 +663,5 @@
     renderHome(); renderScripts(); renderCarpool(); renderTalks(); renderMe();
   }
 
-  ensureData();
+  ensureData().then(maybeIntro);
 })();

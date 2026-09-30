@@ -7,32 +7,32 @@
 <title>甜薯剧本杀 · 手机版</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2317140F'/%3E%3Cpath d='M32 14l17 34H15z' fill='%23BD3318'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=ZCOOL+QingKe+HuangYou&family=Noto+Sans+SC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="/m/styles.css?v=9">
+<link rel="stylesheet" href="/m/styles.css?v=10">
 </head>
 <body>
 <div id="app">
-<div class="rail">甜薯剧本杀 · 今晚换个人活一次</div>
+<div class="rail">甜薯剧本杀 · 约一场，开本就走</div>
 
   <header class="mast">
-    <div class="brand-mark"><b>甜薯剧本杀</b><i>推开社团门，下课换身份</i></div>
-    <button class="btn-entry" data-action="login" id="mast-entry">入场登记</button>
+    <div class="brand-mark"><b>甜薯剧本杀</b><i>挑本 · 拼车 · 到店开演</i></div>
+    <button class="btn-entry" data-action="login" id="mast-entry" hidden>入场登记</button>
   </header>
 
   <main>
     <!-- ===== 大厅 ===== -->
     <section id="view-home" class="view active">
       <div class="hero v-in" style="--d:0ms">
-        <div class="hero-kicker">甜薯剧本杀 · 社团开本中</div>
-        <h1 class="hero-title">今晚<br><span class="l2">换个人活一次</span></h1>
-        <p class="hero-sub">上架的本周新本，一本夜里查房，一把椅子等人坐。你来了，局就开。</p>
+        <div class="hero-kicker">甜薯剧本杀 · 今晚有局</div>
+        <h1 class="hero-title">今晚<br><span class="l2">开一本吧</span></h1>
+        <p class="hero-sub">想玩的先挑好，缺人就拼一辆车。剩下的交给 DM。</p>
         <div class="hero-imgs" id="hero-imgs"></div>
         <div class="hero-cap" id="hero-cap"></div>
       </div>
 
       <div class="marquee v-in" style="--d:120ms">
         <div class="marquee-track">
-          <span>校园 <i>·</i> 悬疑 <i>·</i> 欢乐 <i>·</i> 拼车 <i>·</i> 包场 <i>·</i> 内测 <i>·</i>&nbsp;</span>
-          <span>校园 <i>·</i> 悬疑 <i>·</i> 欢乐 <i>·</i> 拼车 <i>·</i> 包场 <i>·</i> 内测 <i>·</i>&nbsp;</span>
+          <span>悬疑 <i>·</i> 欢乐 <i>·</i> 情感 <i>·</i> 机制 <i>·</i> 恐怖 <i>·</i> 硬核 <i>·</i>&nbsp;</span>
+          <span>悬疑 <i>·</i> 欢乐 <i>·</i> 情感 <i>·</i> 机制 <i>·</i> 恐怖 <i>·</i> 硬核 <i>·</i>&nbsp;</span>
         </div>
       </div>
 
@@ -115,17 +115,33 @@
           <p>挑个本，凑齐人，预约就来了。</p>
         </div>
       </div>
+      <div class="sec v-in" style="--d:100ms" id="orders-sec" hidden>
+        <div class="sec-head"><span class="sec-no">08</span><h2 class="sec-title">我的订单</h2><span class="sec-note" id="orders-note"></span></div>
+        <div id="orders-list"></div>
+      </div>
+
+      <div class="sec v-in" style="--d:110ms" id="favs-sec" hidden>
+        <div class="sec-head"><span class="sec-no">09</span><h2 class="sec-title">收藏的本</h2><span class="sec-note" id="favs-note"></span></div>
+        <div class="slist" id="favs-list"></div>
+      </div>
+
+      <div class="sec v-in" style="--d:120ms" id="notices-sec" hidden>
+        <div class="sec-head"><span class="sec-no">10</span><h2 class="sec-title">消息</h2><span class="sec-note" id="notices-note"></span></div>
+        <div id="notices-list"></div>
+      </div>
+
       <div class="sec v-in" style="--d:140ms">
-        <div class="sec-head"><span class="sec-no">08</span><h2 class="sec-title">账号</h2></div>
+        <div class="sec-head"><span class="sec-no">11</span><h2 class="sec-title">账号</h2></div>
         <div class="menu">
           <button class="mitem" data-action="login" id="menu-login"><span>入场登记 / 登录</span><em>去登记</em></button>
           <button class="mitem" data-action="signup"><span>注册新账号</span><em>去注册</em></button>
           <button class="mitem" data-action="forgot"><span>忘记密码</span><em>找回来</em></button>
+          <button class="mitem" data-action="open-profile" id="menu-profile" hidden><span>个人资料</span><em>昵称 / 性别 / 年龄</em></button>
           <button class="mitem" data-action="logout" id="menu-logout" hidden><span>退出登录</span><em>再见</em></button>
-          <button class="mitem" data-action="admin" id="menu-admin" hidden><span>员工 / 管理后台</span><em>进入</em></button>
+          <button class="mitem" data-action="admin" id="menu-admin" hidden><span>管理后台（电脑版）</span><em>新窗口打开</em></button>
         </div>
       </div>
-      <p class="foot">甜薯剧本杀 · 学校社团活动室</p>
+      <p class="foot">甜薯剧本杀 · 到店开演</p>
     </section>
   </main>
 
@@ -186,7 +202,14 @@
   </div>
 </div>
 
-<script src="/m/data.js?v=9"></script>
-<script src="/m/app.js?v=9"></script>
+  <!-- ===== 首次进入引导 ===== -->
+  <div class="mask" id="intro-mask"></div>
+  <div class="sheet" id="intro-sheet" role="dialog" aria-modal="true" aria-label="初次进入">
+    <div class="sheet-grip"></div>
+    <div class="sheet-body" id="intro-body"></div>
+  </div>
+
+<script src="/m/data.js?v=10"></script>
+<script src="/m/app.js?v=10"></script>
 </body>
 </html>

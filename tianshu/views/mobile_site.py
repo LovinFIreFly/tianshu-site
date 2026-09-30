@@ -76,6 +76,7 @@ def _norm_script(s):
         "price": s.get("price") or 0,
         "hot": bool(s.get("hot") or s.get("isNew")),
         "desc": s.get("desc") or "",
+        "cover": s.get("cover") or s.get("img") or "",
         "grad": s.get("grad") or _grad(s.get("id") or 0),
     }
 
@@ -219,6 +220,28 @@ def api_me():
     now = business.now_ms()
     coupons = [c for c in db.rows("coupons")
                if str(c.get("phone")) == str(phone) and not c.get("used") and (c.get("exp") or 0) > now]
+    orders = []
+    for o in sorted([x for x in db.rows("pays") if str(x.get("phone")) == str(phone)],
+                    key=lambda x: -(x.get("id") or 0))[:20]:
+        orders.append({
+            "id": o.get("id"), "bid": o.get("bid"), "title": o.get("title") or "剧本",
+            "day": o.get("day") or "", "time": o.get("time") or "", "players": o.get("players") or 1,
+            "amount": o.get("amount") or 0, "deposit": o.get("deposit") or 0,
+            "payable": o.get("payable") or 0, "status": o.get("status") or "unpaid",
+        })
+    favs = []
+    for r in db.rows("favs"):
+        if str(r.get("phone")) == str(phone):
+            favs = [str(x) for x in (r.get("sids") or [])]
+    notices = []
+    try:
+        for n in business.my_notices(u, 20):
+            notices.append({
+                "id": n.get("id"), "title": n.get("title") or "通知",
+                "body": n.get("body") or "", "at": _ago(n.get("at")), "read": bool(n.get("read")),
+            })
+    except Exception:
+        notices = []
     return jsonify({
         "guest": False,
         "name": prof.get("nick") or u.get("username") or "玩家",
@@ -227,8 +250,12 @@ def api_me():
         "phone": _mask_phone(phone),
         "id": u.get("invite") or "",
         "credit": u.get("credit") or 0,
-        "staff": (u.get("role") or "user") in ("admin", "staff", "dm") or bool(u.get("super")),
+        "staff": business.role_of(u) in ("admin", "staff", "dm") or bool(u.get("super")),
+        "profile": {"nick": prof.get("nick") or "", "gender": prof.get("gender") or "", "age": prof.get("age") or ""},
         "coupons": [{"id": c.get("id"), "name": c.get("name") or c.get("from") or "抵扣券", "amount": c.get("amount") or 0} for c in coupons],
+        "orders": orders,
+        "favs": favs,
+        "notices": notices,
         "stats": {"bookings": len(bookings), "reviews": len(reviews), "spent": spent},
         "records": recs[:20],
     })
@@ -350,6 +377,45 @@ def api_cancel_booking(bid):
     return jsonify({"ok": True})
 
 
+@bp.post("/m/api/profile")
+def api_profile_save():
+    """改资料：昵称 / 性别 / 年龄（拼车时别人看到的就是这些）"""
+    u = current_user()
+    if not u:
+        return jsonify({"error": "请先登录"}), 401
+    f = request.form
+    users = db.rows("users")
+    hit = next((x for x in users if str(x.get("phone")) == str(u.get("phone"))), None)
+    if not hit:
+        return jsonify({"error": "账号不见了"}), 400
+    prof = hit.get("profile") or {}
+    if f.get("nick") is not None:
+        prof["nick"] = business.clean(f.get("nick"), 16)
+    if f.get("gender") in ("男", "女", ""):
+        prof["gender"] = f.get("gender")
+    if f.get("age") is not None:
+        try:
+            prof["age"] = int(f.get("age")) if str(f.get("age")).strip() else None
+        except ValueError:
+            pass
+    hit["profile"] = prof
+    db.write("users", users)
+    return jsonify({"ok": True, "nick": prof.get("nick") or ""})
+
+
+@bp.post("/m/api/notice/read")
+def api_notice_read():
+    """把一条通知标成已读"""
+    u = current_user()
+    if not u:
+        return jsonify({"error": "请先登录"}), 401
+    nid = request.form.get("id") or request.args.get("id")
+    if not nid:
+        return jsonify({"error": "缺少通知 id"}), 400
+    db.update("notices", lambda rows: [dict(n, read=True) if str(n.get("id")) == str(nid) else n for n in rows])
+    return jsonify({"ok": True})
+
+
 # 简单的内容类型，避免依赖 Flask 的复杂猜测
 _MIME = {
     ".html": "text/html; charset=utf-8",
@@ -380,7 +446,13 @@ def mobile_asset(filename):
         return Response("not found", status=404)
     ext = os.path.splitext(full)[1].lower()
     mime = _MIME.get(ext, "application/octet-stream")
-    resp = Response(_read(filename), mimetype=mime)
+    # 图片/字体必须按二进制读，走文本模式会把 jpg 读坏（图片一直加载不出来的坑）
+    if ext in (".jpg", ".jpeg", ".png", ".gif", ".webp", ".ico", ".svg"):
+        with open(full, "rb") as f:
+            body = f.read()
+    else:
+        body = _read(filename)
+    resp = Response(body, mimetype=mime)
     # 静态资源可缓存（改完靠文件名 ?v= 控制，这里直接长缓存）
     resp.headers["Cache-Control"] = "public, max-age=600"
     return resp

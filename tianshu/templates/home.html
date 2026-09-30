@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}{{ settings.shopName }} · 藏在学校里的剧本杀小店{% endblock %}
+{% block title %}{{ settings.shopName }} · 藏在街角的剧本杀小店{% endblock %}
 {# 首页 3.0：非对称编辑排版。左边「大标题 + 搜索」，右边挂一块「今夜场次牌」；
    下面依次是横向海报轨、班次表、拼车卡片流、编号入口。靠细线 + 编号分区，不靠圆角色块。 #}
 {% block body %}
@@ -11,12 +11,12 @@
     <div class="dhero__grid">
 
       <div class="dhero__main">
-        <p class="dhero__kicker rv">下课别走，校内剧本社，换段剧情上演</p>
+        <p class="dhero__kicker rv">下班别走，换个身份过一晚</p>
         {# 文字遮罩升起（Awwwards 获奖站最常用的一招）：每行藏在一条框里往上推 #}
         <h1 class="dhero__title">
-          <span class="ln"><i><em>今晚换段人生活</em></i></span>
+          <span class="ln"><i><em>今晚开一本吧</em></i></span>
         </h1>
-        <p class="dhero__sub rv" style="--i:2">选好本，凑齐人，下课直接来。DM、场地、零食都给你备好了。</p>
+        <p class="dhero__sub rv" style="--i:2">选好本，凑齐人，下班直接来。DM、场地、零食都给你备好了。</p>
 
         <form class="sform3 rv" style="--i:3" method="get" action="{{ url_for('public.scripts') }}" role="search">
           <input class="sform3__in" name="q" placeholder="找找你想冲的本" aria-label="搜剧本" value="{{ request.args.get('q','') }}">

@@ -1,7 +1,7 @@
 {# 进站第一屏：幕布拉开 → 舞台入口。未登录用户看到此页。
    骨架与全站一致（base.html），只是内容换成"剧场门口"那一屏。 #}
 {% extends 'base.html' %}
-{% block title %}{{ settings.shopName }} · 藏在学校里的剧本杀小店{% endblock %}
+{% block title %}{{ settings.shopName }} · 藏在街角的剧本杀小店{% endblock %}
 {% block main_class %}{% endblock %}
 {% block body %}
 
@@ -17,11 +17,11 @@
   <div class="glow3" aria-hidden="true"></div>
   <div class="wrap3">
     <div style="max-width:940px">
-      <p class="pagehead3__k" style="color:var(--d-stage-2)">{{ settings.shopName }} · 今晚换段人生活</p>
+      <p class="pagehead3__k" style="color:var(--d-stage-2)">{{ settings.shopName }} · 下班过来开一本</p>
       <h1 class="heading-hero" style="margin-top:clamp(12px,2vw,22px);
           font-size:min(var(--d-fs-display),8.6vw,104px)">{{ settings.shopName }}</h1>
       <p class="body-large" style="margin-top:18px;color:var(--d-stage-2);max-width:46ch">
-        推开社团门，下课换身份
+        推门进来，挑个本，坐下就开始
       </p>
 
       <div class="row" style="margin-top:clamp(26px,4vw,40px);gap:12px">

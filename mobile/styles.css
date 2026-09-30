@@ -297,6 +297,15 @@ main{padding-bottom:calc(var(--nav-h) + var(--s8) + env(safe-area-inset-bottom))
 .switch{font-size:var(--fs-meta);color:var(--ink-soft);text-align:center;margin-top:var(--s2)}
 .switch a{color:var(--accent-deep);font-weight:700}
 
+/* 首次进入引导步骤 */
+.steps{margin-top:var(--s4)}
+.step{display:flex;gap:var(--s3);padding:var(--s3) 0;border-bottom:var(--line-w) solid var(--line);min-width:0}
+.step:last-child{border-bottom:none}
+.step-no{font-family:var(--font-display);color:var(--accent);font-size:var(--fs-meta);flex:none;width:28px}
+.step b{display:block;font-weight:700}
+.step p{font-size:var(--fs-meta);color:var(--ink-soft);margin-top:2px;overflow-wrap:anywhere}
+.bkcard a.btn{text-decoration:none;display:inline-flex}
+
 /* Toast */
 .toast{position:fixed;left:50%;transform:translateX(-50%) translateY(var(--s4));max-width:calc(100% - var(--s8));
   bottom:calc(var(--nav-h) + var(--s5) + env(safe-area-inset-bottom));
