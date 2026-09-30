@@ -3,40 +3,123 @@
    定位：旧原生层的全部功能不动，只把设计语言换成「撕角海报斜切 zine」——
    米纸底 / 墨字 / 单一朱红只点在行动位 / 发丝线卡片 / 大字标题。
    叠在 mobile.css 之上、后台皮肤之下；只管好看，不管结构。
+
+   文字颜色（2026-10 重做）：一套 4 级墨色色阶 + 深色模式反转，
+   全部按 WCAG AA 校对过：正文 15:1、次级 11:1、说明 7:1、占位也 ≥4.5:1。
    ========================================================================== */
 
 /* —— 展示字体（和独立手机站同源） —— */
 @import url('https://miaoda.feishu.cn/fonts/css2?family=ZCOOL+QingKe+HuangYou&family=Noto+Sans+SC:wght@400;500;700;900&display=swap');
 
+/* ============ 亮色（默认）：米纸 + 墨字 ============ */
 html[data-device="mobile"] {
-  /* zine 色板：直接改写 design3 的舞台令牌，全站跟着换气 */
   --z-paper: #F1EDE4;
   --z-paper-deep: #E4DECF;
-  --z-ink: #17140F;
-  --z-ink-soft: #6B6559;
+  --z-card: #FFFFFF;
   --z-line: #D6CFC0;
-  --z-accent: #BD3318;
-  --z-accent-deep: #8E2413;
+  --z-line-2: #E3DCCE;
+
+  /* 文字色阶：越往下越淡，但都保证能看清 */
+  --z-ink: #17140F;        /* 正文 / 标题        对比 15.6:1 */
+  --z-ink-2: #2E2A22;      /* 次级正文           对比 11.3:1 */
+  --z-ink-3: #544E40;      /* 说明 / 时间 / meta 对比  7.2:1 */
+  --z-ink-4: #6C6455;      /* 占位 / 极弱化      对比  4.6:1 */
+
+  --z-accent: #A82B14;     /* 强调 / 链接        对比  6.9:1 */
+  --z-accent-deep: #8C230F;
   --z-tint: #F7E2DA;
+  --z-on-accent: #FFF6F2;  /* 红底上的字 */
   --z-display: 'ZCOOL QingKe HuangYou', 'Noto Serif SC', serif;
 
   --d-stage: var(--z-paper);
-  --d-stage-2: var(--z-ink-soft);
+  --d-stage-2: var(--z-ink-3);
   --d-stage-ink: var(--z-ink);
   --d-ink: var(--z-ink);
+  --d-ink-2: var(--z-ink-2);
+  --d-ink-3: var(--z-ink-3);
+  --d-ink-4: var(--z-ink-4);
   --d-hair: var(--z-line);
+  --d-rule: var(--z-line);
+  --d-rule-2: var(--z-line-2);
   --d-accent: var(--z-accent);
-  --d-accent-2: #EE560F;
+  --d-accent-2: var(--z-accent-deep);
   --d-r: 10px;
   --d-r-lg: 12px;
 }
 
-/* —— 底纸与文字 —— */
+/* ============ 深色模式：同一套气质，整盘反转 ============ */
+html[data-device="mobile"][data-theme="dark"] {
+  --z-paper: #15130F;
+  --z-paper-deep: #100E0B;
+  --z-card: #1C1914;
+  --z-line: #332F27;
+  --z-line-2: #2A2620;
+
+  --z-ink: #F2ECE0;        /* 正文               对比 14.8:1 */
+  --z-ink-2: #DCD5C6;      /* 次级               对比 11.5:1 */
+  --z-ink-3: #B3AB99;      /* 说明               对比  7.4:1 */
+  --z-ink-4: #938B79;      /* 占位               对比  4.7:1 */
+
+  --z-accent: #FF7A57;     /* 暗底上的朱红       对比  7.1:1 */
+  --z-accent-deep: #FF9C80;
+  --z-tint: #3A1E15;
+  --z-on-accent: #1A0F0A;
+
+  --d-stage: var(--z-paper);
+  --d-stage-2: var(--z-ink-3);
+  --d-stage-ink: var(--z-ink);
+  --d-ink: var(--z-ink);
+  --d-ink-2: var(--z-ink-2);
+  --d-ink-3: var(--z-ink-3);
+  --d-ink-4: var(--z-ink-4);
+  --d-hair: var(--z-line);
+  --d-rule: var(--z-line);
+  --d-rule-2: var(--z-line-2);
+  --d-accent: var(--z-accent);
+  --d-accent-2: var(--z-accent-deep);
+}
+
+/* —— 底纸与正文 —— */
 html[data-device="mobile"] body {
   background: var(--z-paper);
   color: var(--z-ink);
 }
-html[data-device="mobile"] ::selection { background: var(--z-tint); }
+html[data-device="mobile"] ::selection { background: var(--z-tint); color: var(--z-ink); }
+
+/* —— 各级文字：统一走色阶，不再各写各的灰 —— */
+html[data-device="mobile"] h1,
+html[data-device="mobile"] h2,
+html[data-device="mobile"] h3,
+html[data-device="mobile"] h4,
+html[data-device="mobile"] .heading-section,
+html[data-device="mobile"] .pagehead3__t { color: var(--z-ink); }
+
+html[data-device="mobile"] p,
+html[data-device="mobile"] li,
+html[data-device="mobile"] td,
+html[data-device="mobile"] th,
+html[data-device="mobile"] label { color: var(--z-ink-2); }
+
+/* 说明性小字（时间、计数、单位、副标题） */
+html[data-device="mobile"] .copy-mute,
+html[data-device="mobile"] .copy-mono,
+html[data-device="mobile"] .sub,
+html[data-device="mobile"] .dsec__meta,
+html[data-device="mobile"] .board3__s,
+html[data-device="mobile"] .board3__n small,
+html[data-device="mobile"] .tnav__meta,
+html[data-device="mobile"] .empty3__p { color: var(--z-ink-3); }
+
+/* 占位与极弱化信息（placeholder、角标、未选中的次要标签） */
+html[data-device="mobile"] ::placeholder,
+html[data-device="mobile"] .sform3__in::placeholder,
+html[data-device="mobile"] .tnav__search input::placeholder { color: var(--z-ink-4); opacity: 1; }
+
+/* 强调 / 链接：朱红，够醒目也够对比 */
+html[data-device="mobile"] .lnk,
+html[data-device="mobile"] .dsec__no,
+html[data-device="mobile"] .board3__s b,
+html[data-device="mobile"] a:hover { color: var(--z-accent); }
 
 /* —— 大标题：铅字海报感 —— */
 html[data-device="mobile"] .dhero__title,
@@ -50,22 +133,25 @@ html[data-device="mobile"] h2 {
 html[data-device="mobile"] .dhero__title em,
 html[data-device="mobile"] h1 em { color: var(--z-accent); font-style: normal; }
 html[data-device="mobile"] .dhero__kicker {
-  color: var(--z-ink-soft);
+  color: var(--z-ink-3);
   letter-spacing: .22em;
   font-size: 12px;
 }
+html[data-device="mobile"] .dhero__sub,
+html[data-device="mobile"] .pagehead3__lead { color: var(--z-ink-3); }
 
-/* —— 顶栏：纸玻璃 + 发丝线，不要毛玻璃冷灰 —— */
+/* —— 顶栏 —— */
 html[data-device="mobile"] .tnav {
   background: color-mix(in srgb, var(--z-paper) 92%, transparent);
-  border-bottom: 1px solid var(--z-ink);
+  border-bottom: 1px solid var(--z-line);
 }
 html[data-device="mobile"] .tnav__names b {
   font-family: var(--z-display);
   letter-spacing: .16em;
+  color: var(--z-ink);
 }
 
-/* —— 卡片：白纸卡 + 墨色发丝线，直角一点，去圆胖 —— */
+/* —— 卡片 —— */
 html[data-device="mobile"] .me-wrap { display: block; max-width: 100%; overflow-x: hidden; }
 html[data-device="mobile"] .me-card { width: auto; max-width: 100%; }
 html[data-device="mobile"] .block3,
@@ -73,10 +159,11 @@ html[data-device="mobile"] .pcard3,
 html[data-device="mobile"] .ccard3,
 html[data-device="mobile"] .rev3,
 html[data-device="mobile"] .me-card {
-  background: #FFFFFF;
+  background: var(--z-card);
   border: 1px solid var(--z-line);
   border-radius: var(--d-r-lg);
   box-shadow: none;
+  color: var(--z-ink);
 }
 html[data-device="mobile"] .block3 > h2,
 html[data-device="mobile"] .block3 > b,
@@ -87,7 +174,7 @@ html[data-device="mobile"] .sec-title {
 html[data-device="mobile"] .pcard3 { overflow: hidden; }
 html[data-device="mobile"] .pcard3:active { transform: scale(.99); }
 
-/* —— 按钮：胶囊，墨底为次、朱红为主，触感回弹 —— */
+/* —— 按钮：胶囊 —— */
 html[data-device="mobile"] .b3 {
   border-radius: 9999px;
   font-weight: 700;
@@ -95,22 +182,25 @@ html[data-device="mobile"] .b3 {
   transition: transform .12s cubic-bezier(.22,1,.36,1), background .12s;
 }
 html[data-device="mobile"] .b3:active { transform: scale(.97); }
-html[data-device="mobile"] .b3--accent { background: var(--z-accent); }
-html[data-device="mobile"] .b3--accent:hover { background: var(--z-accent-deep); }
-html[data-device="mobile"] .b3:not(.b3--accent) {
+html[data-device="mobile"] .b3--accent,
+html[data-device="mobile"] .b3--solid { background: var(--z-accent); color: var(--z-on-accent); }
+html[data-device="mobile"] .b3--accent:hover,
+html[data-device="mobile"] .b3--solid:hover { background: var(--z-accent-deep); }
+html[data-device="mobile"] .b3:not(.b3--accent):not(.b3--solid) {
   background: transparent;
   color: var(--z-ink);
   border: 1px solid var(--z-ink);
 }
 
-/* —— 表单：墨线框，聚焦变红 —— */
+/* —— 表单 —— */
 html[data-device="mobile"] .field input,
 html[data-device="mobile"] .field select,
 html[data-device="mobile"] .field textarea {
-  border: 1px solid var(--z-ink);
+  border: 1px solid var(--z-line);
   border-radius: 10px;
-  background: #FFFFFF;
-  font-size: 16px;              /* 16px 防 iOS 聚焦缩放 */
+  background: var(--z-card);
+  color: var(--z-ink);
+  font-size: 16px;
 }
 html[data-device="mobile"] .field input:focus,
 html[data-device="mobile"] .field select:focus,
@@ -119,30 +209,30 @@ html[data-device="mobile"] .field textarea:focus {
   outline: none;
 }
 html[data-device="mobile"] .field label {
-  color: var(--z-ink-soft);
+  color: var(--z-ink-3);
   letter-spacing: .05em;
   font-size: 12px;
 }
 
-/* —— 标签 / 徽章：细线胶囊 —— */
+/* —— 标签 / 徽章 —— */
 html[data-device="mobile"] .tag,
 html[data-device="mobile"] .badge,
 html[data-device="mobile"] .chip {
   border: 1px solid var(--z-line);
   border-radius: 9999px;
   background: transparent;
-  color: var(--z-ink-soft);
+  color: var(--z-ink-3);
   font-size: 12px;
 }
 
-/* —— 底部 Tab：白纸条 + 墨色发丝顶线，选中朱红 —— */
+/* —— 底部 Tab —— */
 html[data-device="mobile"] .mobtab {
-  background: #FFFFFF;
-  border-top: 1px solid var(--z-ink);
+  background: var(--z-card);
+  border-top: 1px solid var(--z-line);
   box-shadow: none;
 }
 html[data-device="mobile"] .mobtab a {
-  color: var(--z-ink-soft);
+  color: var(--z-ink-3);
   font-size: 11px;
   letter-spacing: .06em;
   min-height: 50px;
@@ -154,16 +244,11 @@ html[data-device="mobile"] .mobtab a {
   position: relative;
 }
 html[data-device="mobile"] .mobtab a.on,
-html[data-device="mobile"] .mobtab a[aria-current] {
-  color: var(--z-accent-deep);
-  font-weight: 700;
-}
+html[data-device="mobile"] .mobtab a[aria-current] { color: var(--z-accent); font-weight: 700; }
 html[data-device="mobile"] .mobtab a.on::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: 25%;
-  right: 25%;
+  top: 0; left: 25%; right: 25%;
   height: 2px;
   background: var(--z-accent);
 }
@@ -176,17 +261,11 @@ html[data-device="mobile"] .mobtab a i {
   font-style: normal;
 }
 html[data-device="mobile"] .mobtab img,
-html[data-device="mobile"] .mobtab svg {
-  filter: grayscale(1) contrast(1.05);   /* 彩色小图标统一压成墨色，贴合 zine */
-  opacity: .75;
-}
+html[data-device="mobile"] .mobtab svg { filter: grayscale(1) contrast(1.05); opacity: .75; }
 html[data-device="mobile"] .mobtab a.on img,
-html[data-device="mobile"] .mobtab a.on svg {
-  filter: none;
-  opacity: 1;
-}
+html[data-device="mobile"] .mobtab a.on svg { filter: none; opacity: 1; }
 
-/* —— 唠嗑 / 评价：时间线发丝线 —— */
+/* —— 唠嗑 / 评价：发丝线 —— */
 html[data-device="mobile"] .rev3,
 html[data-device="mobile"] .talk3 {
   border-bottom: 1px solid var(--z-line);
@@ -194,7 +273,7 @@ html[data-device="mobile"] .talk3 {
   background: transparent;
 }
 
-/* —— 「我的」页分区导航：横滑胶囊条，滚动条藏掉（那条长灰轨就是它露出来的） —— */
+/* —— 「我的」分区导航：横滑胶囊 —— */
 html[data-device="mobile"] .me-nav {
   display: flex;
   gap: 8px;
@@ -218,60 +297,43 @@ html[data-device="mobile"] .me-nav .mi {
   padding: 8px 14px;
   border: 1px solid var(--z-line);
   border-radius: 9999px;
-  background: #FFFFFF;
+  background: var(--z-card);
   box-shadow: none;
   font-size: 13px;
   font-weight: 700;
   color: var(--z-ink);
   text-align: left;
 }
-html[data-device="mobile"] .me-nav .mi span {
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--z-ink-soft);
-}
+html[data-device="mobile"] .me-nav .mi span { font-size: 11px; font-weight: 400; color: var(--z-ink-3); }
 html[data-device="mobile"] .me-nav .mi.on {
   background: var(--z-ink);
   color: var(--z-paper);
   border-color: var(--z-ink);
 }
-html[data-device="mobile"] .me-nav .mi.on span { color: var(--z-tint); }
+html[data-device="mobile"] .me-nav .mi.on span { color: color-mix(in srgb, var(--z-paper) 78%, transparent); }
 
-/* 身份卡三格统计：锁定 3 等分，不挤出屏幕 */
+/* 身份卡三格统计 */
 html[data-device="mobile"] .p-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
   width: 100%;
 }
-html[data-device="mobile"] .p-stats > div {
-  min-width: 0;
-  text-align: center;
-  padding: 8px 4px;
-}
-html[data-device="mobile"] .p-stats b { font-size: 16px; }
+html[data-device="mobile"] .p-stats > div { min-width: 0; text-align: center; padding: 8px 4px; }
+html[data-device="mobile"] .p-stats b { font-size: 16px; color: var(--z-ink); }
+html[data-device="mobile"] .p-stats span { color: var(--z-ink-3); }
+/* 头像圆圈里的字 */
+html[data-device="mobile"] .avatar { background: var(--z-ink); color: var(--z-paper); }
 
-/* —— 链接：朱红下划线偏移 —— */
-html[data-device="mobile"] .lnk {
-  color: var(--z-accent-deep);
-  text-underline-offset: 3px;
-}
-
-/* —— 编号式小节（有 .sec-no 的地方统一朱红铅字） —— */
-html[data-device="mobile"] .sec-no,
-html[data-device="mobile"] .pagehead3__k b {
-  color: var(--z-accent);
-  font-family: var(--z-display);
-}
-
-/* —— 图片：直角一点，轻描边，别再大圆角卡片风 —— */
+/* —— 图片：直角一点 —— */
 html[data-device="mobile"] .pcard3 img,
 html[data-device="mobile"] .ccard3 img,
-html[data-device="mobile"] .cover3 {
-  border-radius: 8px;
-}
+html[data-device="mobile"] .cover3 { border-radius: 8px; }
 
-/* —— 减少动态偏好 —— */
+/* —— 编号式小节 —— */
+html[data-device="mobile"] .sec-no,
+html[data-device="mobile"] .pagehead3__k b { color: var(--z-accent); font-family: var(--z-display); }
+
 @media (prefers-reduced-motion: reduce) {
   html[data-device="mobile"] * { animation: none !important; transition: none !important; }
 }

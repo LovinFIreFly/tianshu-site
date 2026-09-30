@@ -85,6 +85,10 @@ def run(no_login, zine):
         iphone = pw.devices['iPhone 13']
         browser = pw.chromium.launch()
         ctx = browser.new_context(**iphone, locale='zh-CN')
+        if '--dark' in sys.argv:      # 深色模式：跟站点 theme cookie 一致
+            ctx.add_cookies([{'name': 'theme', 'value': 'dark',
+                              'domain': '127.0.0.1', 'path': '/'}])
+            print('dark mode on')
         page = ctx.new_page()
 
         page.on('console', lambda m: problems.append('console.%s: %s' % (m.type, m.text)) if m.type == 'error' else None)
@@ -94,9 +98,11 @@ def run(no_login, zine):
         page.on('requestfailed', lambda r: problems.append('reqfail %s %s' % (r.url, r.failure))
                 if '/m/' in r.url else None)
 
+        _sfx = '-dark' if '--dark' in sys.argv else ''
+
         def shot(name):
-            page.screenshot(path=os.path.join(OUT, name + '.png'), full_page=False)
-            print('  shot:', name)
+            page.screenshot(path=os.path.join(OUT, name + _sfx + '.png'), full_page=False)
+            print('  shot:', name + _sfx)
 
         def overflow():
             w = page.evaluate('document.documentElement.scrollWidth')
