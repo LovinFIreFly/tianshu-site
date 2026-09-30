@@ -7,7 +7,7 @@
 <title>甜薯剧本杀 · 手机版</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2317140F'/%3E%3Cpath d='M32 14l17 34H15z' fill='%23BD3318'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=ZCOOL+QingKe+HuangYou&family=Noto+Sans+SC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="/m/styles.css?v=10">
+<link rel="stylesheet" href="/m/styles.css?v=11">
 </head>
 <body>
 <div id="app">
@@ -202,14 +202,26 @@
   </div>
 </div>
 
-  <!-- ===== 首次进入引导 ===== -->
-  <div class="mask" id="intro-mask"></div>
-  <div class="sheet" id="intro-sheet" role="dialog" aria-modal="true" aria-label="初次进入">
-    <div class="sheet-grip"></div>
-    <div class="sheet-body" id="intro-body"></div>
+  <!-- ===== 首次进入：专门的登录门页（未登录时盖住整站） ===== -->
+  <div id="gate" hidden>
+    <div class="gate-in">
+      <div class="gate-mark">甜薯剧本杀</div>
+      <h1 class="gate-title">先登记<br><span>再上车</span></h1>
+      <p class="gate-sub">用手机号或用户名登录，没账号就花一分钟注册一个。</p>
+      <div class="form">
+        <div class="field"><label>手机号 / 用户名</label>
+          <input id="gate-account" autocomplete="username" placeholder="13800000000" enterkeyhint="next"></div>
+        <div class="field"><label>密码</label>
+          <input id="gate-pw" type="password" autocomplete="current-password" placeholder="••••••" enterkeyhint="go"></div>
+        <div class="err" id="gate-err"></div>
+        <button class="btn btn-primary btn-block" data-action="submit-login">入场</button>
+        <button class="btn btn-ghost btn-block" data-action="gate-skip">先随便看看</button>
+        <p class="switch">还没账号？<a href="/register?next=/m/">去注册</a> · <a href="/forgot?next=/m/">忘了密码</a></p>
+      </div>
+    </div>
   </div>
 
-<script src="/m/data.js?v=10"></script>
-<script src="/m/app.js?v=10"></script>
+<script src="/m/data.js?v=11"></script>
+<script src="/m/app.js?v=11"></script>
 </body>
 </html>

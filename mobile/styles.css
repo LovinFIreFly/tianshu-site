@@ -297,6 +297,23 @@ main{padding-bottom:calc(var(--nav-h) + var(--s8) + env(safe-area-inset-bottom))
 .switch{font-size:var(--fs-meta);color:var(--ink-soft);text-align:center;margin-top:var(--s2)}
 .switch a{color:var(--accent-deep);font-weight:700}
 
+/* 登录门页（首次进入） */
+#gate{position:fixed;inset:0;z-index:80;background:var(--paper);display:flex;align-items:center;
+  overflow-y:auto;padding:calc(var(--s8) + env(safe-area-inset-top)) var(--page-pad) calc(var(--s6) + env(safe-area-inset-bottom))}
+#gate[hidden]{display:none}
+.gate-in{width:100%;max-width:var(--container);margin:0 auto}
+.gate-mark{font-family:var(--font-display);font-size:var(--fs-sub);letter-spacing:var(--track-wide);color:var(--accent)}
+.gate-title{font-family:var(--font-display);font-size:var(--fs-hero);line-height:var(--lh-tight);
+  letter-spacing:var(--track-wide);margin-top:var(--s3)}
+.gate-title span{color:var(--accent)}
+.gate-sub{margin-top:var(--s3);color:var(--ink-soft);font-size:var(--fs-body)}
+#gate .form .btn{min-height:48px}
+
+/* 图片：加载失败自动退回示范海报 */
+.photo,.srow-thumb{position:relative}
+.photo img,.srow-thumb img{width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit}
+.srow-thumb{overflow:hidden}
+
 /* 首次进入引导步骤 */
 .steps{margin-top:var(--s4)}
 .step{display:flex;gap:var(--s3);padding:var(--s3) 0;border-bottom:var(--line-w) solid var(--line);min-width:0}

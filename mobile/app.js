@@ -9,6 +9,7 @@
   var curTab = 'home', curCat = '全部', query = '';
   var bookCtx = { sid: '', day: '', time: '', players: 1, mode: '拼车', tags: [] };
   var carCtx = { sid: '', day: '', time: '', players: 1, tags: [] };
+  var gateSkipped = false;
   var TIMES = ['14:00', '16:00', '18:30', '19:00', '20:30'];
   var CAR_TAGS = ['欢乐局', '新手友好', '剧情党', '推理控', '恐怖胆大'];
 
@@ -44,9 +45,34 @@
       return '<div class="' + cls + '"><img src="' + esc(av) + '" alt=""></div>';
     return '<div class="' + cls + '">' + esc(String(initial || '玩').slice(0, 1)) + '</div>';
   }
-  function bgStyle(s, idx) {
-    var grad = (s && s.grad) || 'linear-gradient(160deg,#3a2b4d,#15131f)';
-    return 'background-image:url(' + coverURL(s, idx) + '),' + grad;
+  function gradOf(s) {
+    return (s && s.grad) || 'linear-gradient(160deg,#3a2b4d,#15131f)';
+  }
+  /* 图片一律用 <img> 渲染：加载失败自动退回示范海报，再失败就露出底下的渐变，
+     永远不会出现"空白方块 / 破图图标" */
+  function photoHTML(s, idx, cls) {
+    var cover = coverURL(s, idx);
+    var poster = coverURL(null, idx);
+    var fb = (cover === poster) ? '' : ' onerror="this.onerror=null;this.src=\'' + poster + '\'"';
+    return '<div class="photo ' + (cls || '') + '" style="background:' + gradOf(s) + '">' +
+      '<img src="' + esc(cover) + '" alt="" loading="lazy"' + fb + '></div>';
+  }
+  function thumbHTML(s, idx) {
+    var cover = coverURL(s, idx);
+    var poster = coverURL(null, idx);
+    var fb = (cover === poster) ? '' : ' onerror="this.onerror=null;this.src=\'' + poster + '\'"';
+    return '<span class="srow-thumb" style="background:' + gradOf(s) + '">' +
+      '<img src="' + esc(cover) + '" alt="" loading="lazy"' + fb + '></span>';
+  }
+
+  /* ---------- CSRF：桌面站的守卫要求写操作必须带令牌 ---------- */
+  function csrfToken() {
+    var m = document.cookie.match(/(?:^|;\s*)csrf=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function post(url, fd) {
+    fd.append('_csrf', csrfToken());
+    return fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
   }
 
   /* ---------- 数据 ---------- */
@@ -91,8 +117,8 @@
     var ss = D.scripts.slice(0, 2);
     var hi = $('#hero-imgs'), hc = $('#hero-cap');
     if (ss.length) {
-      hi.innerHTML = '<div class="photo hero-dark" style="' + bgStyle(ss[0], 0) + '"></div>' +
-        (ss[1] ? '<div class="photo hero-bright" style="' + bgStyle(ss[1], 1) + '"></div>' : '');
+      hi.innerHTML = photoHTML(ss[0], 0, 'hero-dark') +
+        (ss[1] ? photoHTML(ss[1], 1, 'hero-bright') : '');
       hc.innerHTML = ss.map(function (s, i) {
         return '<span><b>NO.0' + (i + 1) + '</b> ' + esc(s.title) + '</span>';
       }).join('');
@@ -111,7 +137,7 @@
     var cs = D.scripts.slice(0, 4);
     $('#collage').innerHTML = cs.map(function (s, i) {
       return '<article class="pcard" data-action="open-script" data-id="' + esc(s.id) + '" role="button" tabindex="0">' +
-        '<div class="pcard-img"><div class="photo" style="' + bgStyle(s, i) + '"></div>' +
+        '<div class="pcard-img">' + photoHTML(s, i) +
         '<span class="pcard-no">0' + (i + 1) + '</span><span class="pcard-v">甜薯剧本杀</span></div>' +
         '<div class="pcard-info"><div class="pcard-name">' + esc(s.title) + '</div>' +
         '<div class="pcard-meta">' + esc(s.players || '') + ' · ' + esc(s.duration || '') + '</div></div></article>';
@@ -145,7 +171,7 @@
     $('#scripts-grid').innerHTML = list.map(function (s, i) {
       return '<button class="srow" data-action="open-script" data-id="' + esc(s.id) + '">' +
         '<span class="srow-no">0' + (i + 1) + '</span>' +
-        '<span class="srow-thumb" style="' + bgStyle(s, i) + '"></span>' +
+        thumbHTML(s, i) +
         '<span class="srow-main"><span class="srow-name">' + esc(s.title) + '</span>' +
         '<span class="srow-meta">' + esc(s.players || '') + ' · ' + esc(s.duration || '') +
         ' <span class="tag">' + esc(s.difficulty || '') + '</span>' +
@@ -160,7 +186,7 @@
   }
   function openScriptSheet(id) {
     var s = findScript(id); if (!s) { toast('剧本信息没找到'); return; }
-    $('#sheet-photo').style.cssText = bgStyle(s);
+    setSheetPhoto(s);
     $('#sheet-body').innerHTML =
       '<div class="sheet-no">剧本</div><h2 class="sheet-title">' + esc(s.title) + '</h2>' +
       '<div class="sheet-tags">' +
@@ -176,6 +202,15 @@
     openSheet('#sheet', '#sheet-mask');
     fetchReviews(s.id);
   }
+  function setSheetPhoto(s) {
+    var sp = $('#sheet-photo');
+    if (!sp) return;
+    sp.style.background = gradOf(s);
+    var cover = coverURL(s), poster = coverURL(null, 0);
+    var fb = (cover === poster) ? '' : ' onerror="this.onerror=null;this.src=\'' + poster + '\'"';
+    sp.innerHTML = '<img src="' + esc(cover) + '" alt=""' + fb + '>';
+  }
+
   function openSessionSheet(id) {
     var s = D.sessions.filter(function (x) { return String(x.id) === String(id); })[0];
     if (!s) { toast('场次信息没找到'); return; }
@@ -243,7 +278,7 @@
     fd.append('mode', bookCtx.mode);
     bookCtx.tags.forEach(function (t) { fd.append('carTags', t); });
     fd.append('agree', '1');
-    fetch('/m/api/book', { method: 'POST', body: fd, credentials: 'same-origin' })
+    post('/m/api/book', fd)
       .then(function (r) { return r.json(); })
       .then(function (j) {
         if (j.error) { $('#bk-err').textContent = j.error; return; }
@@ -280,7 +315,7 @@
   }
   function carAct(id, action) {
     if (D.me && D.me.guest) { toast('请先登录再上车'); openAuth(); return; }
-    fetch('/m/api/car/' + id + '/' + action, { method: 'POST', credentials: 'same-origin' })
+    post('/m/api/car/' + id + '/' + action, new FormData())
       .then(function (r) { return r.json(); })
       .then(function (j) {
         toast(j.msg || j.error || '操作完成');
@@ -318,7 +353,7 @@
     fd.append('sid', sid); fd.append('ts_day', carCtx.day); fd.append('time', carCtx.time);
     fd.append('players', carCtx.players); fd.append('mode', '拼车');
     carCtx.tags.forEach(function (t) { fd.append('carTags', t); });
-    fetch('/m/api/book', { method: 'POST', body: fd, credentials: 'same-origin' })
+    post('/m/api/book', fd)
       .then(function (r) { return r.json(); })
       .then(function (j) {
         if (j.error || j.ok === false) { $('#car-err').textContent = j.msg || j.error || '发车失败'; return; }
@@ -342,7 +377,7 @@
     if (!text) return;
     if (D.me && D.me.guest) { toast('登录后才能发帖'); openAuth(); return; }
     var fd = new FormData(); fd.append('text', text);
-    fetch('/m/api/talks', { method: 'POST', body: fd, credentials: 'same-origin' })
+    post('/m/api/talks', fd)
       .then(function (r) { return r.json(); })
       .then(function (j) {
         if (j.error) { toast(j.error); openAuth(); return; }
@@ -365,6 +400,7 @@
     $('#menu-profile').hidden = !logged;
     $('#menu-login').style.display = logged ? 'none' : '';
     $('#mast-entry').hidden = logged;   // 登录后右上角不再挂「入场登记」
+    applyGate();                        // 未登录时盖登录门页
     if (!logged) {
       card.innerHTML = '<div class="idcard"><div class="idav">甜</div>' +
         '<div style="flex:1;min-width:0"><h3>还没入场登记</h3>' +
@@ -424,7 +460,7 @@
     $('#favs-list').innerHTML = favs.map(function (s, i) {
       return '<button class="srow" data-action="open-script" data-id="' + esc(s.id) + '">' +
         '<span class="srow-no">0' + (i + 1) + '</span>' +
-        '<span class="srow-thumb" style="' + bgStyle(s, i) + '"></span>' +
+        thumbHTML(s, i) +
         '<span class="srow-main"><span class="srow-name">' + esc(s.title) + '</span>' +
         '<span class="srow-meta">' + esc(s.players || '') + ' · ' + esc(s.duration || '') + '</span></span>' +
         '<span class="srow-go">详情 ›</span></button>';
@@ -444,7 +480,7 @@
 
   function readNotice(id) {
     var fd = new FormData(); fd.append('id', id);
-    fetch('/m/api/notice/read', { method: 'POST', body: fd, credentials: 'same-origin' })
+    post('/m/api/notice/read', fd)
       .then(function () { return ensureData(true); })
       .catch(function () {});
   }
@@ -471,7 +507,7 @@
     fd.append('age', ($('#pf-age') || {}).value || '');
     var gb = $('#pf-gender .on');
     fd.append('gender', gb ? gb.getAttribute('data-gender') : '');
-    fetch('/m/api/profile', { method: 'POST', body: fd, credentials: 'same-origin' })
+    post('/m/api/profile', fd)
       .then(function (r) { return r.json(); })
       .then(function (j) {
         if (j.error) { $('#pf-err').textContent = j.error; return; }
@@ -479,7 +515,12 @@
       }).catch(function () { $('#pf-err').textContent = '网络开了小差，待会儿再试'; });
   }
 
-  /* ---------- 首次进入引导 ---------- */
+  /* ---------- 首次进入：专门的登录门页 ---------- */
+  function applyGate() {
+    var g = $('#gate'); if (!g) return;
+    g.hidden = !(D.me && D.me.guest && !gateSkipped);
+  }
+
   function maybeIntro() {
     var key = 'tsm_intro_v1';
     var seen = false;
@@ -502,7 +543,7 @@
   }
   function cancelBooking(id) {
     if (!confirm('确定取消这条预约？开演前 2 小时内取消可能影响信用分。')) return;
-    fetch('/m/api/booking/' + id + '/cancel', { method: 'POST', credentials: 'same-origin' })
+    post('/m/api/booking/' + id + '/cancel', new FormData())
       .then(function (r) { return r.json(); })
       .then(function (j) {
         if (j.error) { toast(j.error); return; }
@@ -523,18 +564,26 @@
     openSheet('#auth-sheet', '#auth-mask');
   }
   function submitLogin() {
-    var acc = ($('#auth-account') || {}).value || '';
-    var pw = ($('#auth-pw') || {}).value || '';
-    if (!acc || !pw) { $('#auth-err').textContent = '账号和密码都填一下'; return; }
+    var gate = $('#gate') && !$('#gate').hidden;
+    var accEl = gate ? $('#gate-account') : $('#auth-account');
+    var pwEl = gate ? $('#gate-pw') : $('#auth-pw');
+    var errEl = gate ? $('#gate-err') : $('#auth-err');
+    var say = function (m) { if (errEl) errEl.textContent = m; };
+    var acc = (accEl || {}).value || '', pw = (pwEl || {}).value || '';
+    if (!acc || !pw) { say('账号和密码都填一下'); return; }
     var fd = new FormData();
     fd.append('account', acc); fd.append('password', pw); fd.append('remember', '1');
-    fetch('/login?next=/m/', { method: 'POST', body: fd, credentials: 'same-origin' })
-      .then(function () { return ensureData(true); })
+    post('/login?next=/m/', fd)
+      .then(function (r) {
+        if (r.status === 403) { say('页面放太久了，刷新一下再登录'); return null; }
+        return ensureData(true);
+      })
       .then(function () {
-        if (D.me && D.me.guest) { $('#auth-err').textContent = '账号或密码不对，再试试'; return; }
+        if (!D.ready) return;
+        if (D.me && D.me.guest) { say('账号或密码不对，再试试'); return; }
         toast('欢迎回来，' + (D.me.name || '玩家'));
-        closeSheets();
-      }).catch(function () { $('#auth-err').textContent = '网络开了小差，待会儿再试'; });
+        closeSheets(); applyGate();
+      }).catch(function () { say('网络开了小差，待会儿再试'); });
   }
   function logout() {
     fetch('/logout', { credentials: 'same-origin' })
@@ -580,13 +629,14 @@
       if (a === 'submit-profile') { submitProfile(); return; }
       if (a === 'read-notice') { readNotice(id); return; }
       if (a === 'close-intro') { closeIntro(); return; }
+      if (a === 'gate-skip') { gateSkipped = true; applyGate(); return; }
       if (a === 'submit-login') { submitLogin(); return; }
       if (a === 'login') { if (!D.me.guest) { switchTab('me'); } else { openAuth(); } return; }
       if (a === 'signup') { window.location.href = '/register?next=/m/'; return; }
       if (a === 'forgot') { window.location.href = '/forgot?next=/m/'; return; }
       if (a === 'logout') { logout(); return; }
-      // 后台是电脑版页面，手机上单独开一个标签页，别把手机站顶掉
-      if (a === 'admin') { window.open('/admin', '_blank'); return; }
+      // 后台是电脑版页面：在同标签页里打开（用 _blank 会被手机壳甩到外部浏览器）
+      if (a === 'admin') { window.location.href = '/admin'; return; }
       if (a === 'clear-filter') { curCat = '全部'; query = ''; $('#search-input').value = ''; renderScripts(); return; }
       return;
     }
@@ -663,5 +713,5 @@
     renderHome(); renderScripts(); renderCarpool(); renderTalks(); renderMe();
   }
 
-  ensureData().then(maybeIntro);
+  ensureData();
 })();
