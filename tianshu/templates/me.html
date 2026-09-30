@@ -32,7 +32,7 @@
             </p>
           </div>
         </div>
-        <div class="p-stats">
+        <div class="p-stats rv ink-drop">
           <div><b>{{ me.credit or 100 }}</b><span>信用分</span></div>
           <div><b>{{ coupons|selectattr('used', 'equalto', false)|list|length }}</b><span>可用券</span></div>
           <div><b>{{ spent }}</b><span>已付定金</span></div>
@@ -268,17 +268,28 @@
           </div>
           <div>
             <h2 class="heading-section">心愿单</h2>
-            {% set hit = [] %}
-            {% for s in scripts %}{% if s.id|string in fav_ids %}{% set _ = hit.append(s) %}{% endif %}{% endfor %}
+            {# 三组收藏：想玩 / 已玩 / 避雷（favGroups 由视图提供，每组是剧本对象列表） #}
+            {% set _fg = favGroups or {} %}
+            {% set _groups = [('want', '想玩'), ('done', '已玩'), ('avoid', '避雷')] %}
+            {% for gkey, glabel in _groups %}
+            <h3 class="heading-section" style="font-size:15px;margin:14px 0 6px">{{ glabel }}</h3>
             <div class="block3">
-              {% for s in hit %}
-              <a class="lnk" style="display:flex;justify-content:space-between;gap:10px;padding:8px 0;
-                 border-bottom:1px solid var(--d-rule)" href="{{ url_for('public.script_detail', sid=s.id) }}">
-                <span>{{ s.emoji }} {{ s.title }}</span><span class="caption">¥{{ s.price|int }}</span></a>
+              {% for s in (_fg.get(gkey) or []) %}
+              <div class="row" style="justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--d-rule)">
+                <a class="lnk" href="{{ url_for('public.script_detail', sid=s.id) }}"><span>{{ s.emoji or '' }} {{ s.title }}</span></a>
+                <span class="row" style="gap:8px">
+                  <span class="caption">¥{{ s.price|int }}</span>
+                  <form method="post" action="{{ url_for('public.fav', sid=s.id) }}" style="display:inline">
+                    <input type="hidden" name="group" value="{{ gkey }}">
+                    <button class="b3 b3--sm b3--ghost" type="submit">取消</button>
+                  </form>
+                </span>
+              </div>
               {% else %}
-              <p class="body-secondary" style="margin:0">在剧本页点右上角那颗心，就会出现在这儿。</p>
+              <p class="body-secondary" style="margin:0">{{ glabel }}还空着。在剧本页点心，选这一组放进去。</p>
               {% endfor %}
             </div>
+            {% endfor %}
           </div>
         </div>
       </div>
@@ -304,7 +315,7 @@
             </div>
             {% else %}
             <div class="empty3">
-              <p class="empty3__k">Empty</p>
+              <p class="empty3__k">No Notices</p>
               <h3 class="empty3__t">还没有消息</h3>
               <p class="empty3__p">预约、退款、门店回复、信用分变动都会发到这儿。</p>
             </div>
@@ -321,8 +332,8 @@
                 <div class="row" style="gap:8px;align-items:flex-end">
                   <div class="field" style="max-width:180px">
                     <label>类型</label>
-                    <select name="cat"><option>💡 建议</option><option>⏰ 改时间</option>
-                      <option>💰 问价</option><option>🙋 找人</option><option>😤 投诉</option></select>
+                    <select name="cat"><option>建议</option><option>改时间</option>
+                      <option>问价</option><option>找人</option><option>投诉</option></select>
                   </div>
                   <button class="b3 b3--sm b3--solid" type="submit">发出去</button>
                 </div>
@@ -372,6 +383,18 @@
                   <label>头像（png/jpg/webp，≤700KB）</label>
                   <input type="file" name="avatar" accept="image/png,image/jpeg,image/webp">
                 </div>
+                {# 风格标签：多选胶囊，随 profile 表单一起提交 name=tags（最多 3 个，后端清洗） #}
+                <div class="field">
+                  <label>打本风格标签（帮你匹配合得来的车，最多 3 个）</label>
+                  {% set _mytags = myTags or me.profile.tags or [] %}
+                  <div class="chips3">
+                    {% for t in (PLAYER_TAGS or ['菠萝头', '水龙头', '推理机', '戏精', '全类型']) %}
+                    <label class="chip-check">
+                      <input type="checkbox" name="tags" value="{{ t }}" {{ 'checked' if t in _mytags }}><span>{{ t }}</span>
+                    </label>
+                    {% endfor %}
+                  </div>
+                </div>
                 <button class="b3 b3--sm b3--solid" type="submit">保存资料</button>
               </form>
             </div>
@@ -386,6 +409,26 @@
                 <span class="body-secondary">我的打本生涯邀请码</span><b class="copy-mono" style="font-size:14px">{{ me.invite or '—' }}</b></div>
               <p class="body-secondary" style="margin:12px 0 0">朋友填你的邀请码注册，你俩各得一张 ¥{{ settings.inviteCoupon }} 抵扣券
                 （付游玩费时直接抵掉，90 天内有效）。</p>
+            </div>
+
+            <h2 class="heading-section">联系店里</h2>
+            <div class="block3">
+              {% if serviceWechat %}
+              <div class="row" style="justify-content:space-between;align-items:center;padding:6px 0">
+                <span class="body-secondary">小客服微信</span>
+                <span class="row" style="gap:8px">
+                  <b class="copy-mono" id="svc-wechat">{{ serviceWechat }}</b>
+                  <button class="b3 b3--sm b3--ghost" type="button" id="svc-copy-btn"
+                          data-copy="{{ serviceWechat }}">复制</button>
+                </span>
+              </div>
+              {% else %}
+              <p class="body-secondary" style="margin:6px 0">客服微信还没配，先留言给店里。</p>
+              {% endif %}
+              <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px">
+                <a class="b3 b3--sm" href="{{ faqUrl or '/faq' }}">常见问题</a>
+                <a class="b3 b3--sm" href="{{ url_for('user.me') }}?tab=notices">给店家留言</a>
+              </div>
             </div>
           </div>
 
@@ -428,4 +471,23 @@
   </div>
 </div>
 
+{# 复制客服微信 + 小 toast #}
+<script>
+(function(){
+  var btn=document.getElementById('svc-copy-btn');
+  if(!btn) return;
+  function toast(msg){
+    var t=document.getElementById('share-toast');
+    if(!t){ t=document.createElement('div'); t.id='share-toast'; t.className='share-toast'; document.body.appendChild(t); }
+    t.textContent=msg; t.classList.add('show');
+    clearTimeout(t._tm); t._tm=setTimeout(function(){ t.classList.remove('show'); }, 1800);
+  }
+  btn.addEventListener('click', function(){
+    var v=btn.getAttribute('data-copy')||'';
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(v).then(function(){toast('客服微信已复制');}, function(){toast('复制失败，手动选中');});
+    } else { toast('请手动选中复制'); }
+  });
+})();
+</script>
 {% endblock %}

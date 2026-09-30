@@ -92,6 +92,21 @@
         <span class="sub">填了角色 + 上面「能选」，客人才能在网页上挑角色</span></div>
       <div class="field"><label>简介（客人点开剧本时看到的一段话）</label>
         <textarea name="desc" rows="3">{{ s.desc or '' }}</textarea></div>
+      {# 新增：演绎视频外链 / 演后复盘（DM 客人不可见）/ 每个角色一句话人设 #}
+      <div class="field"><label>演绎视频 URL（可选，客人剧本页会显示「观看演绎视频」外链按钮）</label>
+        <input name="videoUrl" value="{{ s.videoUrl or '' }}" placeholder="https://..."></div>
+      <div class="field"><label>演后复盘（可选，仅 DM / 管理员可见，客人看不到）</label>
+        <textarea name="reviewDoc" rows="4" placeholder="这场开本的复盘：节奏、哪段炸了、下次怎么调…">{{ s.reviewDoc or '' }}</textarea></div>
+      {% if s.roles %}
+      <div class="field"><label>角色一句话人设（给每个角色写一句，客人挑角时看脸也看人）</label>
+        {% for r in s.roles %}
+        <div class="row" style="gap:8px;align-items:center;margin:4px 0">
+          <b style="min-width:84px">{{ r.name }}</b>
+          <input name="role_line_{{ loop.index0 }}" value="{{ r.line or '' }}" placeholder="一句话人设" style="flex:1">
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
     </details>
   </form>
 

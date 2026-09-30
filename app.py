@@ -163,7 +163,7 @@ def main():
     if config.OPEN_BROWSER:
         threading.Timer(1.2, lambda: webbrowser.open('http://localhost:%d' % port)).start()
     try:
-        server = waitress.create_server(app, host=host, port=port, threads=8)
+        server = waitress.create_server(app, host=host, port=port, threads=16)
         server.run()
     except KeyboardInterrupt:
         print('\n已停止。数据都在 data 文件夹里，不会丢。')

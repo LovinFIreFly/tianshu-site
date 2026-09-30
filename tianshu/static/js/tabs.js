@@ -20,6 +20,79 @@
   function each(list, fn) { Array.prototype.forEach.call(list, fn); }
 
   /* 把某个标签亮起来，其余藏掉；返回这次有没有真的命中 */
+  /* 懒加载：升级包后端首屏只渲染当前 tab，其余面板是 <!-- panel:KEY --> 占位注释。
+     切到还没加载的面板时，调 ?partial=1&tab=KEY 把那段 HTML 拉回来塞进 .tabpane。
+     （升级包后端侧已就位，这里补上前端这一半 —— 原 zip 漏带了 tabs.js 的这段） */
+  function ensureLoaded(bar, key) {
+    var box = bar.closest ? bar.closest('.adm') : null;
+    box = box || document;
+    var pane = box.querySelector('.tabpane[data-tab="' + key + '"]');
+    if (!pane) return;
+    if (!/<!--\s*panel:/.test(pane.innerHTML)) return;     // 已经有内容，跳过
+    if (pane.getAttribute('data-loading') === '1') return; // 正在拉，别重复
+    pane.setAttribute('data-loading', '1');
+    if (!window.fetch) { pane.removeAttribute('data-loading'); return; }
+    var url = location.pathname + '?partial=1&tab=' + encodeURIComponent(key);
+    fetch(url, { headers: { 'X-Requested-With': 'fetch' } })
+      .then(function (r) { return r.text(); })
+      .then(function (html) {
+        pane.innerHTML = html;
+        pane.removeAttribute('data-loading');
+        each(pane.querySelectorAll('[data-filter]'), bindFilter);
+        if (window.TS && typeof window.TS.reinit === 'function') window.TS.reinit(pane);
+      })
+      .catch(function () { pane.removeAttribute('data-loading'); });  // 失败允许下次重试
+  }
+
+  /* 同步移动端上下文条标题（☰ 上方那个"当前面板名"） */
+  function syncAdmTitle(bar, key) {
+    try {
+      var adm = bar.closest ? bar.closest('.adm') : null;
+      var cur = adm && adm.querySelector('#adm-cur-name');
+      if (cur && window.ADM_NAME_MAP && window.ADM_NAME_MAP[key]) cur.textContent = window.ADM_NAME_MAP[key];
+    } catch (e) { /* 不在后台/工作台页就跳过 */ }
+  }
+
+  /* 升级包移动端导航（v5）：☰ 抽屉开合 + DM 底栏切 tab。
+     原 zip 漏带了这段 JS（在 tabs.js v5 里），这里补上，否则手机上后台抽屉与 DM 底栏点不动。 */
+  function closeDrawers(adm) {
+    each(adm.querySelectorAll('.adm-drawer.show'), function (d) {
+      d.hidden = true; d.classList.remove('show');
+      var m = document.getElementById(d.id + '-mask');
+      if (m) { m.hidden = true; m.classList.remove('show'); }
+    });
+  }
+  function openDrawer(adm) {
+    var d = adm.querySelector('.adm-drawer');
+    if (!d) return;
+    d.hidden = false; d.classList.add('show');
+    var m = document.getElementById(d.id + '-mask');
+    if (m) { m.hidden = false; m.classList.add('show'); }
+  }
+  function wireAdmMobileNav() {
+    each(document.querySelectorAll('.adm'), function (adm) {
+      var bar = adm.querySelector('[data-tabs]');
+      each(adm.querySelectorAll('#adm-open-drawer, .js-open-drawer'), function (btn) {
+        btn.addEventListener('click', function () { openDrawer(adm); });
+      });
+      each(adm.querySelectorAll('#adm-close-drawer, .adm-drawer-mask'), function (btn) {
+        btn.addEventListener('click', function () { closeDrawers(adm); });
+      });
+      adm.addEventListener('click', function (e) {
+        var t = e.target.closest && e.target.closest('.adm-tile');
+        if (t && t.getAttribute('data-tab')) closeDrawers(adm);
+      });
+      each(adm.querySelectorAll('.dm-tabbar'), function (bar2) {
+        bar2.addEventListener('click', function (e) {
+          var b = e.target.closest && e.target.closest('.dm-tab[data-tab]');
+          if (!b || !bar) return;
+          activate(bar, document, b.getAttribute('data-tab'), bar.getAttribute('data-tabs'));
+          closeDrawers(adm);
+        });
+      });
+    });
+  }
+
   function activate(bar, root, key, remember) {
     var hit = false;
     each(root.querySelectorAll('.tabpane'), function (p) {
@@ -39,6 +112,10 @@
     });
     if (hit && remember) {
       try { sessionStorage.setItem('tabs:' + remember, key); } catch (e) { /* 隐身模式就算了 */ }
+    }
+    if (hit) {
+      ensureLoaded(bar, key);   // 懒加载未渲染的面板（配合 ?partial=1 后端）
+      syncAdmTitle(bar, key);   // 同步移动端上下文条标题
     }
     return hit;
   }
@@ -127,6 +204,7 @@
   function boot() {
     /* [data-tabs] 可能是顶部的胶囊标签条（.tabbar），也可能是后台左侧栏（.adm-side）——
        两种都走同一套逻辑，所以面板统一从整个文档里找。 */
+    wireAdmMobileNav();   // 移动端☰抽屉 + DM 底栏（升级包 v5 漏带的 JS 在这里补）
     each(document.querySelectorAll('[data-tabs]'), function (bar) {
       var root = document;
       var saved = null;

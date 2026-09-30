@@ -1,0 +1,45 @@
+{# 面板：invoices —— 开票申请
+   status 过滤（pending/done）+ 列表 + 「标记已开」按钮（POST /admin/invoices/<iid>/done）。 #}
+<div class="between">
+  <div>
+    <h1>开票申请</h1>
+    <p class="sub">客人在订单里申请的发票，开完点「标记已开」。</p>
+  </div>
+</div>
+
+<div class="row mt" style="gap:6px">
+  <a class="pill {{ 'on' if (status or 'pending') == 'pending' }}" href="{{ url_for('admin.dashboard') }}?tab=invoices&status=pending">待开</a>
+  <a class="pill {{ 'on' if status == 'done' }}" href="{{ url_for('admin.dashboard') }}?tab=invoices&status=done">已开</a>
+  <a class="pill {{ 'on' if status == '' }}" href="{{ url_for('admin.dashboard') }}?tab=invoices">全部</a>
+</div>
+
+<div class="scroll panel mt">
+  <table>
+    <tr><th>订单号</th><th>剧本</th><th>金额</th><th>抬头</th><th>税号</th><th>邮箱</th><th>状态</th><th>申请时间</th><th>操作</th></tr>
+    {% for iv in rows %}
+    <tr>
+      <td class="copy-mono">{{ iv.oid or iv.id }}</td>
+      <td>{{ iv.title or '—' }}<div class="sub">{{ iv.day }} {{ iv.time }}</div></td>
+      <td>¥{{ iv.amount or 0 }}</td>
+      <td>{{ iv.company or '个人' }}</td>
+      <td class="copy-mono">{{ iv.taxId or '—' }}</td>
+      <td>{{ iv.email or '—' }}</td>
+      <td>
+        {% if iv.status == 'done' %}<span class="badge ok">已开</span>
+        {% else %}<span class="badge">待开</span>{% endif %}
+      </td>
+      <td class="caption">{{ day_label(iv.at) if iv.at else '' }}</td>
+      <td>
+        {% if iv.status != 'done' %}
+        <form method="post" action="/admin/invoices/{{ iv.id }}/done" style="display:inline"
+              onsubmit="return confirm('标记这张票已开？')">
+          <button class="btn btn-sm btn-primary" type="submit">标记已开</button>
+        </form>
+        {% else %}—{% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="9" class="empty">还没有开票申请</td></tr>
+    {% endfor %}
+  </table>
+</div>

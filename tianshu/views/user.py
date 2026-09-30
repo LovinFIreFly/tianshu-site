@@ -273,12 +273,30 @@ def me():
     _mybids = {str(b.get('id')) for b in bookings}
     _revs = db.rows('reviews')
     my_reviews = {str(r.get('bid')): r for r in _revs if str(r.get('bid')) in _mybids}
+    # 收藏三组（想玩/已玩/避雷）：sid 列表 → 剧本对象列表（§4.1 me.html）
+    scripts_all = db.rows('scripts')
+    scripts_by_id = {str(s.get('id')): s for s in scripts_all}
+    _fg = business.fav_groups(u)
+    favGroups = {}
+    for _g in ('want', 'done', 'avoid'):
+        favGroups[_g] = [
+            {'id': sid, 'title': scripts_by_id[sid].get('title', ''),
+             'emoji': scripts_by_id[sid].get('emoji', ''),
+             'cover': scripts_by_id[sid].get('cover', ''),
+             'diff': scripts_by_id[sid].get('diff', 0)}
+            for sid in _fg.get(_g, []) if sid in scripts_by_id
+        ]
+    myTags = list((u.get('profile') or {}).get('tags') or [])
+    serviceWechat = business.get_settings().get('serviceWechat', '')
     return render_template('me.html', u=u, bookings=bookings, orders=orders,
                            coupons=coupons, notices=business.my_notices(u, 20), spent=spent,
-                           order_of=order_of, scripts=db.rows('scripts'), fav_ids=fav_ids,
+                           order_of=order_of, scripts=scripts_all, fav_ids=fav_ids,
                            reviewed={r.get('bid') for r in _revs},
                            my_reviews=my_reviews,
-                           msgs=business.my_messages(u), days=next_days(7))
+                           msgs=business.my_messages(u), days=next_days(7),
+                           favGroups=favGroups, myTags=myTags,
+                           serviceWechat=serviceWechat,
+                           faqUrl=url_for('public.faq'))
 
 
 @bp.post('/profile')
@@ -309,6 +327,12 @@ def profile_save():
         flash('头像没传上：%s' % err, 'warn')
     hit['profile'] = prof
     db.write('users', users)
+    # 玩家风格标签（M1#1）：表单多选 getlist，或逗号串；set_player_tags 内部清洗限 3 个
+    if 'tags' in f:
+        tag_list = f.getlist('tags')
+        if not tag_list:
+            tag_list = [t.strip() for t in (f.get('tags') or '').replace('，', ',').split(',') if t.strip()]
+        business.set_player_tags(u, tag_list)
     flash('资料存好了', 'ok')
     return redirect(url_for('user.me'))
 
@@ -402,6 +426,16 @@ def order_act(oid, action):
                                     coupon_id=request.form.get('couponId'))
     flash(msg, 'ok' if ok else 'warn')
     return redirect(url_for('user.me'))
+
+
+@bp.post('/invoice/apply')
+@login_required
+def invoice_apply():
+    """申请开票：form 收 oid/company/taxId/email，校验与落库都在 business.invoice_apply。"""
+    oid = request.form.get('oid') or ''
+    ok, msg = business.invoice_apply(current_user(), oid, request.form)
+    flash(msg, 'ok' if ok else 'warn')
+    return redirect(request.referrer or url_for('user.me'))
 
 
 @bp.get('/me/pay/<int:oid>')

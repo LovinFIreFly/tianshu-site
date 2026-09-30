@@ -45,10 +45,19 @@ def _panel_html(key):
 def dashboard():
     """管理后台 —— 唯一的入口页。
 
-    14 个面板在这一次全渲染好，点标签只是前端切显示：不跳页、不改网址、点了就到
-    （老版 index.html 就是这么干的）。所以不管点哪个功能，网址永远停在 /admin。
+    14 个面板在一个网址里切（/admin?tab=bookings）。原来首屏把 14 个面板全算全渲染，
+    现在首屏只算当前 tab（默认 dash），其余面板留占位注释；切 tab 时前端 fetch
+    /admin/?partial=1&tab=xxx 单独拉那一段 HTML（AUD-B-0001/P0-1）。
+
+    ※ 前端配合：tabs.js 切 tab 时需对未加载的面板 fetch partial=1&tab=xxx 并替换占位。
+      本轮仅落地后端侧（数据准备 + partial 接口），tabs.js 改造由前端代理（H1/H2）完成。
     """
-    return render_template('admin/index.html', panels={k: _panel_html(k) for k in _TAB_FUNCS})
+    tab = request.args.get('tab') or 'dash'
+    func = _TAB_FUNCS.get(tab) or _TAB_FUNCS['dash']
+    if request.args.get('partial') == '1':
+        return func()                      # 前端 fetch 单个面板
+    panels = {k: (('<!-- panel:%s -->' % k) if k != tab else _panel_html(k)) for k in _TAB_FUNCS}
+    return render_template('admin/index.html', panels=panels, active=tab)
 
 
 @bp.get('/<path:old>')
@@ -71,17 +80,23 @@ def verify():
 @staff_required
 def bookings():
     """预约管理：按状态/日期筛，能代客户取消、能核销"""
-    rows = db.rows('bookings')
+    all_rows = db.rows('bookings')
     status = request.args.get('status') or 'booked'      # 只用来点亮默认那颗筛选按钮
     kw = (request.args.get('q') or '').strip()
     # 状态筛选现在由前端就地做（tabs.js 藏行），所以这里不再过滤，全都渲染出来
+    rows = all_rows
     if kw:
         rows = [b for b in rows if kw in str(b.get('title', '')) or kw in str(b.get('username', ''))
                 or kw in str(b.get('phone', '')) or kw in str(b.get('verifyCode', ''))]
     rows = sorted(rows, key=lambda x: (-(x.get('ts') or 0), str(x.get('time'))))
+    # 一次遍历数状态（原来每个状态全表扫一遍，4 次，AUD-B-0030）
+    counts = {s: 0 for s in ('booked', 'arrived', 'done', 'cancelled')}
+    for b in all_rows:
+        s = b.get('status') or 'booked'
+        if s in counts:
+            counts[s] += 1
     return render_template('admin/panel_bookings.html', rows=rows, status=status, q=kw,
-                           counts={s: len([b for b in db.rows('bookings') if b.get('status') == s])
-                                   for s in ('booked', 'arrived', 'done', 'cancelled')})
+                           counts=counts)
 
 
 @bp.post('/bookings/<int:bid>/cancel')
@@ -116,6 +131,12 @@ def users():
     role_filter = (request.args.get('role') or '').strip()
     me = current_user()
     bookings = db.rows('bookings')
+    # 一次遍历 bookings 按 phone 分桶：原来每个用户都全表扫一遍（U×B，AUD-B-0021）
+    by_phone = {}
+    for b in bookings:
+        if b.get('status') == 'cancelled':
+            continue
+        by_phone.setdefault(str(b.get('phone')), []).append(b)
     rows = []
     counts = {'user': 0, 'dm': 0, 'admin': 0, 'super': 0}
     for u in db.rows('users'):
@@ -127,7 +148,7 @@ def users():
             continue
         if kw and kw not in str(u.get('username')) and kw not in str(u.get('phone')):
             continue
-        mine = [b for b in bookings if str(b.get('phone')) == str(u.get('phone')) and b.get('status') != 'cancelled']
+        mine = by_phone.get(str(u.get('phone')), [])
         # 能不能改他的角色（跟 business.set_roles 的三条护栏保持一致，前端才好禁用）
         can_edit = (u.get('super') is not True and r != 'super'
                     and str(u.get('phone')) != str(me.get('phone'))
@@ -501,6 +522,24 @@ def script_save(sid):
         names = [x.strip() for x in str(f.get('roles')).replace('，', ',').split(',') if x.strip()]
         old = {r.get('name'): r for r in hit.get('roles') or []}
         hit['roles'] = [old.get(n, {'name': n, 'img': ''}) for n in names]
+    # 演后复盘文本（DM/管理员可见，普通玩家不可见，§2.5）
+    if f.get('reviewDoc') is not None:
+        hit['reviewDoc'] = business.clean(f.get('reviewDoc'), 5000)
+    # 演绎视频外链（只接受 http(s)，限长 200，否则置空）
+    if f.get('videoUrl') is not None:
+        _vu = business.clean(f.get('videoUrl'), 200)
+        hit['videoUrl'] = _vu if _vu.startswith(('http://', 'https://')) else ''
+    # 角色一句话人设：role_line_0 / role_line_1… 按 roles 列表下标更新 line
+    _roles = hit.get('roles') or []
+    for key in f.keys():
+        if not key.startswith('role_line_'):
+            continue
+        try:
+            _idx = int(key.split('_', 2)[2])
+        except (ValueError, IndexError):
+            continue
+        if 0 <= _idx < len(_roles):
+            _roles[_idx]['line'] = business.clean(f.get(key), 60)
     db.write('scripts', rows)
     business.audit(current_user().get('username'), role(), '改了剧本《%s》' % hit.get('title'))
     flash('《%s》存好了' % hit.get('title'), 'ok')
@@ -533,19 +572,32 @@ def growth():
     reviews = [r for r in db.rows('reviews') if not r.get('hidden')]
     scripts = {str(s.get('id')): s for s in db.rows('scripts')}
     sessions, bookings = db.rows('sessions'), db.rows('bookings')
+    # 一次遍历建好：场次 id→DM，以及每条预约贡献给哪个 DM 的擅长本计数
+    # （原来对每个 DM 都重扫全表 bookings，D×B，AUD-B-0055）
+    sid_to_dm = {}
+    for s in sessions:
+        if s.get('dm'):
+            sid_to_dm[s.get('id')] = str(s.get('dm'))
+    cnt_by_dm = {}
+    for b in bookings:
+        if b.get('status') == 'cancelled':
+            continue
+        dms = set()
+        if b.get('dmPhone'):
+            dms.add(str(b.get('dmPhone')))
+        sess_dm = sid_to_dm.get(b.get('sessionId'))
+        if sess_dm:
+            dms.add(sess_dm)
+        for dm_phone in dms:
+            bucket = cnt_by_dm.setdefault(dm_phone, {})
+            bucket[str(b.get('sid'))] = bucket.get(str(b.get('sid')), 0) + 1
     rows = []
     for u in db.rows('users'):
         if not business.has_role(u, 'dm'):           # 挂着 dm 就算（同时是管理员也算）
             continue
         phone = str(u.get('phone'))
         g = business.dm_growth(phone)
-        my_ses = {s.get('id') for s in sessions if str(s.get('dm')) == phone}
-        cnt = {}
-        for b in bookings:
-            if b.get('status') == 'cancelled':
-                continue
-            if b.get('sessionId') in my_ses or str(b.get('dmPhone')) == phone:
-                cnt[str(b.get('sid'))] = cnt.get(str(b.get('sid')), 0) + 1
+        cnt = cnt_by_dm.get(phone, {})
         rows.append({
             'u': u, 'phone': phone, 'g': g, 'mon': settle.get(phone) or {},
             'nick': (u.get('profile') or {}).get('nick') or u.get('username'),
@@ -729,6 +781,15 @@ def settings():
                 pass
     rows['carTags'] = [t.strip() for t in (f.get('carTags') or '').replace('，', ',').split(',') if t.strip()][:6] \
         if f.get('carTags') is not None else rows.get('carTags', [])
+    # 车主车队参数（M1）：拼车倒计时默认小时 / 奖励阈值(满 N 车发券) / 券面额。
+    # 非法值回退默认（carDeadlineHours=24 / carRewardThreshold=5 / carRewardValue=10）。
+    # wechatSub / smsGateway 为外部依赖占位（§5.5）：只读展示，不接收不写。
+    for k, dft in (('carDeadlineHours', 24), ('carRewardThreshold', 5), ('carRewardValue', 10)):
+        if f.get(k) is not None:
+            try:
+                rows[k] = int(float(f.get(k)))
+            except (ValueError, TypeError):
+                rows[k] = dft
     if f.get('banners') is not None:              # 首页轮播，一行一条
         rows['banners'] = business.parse_banners(f.get('banners'))
     db.write('settings', rows)
@@ -1165,11 +1226,17 @@ def user_detail(phone):
 @staff_required
 def messages():
     """客人留的言（没回的排前面）—— 晚到没车、想换时间、问价，基本都从这儿来"""
-    rows = sorted(db.rows('messages'), key=lambda x: -(x.get('createdAt') or 0))
+    all_msgs = db.rows('messages')
+    rows = sorted(all_msgs, key=lambda x: -(x.get('createdAt') or 0))
     status = request.args.get('status') or 'pending'     # 状态筛选在前端做
+    # 一次遍历数状态（原来每个状态全表扫 2 次，AUD-B-0031）
+    counts = {'pending': 0, 'replied': 0}
+    for m in all_msgs:
+        k = m.get('status') or 'pending'
+        if k in counts:
+            counts[k] += 1
     return render_template('admin/panel_messages.html', rows=rows, status=status,
-                           counts={k: len([m for m in db.rows('messages') if (m.get('status') or 'pending') == k])
-                                   for k in ('pending', 'replied')})
+                           counts=counts)
 
 
 @bp.post('/messages/<int:mid>/reply')
@@ -1229,6 +1296,77 @@ def dm_settle():
     return redirect(url_for('admin.dashboard') + '#dm')
 
 
+# ---------------------------------------------------------------- 话术库 / 发票 / 访问统计（M7/M8/M10）
+def talktips_panel():
+    """开本话术库面板（admin 与 DM 共用 admin/panel_talktips.html）。
+    列表 + 分类筛选；新增/删除走下面的 POST 子路由（权限 business 已判 dm/admin）。"""
+    cat = request.args.get('cat') or ''
+    return render_template('admin/panel_talktips.html',
+                           rows=business.talktips(cat), cat=cat,
+                           cats=getattr(business, 'TALKTIP_CATS', ('开场白', '过渡', '结尾', '其他')))
+
+
+@bp.post('/talktips/add')
+@dm_required
+def talktip_add():
+    """新增话术（DM / 管理员都能加，business.talktip_add 内有二次判权）"""
+    ok, msg = business.talktip_add(current_user(),
+                                   request.form.get('cat') or '其他',
+                                   request.form.get('title'), request.form.get('text'))
+    flash(msg, 'ok' if ok else 'warn')
+    return redirect(request.referrer or url_for('admin.dashboard') + '#talktips')
+
+
+@bp.post('/talktips/<int:tid>/del')
+@dm_required
+def talktip_del(tid):
+    """删话术（作者本人或管理员）"""
+    ok, msg = business.talktip_del(current_user(), tid)
+    flash(msg, 'ok' if ok else 'warn')
+    return redirect(request.referrer or url_for('admin.dashboard') + '#talktips')
+
+
+def invoices_panel():
+    """发票申请面板：按 pending/done 筛选，列表 + 标记已开按钮（仅 admin）"""
+    status = request.args.get('status') or 'pending'
+    rows = business.invoices_list(status if status in ('pending', 'done') else '')
+    return render_template('admin/panel_invoices.html', rows=rows, status=status)
+
+
+@bp.post('/invoices/<int:iid>/done')
+@staff_required
+def invoice_done(iid):
+    """标记发票已开（仅 admin）"""
+    ok, msg = business.invoice_mark_done(iid, current_user().get('username'))
+    flash(msg, 'ok' if ok else 'warn')
+    return redirect(request.referrer or url_for('admin.dashboard') + '#invoices')
+
+
+def visits_panel():
+    """访问统计面板：今日 PV/UV + 近 7 日趋势 + 热门页面 top10（仅 admin）"""
+    return render_template('admin/panel_visits.html', st=business.visit_stats())
+
+
+@bp.post('/bookings/<int:cid>/car-close')
+@staff_required
+def car_close(cid):
+    """门店代车主提前截止拼车（仅 admin；带 _staff=True 越过车主本人判权）"""
+    u = dict(current_user(), _staff=True)
+    ok, msg = business.car_action(u, cid, 'close', request.form)
+    flash(msg, 'ok' if ok else 'warn')
+    return redirect(request.referrer or url_for('admin.dashboard') + '#bookings')
+
+
+@bp.post('/bookings/<int:cid>/car-fill')
+@staff_required
+def car_fill(cid):
+    """门店代车主标记补满发车（仅 admin）"""
+    u = dict(current_user(), _staff=True)
+    ok, msg = business.car_action(u, cid, 'fill', request.form)
+    flash(msg, 'ok' if ok else 'warn')
+    return redirect(request.referrer or url_for('admin.dashboard') + '#bookings')
+
+
 # ---------------------------------------------------------------- 后台标签总表
 # 一个网址里切所有面板：/admin?tab=bookings 这样。
 # 以后加新功能：先照抄一个视图函数，再来这里补一行，最后去 _nav.html 加个标签。
@@ -1239,4 +1377,5 @@ _TAB_FUNCS = {
     'messages': messages, 'scripts': scripts, 'orders': orders, 'guides': guides_page,
     'notice': notice_page, 'dm': dm_page, 'backup': backup_page, 'reports': reports_page,
     'logs': logs,
+    'talktips': talktips_panel, 'invoices': invoices_panel, 'visits': visits_panel,
 }

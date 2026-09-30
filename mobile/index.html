@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F1EDE4">
+<meta name="theme-color" content="#F1EDE4" id="meta-theme">
 <title>甜薯剧本杀 · 手机版</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2317140F'/%3E%3Cpath d='M32 14l17 34H15z' fill='%23BD3318'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=ZCOOL+QingKe+HuangYou&family=Noto+Sans+SC:wght@400;500;700;900&display=swap">
@@ -15,6 +15,7 @@
 
   <header class="mast">
     <div class="brand-mark"><b>甜薯剧本杀</b><i>挑本 · 拼车 · 到店开演</i></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="切换深浅色">◐</button>
     <button class="btn-entry" data-action="login" id="mast-entry" hidden>入场登记</button>
   </header>
 
@@ -40,6 +41,16 @@
         <div class="sec-head"><span class="sec-no">01</span><h2 class="sec-title">今日排期</h2><span class="sec-note" id="tonight-note">今夜发车</span></div>
         <div class="tonight" id="tonight"></div>
       </div>
+
+      <div class="sec v-in" style="--d:200ms">
+        <div class="sec-head"><span class="sec-no">01·A</span><h2 class="sec-title">热玩本</h2><span class="sec-note">大家都在开</span></div>
+      </div>
+      <div class="hscroll" id="home-hot"></div>
+
+      <div class="sec v-in" style="--d:220ms">
+        <div class="sec-head"><span class="sec-no">01·B</span><h2 class="sec-title">新本首车</h2><span class="sec-note">刚上架</span></div>
+      </div>
+      <div class="hscroll" id="home-new"></div>
 
       <div class="sec v-in" style="--d:240ms">
         <div class="sec-head"><span class="sec-no">02</span><h2 class="sec-title">上架剧本</h2><span class="sec-note" id="collage-note">已上架</span></div>
@@ -71,7 +82,31 @@
     <section id="view-carpool" class="view">
       <div class="sec v-in" style="--d:0ms">
         <div class="sec-head"><span class="sec-no">04</span><h2 class="sec-title">拼车局</h2>
-          <button class="btn btn-ink" style="min-height:34px;padding:0 var(--s4);font-size:var(--fs-meta);margin-left:auto" data-action="open-car-create">发起拼车</button>
+          <button class="btn btn-ink" style="min-height:44px;padding:0 var(--s4);font-size:var(--fs-meta);margin-left:auto" data-action="open-car-create">发起拼车</button>
+        </div>
+      </div>
+      <div class="carfilter v-in" style="--d:60ms">
+        <div class="carfilter-row">
+          <input type="search" id="cf-q" placeholder="搜剧本名，比如夜班日志" aria-label="剧本名筛选">
+        </div>
+        <div class="carfilter-row">
+          <select id="cf-players" aria-label="人数筛选">
+            <option value="">人数不限</option>
+            <option value="4">≥4 人</option><option value="5">≥5 人</option>
+            <option value="6">≥6 人</option><option value="7">≥7 人</option>
+          </select>
+          <select id="cf-time" aria-label="时段筛选">
+            <option value="">时段不限</option>
+            <option value="afternoon">下午场</option>
+            <option value="evening">晚间场</option>
+            <option value="night">夜场</option>
+          </select>
+          <select id="cf-diff" aria-label="难度筛选">
+            <option value="">难度不限</option>
+            <option value="1">1 星</option><option value="2">2 星</option><option value="3">3 星</option>
+            <option value="4">4 星</option><option value="5">5 星</option>
+          </select>
+          <button class="carfilter-clear" data-action="clear-cars">重置</button>
         </div>
       </div>
       <div class="clist" id="carpool-body"></div>
@@ -122,12 +157,23 @@
 
       <div class="sec v-in" style="--d:110ms" id="favs-sec" hidden>
         <div class="sec-head"><span class="sec-no">09</span><h2 class="sec-title">收藏的本</h2><span class="sec-note" id="favs-note"></span></div>
+        <div class="favtabs" id="fav-tabs" role="tablist" aria-label="收藏分组">
+          <button class="favtab on" data-favgroup="want" role="tab" aria-selected="true">想玩</button>
+          <button class="favtab" data-favgroup="done" role="tab" aria-selected="false">已玩</button>
+          <button class="favtab" data-favgroup="avoid" role="tab" aria-selected="false">避雷</button>
+        </div>
         <div class="slist" id="favs-list"></div>
       </div>
 
       <div class="sec v-in" style="--d:120ms" id="notices-sec" hidden>
         <div class="sec-head"><span class="sec-no">10</span><h2 class="sec-title">消息</h2><span class="sec-note" id="notices-note"></span></div>
         <div id="notices-list"></div>
+      </div>
+
+      <div class="sec v-in" style="--d:130ms" id="comm-sec">
+        <div class="sec-head"><span class="sec-no">10·A</span><h2 class="sec-title">社区</h2><span class="sec-note">最近在聊</span></div>
+        <div class="feed" id="comm-recent"></div>
+        <button class="btn btn-ink btn-block" style="margin-top:var(--s3)" data-action="open-post">去发帖</button>
       </div>
 
       <div class="sec v-in" style="--d:140ms">
@@ -137,7 +183,11 @@
           <button class="mitem" data-action="signup"><span>注册新账号</span><em>去注册</em></button>
           <button class="mitem" data-action="forgot"><span>忘记密码</span><em>找回来</em></button>
           <button class="mitem" data-action="open-profile" id="menu-profile" hidden><span>个人资料</span><em>昵称 / 性别 / 年龄</em></button>
+          <button class="mitem" data-action="open-msg" id="menu-msg" hidden><span>给店家留言</span><em>店家会回你</em></button>
+          <button class="mitem" data-action="open-faq"><span>常见问题</span><em>定金 / 拼车 / 核销</em></button>
+          <button class="mitem" data-action="open-service"><span>客服</span><em>加微信小客服</em></button>
           <button class="mitem" data-action="open-pwd" id="menu-pwd" hidden><span>修改密码</span><em>换个新的</em></button>
+          <button class="mitem" data-action="download-app" id="menu-app"><span>下载 App</span><em>揣兜里随时约本</em></button>
           <button class="mitem" data-action="logout" id="menu-logout" hidden><span>退出登录</span><em>再见</em></button>
           <button class="mitem" data-action="admin" id="menu-admin" hidden><span>管理后台（电脑版）</span><em>新窗口打开</em></button>
         </div>
@@ -218,7 +268,7 @@
         <div class="err" id="gate-err"></div>
         <button class="btn btn-primary btn-block" data-action="submit-login">入场</button>
         <button class="btn btn-ghost btn-block" data-action="gate-skip">先随便看看</button>
-        <p class="switch">还没账号？<a href="/register?next=/m/">去注册</a> · <a href="/forgot?next=/m/">忘了密码</a></p>
+        <p class="switch">还没账号？<a href="javascript:void(0)" data-action="signup">去注册</a> · <a href="javascript:void(0)" data-action="forgot">忘了密码</a></p>
       </div>
     </div>
   </div>

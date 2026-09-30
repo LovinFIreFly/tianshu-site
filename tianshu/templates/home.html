@@ -73,10 +73,10 @@
     </div>
 
     <div class="ticker3 rv">
-      <div><b class="count3" data-to="{{ stat.plays }}">0</b><span>累计开本</span></div>
-      <div><b class="count3" data-to="{{ scripts|length }}">0</b><span>在架剧本</span></div>
-      <div><b class="count3" data-to="{{ sessions|length }}">0</b><span>今日场次</span></div>
-      <div><b class="count3" data-to="{{ served }}">0</b><span>累计接待</span></div>
+      <div><b class="count3 ink-drop rv" data-to="{{ stat.plays }}">0</b><span>累计开本</span></div>
+      <div><b class="count3 ink-drop rv" data-to="{{ scripts|length }}">0</b><span>在架剧本</span></div>
+      <div><b class="count3 ink-drop rv" data-to="{{ sessions|length }}">0</b><span>今日场次</span></div>
+      <div><b class="count3 ink-drop rv" data-to="{{ served }}">0</b><span>累计接待</span></div>
     </div>
   </div>
 </section>
@@ -85,8 +85,8 @@
 {% if settings.notice %}
 <section class="band" style="padding:clamp(0px,1vw,14px) 0">
   <div class="wrap3">
-    <div class="chalk3 rv">
-      <span class="chalk3__pin">✦</span>
+    <div class="chalk3 rv unfold">
+      <span class="chalk3__pin" aria-hidden="true">✦</span>
       <div class="chalk3__b">
         <p class="chalk3__k">今日小黑板 · Note</p>
         <p class="chalk3__t">{{ settings.notice }}</p>
@@ -141,6 +141,71 @@
     </div>
   </div>
 </section>
+
+{# ============ 热玩本 / 新本首车（hotScripts / newScripts 两栏聚合） ============ #}
+{% if (hotScripts and hotScripts|length) or (newScripts and newScripts|length) %}
+<section class="dsec">
+  <div class="wrap3">
+    <header class="dsec__head rv">
+      <span class="dsec__no">★</span>
+      <h2 class="dsec__title">这周在玩什么</h2>
+      <p class="dsec__meta">热玩本 · 新本首车</p>
+      <span class="dsec__rule"></span>
+    </header>
+
+    <div class="split3">
+      <div>
+        <p class="sidehead3">01 / 热玩本<span class="line"></span></p>
+        {% if hotScripts %}
+        <div class="mason3">
+          {% for s in hotScripts[:6] %}
+          <article class="pcard3 rv" style="--i:{{ loop.index0 }}">
+            <a class="pcard3__cover" href="{{ url_for('public.script_detail', sid=s.id) }}">
+              {% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}" loading="lazy">
+              {% else %}{% include '_script_ph.html' %}{% endif %}
+              <span class="pcard3__type">{{ s.type or '剧本' }}</span>
+            </a>
+            <div class="pcard3__body">
+              <h3 class="pcard3__title"><a href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.title }}</a></h3>
+              <p class="pcard3__meta">{{ s.players or '人数待定' }} · 难度 {{ s.diff or 3 }}/5</p>
+              <div class="pcard3__foot">
+                <span class="pcard3__price">¥{{ s.price|int }}<span style="color:var(--d-ink-4);font-size:11px">/人</span></span>
+                <span class="tag3 tag3--accent">热玩</span>
+              </div>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}<p class="dsec__lead">还没有热玩本数据。</p>{% endif %}
+      </div>
+      <div>
+        <p class="sidehead3">02 / 新本首车<span class="line"></span></p>
+        {% if newScripts %}
+        <div class="mason3">
+          {% for s in newScripts[:6] %}
+          <article class="pcard3 rv" style="--i:{{ loop.index0 }}">
+            <a class="pcard3__cover" href="{{ url_for('public.script_detail', sid=s.id) }}">
+              {% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}" loading="lazy">
+              {% else %}{% include '_script_ph.html' %}{% endif %}
+              <span class="pcard3__type">{{ s.type or '剧本' }}</span>
+            </a>
+            <div class="pcard3__body">
+              <h3 class="pcard3__title"><a href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.title }}</a></h3>
+              <p class="pcard3__meta">{{ s.players or '人数待定' }} · 难度 {{ s.diff or 3 }}/5</p>
+              <div class="pcard3__foot">
+                <span class="pcard3__price">¥{{ s.price|int }}<span style="color:var(--d-ink-4);font-size:11px">/人</span></span>
+                <span class="tag3">新本首车</span>
+              </div>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}<p class="dsec__lead">最近没上新本。</p>{% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
 
 {# ============ 怎么玩：滚动分镜（Apple 式 sticky 叙事，抄 CSSDA 获奖站的"沉浸式滚动"） ============ #}
 <section class="how3" id="how" aria-label="怎么玩">
@@ -234,7 +299,7 @@
     <div class="empty3 rv">
       <p class="empty3__k">Now Empty</p>
       <h3 class="empty3__t">店长正在熬夜测本，马上就上！</h3>
-      <p class="empty3__p">店长正在熬夜测本，马上就上！</p>
+      <p class="empty3__p">点下面「看全部剧本」去本本墙先逛逛。</p>
     </div>
     {% endif %}
   </div>

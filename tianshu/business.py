@@ -5,13 +5,17 @@
 一条铁律：所有判断都在服务端。表单里传过来的数字只当"意向"，
 最后算出来多少以这里为准（以前有人改前端把 288 的本订成 1 块钱）。
 """
+import hashlib
 import os
+import re
 import secrets
+import threading
 import time
 
 from tianshu.db import db
 from tianshu.security import hash_password, verify_password
-from config import DEMO_CODE, IMG_DIR, MAX_IMG_BYTES, WEEK
+from config import DEMO_CODE, IMG_DIR, MAX_IMG_BYTES, PLAYER_TAGS, WEEK
+from tianshu._ttlcache import get_or_set
 
 # ---------------------------------------------------------------- 小工具
 def now_ms():
@@ -38,7 +42,6 @@ def age_bucket(age):
 
 def player_range(script):
     """「4-6人」→ (4, 6)"""
-    import re
     m = re.search(r'(\d+)\s*[-~到]\s*(\d+)', str(script.get('players') or ''))
     if m:
         return int(m.group(1)), int(m.group(2))
@@ -46,17 +49,31 @@ def player_range(script):
     return (int(m.group(1)), int(m.group(1))) if m else (1, 8)
 
 
+# get_settings() 的合并结果缓存：[settings.json 的 mtime, 合并后的 dict]
+# 每请求会被 context_processor / script_detail / car_deposit / mail_* / current_skin…调十几次，
+# 每次 dict(SETTINGS_DEFAULT)+update 是纯重复劳动。settings.json 几乎不变，按 mtime 命中即可。
+_settings_cache = [None, None]
+
+
 def get_settings():
     from config import SETTINGS_DEFAULT
+    p = db.path('settings')
+    try:
+        mt = os.path.getmtime(p)
+    except OSError:
+        mt = None
+    if _settings_cache[0] == mt and _settings_cache[1] is not None:
+        return _settings_cache[1]
     s = db.read('settings')
     out = dict(SETTINGS_DEFAULT)
     if isinstance(s, dict):
         out.update(s)
+    _settings_cache[0] = mt
+    _settings_cache[1] = out
     return out
 
 
 def clean(t, max_len=200):
-    import re
     return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', str(t or ''))[:max_len]
 
 
@@ -203,19 +220,87 @@ def ensure_invite(user):
 
 
 def public_profile(u):
-    """给外人看的资料：昵称/头像/性别/年龄段，没手机号"""
+    """给外人看的资料：昵称/头像/性别/年龄段/风格标签，没手机号"""
     p = u.get('profile') or {}
     return {'username': u.get('username', ''), 'role': role_of(u),
             'nick': p.get('nick') or u.get('username', ''), 'avatar': p.get('avatar') or '🎭',
-            'gender': p.get('gender') or '', 'ageBucket': age_bucket(p.get('age'))}
+            'gender': p.get('gender') or '', 'ageBucket': age_bucket(p.get('age')),
+            'tags': list(p.get('tags') or [])}
+
+
+def set_player_tags(user, tags):
+    """设置玩家风格标签（最多 3 个，只允许 PLAYER_TAGS 内的值）。
+
+    输入可能是列表、或逗号分隔的字符串（表单多选/逗号串都收）；清洗去重限 3 个写回 users.json。
+    """
+    if not user:
+        return False, '没登录'
+    if isinstance(tags, str):
+        tags = [t for t in re.split(r'[,，、]', tags)]
+    seen = []
+    for t in (tags or []):
+        t = clean(t, 12).strip()
+        if t and t in PLAYER_TAGS and t not in seen:
+            seen.append(t)
+    seen = seen[:3]
+    users = db.rows('users')
+    for x in users:
+        if str(x.get('phone')) == str(user.get('phone')):
+            prof = x.get('profile') or {}
+            prof['tags'] = seen
+            x['profile'] = prof
+    db.write('users', users)
+    if seen:
+        return True, '风格标签存好了（%s）' % '、'.join(seen)
+    return True, '风格标签已清空'
 
 
 # ---------------------------------------------------------------- 通知 / 日志
-def notify(phone, title, text, kind='system'):
-    """站内通知（顶栏那个小铃铛的红点就是它）"""
+def _req_g():
+    """当前请求的 flask.g（不在请求上下文时返回 None，如自检/启动脚本直接调函数）"""
+    try:
+        from flask import g, has_request_context
+        return g if has_request_context() else None
+    except Exception:
+        return None
+
+
+def notify(phone, title, text, kind='system', key=None):
+    """站内通知（顶栏那个小铃铛的红点就是它）
+
+    性能：一次预约动作会 notify(客人) + notify_staff(员工们) = N 次整份重写 notices.json（~150KB）。
+    这里改成"请求级缓冲"：先攒在 flask.g 上，由 __init__ 的 teardown_request 一次性落盘。
+    不在请求上下文（自检/启动）时保持原行为，直接写。
+
+    key（可选，M8 去重）：同 key 已有**未读**通知（含本次请求缓冲里还没落盘的）就跳过不发，
+    避免打开通知中心、重复核销等场景把同一条提醒刷成好几条。"""
+    g = _req_g()
+    if key:
+        # ① 请求缓冲内查重：同一请求里可能已经 notify 过同 key（还没落盘）
+        buf = getattr(g, '_notify_buf', None) if g is not None else None
+        if buf:
+            for r in buf:
+                if r.get('key') == key and str(phone) in [str(p) for p in r.get('to') or []]:
+                    return
+        # ② 已落库的未读通知查重
+        for n in db.rows('notices'):
+            if n.get('key') != key:
+                continue
+            if str(phone) in [str(x) for x in n.get('readBy') or []]:
+                continue                       # 已读的不算，允许重发
+            if (not n.get('to')) or str(phone) in [str(p) for p in n.get('to') or []]:
+                return
+    row = {'id': now_ms() + secrets.randbelow(1000), 'title': title, 'text': text,
+           'at': now_ms(), 'to': [phone], 'kind': kind, 'readBy': []}
+    if key:
+        row['key'] = key
+    if g is not None:
+        if not hasattr(g, '_notify_buf'):
+            g._notify_buf = []
+        g._notify_buf.append(row)
+        return
     rows = db.rows('notices')
-    rows.insert(0, {'id': now_ms() + secrets.randbelow(1000), 'title': title, 'text': text,
-                    'at': now_ms(), 'to': [phone], 'kind': kind, 'readBy': []})
+    rows.insert(0, row)
     db.write('notices', rows[:500])
 
 
@@ -227,19 +312,30 @@ def notify_staff(title, text, kind='system'):
             notify(u.get('phone'), title, text, kind)
 
 
+def flush_notices():
+    """teardown_request 调：把本次请求攒下的通知合并成一次写盘。无请求上下文/无缓冲则什么都不做。"""
+    g = _req_g()
+    if g is None or not getattr(g, '_notify_buf', None):
+        return
+    rows = db.rows('notices')
+    # 原逻辑每条都是 insert(0)：先调的排在底下，反序前置才和逐条 insert 等价
+    for row in reversed(g._notify_buf):
+        rows.insert(0, row)
+    g._notify_buf = []
+    db.write('notices', rows[:500])
+
+
 def parse_day(s):
     """日历控件交上来的 '2026-09-30' → 当天 0 点的毫秒。填不成日期就返回 0"""
     try:
-        import time as _t
-        return int(_t.mktime(_t.strptime(str(s).strip(), '%Y-%m-%d')) * 1000)
+        return int(time.mktime(time.strptime(str(s).strip(), '%Y-%m-%d')) * 1000)
     except Exception:
         return 0
 
 
 def iso_day(offset=0):
     """今天 +offset 天的 'YYYY-MM-DD'（日历控件的 min / max / 默认值都用它）"""
-    import time as _t
-    return _t.strftime('%Y-%m-%d', _t.localtime((midnight() + offset * 86400000) / 1000))
+    return time.strftime('%Y-%m-%d', time.localtime((midnight() + offset * 86400000) / 1000))
 
 
 def car_deposit(st=None):
@@ -261,14 +357,66 @@ def deposit_per_person(st=None):
 
 
 def audit(who, role_name, text):
-    """操作日志：谁在什么时候干了什么。后台「日志」页能看到"""
+    """操作日志：谁在什么时候干了什么。后台「日志」页能看到
+
+    和 notify 一样做请求级缓冲：一个动作常连带好几条 audit（登录/下单/核销），
+    合并成一次写 logs.json。"""
+    row = {'id': now_ms(), 'by': who or '系统', 'role': role_name or 'user',
+           'text': text, 'at': now_ms()}
+    g = _req_g()
+    if g is not None:
+        if not hasattr(g, '_audit_buf'):
+            g._audit_buf = []
+        g._audit_buf.append(row)
+        return
     rows = db.rows('logs')
-    rows.insert(0, {'id': now_ms(), 'by': who or '系统', 'role': role_name or 'user',
-                    'text': text, 'at': now_ms()})
+    rows.insert(0, row)
     db.write('logs', rows[:500])
 
 
+def flush_logs():
+    """teardown_request 调：把本次请求攒下的日志合并成一次写盘。"""
+    g = _req_g()
+    if g is None or not getattr(g, '_audit_buf', None):
+        return
+    rows = db.rows('logs')
+    for row in reversed(g._audit_buf):
+        rows.insert(0, row)
+    g._audit_buf = []
+    db.write('logs', rows[:500])
+
+
+def reminder_scan(user):
+    """扫该用户「待开本」的预约，按开场远近自动发提醒（M8#157）。
+
+    - 距开场 0~1 小时：「稍后 X 点开《…》」（key=open-<bid>-h1）
+    - 距开场 23~25 小时：「明天 X 点开《…》」（key=open-<bid>-d1）
+    key 去重：同一窗口只发一次，已读可重发。打开通知中心时由 my_notices 顺手调一次。"""
+    if not user:
+        return
+    phone = str(user.get('phone'))
+    now = now_ms()
+    for b in db.rows('bookings'):
+        if str(b.get('phone')) != phone or b.get('status') != 'booked':
+            continue
+        ts = int(b.get('ts') or 0)
+        if ts <= now:
+            continue
+        hours = (ts - now) / 3600000
+        bid = b.get('id')
+        title = b.get('title') or ''
+        tm = b.get('time') or ''
+        if 0 < hours <= 1:
+            notify(phone, '开场提醒', '稍后 %s 点开《%s》，别迟到哈～' % (tm, title),
+                   kind='remind', key='open-%s-h1' % bid)
+        elif 23 < hours <= 25:
+            notify(phone, '明天开场', '明天 %s 点开《%s》，记得安排好时间' % (tm, title),
+                   kind='remind', key='open-%s-d1' % bid)
+
+
 def my_notices(user, limit=30):
+    # 打开通知中心时顺手扫一遍待开本预约，自动补发开场提醒（reminder_scan 内部 key 去重）
+    reminder_scan(user)
     phone = str(user.get('phone'))
     rows = [n for n in db.rows('notices') if not n.get('to') or phone in [str(p) for p in n.get('to') or []]]
     return rows[:limit]
@@ -314,25 +462,40 @@ def adjust_credit(phone, delta, reason, who='系统'):
 
 
 # ---------------------------------------------------------------- 拼车
-def car_pool(me_phone=''):
-    """拼车大厅：车主 + 已上车的人（对外只给昵称/性别/年龄段）"""
+def _car_pool_base():
+    """一次遍历 bookings 同时挑出"车主车"和"同组 mates"，消除原来车主车×全表的 O(N²)。
+
+    返回的每辆车带一个内部字段 '_phones'（车主+mates 的手机号），仅供 car_pool() 判断
+    "这辆车是不是我的"用；对外输出时会剥掉。结果按 15 秒 TTL 缓存（拼车状态秒级不变）。
+    """
     bookings = db.rows('bookings')
     users = {str(u.get('phone')): u for u in db.rows('users')}
-    today0 = int(time.mktime(time.strptime(time.strftime('%Y-%m-%d'), '%Y-%m-%d'))) * 1000
-    out = []
+    scripts = {str(s.get('id')): s for s in db.rows('scripts')}   # sid→剧本（难度/人数串）
+    today0 = midnight()
+    now = now_ms()
+    owners = []
+    mates_bucket = {}
     for ob in bookings:
-        if not (ob.get('carNew') is True and ob.get('status') == 'booked' and (ob.get('ts') or 0) >= today0):
-            continue
-        mates = [b for b in bookings if not b.get('carNew') and b.get('carOwner') == ob.get('username')
-                 and b.get('sid') == ob.get('sid') and b.get('ts') == ob.get('ts')
-                 and b.get('time') == ob.get('time') and b.get('status') != 'cancelled']
+        if ob.get('carNew') is True and ob.get('status') == 'booked' and (ob.get('ts') or 0) >= today0:
+            owners.append(ob)
+        elif not ob.get('carNew') and ob.get('carOwner') and ob.get('status') != 'cancelled':
+            k = (ob.get('carOwner'), ob.get('sid'), ob.get('ts'), ob.get('time'))
+            mates_bucket.setdefault(k, []).append(ob)
+    out = []
+    for ob in owners:
+        k = (ob.get('username'), ob.get('sid'), ob.get('ts'), ob.get('time'))
+        mates = mates_bucket.get(k, [])
         joined = (ob.get('players') or 1) + sum((b.get('players') or 1) for b in mates)
         members = []
+        phone_set = [ob.get('phone')] + [b.get('phone') for b in mates]
         for b in [ob] + mates:
             p = users.get(str(b.get('phone')), {}).get('profile') or {}
             members.append({'nick': b.get('username') or '玩家', 'gender': p.get('gender') or '',
                             'ageBucket': age_bucket(p.get('age')), 'players': b.get('players') or 1,
-                            'owner': bool(b.get('carNew'))})
+                            'owner': bool(b.get('carNew')),
+                            'tags': list(p.get('tags') or [])})
+        sc = scripts.get(str(ob.get('sid')), {})
+        deadline = int(ob.get('carDeadline') or 0)
         out.append({'id': ob.get('id'), 'sid': ob.get('sid'), 'title': ob.get('title'),
                     'emoji': ob.get('emoji') or '🎭', 'ts': ob.get('ts'), 'day': ob.get('day') or day_label(ob.get('ts')),
                     'time': ob.get('time'), 'owner': ob.get('username') or '玩家',
@@ -343,8 +506,43 @@ def car_pool(me_phone=''):
                     # 满没满看的是**车主设的车上限 carCap**（不是剧本人数 cap）——
                     # 之前这里读了另一个字段，结果 6/6 的车也算"有位"，客人点进去才发现上不去
                     'full': joined >= (ob.get('carCap') or 8), 'members': members,
-                    'mine': bool(me_phone and any(str(b.get('phone')) == str(me_phone) for b in [ob] + mates))})
+                    # 车主车队扩展（M1#3/#5/#6）：截止倒计时 / 提前截止 / 补满 / 剧本难度与人数串
+                    'deadline': deadline,
+                    'deadlineIn': max(0, deadline - now),
+                    'closed': bool(ob.get('carClosed')),
+                    'filled': bool(ob.get('carFilled')),
+                    'scriptDiff': sc.get('diff') or 0,
+                    'scriptPlayers': sc.get('players') or '',
+                    '_phones': [str(p) for p in phone_set if p]})
     return sorted(out, key=lambda c: (c.get('ts') or 0, str(c.get('time'))))
+
+
+def car_pool(me_phone=''):
+    """拼车大厅：车主 + 已上车的人（对外只给昵称/性别/年龄段）
+
+    基础分组结果 15 秒 TTL 缓存；'mine' 标记按当前请求的 me_phone 现算（不能缓存，因人而异）。
+    likeCount/likeMind 也按 me_phone 现算：排除自己后，成员 tags ∩ 我的 tags 的人数。"""
+    base = get_or_set('car_pool', 15, _car_pool_base)
+    me_tags = set()
+    if me_phone:
+        me = db.one('users', phone=str(me_phone))
+        me_tags = set(((me or {}).get('profile') or {}).get('tags') or [])
+    out = []
+    for c in base:
+        c2 = {k: v for k, v in c.items() if k != '_phones'}
+        c2['mine'] = bool(me_phone and str(me_phone) in c['_phones'])
+        # 口味相投：成员里标签和我有交集的人数（扣掉我自己）
+        like = 0
+        if me_tags:
+            for m in c2.get('members') or []:
+                if set(m.get('tags') or []) & me_tags:
+                    like += 1
+            if c2['mine']:
+                like -= 1                       # 我自己和我自己必然相交，扣掉
+        c2['likeCount'] = max(0, like)
+        c2['likeMind'] = c2['likeCount'] > 0
+        out.append(c2)
+    return out
 
 
 def car_msgs(car_id, limit=50):
@@ -354,24 +552,31 @@ def car_msgs(car_id, limit=50):
 
 
 def my_cars(me_phone):
-    """我所在的车队 id（模板里判断按钮显示用）"""
+    """我所在的车队 id（模板里判断按钮显示用）
+
+    原来循环里每条预约都 db.one('users', username=...)（O(用户)）+ 再全表扫车主车（O(预约)），
+    这里一次建好 username→用户 和 (车主, sid, ts)→车主车 两张表，循环内 O(1) 查。"""
+    bookings = db.rows('bookings')
+    users = {str(u.get('username')): u for u in db.rows('users')}
+    owner_cars = {}
+    for x in bookings:
+        if x.get('carNew') and x.get('username'):
+            owner_cars[(str(x.get('username')), str(x.get('sid')), x.get('ts'))] = x.get('id')
     out = set()
-    for b in db.rows('bookings'):
+    for b in bookings:
         if str(b.get('phone')) == str(me_phone) and b.get('status') == 'booked':
             out.add(str(b.get('id')))
             if b.get('carOwner'):
-                owner = db.one('users', username=b.get('carOwner'))
-                if owner:
-                    ob = next((x for x in db.rows('bookings') if x.get('carNew') and x.get('username') == b.get('carOwner')
-                               and x.get('sid') == b.get('sid') and x.get('ts') == b.get('ts')), None)
-                    if ob:
-                        out.add(str(ob.get('id')))
+                if str(b.get('carOwner')) not in users:
+                    continue
+                ob_id = owner_cars.get((str(b.get('carOwner')), str(b.get('sid')), b.get('ts')))
+                if ob_id:
+                    out.add(str(ob_id))
     return out
 
 
 # ---------------------------------------------------------------- 统计
-def stats():
-    """首页/后台要用的几个数字"""
+def _stats_uncached():
     bookings, pays, reviews = db.rows('bookings'), db.rows('pays'), db.rows('reviews')
     ok_bk = [b for b in bookings if b.get('status') != 'cancelled']
     by_script = {}
@@ -391,6 +596,14 @@ def stats():
             'hot': sorted(by_script.items(), key=lambda kv: -kv[1]['plays'])[:6]}
 
 
+def stats():
+    """首页/后台要用的几个数字。
+
+    原来每次都全表扫 bookings+pays+reviews 重算，而首页→剧本库→详情会连算 3 遍。
+    加 60 秒进程内 TTL：数据秒级不变，写 bookings/pays/reviews 后最长 60s 才刷新，可接受。"""
+    return get_or_set('stats', 60, _stats_uncached)
+
+
 def midnight(ts=None):
     """某一天的 0 点（毫秒）—— 算"今天"都用它，别在各处重复写一遍"""
     base = time.localtime((ts or now_ms()) / 1000)
@@ -398,13 +611,24 @@ def midnight(ts=None):
 
 
 def sessions_of(ts):
-    """某天的场次，带上已报人数和余位"""
+    """某天的场次，带上已报人数和余位。
+
+    原来对当天每场都全表扫一遍 bookings（M 场 × B 预约 = M×B，周视图 ×7 天更明显）。
+    这里先按 sessionId 一次聚合 bookings 成 joined_map，再 O(1) 赋值。
+    返回 dict(s, ...) 副本：不再原地改 db 缓存里的 session 对象（AUD-B-0041）。"""
     rows = [s for s in db.rows('sessions') if s.get('ts') == ts and s.get('status') != 'cancelled']
+    joined_map = {}
+    for b in db.rows('bookings'):
+        if b.get('status') == 'cancelled':
+            continue
+        sid = b.get('sessionId')
+        if sid:
+            joined_map[sid] = joined_map.get(sid, 0) + (b.get('players') or 1)
+    out = []
     for s in rows:
-        s['joined'] = sum((b.get('players') or 1) for b in db.rows('bookings')
-                          if b.get('sessionId') == s.get('id') and b.get('status') != 'cancelled')
-        s['left'] = max(0, (s.get('cap') or 99) - s['joined'])
-    return sorted(rows, key=lambda x: str(x.get('time')))
+        j = joined_map.get(s.get('id'), 0)
+        out.append(dict(s, joined=j, left=max(0, (s.get('cap') or 99) - j)))
+    return sorted(out, key=lambda x: str(x.get('time')))
 
 
 def today_sessions():
@@ -498,7 +722,7 @@ def dm_level(st):
     return tier
 
 
-def dm_growth(phone):
+def _dm_growth_uncached(phone):
     """一个 DM 的成长档案（老版 dmGrowth 的 Python 版）
 
     带本量 = 排在他名下的场次 + 客人点名他的单（去重前的条数，跟结算口径一致）
@@ -532,6 +756,12 @@ def dm_growth(phone):
     st['next'] = next((t for t in DM_TIERS if t['need'] > st['done']), None)
     st['toNext'] = (st['next']['need'] - st['done']) if st['next'] else 0
     return st
+
+
+def dm_growth(phone):
+    """一个 DM 的成长档案。后台 growth 页对每个 DM 调一次、DM 工作台/公开主页也调，
+    每次都全扫 sessions+bookings+reviews+scripts。按 phone 加 60 秒 TTL。"""
+    return get_or_set(('dm_growth', str(phone)), 60, lambda: _dm_growth_uncached(phone))
 
 
 def dm_customers_of(phone):
@@ -835,7 +1065,6 @@ def mail_from_name(st=None):
     ⚠️ 必须掐掉换行/制表：邮件头里一旦能塞进 \\r\\n，就能伪造出别的头（**头注入**）。
     这个值只有店主能填，但发信是最不该图省事的地方 —— clean() 不删 \\r\\n\\t，所以这里单独删。
     """
-    import re
     st = st or get_settings()
     return re.sub(r'[\r\n\t]+', ' ', str(st.get('mailFromName') or '')).strip()[:40]
 
@@ -980,13 +1209,24 @@ def send_code(email, purpose):
                 '5 分钟内有效，请别转发给别人。\n'
                 '如果不是你本人操作，忽略这封邮件就行。\n\n'
                 '—— %s' % (code, shop))
-        ok, err = send_mail(to, subject, body, st, code=code)
-        print('[验证码] 发往 %s（%s）：%s  →  %s（通道 %s）'
-              % (to, purpose, code, '已发送' if ok else '发送失败', mail_provider(st) or '未配置'))
-        return code, ok, err
+        # 验证码已落库（codes.json）。真正发邮件可能要等 Resend/SMTP 往返（可达 15s），
+        # 不该让用户和 waitress 工作线程干等 —— 丢进 daemon 线程发，接口立即返回。
+        threading.Thread(target=_send_code_async,
+                         args=(to, purpose, subject, body, st, code), daemon=True).start()
+        return code, True, ''
     print('[验证码] %s（%s）：%s%s'
           % (to, purpose, code, ('    也可以直接用 %s' % DEMO_CODE) if is_dev_request() else ''))
     return code, False, '还没配置发信通道'
+
+
+def _send_code_async(to, purpose, subject, body, st, code):
+    """后台线程里发验证码邮件：失败只打日志，不影响用户拿码（码已落库）。"""
+    try:
+        ok, err = send_mail(to, subject, body, st, code=code)
+        print('[验证码] 发往 %s（%s）：%s  →  %s（通道 %s）'
+              % (to, purpose, code, '已发送' if ok else '发送失败：%s' % err, mail_provider(st) or '未配置'))
+    except Exception as e:
+        print('[验证码] 后台发信异常（码已落库）：%s: %s' % (type(e).__name__, e))
 
 
 def is_dev_request():
@@ -1138,10 +1378,18 @@ def my_messages(user, limit=20):
                   key=lambda x: -(x.get('createdAt') or 0))[:limit]
 
 
-def community_posts(limit=60, me_phone=''):
+def community_posts(limit=60, me_phone='', ftype='', ftopic=''):
     """社区帖子，顺便标出"我点过赞没"（模板里好显示）。
-    同时把发帖人头像/昵称带出来，社区页能显示头像。"""
-    rows = sorted(db.rows('posts'), key=lambda x: -(x.get('at') or 0))[:limit]
+    同时把发帖人头像/昵称带出来，社区页能显示头像。
+
+    ftype / ftopic（M7，默认 ''=不过滤）：按 postType（如 'recruit'）/ topic（情感/硬核…）过滤。
+    先按时间倒序排，再过滤，最后截断 limit —— 保证拿到的是最新的匹配帖。"""
+    rows = sorted(db.rows('posts'), key=lambda x: -(x.get('at') or 0))
+    if ftype:
+        rows = [p for p in rows if (p.get('postType') or '') == ftype]
+    if ftopic:
+        rows = [p for p in rows if (p.get('topic') or '') == ftopic]
+    rows = rows[:limit]
     users = {str(u.get('phone')): u for u in db.rows('users')}
     for p in rows:
         likes = [str(x) for x in p.get('likes') or []]
@@ -1154,19 +1402,242 @@ def community_posts(limit=60, me_phone=''):
     return rows
 
 
-def reviews_of(sid=None, only_visible=True):
+def reviews_of(sid=None, only_visible=True, limit=None):
     rows = db.rows('reviews')
     if sid is not None:
         rows = [r for r in rows if str(r.get('sid')) == str(sid)]
     if only_visible:
         rows = [r for r in rows if not r.get('hidden')]
+    # 先按时间倒序，再截断 limit：首页只要最近几条，不必给全部评价建昵称/头像
+    rows = sorted(rows, key=lambda x: -(x.get('createdAt') or 0))
+    if limit:
+        rows = rows[:limit]
     users = {str(u.get('username')): u for u in db.rows('users')}
     for r in rows:
         author = users.get(str(r.get('username') or ''))
         profile = (author or {}).get('profile') or {}
         r['avatar'] = profile.get('avatar') or ''
         r['nick'] = profile.get('nick') or r.get('username') or '玩家'
-    return sorted(rows, key=lambda x: -(x.get('createdAt') or 0))
+    return rows
+
+
+# ---------------------------------------------------------------- 话术库（M7）
+TALKTIP_CATS = ('开场白', '过渡', '结尾', '其他')
+
+
+def talktips(cat=''):
+    """DM/门店维护的开本话术库，按时间倒序；cat 给定时只看该分类。数据文件 talktips.json，cap 300。"""
+    rows = db.rows('talktips')
+    if cat:
+        rows = [t for t in rows if (t.get('cat') or '') == cat]
+    return sorted(rows, key=lambda x: -(x.get('at') or 0))
+
+
+def talktip_add(user, cat, title, text):
+    """新增一条话术。DM / 管理员才能加；cat 限定四类，title/text clean 限长。"""
+    if not has_role(user, 'dm', 'admin'):
+        return False, '只有 DM / 管理员能维护话术库'
+    cat = clean(cat, 10).strip()
+    if cat not in TALKTIP_CATS:
+        return False, '分类只能是：%s' % ' / '.join(TALKTIP_CATS)
+    title = clean(title, 40).strip()
+    text = clean(text, 500).strip()
+    if not title or not text:
+        return False, '标题和正文都要填'
+    db.update('talktips', lambda rows: rows + [{
+        'id': now_ms(), 'cat': cat, 'title': title, 'text': text,
+        'by': (user or {}).get('username') or '', 'phone': (user or {}).get('phone') or '',
+        'at': now_ms()}], 300)
+    return True, '话术已收录'
+
+
+def talktip_del(user, tip_id):
+    """删一条话术：作者本人 或 管理员。"""
+    rows = db.rows('talktips')
+    hit = next((t for t in rows if str(t.get('id')) == str(tip_id)), None)
+    if not hit:
+        return False, '没这条话术'
+    is_author = bool(user) and str(hit.get('phone')) == str(user.get('phone'))
+    if not (is_author or has_role(user, 'admin')):
+        return False, '只有作者本人或管理员能删'
+    rows = [t for t in rows if str(t.get('id')) != str(tip_id)]
+    db.write('talktips', rows)
+    return True, '已删除'
+
+
+# ---------------------------------------------------------------- 发票（M8#155）
+def invoice_apply(user, oid, form):
+    """申请开票：订单必须 paid 且属于本人；同一订单只能申请一次。
+
+    company/taxId/email 做 clean 限长。写 invoices.json（rows，cap 300）。"""
+    if not user:
+        return False, '没登录'
+    order = next((o for o in db.rows('pays') if str(o.get('id')) == str(oid)), None)
+    if not order:
+        return False, '订单不存在'
+    if str(order.get('phone')) != str(user.get('phone')):
+        return False, '这不是你的订单'
+    if order.get('status') != 'paid':
+        return False, '只有已支付的订单才能申请开票'
+    rows = db.rows('invoices')
+    if any(str(x.get('oid')) == str(oid) for x in rows):
+        return False, '这单已经申请过发票了，别重复提交'
+    rec = {'id': now_ms(), 'oid': order.get('id'), 'phone': order.get('phone'),
+           'username': order.get('username') or user.get('username'),
+           'title': order.get('title') or '', 'day': order.get('day') or '',
+           'time': order.get('time') or '', 'amount': order.get('amount') or 0,
+           'company': clean(form.get('company'), 80),
+           'taxId': clean(form.get('taxId'), 40),
+           'email': clean(form.get('email'), 80),
+           'status': 'pending', 'at': now_ms(), 'doneAt': 0, 'by': ''}
+    db.update('invoices', lambda r: r + [rec], 300)
+    return True, '开票申请已提交，开好会通知你'
+
+
+def invoices_list(status=''):
+    """发票申请列表，按时间倒序；status 给定时只看 pending/done。"""
+    rows = db.rows('invoices')
+    if status:
+        rows = [x for x in rows if (x.get('status') or 'pending') == status]
+    return sorted(rows, key=lambda x: -(x.get('at') or 0))
+
+
+def invoice_mark_done(iid, by):
+    """门店标记发票已开。"""
+    rows = db.rows('invoices')
+    hit = next((x for x in rows if str(x.get('id')) == str(iid)), None)
+    if not hit:
+        return False, '没这条申请'
+    if hit.get('status') == 'done':
+        return False, '这单已经开过了'
+    hit['status'] = 'done'
+    hit['doneAt'] = now_ms()
+    hit['by'] = clean(by, 40)
+    db.write('invoices', rows)
+    if hit.get('phone'):
+        notify(hit.get('phone'), '发票已开好',
+               '《%s》的发票已开，留意邮箱。' % (hit.get('title') or ''),
+               kind='pay', key='invoice-done-%s' % hit.get('id'))
+    return True, '已标记为已开'
+
+
+# ---------------------------------------------------------------- 访问埋点（M10）
+def _ip_hash(ip):
+    """IP 做 sha256 摘要：只存哈希不存原始 IP，拿不到具体是谁。"""
+    return hashlib.sha256(str(ip or '').strip().encode('utf-8')).hexdigest()
+
+
+def track_visit(ip, path):
+    """记一次页面访问。visits.json 是 dict 结构（不是 rows 数组）：
+    {'days': {day: {ipHash: {path: n}}}, 'updated': ms}。path 计数 +1。"""
+    path = clean(path or '/', 200) or '/'
+    day = iso_day(0)
+    data = db.read('visits')
+    if not isinstance(data, dict):
+        data = {}
+    days = data.setdefault('days', {})
+    d = days.setdefault(day, {})
+    h = d.setdefault(_ip_hash(ip), {})
+    h[path] = int(h.get(path) or 0) + 1
+    data['updated'] = now_ms()
+    db.write('visits', data)
+
+
+def visit_stats(days=7):
+    """近 N 天访问统计：今日 PV/UV、每日趋势、热门页面 top10。
+
+    PV = 页面浏览次数总和；UV = 去重 ipHash 数。只看 visits.json 里最近 days 天。"""
+    data = db.read('visits')
+    days_map = (data or {}).get('days') if isinstance(data, dict) else None
+    days_map = days_map or {}
+    today = iso_day(0)
+    # 最近 days 天的日期列表（含今天）
+    recent = [iso_day(-i) for i in range(days - 1, -1, -1)]
+    trend = []
+    top = {}
+    today_pv = today_uv = 0
+    for day in recent:
+        d = days_map.get(day) or {}
+        pv = uv = 0
+        for ip_hash, paths in d.items():
+            uv += 1
+            for p, n in (paths or {}).items():
+                n = int(n or 0)
+                pv += n
+                top[p] = top.get(p, 0) + n
+        trend.append({'day': day, 'pv': pv, 'uv': uv})
+        if day == today:
+            today_pv, today_uv = pv, uv
+    top10 = [{'path': p, 'n': n} for p, n in sorted(top.items(), key=lambda kv: -kv[1])[:10]]
+    return {'today': {'pv': today_pv, 'uv': today_uv}, 'trend': trend, 'top': top10}
+
+
+# ---------------------------------------------------------------- 收藏分组（M10#172）
+FAV_GROUPS = ('want', 'done', 'avoid')
+
+
+def _fav_rec(rows, phone):
+    return next((r for r in rows if str(r.get('phone')) == str(phone)), None)
+
+
+def fav_groups(user):
+    """取我的收藏分组 {'want':[],'done':[],'avoid':[]}。
+
+    老数据只有 sids（=想玩）；第一次访问时把 sids 迁移进 groups.want 并写回一次。
+    旧 sids 字段保留为兼容（=want），视图层 my_fav_ids 仍读它。"""
+    if not user:
+        return {'want': [], 'done': [], 'avoid': []}
+    phone = str(user.get('phone'))
+    rows = db.rows('favs')
+    rec = _fav_rec(rows, phone)
+    if rec is None:
+        return {'want': [], 'done': [], 'avoid': []}
+    if not isinstance(rec.get('groups'), dict):
+        old_sids = [str(x) for x in (rec.get('sids') or [])]
+        rec['groups'] = {'want': old_sids, 'done': [], 'avoid': []}
+        db.write('favs', rows)
+    g = rec['groups']
+    return {'want': [str(x) for x in g.get('want') or []],
+            'done': [str(x) for x in g.get('done') or []],
+            'avoid': [str(x) for x in g.get('avoid') or []]}
+
+
+def fav_set(user, sid, group, on):
+    """把某个剧本加入/移出指定分组（want|done|avoid）。on=True 加入，False 移出。
+
+    加入 want 时同步写回兼容字段 sids（=want），移出 want 时从 sids 删除，
+    这样老的 my_fav_ids / 视图不用改也照常工作。"""
+    if not user:
+        return False, '没登录'
+    group = str(group or 'want')
+    if group not in FAV_GROUPS:
+        return False, '分组只能是 want / done / avoid'
+    sid = str(sid)
+    rows = db.rows('favs')
+    rec = _fav_rec(rows, str(user.get('phone')))
+    if rec is None:
+        rec = {'phone': str(user.get('phone')), 'sids': [],
+               'groups': {'want': [], 'done': [], 'avoid': []}}
+        rows.append(rec)
+    if not isinstance(rec.get('groups'), dict):
+        rec['groups'] = {'want': [str(x) for x in (rec.get('sids') or [])], 'done': [], 'avoid': []}
+    g = rec['groups']
+    g.setdefault('want', [])
+    g.setdefault('done', [])
+    g.setdefault('avoid', [])
+    lst = [str(x) for x in g[group]]
+    if on:
+        if sid not in lst:
+            lst.append(sid)
+    else:
+        lst = [x for x in lst if x != sid]
+    g[group] = lst
+    # 兼容：sids 始终等于 want
+    rec['sids'] = list(g['want'])
+    db.write('favs', rows)
+    if on:
+        return True, '已加入%s' % group
+    return True, '已移出%s' % group
 
 
 # ---------------------------------------------------------------- 下单 ★
@@ -1259,6 +1730,16 @@ def create_booking(user, form):
         used = min(int(user.get('balance') or 0), deposit)
 
     bid = now_ms() + secrets.randbelow(90)
+    # 车主新开拼车：开团即开始倒计时（默认 settings.carDeadlineHours 小时；表单给 carDeadlineHours 则用它）
+    _new_car = (mode == '拼车' and not join_car)
+    if _new_car:
+        try:
+            _dh = int(form.get('carDeadlineHours') or st.get('carDeadlineHours') or 24)
+        except Exception:
+            _dh = int(st.get('carDeadlineHours') or 24)
+        car_deadline = now_ms() + _dh * 3600000
+    else:
+        car_deadline = 0
     booking = {'id': bid, 'phone': user.get('phone'), 'username': user.get('username'),
                'sid': sc.get('id'), 'title': sc.get('title'), 'emoji': sc.get('emoji') or '🎭',
                'day': day_label(ts), 'ts': ts, 'time': tm, 'players': players,
@@ -1271,6 +1752,8 @@ def create_booking(user, form):
                'carTags': (list(join_car.get('carTags') or []) if join_car
                            else [clean(t, 10) for t in form.getlist('carTags') if clean(t, 10)][:4]),
                'reserved': 0, 'sessionId': session_id,
+               # 车主车队状态（仅 carNew 车主车有意义；上车的 mate 车不挂倒计时）
+               'carDeadline': car_deadline, 'carClosed': False, 'carFilled': False,
                'dmPhone': (join_car.get('dmPhone') if join_car else clean(form.get('dmPhone'), 20)),
                'role': role,
                # 到店报这个码核销。**付定金并经小客服确认之前，客人自己看不到它**
@@ -1442,8 +1925,12 @@ def order_action(user, order_id, action, is_staff=False, reason='', coupon_id='0
             db.write('bookings', bookings)
             if not free and not is_staff and int(st['lateCancelPenalty']) > 0:
                 adjust_credit(order.get('phone'), -int(st['lateCancelPenalty']) * 10, '临期取消', '系统')
-        notify(order.get('phone'), '退款已处理' if free else '已取消',
-               ('《%s》定金 ¥%d 退给你了' % (order.get('title'), order.get('deposit'))) if free
+        # 退款进度通知（#150）：核验结论——refund 分支原本就有一条 kind='pay' 通知；
+        # 这里把免费退定金的文案明确为「已发起原路退回，1-3 工作日到账」，对齐 spec「退款已发起/已到账」。
+        # 本流程是单步原子退款（发起即处理），无需再拆两条通知。
+        notify(order.get('phone'), '退款已发起' if free else '已取消',
+               ('《%s》定金 ¥%d 已发起原路退回，1-3 个工作日到账，请留意。'
+                % (order.get('title'), order.get('deposit'))) if free
                else ('《%s》的预约取消了，超时定金不退' % order.get('title')), 'pay')
         return True, '已退款' if free else '已取消（超时定金不退）'
 
@@ -1599,10 +2086,91 @@ def car_action(user, car_id, action, form=None):
         pos = len([x for x in rows if x.get('carId') == car_id and x.get('status') == 'waiting'])
         return True, '排上候补了，第 %d 位，有空位就叫你' % pos
 
+    # ---- 车主车队状态：提前截止 / 标记补满 / 改截止时间（M1#5/#6/#9）----
+    # 权限统一：车主本人 或 门店员工（user._staff，后台代操作时传）
+    def _is_owner_or_staff():
+        return str(ob.get('phone')) == str(phone) or bool(user.get('_staff'))
+
+    if action == 'close':
+        if not _is_owner_or_staff():
+            return False, '只有车主能提前截止'
+        ob['carClosed'] = True
+        db.write('bookings', bookings)
+        for x in [ob] + mates():                       # 通知全体成员
+            if x.get('phone'):
+                notify(x.get('phone'), '这车提前截止了',
+                       '《%s》%s %s 提前截止拼车，不再加人了。' % (ob.get('title'), ob.get('day'), ob.get('time')),
+                       kind='car', key='carclosed-%s' % car_id)
+        # 候补队列里这台车的 waiting 行全部置 closed，并逐个通知
+        wrows = db.rows('wants')
+        touched = False
+        for w in wrows:
+            if w.get('carId') == car_id and w.get('status') == 'waiting':
+                w['status'] = 'closed'
+                touched = True
+                if w.get('phone'):
+                    notify(w.get('phone'), '这车截止了',
+                           '《%s》%s %s 截止拼车了，去看看别的车吧。' % (ob.get('title'), ob.get('day'), ob.get('time')),
+                           kind='car', key='carclosed-w-%s' % w.get('id'))
+        if touched:
+            db.write('wants', wrows)
+        return True, '已提前截止，通知了车上和候补的人'
+
+    if action == 'fill':
+        if not _is_owner_or_staff():
+            return False, '只有车主能标记补满'
+        ob['carFilled'] = True
+        db.write('bookings', bookings)
+        for x in [ob] + mates():
+            if x.get('phone'):
+                notify(x.get('phone'), '已标记补满',
+                       '《%s》%s %s 已补满，准备发车啦～' % (ob.get('title'), ob.get('day'), ob.get('time')),
+                       kind='car', key='carfilled-%s' % car_id)
+        return True, '已标记补满，通知车上成员准备发车'
+
+    if action == 'deadline':
+        if not _is_owner_or_staff():
+            return False, '只有车主能改截止时间'
+        try:
+            h = int(form.get('deadlineHours') or 0)
+        except Exception:
+            h = 0
+        if not (1 <= h <= 168):
+            return False, '截止时长要在 1~168 小时之间'
+        ob['carDeadline'] = now_ms() + h * 3600000
+        db.write('bookings', bookings)
+        return True, '已把拼车截止时间改成 %d 小时后' % h
+
     return False, '不认识这个操作'
 
 
 # ---------------------------------------------------------------- 到店核销 ★
+def _maybe_car_reward(phone):
+    """车主奖励（M1#7）：核销车主自己开的那一车时 carCount+1；
+    每开满 settings.carRewardThreshold 车就发一张 settings.carRewardValue 元券（180 天有效）。"""
+    st = get_settings()
+    threshold = int(st.get('carRewardThreshold') or 5)
+    value = int(st.get('carRewardValue') or 10)
+    users = db.rows('users')
+    me = next((u for u in users if str(u.get('phone')) == str(phone)), None)
+    if not me:
+        return
+    count = int(me.get('carCount') or 0) + 1
+    me['carCount'] = count
+    db.write('users', users)
+    if threshold > 0 and count % threshold == 0:
+        now = now_ms()
+        coupon = {'id': now + secrets.randbelow(90), 'phone': phone,
+                  # 既有核销逻辑读 amount；spec 契约字段为 value，两个都写以兼容
+                  'amount': value, 'value': value, 'minAmount': 0,
+                  'used': False, 'exp': now + 180 * 86400000, 'all': False,
+                  'note': '车主奖励', 'at': now}
+        db.update('coupons', lambda rows: rows + [coupon])
+        notify(phone, '车主奖励到账',
+               '你已经开满 %d 车啦，送你一张 ¥%d 抵扣券（180 天有效），下次玩本直接用～'
+               % (count, value), kind='pay', key='car-reward-%s-%d' % (phone, count))
+
+
 def verify_checkin(code, by_name):
     """客户报核销码，前台在这儿核销"""
     bookings = db.rows('bookings')
@@ -1612,8 +2180,15 @@ def verify_checkin(code, by_name):
         return False, '这个码查不到未核销的预约', None
     hit.update(status='arrived', arrivedAt=now_ms(), verifiedBy=by_name)
     db.write('bookings', bookings)
+    # 核销的是车主自己开的那一车 → 计一次车数，满阈值发车主奖励券
+    if hit.get('carNew') is True:
+        _maybe_car_reward(hit.get('phone'))
     notify(hit.get('phone'), '到店核销 ✅',
            '《%s》%s %s 核销完成，玩得开心～' % (hit.get('title'), hit.get('day'), hit.get('time')), 'verify')
+    # 玩完顺手邀请写短评（key=review-<bid> 天然去重，同一车只提醒一次）
+    notify(hit.get('phone'), '写个短评吧',
+           '《%s》刚开完，回「我的预约」给这场写条短评？' % (hit.get('title') or ''),
+           kind='review', key='review-%s' % hit.get('id'))
     audit(by_name, 'staff', '核销《%s》（码 %s）' % (hit.get('title'), code))
     return True, '核销成功：%s %s %s（%s 人）' % (hit.get('title'), hit.get('day'), hit.get('time'),
                                                 hit.get('players')), hit

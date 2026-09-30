@@ -300,11 +300,28 @@
 
     <h3>拼车与首页</h3>
     <div class="form-grid">
+      <div class="field"><label>车主奖励阈值（开满 N 车送券）</label>
+        <input name="carRewardThreshold" type="number" min="1" value="{{ settings.carRewardThreshold or 5 }}"></div>
+      <div class="field"><label>车主奖励券面额（元）</label>
+        <input name="carRewardValue" type="number" min="0" value="{{ settings.carRewardValue or 10 }}"></div>
+      <div class="field"><label>拼车倒计时默认（小时）</label>
+        <input name="carDeadlineHours" type="number" min="1" max="168" value="{{ settings.carDeadlineHours or 24 }}"></div>
       <div class="field full"><label>车队标签（逗号分隔）</label>
         <input name="carTags" value="{{ settings.carTags|join(',') }}"></div>
       <div class="field full"><label>首页轮播（一行一条：表情|标题|一句话|剧本id）</label>
         <textarea name="banners" rows="4">{% for b in (settings.banners or []) %}{{ b.emoji or '🎭' }}|{{ b.title or '' }}|{{ b.text or '' }}|{{ b.sid or 0 }}
 {% endfor %}</textarea></div>
+    </div>
+
+    <h3>外部触达（占位 · 未接入）</h3>
+    <p class="sub">以下两项依赖外部平台，目前<b>未接入</b>，站内通知兜底，只读展示。</p>
+    <div class="form-grid">
+      <div class="field"><label>微信订阅消息</label>
+        <input value="{% if settings.wechatSub %}已开启{% else %}未接入{% endif %}" readonly disabled>
+        <span class="sub">需微信公众平台模板消息权限，未接入，站内通知兜底。</span></div>
+      <div class="field"><label>短信通道</label>
+        <input value="{{ settings.smsGateway or '未接入' }}" readonly disabled>
+        <span class="sub">需短信服务商，未接入，邮件 + 站内通知兜底。</span></div>
     </div>
 
     <button class="btn btn-primary" type="submit">保存设置</button>

@@ -14,12 +14,13 @@
 """
 import os
 import re
+import secrets
 import time
 
 from flask import Blueprint, Response, current_app, jsonify, request
 from tianshu import business
 from tianshu.db import db
-from tianshu.security import current_user
+from tianshu.security import current_user, hash_password
 
 bp = Blueprint("mobile_site", __name__)
 
@@ -64,7 +65,27 @@ def _mask_phone(p):
     return (p[:3] + "****" + p[-4:]) if len(p) >= 7 else p
 
 
-def _norm_script(s):
+# 常见问题（§5.4，与桌面 faq.html 文案完全一致）
+_FAQ = [
+    {"q": "定金能退吗？",
+     "a": "开场前 24 小时以上取消全额退（临期按规则扣信用分），到店开演后定金原路退回/可抵尾款。"},
+    {"q": "能迟到吗？",
+     "a": "建议提前 10 分钟到；迟到会拖累整车开本，请提前在「我的预约」联系店家。"},
+    {"q": "几个人开？",
+     "a": "每个本有最低人数，拼车页会显示「还差 X 人」；不够人车主可提前截止或补满发车。"},
+    {"q": "怎么拼车？",
+     "a": "大厅看车 → 点「上车」交押位定金 → 小客服确认后出核销码；也可自己开一车等人。"},
+    {"q": "核销码哪来？",
+     "a": "定金确认到账后，「我的预约」里显示 6 位核销码，到店报码即可。"},
+    {"q": "改期规则？",
+     "a": "开场前可在「我的预约」申请改期，一次一改；改期后原定金随单走。"},
+]
+
+# 帖子话题白名单（与 spec §2.4 一致）
+_TOPICS = ("情感", "硬核", "恐怖", "欢乐")
+
+
+def _norm_script(s, rating=0):
     return {
         "id": s.get("id"),
         "emoji": s.get("emoji") or "🎭",
@@ -80,7 +101,21 @@ def _norm_script(s):
         "grad": s.get("grad") or _grad(s.get("id") or 0),
         "allowRolePick": bool(s.get("allowRolePick")),
         "roles": [r.get("name") for r in (s.get("roles") or []) if r.get("name")],
+        "rating": rating,
     }
+
+
+def _rating_map():
+    """sid → 平均评分（仅 visible）"""
+    acc = {}
+    for r in db.rows("reviews"):
+        if r.get("hidden"):
+            continue
+        k = str(r.get("sid"))
+        a = acc.setdefault(k, [0, 0])
+        a[0] += float(r.get("rating") or 0)
+        a[1] += 1
+    return {k: round(v[0] / v[1], 1) if v[1] else 0 for k, v in acc.items()}
 
 
 @bp.get("/m/api/scripts")
@@ -88,6 +123,7 @@ def api_scripts():
     q = (request.args.get("q") or "").strip().lower()
     tag = (request.args.get("tag") or "").strip()
     diff = (request.args.get("diff") or "").strip()
+    ratings = _rating_map()
     rows = []
     for s in db.rows("scripts"):
         if s.get("onSale") is False:
@@ -98,8 +134,42 @@ def api_scripts():
             continue
         if diff and str(s.get("diff")) != diff:
             continue
-        rows.append(_norm_script(s))
+        rows.append(_norm_script(s, ratings.get(str(s.get("id")), 0)))
     return jsonify(rows)
+
+
+@bp.get("/m/api/faq")
+def api_faq():
+    """常见问题（静态，与桌面 faq.html 一致，§5.4）"""
+    return jsonify({"items": _FAQ})
+
+
+@bp.post("/m/api/track")
+def api_track():
+    """页面访问埋点（只存 IP 的 sha256 摘要，不记任何用户信息）。
+    body: JSON {path}。对齐桌面 /api/track。"""
+    data = request.get_json(silent=True) or {}
+    path = business.clean(str(data.get("path") or "/"), 200) or "/"
+    business.track_visit(request.remote_addr or "", path)
+    return jsonify({"ok": True})
+
+
+@bp.get("/m/api/scripts/<int:sid>")
+def api_script_detail(sid):
+    """单个剧本全字段详情：sc 全字段 + 评分 + canSeeReview + roles（含 line/img）。
+    复盘 reviewDoc / 视频 videoUrl 由 T2 按 canSeeReview 决定是否展示。"""
+    sc = next((s for s in db.rows("scripts") if s.get("id") == sid), None)
+    if not sc:
+        return jsonify({"error": "没这个剧本"}), 404
+    u = current_user()
+    can_see = bool(u) and business.has_role(u, "dm", "admin")
+    by = (business.stats().get("byScript") or {}).get(str(sid)) or {}
+    out = dict(sc)
+    out["canSeeReview"] = can_see
+    out["rating"] = by.get("rating") or 0
+    out["rating_n"] = by.get("n") or 0
+    out["roles"] = sc.get("roles") or []
+    return jsonify(out)
 
 
 def _script_titles():
@@ -142,8 +212,29 @@ def api_cars():
     u = current_user()
     me_phone = u.get("phone") if u else ""
     users = {str(x.get("phone")): x for x in db.rows("users")}
+    # 多维筛选（与桌面 car 同口径，§3.1）：剧本名 q / 最低人数 players / 时段 time / 难度 diff(1-5)
+    f_q = (request.args.get("q") or "").strip().lower()
+    f_players = request.args.get("players")
+    f_time = (request.args.get("time") or "").strip()
+    f_diff = (request.args.get("diff") or "").strip()
+    try:
+        need_players = int(f_players) if f_players else 0
+    except (ValueError, TypeError):
+        need_players = 0
+    try:
+        want_diff = int(f_diff) if f_diff else 0
+    except (ValueError, TypeError):
+        want_diff = 0
     out = []
     for c in business.car_pool(me_phone):
+        if f_q and f_q not in str(c.get("title", "")).lower():
+            continue
+        if need_players and int(c.get("min") or 0) < need_players:
+            continue
+        if f_time and str(c.get("time") or "") != f_time:
+            continue
+        if want_diff and int(c.get("scriptDiff") or 0) != want_diff:
+            continue
         owner = users.get(str(c.get("owner"))) if c.get("owner") else None
         prof = (owner or {}).get("profile") or {}
         av = prof.get("avatar") or ((owner or {}).get("username") or "🎭")
@@ -158,15 +249,28 @@ def api_cars():
             "av": av,
             "script": c.get("title") or "剧本",
             "time": "%s %s" % (c.get("day") or "", c.get("time") or ""),
+            "day": c.get("day") or "",
+            "startTime": c.get("time") or "",
             "have": c.get("joined") or 0,
             "cap": c.get("cap") or 8,
+            "min": c.get("min") or 4,
             "need": c.get("need") or 0,
             "price": c.get("price") or 0,
             "tags": list(c.get("tags") or []),
-            "members": [m.get("nick") or "玩家" for m in (c.get("members") or [])][:8],
+            "members": [{"nick": m.get("nick") or "玩家", "tags": list(m.get("tags") or [])}
+                        for m in (c.get("members") or [])][:8],
             "note": note,
             "full": bool(c.get("full")),
             "mine": bool(c.get("mine")),
+            # 车队扩展字段（M1，数据层已算好，直接透传）
+            "deadline": c.get("deadline") or 0,
+            "deadlineIn": c.get("deadlineIn") or 0,
+            "closed": bool(c.get("closed")),
+            "filled": bool(c.get("filled")),
+            "scriptDiff": c.get("scriptDiff") or 0,
+            "scriptPlayers": c.get("scriptPlayers") or "",
+            "likeMind": bool(c.get("likeMind")),
+            "likeCount": c.get("likeCount") or 0,
         })
     return jsonify(out)
 
@@ -176,12 +280,15 @@ def api_me():
     u = current_user()
     if not u:
         return jsonify({"guest": True})
+    u = business.ensure_invite(u)   # 老账号补邀请码（对齐桌面 /me，AUD-G-0069）
     phone = u.get("phone") or ""
     prof = u.get("profile") or {}
-    bookings = [b for b in db.rows("bookings")
+    all_bookings = db.rows("bookings")
+    all_pays = db.rows("pays")
+    bookings = [b for b in all_bookings
                 if str(b.get("phone")) == str(phone) and b.get("status") != "cancelled"]
     reviews = [r for r in db.rows("reviews") if r.get("username") == u.get("username")]
-    spent = sum(int(p.get("deposit") or 0) for p in db.rows("pays")
+    spent = sum(int(p.get("deposit") or 0) for p in all_pays
                 if str(p.get("phone")) == str(phone) and p.get("status") == "paid")
     avatar = prof.get("avatar") or u.get("username") or "🦋"
     if not (str(avatar).startswith("/img/") or str(avatar).startswith("http")):
@@ -191,16 +298,26 @@ def api_me():
     recs = []
     _titles = {str(x.get("id")): x.get("title") for x in db.rows("scripts")}
     _stmap = {"booked": "待开演", "arrived": "已入场", "done": "已结束", "cancelled": "已取消"}
-    pays = db.rows("pays")
+    # 原来每条预约都 next() 全表扫 pays（M×P）、any() 全表扫 my_reviews（M×R）。
+    # 这里一次建好 bid→订单 和 sid→最近评论时间 两张表，循环内 O(1) 查（AUD-B-0018/0022）。
+    pay_by_bid = {}
+    for p in all_pays:
+        if p.get("bid") is not None:
+            pay_by_bid.setdefault(str(p.get("bid")), p)
     my_reviews = [r for r in db.rows("reviews") if r.get("username") == u.get("username")]
-    for b in db.rows("bookings"):
+    review_time_by_sid = {}
+    for r in my_reviews:
+        sid = str(r.get("sid"))
+        ct = r.get("createdAt") or 0
+        if ct > review_time_by_sid.get(sid, 0):
+            review_time_by_sid[sid] = ct
+    for b in all_bookings:
         if str(b.get("phone")) != str(phone):
             continue
         status = b.get("status") or "booked"
-        pay = next((p for p in pays if str(p.get("bid")) == str(b.get("id"))), None)
+        pay = pay_by_bid.get(str(b.get("id")))
         pay_status = (pay or {}).get("status") or "unpaid"
-        reviewed = any(str(r.get("sid")) == str(b.get("sid"))
-                       and (r.get("createdAt") or 0) > (b.get("createdAt") or 0) for r in my_reviews)
+        reviewed = review_time_by_sid.get(str(b.get("sid")), 0) > (b.get("createdAt") or 0)
         recs.append({
             "id": b.get("id"),
             "sid": b.get("sid"),
@@ -223,7 +340,7 @@ def api_me():
     coupons = [c for c in db.rows("coupons")
                if str(c.get("phone")) == str(phone) and not c.get("used") and (c.get("exp") or 0) > now]
     orders = []
-    for o in sorted([x for x in db.rows("pays") if str(x.get("phone")) == str(phone)],
+    for o in sorted([x for x in all_pays if str(x.get("phone")) == str(phone)],
                     key=lambda x: -(x.get("id") or 0))[:20]:
         orders.append({
             "id": o.get("id"), "bid": o.get("bid"), "title": o.get("title") or "剧本",
@@ -235,6 +352,30 @@ def api_me():
     for r in db.rows("favs"):
         if str(r.get("phone")) == str(phone):
             favs = [str(x) for x in (r.get("sids") or [])]
+    # 收藏三组（want/done/avoid）→ 每组剧本对象列表（§2.9）
+    try:
+        business.reminder_scan(u)          # 打开我的页时自动生成开场提醒（M8#157）
+    except Exception:
+        pass
+    _scripts_by_id = {str(s.get("id")): s for s in db.rows("scripts")}
+
+    def _fav_objs(sids):
+        objs = []
+        for x in sids or []:
+            sc = _scripts_by_id.get(str(x))
+            if sc:
+                objs.append({"id": sc.get("id"), "title": sc.get("title") or "剧本",
+                             "emoji": sc.get("emoji") or "🎭", "img": sc.get("img") or "",
+                             "diff": sc.get("diff") or 0})
+        return objs
+
+    try:
+        _fg = business.fav_groups(u) or {}
+    except Exception:
+        _fg = {}
+    fav_groups_out = {k: _fav_objs(_fg.get(k)) for k in ("want", "done", "avoid")}
+    my_tags = list(prof.get("tags") or [])
+    can_see_review = business.has_role(u, "dm", "admin")
     notices = []
     try:
         for n in business.my_notices(u, 20):
@@ -244,6 +385,13 @@ def api_me():
             })
     except Exception:
         notices = []
+    # 可选 DM 列表（预约 Sheet 下拉用，AUD-G-0004/0099）
+    dms = []
+    for x in db.rows("users"):
+        if business.role_of(x) in ("dm", "staff", "admin") or x.get("super"):
+            xp = x.get("profile") or {}
+            dms.append({"phone": x.get("phone"), "name": xp.get("nick") or x.get("username") or "DM"})
+    st = business.get_settings() or {}
     return jsonify({
         "guest": False,
         "name": prof.get("nick") or u.get("username") or "玩家",
@@ -253,11 +401,22 @@ def api_me():
         "id": u.get("invite") or "",
         "credit": u.get("credit") or 0,
         "staff": business.role_of(u) in ("admin", "staff", "dm") or bool(u.get("super")),
-        "profile": {"nick": prof.get("nick") or "", "gender": prof.get("gender") or "", "age": prof.get("age") or ""},
-        "coupons": [{"id": c.get("id"), "name": c.get("name") or c.get("from") or "抵扣券", "amount": c.get("amount") or 0} for c in coupons],
+        "isDm": business.role_of(u) in ("dm", "staff", "admin") or bool(u.get("super")),
+        "canSeeReview": can_see_review,
+        "serviceWechat": st.get("serviceWechat") or "",
+        "myTags": my_tags,
+        "favGroups": fav_groups_out,
+        "profile": {"nick": prof.get("nick") or "", "gender": prof.get("gender") or "", "age": prof.get("age") or "",
+                    "tags": my_tags},
+        "coupons": [{"id": c.get("id"), "name": c.get("name") or c.get("from") or "抵扣券", "amount": c.get("amount") or 0,
+                     "minAmount": c.get("minAmount") or 0} for c in coupons],
         "orders": orders,
         "favs": favs,
         "notices": notices,
+        "dms": dms,
+        "shop": {"name": st.get("shopName") or "甜薯剧本杀",
+                 "serviceWechat": st.get("serviceWechat") or "",
+                 "groupQr": st.get("groupQr") or ""},
         "stats": {"bookings": len(bookings), "reviews": len(reviews), "spent": spent},
         "records": recs[:20],
     })
@@ -295,6 +454,68 @@ def api_talks_create():
     return jsonify({"ok": True})
 
 
+@bp.get("/m/api/posts")
+def api_posts():
+    """社区最近帖子（含话题/招募字段 + 点赞数/我是否赞过/昵称/头像）。
+    ?type=recruit&topic=情感 过滤（''=不过滤）。"""
+    u = current_user()
+    me_phone = u.get("phone") if u else ""
+    ftype = request.args.get("type") or request.args.get("postType") or ""
+    ftopic = request.args.get("topic") or ""
+    rows = business.community_posts(30, me_phone, ftype, ftopic)
+    out = []
+    for p in rows:
+        out.append({
+            "id": p.get("id"),
+            "name": p.get("nick") or p.get("username") or "玩家",
+            "nick": p.get("nick") or p.get("username") or "玩家",
+            "avatar": p.get("avatar") or "",
+            "text": p.get("text") or "",
+            "content": p.get("text") or "",
+            "ago": _ago(p.get("at")),
+            "at": p.get("at"),
+            "topic": p.get("topic") or "",
+            "postType": p.get("postType") or "",
+            "recruitNeed": p.get("recruitNeed") or 0,
+            "recruitRole": p.get("recruitRole") or "",
+            "recruitScript": p.get("recruitScript") or "",
+            "likeCount": p.get("likeCount") or 0,
+            "liked": bool(p.get("liked")),
+        })
+    return jsonify(out)
+
+
+@bp.post("/m/api/post")
+def api_post_create():
+    """发帖（含话题与缺位招募）。清洗/校验与桌面 post_create 同口径。"""
+    u = current_user()
+    if not u:
+        return jsonify({"error": "请先登录"}), 401
+    f = request.form
+    text = business.clean(f.get("content") or f.get("text"), 1000)
+    if not text:
+        return jsonify({"error": "写点内容再发"}), 400
+    topic = business.clean(f.get("topic"), 10)
+    if topic not in _TOPICS:
+        topic = ""
+    is_recruit = (f.get("postType") or "") == "recruit"
+    rec = {
+        "id": business.now_ms(), "type": "chat", "title": "", "text": text, "imgs": [],
+        "username": (u.get("profile") or {}).get("nick") or u.get("username"),
+        "phone": u.get("phone"), "at": business.now_ms(), "likes": [],
+        "topic": topic, "postType": "recruit" if is_recruit else "",
+    }
+    if is_recruit:
+        try:
+            rec["recruitNeed"] = max(0, int(f.get("recruitNeed") or 0))
+        except (ValueError, TypeError):
+            rec["recruitNeed"] = 0
+        rec["recruitRole"] = business.clean(f.get("recruitRole"), 30)
+        rec["recruitScript"] = business.clean(f.get("recruitScript"), 40)
+    db.update("posts", lambda rows: [rec] + rows, 500)
+    return jsonify({"ok": True})
+
+
 @bp.post("/m/api/cars")
 def api_cars_create():
     """发起拼车（需登录）。写入 bookings（carNew=True），拼车大厅直接能读到。"""
@@ -323,7 +544,7 @@ def api_cars_create():
 
 @bp.get("/m/api/reviews")
 def api_reviews():
-    """某剧本的评价列表。?sid=..."""
+    """某剧本的评价列表。?sid=... （含店长回复 reply、点赞数、四维分项 dims）"""
     sid = request.args.get("sid")
     rows = business.reviews_of(sid, only_visible=True)
     return jsonify([{
@@ -332,6 +553,9 @@ def api_reviews():
         "avatar": r.get("avatar") or "",
         "text": r.get("text") or "",
         "rating": r.get("rating") or 0,
+        "dims": r.get("dims") or {},
+        "reply": r.get("reply") or "",
+        "likes": len(r.get("likes") or []),
         "time": _ago(r.get("createdAt")),
     } for r in rows])
 
@@ -402,7 +626,15 @@ def api_profile_save():
             pass
     hit["profile"] = prof
     db.write("users", users)
-    return jsonify({"ok": True, "nick": prof.get("nick") or ""})
+    # 风格标签（多选 getlist，或逗号/顿号串）→ business.set_player_tags 清洗限 3 个
+    tag_list = f.getlist("tags")
+    if not tag_list and f.get("tags"):
+        tag_list = [t.strip() for t in str(f.get("tags")).replace("，", ",").replace("、", ",")
+                    .split(",") if t.strip()]
+    tag_msg = ""
+    if tag_list:
+        _ok, tag_msg = business.set_player_tags(hit, tag_list)
+    return jsonify({"ok": True, "nick": prof.get("nick") or "", "tagMsg": tag_msg})
 
 
 @bp.post("/m/api/notice/read")
@@ -420,27 +652,18 @@ def api_notice_read():
 
 @bp.post("/m/api/fav/<sid>")
 def api_fav(sid):
-    """收藏 / 取消收藏（想玩）"""
+    """收藏 / 移出，支持分组（want|done|avoid，默认 want）。
+    form.group + form.on(1/0)；on 缺省时默认加入该组。"""
     u = current_user()
     if not u:
         return jsonify({"error": "请先登录"}), 401
-    phone = str(u.get("phone"))
-    rows = db.rows("favs")
-    rec = next((r for r in rows if str(r.get("phone")) == phone), None)
-    if not rec:
-        rec = {"phone": phone, "sids": []}
-        rows.append(rec)
-    sids = [str(x) for x in rec.get("sids") or []]
-    sid = str(sid)
-    if sid in sids:
-        sids.remove(sid)
-        on = False
-    else:
-        sids.append(sid)
-        on = True
-    rec["sids"] = sids
-    db.write("favs", rows)
-    return jsonify({"ok": True, "on": on})
+    group = request.form.get("group") or "want"
+    if group not in ("want", "done", "avoid"):
+        group = "want"
+    on_raw = request.form.get("on")
+    on = True if on_raw is None else str(on_raw) not in ("0", "", "false", "off")
+    ok, msg = business.fav_set(u, sid, group, on)
+    return jsonify({"ok": ok, "msg": msg, "on": on, "group": group})
 
 
 @bp.post("/m/api/booking/<int:bid>/reschedule")
@@ -477,13 +700,22 @@ def api_review(bid):
     except ValueError:
         rating = 5
     anon = request.form.get("anonymous") == "1"
+    # 四个细分维度（剧情/DM/氛围/房间），与桌面端一致
+    dims = {}
+    for key, label in (("plot", "剧情"), ("dm", "DM"), ("vibe", "氛围"), ("room", "房间")):
+        try:
+            v = int(request.form.get(key) or 0)
+        except ValueError:
+            v = 0
+        if 1 <= v <= 5:
+            dims[label] = v
     db.update("reviews", lambda rows: rows + [{
         "id": business.now_ms(), "sid": bk.get("sid"), "bid": bid,
         "dmPhone": bk.get("dmPhone") or "",
         "rating": rating,
         "text": business.clean(request.form.get("text"), 800),
         "username": "匿名玩家" if anon else u.get("username"), "anonymous": anon,
-        "dims": {}, "reply": "", "likes": [], "hidden": False, "createdAt": business.now_ms()}])
+        "dims": dims, "reply": "", "likes": [], "hidden": False, "createdAt": business.now_ms()}])
     business.notify(u.get("phone"), "评价已提交，谢谢！",
                     "《%s》的评价收到了，欢迎下次再来" % bk.get("title"), "review")
     return jsonify({"ok": True, "msg": "评价收到了，谢谢！"})
@@ -497,6 +729,255 @@ def api_password():
         return jsonify({"error": "请先登录"}), 401
     ok, msg = business.change_password(u, request.form.get("old"), request.form.get("password"))
     return jsonify({"ok": ok, "msg": msg})
+
+
+# ---------------------------------------------------------------- 验证码 / 注册 / 找回（内联 Sheet）
+@bp.post("/m/api/code/send")
+def api_code_send():
+    """发邮箱验证码（purpose=register|reset）。对齐桌面 /code/send，回 JSON。"""
+    email = (request.form.get("email") or "").strip()
+    purpose = request.form.get("purpose") or "reset"
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        return jsonify({"ok": False, "msg": "先填个有效的邮箱，验证码发到邮箱"})
+    code, sent, err = business.send_code(email, purpose)
+    if code is None:
+        return jsonify({"ok": False, "msg": err or "要码太频繁了，等一会儿"})
+    if sent:
+        return jsonify({"ok": True, "msg": "验证码已发到 %s，5 分钟内有效" % email})
+    if business.is_dev_request():
+        return jsonify({"ok": True, "msg": "已生成：看服务黑窗口，本机也可直接填 1234"})
+    return jsonify({"ok": False, "msg": "发信通道没配好，联系门店（%s）" % (err or "未配置")})
+
+
+@bp.post("/m/api/register")
+def api_register():
+    """内联注册（对齐桌面 /register）：手机号+邮箱验证码+昵称+两次密码+邀请码"""
+    f = request.form
+    phone = (f.get("phone") or "").strip()
+    email = (f.get("email") or "").strip()
+    code = (f.get("code") or "").strip()
+    name = business.clean(f.get("username"), 20)
+    pw = f.get("password") or ""
+    pw2 = f.get("password2") or ""
+    invite = (f.get("invite") or "").strip().upper()
+    if not re.match(r"^1\d{10}$", phone):
+        return jsonify({"ok": False, "msg": "手机号要 11 位"})
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        return jsonify({"ok": False, "msg": "要填个邮箱，验证码发到邮箱"})
+    if len(pw) < 6:
+        return jsonify({"ok": False, "msg": "密码至少 6 位"})
+    if pw != pw2:
+        return jsonify({"ok": False, "msg": "两次输入的密码不一样"})
+    if not name:
+        return jsonify({"ok": False, "msg": "起个名字吧"})
+    if db.one("users", phone=phone):
+        return jsonify({"ok": False, "msg": "这个手机号注册过了，直接登录"})
+    if db.one("users", username=name):
+        return jsonify({"ok": False, "msg": "名字被占了，换一个"})
+    if not business.use_code(email, "register", code):
+        return jsonify({"ok": False, "msg": "验证码不对（本机测试可填 1234）"})
+    my_invite = "TS" + secrets.token_hex(3).upper()
+    users = db.rows("users")
+    users.append({"phone": phone, "username": name, "email": email, "role": "user", "super": False,
+                  "password": hash_password(pw), "credit": 100, "creditLogs": [],
+                  "profile": {"avatar": "🎭", "nick": name, "gender": "", "age": None},
+                  "first": business.now_ms(), "last": business.now_ms(),
+                  "invite": my_invite, "banned": False})
+    db.write("users", users)
+    inviter = db.one("users", invite=invite) if invite else None
+    invite_amount = int(business.get_settings().get("inviteCoupon") or 10)
+    if inviter:
+        for who in ({"phone": phone}, inviter):
+            db.update("coupons", lambda rows: rows + [{
+                "id": business.now_ms() + secrets.randbelow(999),
+                "phone": who.get("phone"), "amount": invite_amount, "minAmount": 0, "used": False,
+                "exp": business.now_ms() + 90 * 86400000, "from": "邀请返利"}])
+        business.notify(inviter.get("phone"), "邀请成功", "%s 用你的邀请码注册了" % name, "coupon")
+    return jsonify({"ok": True, "msg": "注册成功，请登录", "phone": phone})
+
+
+@bp.post("/m/api/reset")
+def api_reset():
+    """内联找回密码（对齐桌面 /forgot）：手机号+注册邮箱+验证码→重设"""
+    f = request.form
+    phone = (f.get("phone") or "").strip()
+    code = (f.get("code") or "").strip()
+    pw = f.get("password") or ""
+    pw2 = f.get("password2") or ""
+    email_ = (f.get("email") or "").strip().lower()
+    u = db.one("users", phone=phone)
+    if not u:
+        return jsonify({"ok": False, "msg": "这个手机号还没注册过"})
+    if not email_ or email_ != str(u.get("email") or "").strip().lower():
+        return jsonify({"ok": False, "msg": "邮箱要和注册时填的一致"})
+    if not business.use_code(email_, "reset", code):
+        return jsonify({"ok": False, "msg": "验证码不对（本机测试可填 1234）"})
+    if len(pw) < 6:
+        return jsonify({"ok": False, "msg": "新密码至少 6 位"})
+    if pw != pw2:
+        return jsonify({"ok": False, "msg": "两次输入的密码不一样"})
+    users = db.rows("users")
+    for x in users:
+        if str(x.get("phone")) == str(phone):
+            x["password"] = hash_password(pw)
+    db.write("users", users)
+    return jsonify({"ok": True, "msg": "密码重设好了，去登录"})
+
+
+# ---------------------------------------------------------------- 支付闭环（内联 Sheet）
+@bp.get("/m/api/pay/<int:oid>")
+def api_pay_info(oid):
+    """返回这一单的支付信息：金额/类型/动作/客服微信/群码/可用券。对齐桌面 pay_deposit。"""
+    u = current_user()
+    if not u:
+        return jsonify({"error": "请先登录"}), 401
+    o = next((x for x in db.rows("pays") if str(x.get("id")) == str(oid)
+              and str(x.get("phone")) == str(u.get("phone"))), None)
+    if not o:
+        return jsonify({"error": "没找到这一单"}), 404
+    b = next((x for x in db.rows("bookings") if str(x.get("id")) == str(o.get("bid"))), {}) or {}
+    coupons = []
+    if str(b.get("status")) in ("arrived", "done") and o.get("balStatus") != "paid":
+        due = max(0, int(o.get("amount") or 0))
+        due_kind = "游玩费"
+        due_act = "claim-bal"
+        now = business.now_ms()
+        coupons = [{"id": c.get("id"), "name": c.get("name") or c.get("from") or "抵扣券",
+                    "amount": c.get("amount") or 0, "minAmount": c.get("minAmount") or 0}
+                   for c in db.rows("coupons")
+                   if not c.get("used") and (not c.get("exp") or c.get("exp") > now)
+                   and (c.get("all") or str(c.get("phone")) == str(u.get("phone")))]
+    else:
+        due = int(o.get("payable") if o.get("payable") is not None else o.get("deposit") or 0)
+        due_kind = "定金"
+        due_act = "claim"
+    st = business.get_settings() or {}
+    return jsonify({
+        "id": o.get("id"), "title": o.get("title") or "剧本",
+        "day": o.get("day") or "", "time": o.get("time") or "",
+        "due": due, "dueKind": due_kind, "dueAct": due_act,
+        "status": o.get("status"), "balStatus": o.get("balStatus") or "",
+        "coupons": coupons,
+        "serviceWechat": st.get("serviceWechat") or "",
+        "groupQr": st.get("groupQr") or "",
+        "shopName": st.get("shopName") or "甜薯剧本杀",
+    })
+
+
+@bp.post("/m/api/pay/<int:oid>/claim")
+def api_pay_claim(oid):
+    """「我已转账」：把单子标成 claimed，等小客服确认（不做假在线支付，AUD-G-0032）。"""
+    u = current_user()
+    if not u:
+        return jsonify({"error": "请先登录"}), 401
+    o = next((x for x in db.rows("pays") if str(x.get("id")) == str(oid)
+              and str(x.get("phone")) == str(u.get("phone"))), None)
+    if not o:
+        return jsonify({"error": "没找到这一单"}), 404
+    b = next((x for x in db.rows("bookings") if str(x.get("id")) == str(o.get("bid"))), {}) or {}
+    if str(b.get("status")) in ("arrived", "done") and o.get("balStatus") != "paid":
+        act = "claim-bal"
+    else:
+        act = "claim"
+    ok, msg = business.order_action(u, oid, act, coupon_id=request.form.get("couponId"))
+    return jsonify({"ok": ok, "msg": msg})
+
+
+@bp.post("/m/api/invoice/apply")
+def api_invoice_apply():
+    """申请开票（oid/company/taxId/email）。订单须 paid 且属本人，同 oid 只能申请一次。"""
+    u = current_user()
+    if not u:
+        return jsonify({"ok": False, "msg": "请先登录"}), 401
+    oid = request.form.get("oid")
+    if not oid:
+        return jsonify({"ok": False, "msg": "缺少订单号"}), 400
+    ok, msg = business.invoice_apply(u, oid, request.form)
+    return jsonify({"ok": ok, "msg": msg})
+
+
+# ---------------------------------------------------------------- 给店家留言
+@bp.get("/m/api/msgs")
+def api_msgs():
+    """我给店家留的言（含店家回复）"""
+    u = current_user()
+    if not u:
+        return jsonify({"error": "请先登录"}), 401
+    return jsonify([{
+        "id": m.get("id"), "cat": m.get("cat") or "💡 建议", "text": m.get("text") or "",
+        "reply": m.get("reply") or "", "status": m.get("status") or "pending",
+        "at": _ago(m.get("createdAt")),
+    } for m in business.my_messages(u, 30)])
+
+
+@bp.post("/m/api/msg")
+def api_msg_create():
+    """给店家留言（分类+文字，店家在后台回）"""
+    u = current_user()
+    if not u:
+        return jsonify({"error": "请先登录"}), 401
+    text = business.clean(request.form.get("text"), 500)
+    if not text:
+        return jsonify({"error": "写点内容再发"}), 400
+    db.update("messages", lambda rows: rows + [{
+        "id": business.now_ms(), "phone": u.get("phone"), "username": u.get("username"),
+        "cat": business.clean(request.form.get("cat"), 10) or "💡 建议", "text": text,
+        "status": "pending", "reply": "", "createdAt": business.now_ms()}])
+    return jsonify({"ok": True, "msg": "留言发出去了，店家看到会回你"})
+
+
+# ---------------------------------------------------------------- 车队详情 + 车内聊天
+@bp.get("/m/api/car/<int:cid>")
+def api_car_detail(cid):
+    """车队详情：基本信息 + 成员(含 tags) + 车内聊天记录 + 车队状态新字段"""
+    booking = next((b for b in db.rows("bookings") if str(b.get("id")) == str(cid)), None)
+    if not booking:
+        return jsonify({"error": "没这辆车"}), 404
+    u = current_user()
+    me_phone = u.get("phone") if u else ""
+    # 从 car_pool 取数据层已算好的扩展字段（倒计时/截止/补满/难度/口味相近）
+    enriched = next((c for c in business.car_pool(me_phone) if str(c.get("id")) == str(cid)), {})
+    users = {str(x.get("phone")): x for x in db.rows("users")}
+    owner = users.get(str(booking.get("phone"))) or {}
+    op = owner.get("profile") or {}
+    msgs = [{"name": m.get("nick") or m.get("username") or "玩家", "text": m.get("text") or ""}
+            for m in business.car_msgs(cid, 50)]
+    return jsonify({
+        "id": booking.get("id"), "script": booking.get("title") or "剧本",
+        "day": booking.get("day") or "", "time": booking.get("time") or "",
+        "who": op.get("nick") or owner.get("username") or "玩家",
+        "tags": booking.get("carTags") or [],
+        "members": [{"nick": m.get("nick") or "玩家", "tags": list(m.get("tags") or [])}
+                    for m in (enriched.get("members") or booking.get("members") or [])],
+        "msgs": msgs,
+        "deadline": enriched.get("deadline") or booking.get("carDeadline") or 0,
+        "deadlineIn": enriched.get("deadlineIn") or 0,
+        "closed": bool(enriched.get("closed") or booking.get("carClosed")),
+        "filled": bool(enriched.get("filled") or booking.get("carFilled")),
+        "scriptDiff": enriched.get("scriptDiff") or 0,
+        "scriptPlayers": enriched.get("scriptPlayers") or "",
+        "likeMind": bool(enriched.get("likeMind")),
+        "likeCount": enriched.get("likeCount") or 0,
+        "need": enriched.get("need") or 0,
+        "joined": enriched.get("joined") or 0,
+        "cap": enriched.get("cap") or 0,
+    })
+
+
+@bp.post("/m/api/car/<int:cid>/msg")
+def api_car_msg(cid):
+    """在车队里发一条聊天"""
+    u = current_user()
+    if not u:
+        return jsonify({"error": "请先登录"}), 401
+    text = business.clean(request.form.get("text"), 200)
+    if not text:
+        return jsonify({"error": "说点什么再发"}), 400
+    db.update("carmsgs", lambda rows: rows + [{
+        "id": business.now_ms(), "carId": cid,
+        "nick": (u.get("profile") or {}).get("nick") or u.get("username"),
+        "text": text, "at": business.now_ms()}])
+    return jsonify({"ok": True})
 
 
 # 简单的内容类型，避免依赖 Flask 的复杂猜测

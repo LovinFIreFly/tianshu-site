@@ -65,10 +65,18 @@ def _panel_html(key):
 def index():
     """DM 工作台 —— 唯一的入口页。
 
-    三块内容（今日 / 我的客人 / 学本资料）都在这一页里渲染好，点标签只是前端切显示：
-    不跳页、不改网址。所以不管点哪块，网址一直是 /dm。
+    三块内容（今日 / 我的客人 / 学本资料…）原来一次全渲染，现在首屏只算当前 tab（默认 today），
+    其余面板留占位；切 tab 时前端 fetch /dm/?partial=1&tab=xxx 单独拉（AUD-B-0002/P0-2）。
+
+    ※ 前端配合：tabs.js 切 tab 时需对未加载面板 fetch partial=1&tab=xxx 并替换占位。
+      本轮仅落地后端侧，tabs.js 改造由前端代理（H1/H2）完成。
     """
-    return render_template('dm/shell.html', panels={k: _panel_html(k) for k in _TAB_FUNCS})
+    tab = request.args.get('tab') or 'today'
+    func = _TAB_FUNCS.get(tab) or _TAB_FUNCS['today']
+    if request.args.get('partial') == '1':
+        return func()                      # 前端 fetch 单个面板
+    panels = {k: (('<!-- panel:%s -->' % k) if k != tab else _panel_html(k)) for k in _TAB_FUNCS}
+    return render_template('dm/shell.html', panels=panels, active=tab)
 
 
 @bp.post('/verify')
@@ -206,6 +214,17 @@ def sched():
     return render_template('dm/panel_sched.html', rows=out)
 
 
+@dm_required
+def talktips_panel():
+    """开本话术库（DM 与 admin 共用 admin/panel_talktips.html；增删走 /admin/talktips/*，
+    该路由用 dm_required 闸门、business 内二次判权，DM 可维护）。"""
+    cat = request.args.get('cat') or ''
+    return render_template('admin/panel_talktips.html',
+                           rows=business.talktips(cat), cat=cat,
+                           cats=getattr(business, 'TALKTIP_CATS', ('开场白', '过渡', '结尾', '其他')))
+
+
 # 标签总表（放末尾因为它要引用上面的函数；index() 里是运行时才查，顺序无所谓）
 _TAB_FUNCS = {'msgs': msgs, 'today': today_panel, 'credit': credit,
-              'sched': sched, 'growth': growth, 'guides': guides}
+              'sched': sched, 'growth': growth, 'guides': guides,
+              'talktips': talktips_panel}

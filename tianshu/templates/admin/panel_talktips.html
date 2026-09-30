@@ -1,0 +1,54 @@
+{# 面板：talktips —— DM 话术库（admin / dm 共用此模板）
+   分类胶囊 GET 过滤（cat=开场白/过渡/结尾/其他）；列表 + 新增表单。 #}
+<div class="between">
+  <div>
+    <h1>DM 话术库</h1>
+    <p class="sub">开本时常用的开场白 / 过渡 / 结尾话术，DM 和店家都能补。</p>
+  </div>
+</div>
+
+{# 分类胶囊：GET 过滤 #}
+<div class="row mt" style="gap:6px;flex-wrap:wrap">
+  <a class="pill {{ 'on' if not cat }}" href="{{ url_for('admin.dashboard') }}?tab=talktips">全部</a>
+  {% for c_opt in ['开场白', '过渡', '结尾', '其他'] %}
+  <a class="pill {{ 'on' if cat == c_opt }}" href="{{ url_for('admin.dashboard') }}?tab=talktips&cat={{ c_opt }}">{{ c_opt }}</a>
+  {% endfor %}
+</div>
+
+{# 列表 #}
+{% for t in rows %}
+<div class="panel mt" data-cat="{{ t.cat or '' }}">
+  <div class="between">
+    <div>
+      <b>{{ t.title }}</b>
+      <span class="pill">{{ t.cat or '其他' }}</span>
+    </div>
+    <span class="sub">{{ t.author or '店家' }} · {{ day_label(t.at) if t.at else '' }}</span>
+  </div>
+  <p style="color:var(--text-2);white-space:pre-wrap;margin:8px 0 0">{{ t.text }}</p>
+  <form method="post" action="{{ url_for('admin.talktip_del', tid=t.id) }}" style="margin-top:10px"
+        onsubmit="return confirm('删掉这条话术？')">
+    <button class="btn btn-sm btn-danger" type="submit">删除</button>
+  </form>
+</div>
+{% else %}
+<div class="panel empty">这一类还没有话术。在下面补一条吧。</div>
+{% endfor %}
+
+{# 新增表单 #}
+<h2 style="margin-top:22px">补一条话术</h2>
+<div class="panel">
+  <form method="post" action="{{ url_for('admin.talktips') }}" class="form-inline" style="gap:12px;align-items:flex-end;flex-wrap:wrap">
+    <div class="field" style="margin:0"><label>分类</label>
+      <select name="cat">
+        {% for c_opt in ['开场白', '过渡', '结尾', '其他'] %}
+        <option value="{{ c_opt }}">{{ c_opt }}</option>
+        {% endfor %}
+      </select></div>
+    <div class="field" style="flex:1 1 200px;margin:0"><label>标题</label>
+      <input name="title" placeholder="例：人齐了怎么开场"></div>
+    <div class="field" style="flex:2 1 320px;margin:0"><label>正文</label>
+      <textarea name="text" rows="2" placeholder="话术写这儿…"></textarea></div>
+    <button class="btn btn-primary" type="submit">加进去</button>
+  </form>
+</div>

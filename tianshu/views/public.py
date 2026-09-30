@@ -6,7 +6,8 @@
 """
 import os
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import (Blueprint, flash, jsonify, make_response, redirect,
+                   render_template, request, session, url_for)
 
 from tianshu import business
 from tianshu.db import db
@@ -46,15 +47,15 @@ def welcome():
 
 @bp.get('/theme')
 def toggle_theme():
-    """切换深/浅色（顶栏那个 🌙 按钮）。
+    """切换主题：三态循环 light → dark → auto → light。
 
-    默认是浅色（暖米底那套，Airbnb 方向的），喜欢暗的记在 cookie 里。
-    注意别把默认值写反：base.html 里是「theme == 'dark' 才输出 data-theme」。
+    cookie theme 取值 light / dark / auto；base.html 的内联脚本据此
+    （auto 时 matchMedia 跟随系统）尽早设置 data-theme。
     """
-    from flask import make_response, request as _req, redirect
-    cur = _req.cookies.get('theme') or 'light'
-    resp = make_response(redirect(_req.referrer or url_for('public.home')))
-    resp.set_cookie('theme', 'dark' if cur != 'dark' else 'light', max_age=365 * 86400)
+    cur = request.cookies.get('theme') or 'light'
+    nxt = {'light': 'dark', 'dark': 'auto'}.get(cur, 'light')
+    resp = make_response(redirect(request.referrer or url_for('public.home')))
+    resp.set_cookie('theme', nxt, max_age=365 * 86400)
     return resp
 
 
@@ -89,9 +90,10 @@ def home():
         if n and n != '待安排' and n not in dm_duty:
             dm_duty.append(n)
     # 真实玩家短评：最近几条"已展示"的评价（reviews_of 已带昵称/头像，按时间倒序）
+    # 只取最近 20 条来挑带文字的 8 条，不必给全量评价建昵称/头像（AUD-B-0026）
     script_titles = {str(s.get('id')): s.get('title', '') for s in scripts}
     reviews = []
-    for r in business.reviews_of():
+    for r in business.reviews_of(limit=20):
         if not r.get('text'):
             continue
         reviews.append({
@@ -104,10 +106,17 @@ def home():
         if len(reviews) >= 8:
             break
     boss_pick = feat[0] if feat else (scripts[0] if scripts else None)
+    # 热玩本：stats['hot'] 已是 [(sid, {plays...})] 按 plays 降序 top6，转回剧本对象
+    scripts_by_id = {str(s.get('id')): s for s in scripts}
+    hotScripts = [scripts_by_id[sid] for sid, _ in st['hot'] if sid in scripts_by_id]
+    # 新本首车：上架剧本按 id 倒序 top6
+    on_sale = [s for s in scripts if s.get('onSale') is not False]
+    newScripts = sorted(on_sale, key=lambda s: -(s.get('id') or 0))[:6]
     return render_template('home.html', scripts=feat, stat=st, rating=rating,
                            banners=business.banners(), served=served,
                            sessions=sessions, cars=business.car_pool()[:3],
-                           dm_duty=dm_duty, reviews=reviews, boss_pick=boss_pick)
+                           dm_duty=dm_duty, reviews=reviews, boss_pick=boss_pick,
+                           hotScripts=hotScripts, newScripts=newScripts)
 
 
 @bp.get('/scripts')
@@ -203,6 +212,8 @@ def script_detail(sid):
     open_cars = [c for c in business.car_pool() if str(c.get('sid')) == str(sid) and not c.get('full')]
     # 评分 = 玩家点评的平均分（没人评过就是 0，页面上显示"—"）；n 是评价条数
     _st = business.stats()['byScript'].get(str(sid), {})
+    # 演后复盘仅 DM/管理员可见（§2.5）
+    canSeeReview = bool(u) and (business.has_role(u, 'dm') or business.has_role(u, 'admin'))
 
     return render_template('script.html', sc=sc, days=days, sessions=ses, coupons=coupons,
                            lo=lo, hi=hi, dm_fee=st['dmFee'], reviews=reviews, dms=dms,
@@ -210,16 +221,59 @@ def script_detail(sid):
                            open_cars=open_cars, car_deposit=business.car_deposit(st),
                            # 日历控件的可选范围：今天 ~ 30 天后（别再让客人翻无意义的月份）
                            day_min=business.iso_day(0), day_max=business.iso_day(30),
-                           rating=_st.get('rating'), rating_n=_st.get('n'))
+                           rating=_st.get('rating'), rating_n=_st.get('n'),
+                           canSeeReview=canSeeReview)
 
 
 @bp.get('/car')
 def car():
-    """拼车大厅：谁开了车、还差几人、能上车还是排候补"""
+    """拼车大厅：谁开了车、还差几人、能上车还是排候补。
+
+    GET 筛选：q(剧本名模糊) / players(≥人数，按 carMin) / time(时段 上午/下午/晚上
+    或精确时间串) / diff(1-5，匹配 scriptDiff)。筛选参数原样回显给模板做表单回填。
+    """
     u = current_user()
-    return render_template('car.html', cars=business.car_pool(u.get('phone') if u else ''),
+    cars = business.car_pool(u.get('phone') if u else '')
+    q = (request.args.get('q') or '').strip()
+    players = (request.args.get('players') or '').strip()
+    tm = (request.args.get('time') or '').strip()
+    diff = (request.args.get('diff') or '').strip()
+
+    def _hour_of(c):
+        s = str(c.get('time') or '')
+        try:
+            return int(s.split(':')[0])
+        except (ValueError, IndexError):
+            return -1
+
+    def _match_period(c, period):
+        h = _hour_of(c)
+        if h < 0:
+            return False
+        if period == '上午':
+            return h < 12
+        if period == '下午':
+            return 12 <= h < 18
+        if period == '晚上':
+            return h >= 18
+        return str(c.get('time') or '') == period   # 精确时间串
+
+    if q:
+        cars = [c for c in cars if q in str(c.get('title') or '')]
+    if players:
+        try:
+            pn = int(players)
+            cars = [c for c in cars if int(c.get('min') or 0) >= pn]
+        except ValueError:
+            pass
+    if tm:
+        cars = [c for c in cars if _match_period(c, tm)]
+    if diff:
+        cars = [c for c in cars if str(c.get('scriptDiff') or '') == str(diff)]
+    return render_template('car.html', cars=cars,
                            mine=business.my_cars(u.get('phone')) if u else set(),
-                           tags=business.get_settings()['carTags'])
+                           tags=business.get_settings()['carTags'],
+                           q=q, players=players, time=tm, diff=diff)
 
 
 @bp.get('/group')
@@ -263,12 +317,16 @@ def review_like(rid):
 
 @bp.get('/img/<sub>/<name>')
 def upload_img(sub, name):
-    """读上传的图片（封面 / 头像 / 形象照 / 门店群二维码）。只让读 data/img/ 里这几类，别的一律不给"""
+    """读上传的图片（封面 / 头像 / 形象照 / 门店群二维码）。只让读 data/img/ 里这几类，别的一律不给
+
+    图片一周内不变，发长缓存头让浏览器/CDN 直接缓存（AUD-B-0084）。
+    conditional=True 让浏览器带 If-Modified-Since 时回 304，省带宽。"""
     from flask import abort, send_from_directory
     from config import IMG_DIR
     if sub not in ('cover', 'avatar', 'role', 'dm', 'qr') or '/' in name or '..' in name:
         abort(404)
-    return send_from_directory(os.path.join(IMG_DIR, sub), name)
+    return send_from_directory(os.path.join(IMG_DIR, sub), name,
+                               max_age=604800, conditional=True)
 
 
 @bp.get('/dm/<phone>')
@@ -296,19 +354,28 @@ def dm_page(phone):
 
 @bp.get('/comm')
 def comm():
-    """玩家社区。分「动态 / 日记 / 攻略 / 组队」四类（老版就是这个分法），
-    顶上能按分类筛；不带参数就是全部。"""
+    """玩家社区。
+
+    GET 筛选：type(all|chat|recruit) 按 postType 过滤（chat=非招募帖），
+    topic 按话题（情感/硬核/恐怖/欢乐）过滤。筛选参数 ftype/ftopic 回显给模板。
+    老的 ?t= 页内标签保留。
+    """
     u = current_user()
     t = (request.args.get('t') or '').strip()
-    posts = business.community_posts(60, str((u or {}).get('phone') or ''))
+    ftype = (request.args.get('type') or 'all').strip()
+    ftopic = (request.args.get('topic') or '').strip()
+    # 映射到 business.community_posts 的 ftype：all/空→不过滤；recruit→精确匹配；chat→先全取再排除招募
+    biz_ftype = '' if ftype in ('', 'all', 'chat') else ftype
+    posts = business.community_posts(60, str((u or {}).get('phone') or ''),
+                                     ftype=biz_ftype, ftopic=ftopic)
+    if ftype == 'chat':
+        posts = [p for p in posts if (p.get('postType') or '') != 'recruit']
     counts = {}
-    for p in posts:
+    for p in business.community_posts(200, str((u or {}).get('phone') or '')):
         k = p.get('type') or 'chat'
         counts[k] = counts.get(k, 0) + 1
-    # 分类改成**页内筛**（点一下就地藏/显，不跳网址、不刷新 —— 用户嫌跳页一卡一卡）：
-    # 所以这里始终把全部帖子渲染出去，t 只决定"打开时点亮哪一颗"，
-    # 网址上带 ?t= 依然能直接进到那一类（分享/收藏照旧管用）。
-    return render_template('comm.html', posts=posts, t=t, counts=counts)
+    return render_template('comm.html', posts=posts, t=t, counts=counts,
+                           ftype=ftype, ftopic=ftopic)
 
 
 @bp.post('/post')
@@ -320,13 +387,35 @@ def post_create():
     text = business.clean(request.form.get('text'), 1000)
     if not text:
         flash('写点内容再发', 'warn')
-    else:
-        db.update('posts', lambda rows: [{
-            'id': business.now_ms(), 'type': request.form.get('type') or 'diary',
-            'title': business.clean(request.form.get('title'), 40), 'text': text, 'imgs': [],
-            'username': (u.get('profile') or {}).get('nick') or u.get('username'),
-            'phone': u.get('phone'), 'at': business.now_ms(), 'likes': []}] + rows, 500)
-        flash('发出去了', 'ok')
+        return redirect(url_for('public.comm'))
+    # 话题 / 招募字段（§2.4）
+    topic = business.clean(request.form.get('topic'), 8)
+    post_type = request.form.get('postType') or ''
+    if post_type not in ('recruit',):
+        post_type = ''
+    recruit_need = 0
+    recruit_role = ''
+    recruit_script = ''
+    if post_type == 'recruit':
+        recruit_role = business.clean(request.form.get('recruitRole'), 16)
+        recruit_script = business.clean(request.form.get('recruitScript'), 30)
+        try:
+            recruit_need = int(request.form.get('recruitNeed') or 0)
+            recruit_need = max(1, min(12, recruit_need))
+        except ValueError:
+            recruit_need = 0
+        if not recruit_need and not recruit_role:
+            flash('缺位招募要至少填「缺几人」或「缺什么位」', 'warn')
+            return redirect(url_for('public.comm'))
+    db.update('posts', lambda rows: [{
+        'id': business.now_ms(), 'type': request.form.get('type') or 'chat',
+        'title': business.clean(request.form.get('title'), 40), 'text': text, 'imgs': [],
+        'topic': topic, 'postType': post_type,
+        'recruitNeed': recruit_need, 'recruitRole': recruit_role,
+        'recruitScript': recruit_script,
+        'username': (u.get('profile') or {}).get('nick') or u.get('username'),
+        'phone': u.get('phone'), 'at': business.now_ms(), 'likes': []}] + rows, 500)
+    flash('发出去了', 'ok')
     return redirect(url_for('public.comm'))
 
 
@@ -434,30 +523,28 @@ def post_report(pid):
 
 @bp.post('/fav/<int:sid>')
 def fav(sid):
-    """收藏（想玩）—— 没登录就先去登录"""
+    """收藏分组（想玩 / 已玩 / 避雷）—— 没登录就先去登录。
+
+    group 参数（form 或 query）：want|done|avoid，默认 want。
+    切换逻辑：当前不在该组 → 加入；已在 → 移出。
+    """
     u = current_user()
     if not u:
         flash('登录之后才能收藏哦', 'warn')
         return redirect(url_for('user.login', next=url_for('public.script_detail', sid=sid)))
-    phone = str(u.get('phone'))
-    rows = db.rows('favs')
-    rec = next((r for r in rows if str(r.get('phone')) == phone), None)
-    if not rec:
-        rec = {'phone': phone, 'sids': []}
-        rows.append(rec)
-    sids = [str(x) for x in rec.get('sids') or []]
-    if str(sid) in sids:
-        sids.remove(str(sid))
-        flash('已取消收藏', 'ok')
-    else:
-        sids.append(str(sid))
-        flash('加进「想玩」了', 'ok')
-    rec['sids'] = sids
-    db.write('favs', rows)
+    group = request.form.get('group') or request.args.get('group') or 'want'
+    if group not in ('want', 'done', 'avoid'):
+        group = 'want'
+    groups = business.fav_groups(u)
+    on = str(sid) not in groups.get(group, [])
+    business.fav_set(u, sid, group, on)
+    labels = {'want': '想玩', 'done': '已玩', 'avoid': '避雷'}
+    label = labels.get(group, '想玩')
+    flash(('已加入「%s」' % label) if on else ('已移出「%s」' % label), 'ok')
     # AJAX 收藏：前端那颗心点了用 fetch 打这个接口，成功后只回个 JSON，
     # 前端自己改按钮状态，整页不刷新（剧本库 SPA 体验的一部分）。
     if request.args.get('ajax') == '1' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({'on': str(sid) in sids})
+        return jsonify({'on': on, 'group': group})
     return redirect(request.referrer or url_for('public.scripts'))
 
 
@@ -469,3 +556,17 @@ def my_fav_ids(u):
         if str(r.get('phone')) == str(u.get('phone')):
             return {str(x) for x in r.get('sids') or []}
     return set()
+
+
+@bp.get('/faq')
+def faq():
+    """常见问题页（匿名可访问）。内容见 spec §5.4，模板由 T1 创建。"""
+    return render_template('faq.html', serviceWechat=business.get_settings().get('serviceWechat', ''))
+
+
+@bp.post('/api/track')
+def api_track():
+    """埋点 beacon：前端 sendBeacon 发 {path}，服务端只记 IP 哈希 + path，不记任何用户信息。"""
+    path = (request.get_json(silent=True) or {}).get('path') or request.form.get('path') or '/'
+    business.track_visit(request.remote_addr or '', path)
+    return jsonify({'ok': True})

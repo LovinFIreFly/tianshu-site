@@ -293,7 +293,7 @@ html[data-device="mobile"] .me-nav .mi {
   flex-direction: column;
   align-items: flex-start;
   gap: 1px;
-  min-height: 0;
+  min-height: 44px;
   padding: 8px 14px;
   border: 1px solid var(--z-line);
   border-radius: 9999px;
@@ -325,79 +325,159 @@ html[data-device="mobile"] .p-stats span { color: var(--z-ink-3); }
 /* 头像圆圈里的字 */
 html[data-device="mobile"] .avatar { background: var(--z-ink); color: var(--z-paper); }
 
-/* ============ 管理后台：手机端横滑导航 + 主内容不溢出 ============ */
-html[data-device="mobile"] .adm { flex-direction: column; min-height: auto; }
-html[data-device="mobile"] .adm-side {
-  display: flex !important;
-  position: relative;
-  top: auto; left: auto; bottom: auto;
-  width: 100%;
-  height: auto;
-  min-height: auto;
-  flex-direction: column;
-  background: var(--z-card);
-  color: var(--z-ink);
-  border-bottom: 1px solid var(--z-line);
-  border-right: none;
-  padding: 10px 0 0;
+/* ============ 管理后台 / DM 工作台：手机端移动导航（v5 改版） ============
+   桌面保持左侧栏；手机端：上下文条 + 高频横滑条（Admin）/ 底部 Tab（DM）+ 更多抽屉。
+   移动专属元素桌面默认隐藏，仅在 ≤900px 且 data-device=mobile 时显示。 */
+.adm-mctx, .adm-navi--top, .adm-drawer, .adm-drawer-mask, .dm-tabbar { display: none; }
+
+@media (max-width: 900px){
+  html[data-device="mobile"] .adm { flex-direction: column; min-height: auto; }
+  html[data-device="mobile"] .adm-side {
+    position: sticky; top: var(--d-nav-h); z-index: 50;
+    display: block; width: 100%; height: auto; min-height: auto;
+    background: var(--z-paper);
+    color: var(--z-ink);
+    border-bottom: 1px solid var(--z-line);
+    border-right: none;
+    padding: 0;
+  }
+  /* 桌面品牌 / 全量目录 / 侧栏脚 / 旧顶条：手机端收起 */
+  html[data-device="mobile"] .adm-brand,
+  html[data-device="mobile"] .adm-navi,
+  html[data-device="mobile"] .adm-foot,
+  html[data-device="mobile"] .adm-mobile { display: none; }
+
+  /* 上下文条：当前面板名 + 菜单钮（触控 ≥44px） */
+  html[data-device="mobile"] .adm-mctx {
+    display: flex; align-items: center; gap: 10px;
+    padding: calc(env(safe-area-inset-top) + 10px) 14px 10px;
+    background: var(--z-paper);
+  }
+  html[data-device="mobile"] .adm-mctx-k {
+    font-family: var(--z-display); font-size: 13px; letter-spacing: .2em;
+    color: var(--z-accent);
+  }
+  html[data-device="mobile"] .adm-mctx strong {
+    flex: 1; font-family: var(--z-display); font-size: 17px; letter-spacing: .06em;
+    color: var(--z-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  html[data-device="mobile"] .adm-menu-btn {
+    flex: none; min-height: 44px; padding: 0 14px; border-radius: 9999px;
+    border: 1px solid var(--z-ink); background: transparent; color: var(--z-ink);
+    font-size: 13px; font-weight: 700;
+  }
+  html[data-device="mobile"] .adm-menu-btn:active { transform: scale(.97); }
+
+  /* Admin 高频横滑条（只 5 粒）；DM 不用此条 */
+  html[data-device="mobile"] .adm-navi--top {
+    display: flex; flex-direction: row; gap: 8px;
+    padding: 0 12px 10px;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; -ms-overflow-style: none;
+  }
+  html[data-device="mobile"] .adm-navi--top::-webkit-scrollbar { display: none; height: 0; }
+  html[data-device="mobile"] .adm-navi--top .navi {
+    flex: 0 0 auto; min-height: 44px; padding: 0 14px;
+    display: inline-flex; align-items: center; gap: 5px;
+    border: 1px solid var(--z-line); border-radius: 9999px;
+    background: transparent; color: var(--z-ink-3); font-size: 13px;
+  }
+  html[data-device="mobile"] .adm-navi--top .navi .navi-no { color: var(--z-accent); font-size: 11px; }
+  html[data-device="mobile"] .adm-navi--top .navi.on {
+    background: var(--z-ink); border-color: var(--z-ink); color: var(--z-paper);
+  }
+  html[data-device="mobile"] .adm-navi--top .navi.on .navi-no { color: var(--z-tint); }
+
+  /* 更多抽屉（Admin / DM 共用）：hidden 属性控制显示，:not([hidden]) 期间可动效 */
+  html[data-device="mobile"] .adm-drawer-mask:not([hidden]) { display: block; }
+  html[data-device="mobile"] .adm-drawer-mask {
+    position: fixed; inset: 0; background: rgba(21, 19, 15, .45);
+    z-index: 90; opacity: 0; transition: opacity .25s ease;
+  }
+  html[data-device="mobile"] .adm-drawer-mask.show { opacity: 1; }
+  html[data-device="mobile"] .adm-drawer:not([hidden]) { display: block; }
+  html[data-device="mobile"] .adm-drawer {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 91;
+    max-height: 82dvh; overflow-y: auto;
+    background: var(--z-card); border-radius: 16px 16px 0 0;
+    padding: 8px 16px calc(20px + env(safe-area-inset-bottom));
+    transform: translateY(100%);
+    transition: transform .28s cubic-bezier(.22, 1, .36, 1);
+  }
+  html[data-device="mobile"] .adm-drawer.show { transform: translateY(0); }
+  html[data-device="mobile"] .adm-drawer-grip {
+    width: 40px; height: 4px; border-radius: 999px; background: var(--z-line);
+    margin: 4px auto 12px;
+  }
+  html[data-device="mobile"] .adm-drawer-head {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+  }
+  html[data-device="mobile"] .adm-drawer-head strong {
+    font-family: var(--z-display); font-size: 18px; letter-spacing: .1em; color: var(--z-ink);
+  }
+  html[data-device="mobile"] .adm-drawer-x {
+    width: 44px; height: 44px; border-radius: 999px;
+    border: 1px solid var(--z-line); background: transparent; color: var(--z-ink); font-size: 16px;
+  }
+  html[data-device="mobile"] .adm-dgroup { margin-top: 14px; }
+  html[data-device="mobile"] .adm-dgroup-t {
+    font-size: 11px; letter-spacing: .2em; color: var(--z-ink-3);
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  html[data-device="mobile"] .adm-dgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  html[data-device="mobile"] .adm-tile {
+    min-height: 56px; padding: 8px 6px;
+    border: 1px solid var(--z-line); border-radius: 12px;
+    background: transparent; color: var(--z-ink);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    font-size: 13px; text-align: center;
+  }
+  html[data-device="mobile"] .adm-tile:active { transform: scale(.97); background: var(--z-paper-deep); }
+  html[data-device="mobile"] .adm-tile.on { background: var(--z-ink); color: var(--z-paper); border-color: var(--z-ink); }
+  html[data-device="mobile"] .adm-tile-no { font-size: 10px; color: var(--z-accent); }
+  html[data-device="mobile"] .adm-drawer-foot {
+    margin-top: 18px; border-top: 1px dashed var(--z-line);
+    padding-top: 12px; display: grid; gap: 6px;
+  }
+  html[data-device="mobile"] .adm-drawer-link {
+    display: block; min-height: 44px; line-height: 44px; padding: 0 12px;
+    font-size: 13px; color: var(--z-ink-3);
+    border: 1px solid var(--z-line); border-radius: 9999px; text-align: center;
+  }
+
+  /* DM 底部 Tab（触控 ≥54px） */
+  html[data-device="mobile"] .dm-tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
+    display: flex; background: var(--z-card); border-top: 1px solid var(--z-line);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  html[data-device="mobile"] .dm-tab {
+    flex: 1; min-height: 54px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px;
+    color: var(--z-ink-3); font-size: 11px; background: transparent; border: none;
+  }
+  html[data-device="mobile"] .dm-tab-no { font-family: var(--z-display); font-size: 13px; line-height: 1; color: var(--z-accent); }
+  html[data-device="mobile"] .dm-tab.on { color: var(--z-accent); font-weight: 700; }
+  html[data-device="mobile"] .dm-tab.on .dm-tab-no { color: var(--z-ink); }
+
+  /* 内容区：留出底栏高度；表格仍横向滚，但不再和导航横滑叠加 */
+  html[data-device="mobile"] .adm-main {
+    flex: 1; width: 100%; min-width: 0;
+    padding: 14px 12px calc(90px + env(safe-area-inset-bottom));
+  }
+  html[data-device="mobile"] .adm-main > .tabpane { width: 100%; overflow-x: hidden; }
+  html[data-device="mobile"] .adm-main .panel,
+  html[data-device="mobile"] .adm-main .adm-panel { width: 100%; overflow-x: auto; }
+  html[data-device="mobile"] .adm-main table {
+    display: block; width: 100%; overflow-x: auto; white-space: nowrap;
+  }
+  html[data-device="mobile"] .adm-main .form-grid { grid-template-columns: 1fr; }
 }
-html[data-device="mobile"] .adm-brand,
-html[data-device="mobile"] .adm-foot { display: none; }     /* 横条里不需要品牌和返回 */
-html[data-device="mobile"] .adm-mobile {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--z-line);
-  background: var(--z-paper);
+
+@media (prefers-reduced-motion: reduce){
+  html[data-device="mobile"] .adm-drawer,
+  html[data-device="mobile"] .adm-drawer-mask { transition: none !important; }
 }
-html[data-device="mobile"] .adm-navi {
-  flex-direction: row;
-  flex-wrap: nowrap;
-  gap: 8px;
-  padding: 0 12px 10px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-html[data-device="mobile"] .adm-navi::-webkit-scrollbar { display: none; height: 0; }
-html[data-device="mobile"] .adm-side .navi {
-  flex: 0 0 auto;
-  padding: 7px 12px;
-  border: 1px solid var(--z-line);
-  border-left-width: 1px;
-  border-radius: 9999px;
-  background: transparent;
-  color: var(--z-ink-3);
-  font-size: 13px;
-}
-html[data-device="mobile"] .adm-side .navi .navi-no { color: var(--z-accent); width: auto; margin-right: 4px; font-size: 11px; }
-html[data-device="mobile"] .adm-side .navi.on {
-  background: var(--z-ink);
-  border-color: var(--z-ink);
-  color: var(--z-paper);
-}
-html[data-device="mobile"] .adm-side .navi.on .navi-no { color: var(--z-tint); }
-html[data-device="mobile"] .adm-main {
-  flex: 1;
-  width: 100%;
-  min-width: 0;
-  padding: 14px 12px calc(60px + env(safe-area-inset-bottom));
-}
-html[data-device="mobile"] .adm-main > .tabpane { width: 100%; overflow-x: hidden; }
-html[data-device="mobile"] .adm-main .panel,
-html[data-device="mobile"] .adm-main .adm-panel {
-  width: 100%;
-  overflow-x: auto;
-}
-html[data-device="mobile"] .adm-main table {
-  display: block;
-  width: 100%;
-  overflow-x: auto;
-  white-space: nowrap;
-}
-html[data-device="mobile"] .adm-main .form-grid { grid-template-columns: 1fr; }
 
 /* —— 图片：直角一点 —— */
 html[data-device="mobile"] .pcard3 img,
@@ -411,3 +491,14 @@ html[data-device="mobile"] .pagehead3__k b { color: var(--z-accent); font-family
 @media (prefers-reduced-motion: reduce) {
   html[data-device="mobile"] * { animation: none !important; transition: none !important; }
 }
+
+/* ============================================================================
+   v6 动效补充（C 代理 · 豆包动效质感规范 §0）
+   说明：弹层 .sheet--pop/.sheet--mask、逐段揭示 .rv--rise、骨架屏 .skeleton
+        已由 design3.css 全局定义，移动端直接生效，无需重复。
+        本文件仅补：.dm-tab（DM 底部 Tab，基础规则在冻结块 328-475 行内，
+        这里只追加新规则块，不改冻结行）的按压微反馈。
+        .b3 / .chip3 / .adm-tile 已有 :active 反馈，不重复加。
+   ============================================================================ */
+html[data-device="mobile"] .dm-tab{transition:transform .15s var(--d-ease)}
+html[data-device="mobile"] .dm-tab:active{transform:scale(.97)}

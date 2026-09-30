@@ -3,6 +3,48 @@
   <h1>预约管理</h1>
 </div>
 
+{# 车主车队：截止时间 / closed / filled 状态 + 提前截止 / 标记补满（POST car-close / car-fill） #}
+{% if cars is defined and cars %}
+<h2 style="margin-top:14px">车主车队（{{ cars|length }}）</h2>
+<div class="scroll panel mt">
+  <table>
+    <tr><th>剧本</th><th>时间</th><th>车主</th><th>人数</th><th>截止倒计时</th><th>状态</th><th>操作</th></tr>
+    {% for c in cars %}
+    <tr>
+      <td>{{ c.title }}</td>
+      <td>{{ c.day }} {{ c.time }}</td>
+      <td>{{ c.owner }}</td>
+      <td>{{ c.joined }}/{{ c.cap }}{% if c.need %}（差 {{ c.need }}）{% endif %}</td>
+      <td>
+        {% if c.closed %}<span class="badge">已截止</span>
+        {% elif c.filled %}<span class="badge ok">补满发车</span>
+        {% elif c.deadlineIn and c.deadlineIn > 0 %}剩 {{ (c.deadlineIn / 3600000)|round(method='ceil')|int }} 小时
+        {% else %}—{% endif %}
+      </td>
+      <td>
+        {% if c.closed %}<span class="badge">已截止</span>
+        {% elif c.filled %}<span class="badge ok">补满发车</span>
+        {% else %}<span class="badge ok">进行中</span>{% endif %}
+      </td>
+      <td>
+        {% if not c.closed %}
+        <form method="post" action="/admin/bookings/{{ c.id }}/car-close" style="display:inline"
+              onsubmit="return confirm('提前截止这车？')">
+          <button class="btn btn-sm" type="submit">提前截止</button>
+        </form>
+        {% endif %}
+        {% if not c.filled %}
+        <form method="post" action="/admin/bookings/{{ c.id }}/car-fill" style="display:inline">
+          <button class="btn btn-sm btn-primary" type="submit">标记补满</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
 {# 这几颗按钮不再跳网址了：点一下由 tabs.js 就地筛表格（整页的表格都在，只是藏一部分）
    所以服务端现在一律把全部预约都渲染出来，筛选是前端的事 #}
 <div class="row mt" style="gap:6px" data-filter="status">

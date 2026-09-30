@@ -1,5 +1,9 @@
 {% extends 'base.html' %}
 {% block title %}{{ sc.title }} · {{ settings.shopName }}{% endblock %}
+{# OG 覆盖：社交分享卡片用剧本名 / 简介前 60 字 / 封面（绝对 URL） #}
+{% block og_title %}{{ sc.title }} · {{ settings.shopName }}{% endblock %}
+{% block og_description %}{{ (sc.desc or settings.shopName)|truncate(60, True, '…') }}{% endblock %}
+{% block og_image %}{% if sc.img %}{{ sc.img if sc.img.startswith('http') else request.url_root ~ sc.img.lstrip('/') }}{% else %}{{ url_for('static', filename='icon.svg', _external=True) }}{% endif %}{% endblock %}
 {# 剧本详情 3.0：暗场海报 + 规格条 + 角色/DM + 评价 + 「预约 + 场次」两栏。
    表单字段名、action、id 全部保留，只换版式。 #}
 {% block body %}
@@ -37,6 +41,8 @@
             </button>
           </form>
           <a class="b3 b3--sm b3--accent" href="#book">约这个本 ↓</a>
+          <button class="b3 b3--sm b3--ghost" type="button" id="share-btn"
+                  data-share-text="甜薯剧本杀｜《{{ sc.title }}》">分享这本</button>
         </div>
 
         {# 费用口径说清楚：页面上这个价是"游玩费"，不是定金 —— 不然客人会以为 ¥100 就能占位 #}
@@ -51,12 +57,12 @@
         {# 封面：竖版 3:4。有图就用图；没图就**现印一张戏单海报**（原来只放一个 emoji，
            3:4 的大块头会空成一个黑洞）。海报用的全是已有字段，所以每本都自带封面。 #}
         {% if sc.img %}
-        <div style="border:1px solid var(--d-hair);border-radius:var(--d-r);overflow:hidden;background:rgba(255,255,255,.04)">
+        <div class="tear-in rv" style="border:1px solid var(--d-hair);border-radius:var(--d-r);overflow:hidden;background:rgba(255,255,255,.04)">
           <img src="{{ sc.img }}" alt="{{ sc.title }}" style="width:100%;aspect-ratio:3/4;object-fit:cover;display:block">
         </div>
         {% else %}
         {% set d = (sc.diff or 3)|int %}
-        <div class="poster3">
+        <div class="poster3 tear-in rv">
           <span class="poster3__wm">{{ sc.emoji or '🎭' }}</span>
           <p class="poster3__k">{{ sc.type or '剧本' }} · No.{{ sc.id }}</p>
           <p class="poster3__t">{{ sc.title }}</p>
@@ -107,10 +113,12 @@
       <div class="role3 role-gallery rv">
         {% for r in sc.roles %}
         <div class="role3__c {{ 'is-taken' if r.name in taken }}">
+          <span class="role3__no" aria-hidden="true">{{ '%02d'|format(loop.index) }}</span>
           {% if r.img %}<img src="{{ r.img }}" alt="{{ r.name }}" loading="lazy">
           {% else %}<div class="role3__ph">{{ r.name[0] }}</div>{% endif %}
           <div class="role3__b">
             <b>{{ r.name }}</b>
+            {% if r.line %}<p class="role3__line">{{ r.line }}</p>{% endif %}
             {% if r.name in taken %}<span class="tag3">已被选</span>{% endif %}
           </div>
         </div>
@@ -119,7 +127,7 @@
       {% else %}
       <div class="chips3 rv">
         {% for r in sc.roles %}
-        <span class="tag3 {{ 'tag3--solid' if r.name in taken }}">{{ r.name }}{% if r.name in taken %} · 已被选{% endif %}</span>
+        <span class="tag3 {{ 'tag3--solid' if r.name in taken }}">{{ r.name }}{% if r.line %} · {{ r.line }}{% endif %}{% if r.name in taken %} · 已被选{% endif %}</span>
         {% endfor %}
       </div>
       {% endif %}
@@ -129,10 +137,45 @@
     <div style="margin-top:clamp(22px,3vw,38px)">
       <p class="sidehead3" style="max-width:340px">能带这本<span class="line"></span></p>
       <div class="chips3">
-        {% for d in sc.dms %}<a class="tag3" href="{{ url_for('public.dm_page', phone=d.phone) }}">🗡 {{ d.name }}</a>{% endfor %}
+        {% for d in sc.dms %}<a class="tag3" href="{{ url_for('public.dm_page', phone=d.phone) }}">{{ d.name }}</a>{% endfor %}
       </div>
     </div>
     {% endif %}
+  </div>
+</section>
+{% endif %}
+
+{# ============ 演绎视频（有外链才显示） ============ #}
+{% if sc.videoUrl %}
+<section class="dsec">
+  <div class="wrap3">
+    <header class="dsec__head rv">
+      <span class="dsec__no">02</span>
+      <h2 class="dsec__title">演绎视频</h2>
+      <p class="dsec__meta">看看这车人怎么演</p>
+      <span class="dsec__rule"></span>
+    </header>
+    <div class="rv" style="margin-top:clamp(14px,2vw,22px)">
+      <a class="b3 b3--accent" href="{{ sc.videoUrl }}" target="_blank" rel="noopener nofollow">观看演绎视频 ↗</a>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ============ 演后复盘（仅 DM / 管理员可见） ============ #}
+{% if canSeeReview and sc.reviewDoc %}
+<section class="dsec dsec--alt">
+  <div class="wrap3">
+    <header class="dsec__head rv">
+      <span class="dsec__no">03</span>
+      <h2 class="dsec__title">演后复盘</h2>
+      <p class="dsec__meta">DM / 店家可见 · 客人看不到</p>
+      <span class="dsec__rule"></span>
+    </header>
+    <details class="rv sheet3" style="margin-top:clamp(14px,2vw,22px)">
+      <summary class="copy-mono" style="cursor:pointer">点开看复盘记录</summary>
+      <div class="rev3__t" style="margin-top:14px">{{ sc.reviewDoc | nl2p | safe }}</div>
+    </details>
   </div>
 </section>
 {% endif %}
@@ -142,7 +185,7 @@
 <section class="dsec">
   <div class="wrap3">
     <header class="dsec__head rv">
-      <span class="dsec__no">02</span>
+      <span class="dsec__no">04</span>
       <h2 class="dsec__title">剧友评价（{{ reviews|length }}）</h2>
       <p class="dsec__meta">玩过的人怎么说</p>
       <span class="dsec__rule"></span>
@@ -207,7 +250,7 @@
 <section class="dsec dsec--alt" id="book">
   <div class="wrap3">
     <header class="dsec__head rv">
-      <span class="dsec__no">03</span>
+      <span class="dsec__no">05</span>
       <h2 class="dsec__title">预约这一本</h2>
       <p class="dsec__meta">定金锁位 · 客服确认</p>
       <span class="dsec__rule"></span>
@@ -373,6 +416,30 @@
   mode.addEventListener('change', sync);
   car.addEventListener('change', sync);
   sync();
+})();
+</script>
+
+{# 分享：navigator.share 优先，降级 clipboard 复制，成功后小 toast #}
+<script>
+(function(){
+  var btn=document.getElementById('share-btn');
+  if(!btn) return;
+  function toast(msg){
+    var t=document.getElementById('share-toast');
+    if(!t){ t=document.createElement('div'); t.id='share-toast'; t.className='share-toast'; document.body.appendChild(t); }
+    t.textContent=msg; t.classList.add('show');
+    clearTimeout(t._tm); t._tm=setTimeout(function(){ t.classList.remove('show'); }, 1800);
+  }
+  btn.addEventListener('click', function(){
+    var data={ title: document.title, text: btn.getAttribute('data-share-text') || document.title, url: location.href };
+    if(navigator.share){ navigator.share(data).catch(function(){}); }
+    else {
+      var text=data.text+' '+data.url;
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(function(){toast('链接已复制，去粘贴给朋友');}, function(){toast('复制失败，手动复制地址栏');});
+      } else { toast('请手动复制地址栏链接'); }
+    }
+  });
 })();
 </script>
 {% endblock %}

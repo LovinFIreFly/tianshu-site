@@ -3,14 +3,28 @@
 {% block main_class %}{% endblock %}
 {% block body %}
 
-{# DM 工作台：和老版后台一个长相（左侧栏 + 右侧内容），切换仍是前端切，网址一直是 /dm #}
-{# 六栏，跟老版 DM 端对齐：#}
+{# DM 工作台：桌面保持左侧栏 + 右侧内容；手机端改为底部 4 Tab + 更多抽屉（v5 改版）。
+   切换仍是前端切（tabs.js），网址一直是 /dm。 #}
 {% set NAVI = [('msgs', '我的消息'), ('today', '今日场次'), ('credit', '我的客人'),
-               ('sched', '我的档期'), ('growth', '我的成长'), ('guides', '学本资料')] %}
+               ('sched', '我的档期'), ('growth', '我的成长'), ('guides', '学本资料'),
+               ('talktips', '话术库')] %}
+{# 底部 4 Tab：高频放底栏，低频进「更多」抽屉 #}
+{% set DM_TABS = [('today', '今日场次', '01'), ('msgs', '我的消息', '02'),
+                  ('credit', '我的客人', '03'), ('sched', '我的档期', '04')] %}
 
-<div class="adm">
+<div class="adm adm--dm">
   <aside class="adm-side" data-tabs="dm">
     <div class="adm-brand"><span class="adm-brand-ic">🗡</span><span>DM 工作台</span></div>
+
+    {# —— 手机端：上下文条（当前面板名 + 全部功能） —— #}
+    <header class="adm-mctx">
+      <span class="adm-mctx-k">DM</span>
+      <strong id="adm-cur-name">今日场次</strong>
+      <button type="button" class="adm-menu-btn" id="adm-open-drawer"
+              aria-haspopup="dialog" aria-label="更多功能">☰ 更多</button>
+    </header>
+
+    {# 桌面侧栏目录（编号 + 名称） #}
     <nav class="adm-navi">
     {% for key, name in NAVI %}
     <button type="button" class="navi {{ 'on' if loop.first }}" data-tab="{{ key }}">
@@ -18,10 +32,33 @@
     {% endfor %}
     </nav>
     <div class="adm-foot">
-      {# 以前指向 admin 的 DM 结算页 —— 但 DM 不是员工，点进去直接 403「这块只有员工能进」。
-         改成跳自己工作台的结算块（今日面板底部那块，锚点 #my-pay）。 #}
       <a class="navi" href="{{ url_for('dm.index') }}#my-pay"><span>→</span><span>我这个月能拿多少</span></a>
       <a class="navi" href="{{ url_for('public.home') }}"><span>←</span><span>回到网站</span></a>
+    </div>
+
+    {# —— 手机端：更多抽屉（低频面板 + 两个出口） —— #}
+    <div class="adm-drawer-mask" id="adm-drawer-mask" hidden></div>
+    <div class="adm-drawer" id="adm-drawer" role="dialog" aria-modal="true" aria-label="更多功能" hidden>
+      <div class="adm-drawer-grip"></div>
+      <div class="adm-drawer-head">
+        <strong>全部功能</strong>
+        <button type="button" class="adm-drawer-x" id="adm-close-drawer" aria-label="关闭">✕</button>
+      </div>
+      <div class="adm-dgroup">
+        <div class="adm-dgroup-t">工作台</div>
+        <div class="adm-dgrid">
+          {% for key, name in NAVI %}
+          <button type="button" class="adm-tile {{ 'on' if loop.first }}" data-tab="{{ key }}">
+            <span class="adm-tile-no">{{ '%02d' % loop.index }}</span>
+            <span class="adm-tile-nm">{{ name }}</span>
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="adm-drawer-foot">
+        <a class="adm-drawer-link" href="{{ url_for('dm.index') }}#my-pay">→ 我这个月能拿多少</a>
+        <a class="adm-drawer-link" href="{{ url_for('public.home') }}">← 回到网站</a>
+      </div>
     </div>
   </aside>
 
@@ -34,6 +71,19 @@
     <div class="tabpane {{ 'on' if loop.first }}" data-tab="{{ key }}">{{ panels.get(key, '')|safe }}</div>
     {% endfor %}
   </main>
+
+  {# —— 手机端：底部固定 4 Tab + 更多 —— #}
+  <nav class="dm-tabbar" aria-label="DM 主导航">
+    {% for key, name, no in DM_TABS %}
+    <button type="button" class="dm-tab {{ 'on' if loop.first }}" data-tab="{{ key }}">
+      <span class="dm-tab-no">{{ no }}</span><span class="dm-tab-nm">{{ name }}</span></button>
+    {% endfor %}
+    <button type="button" class="dm-tab js-open-drawer" aria-label="更多">
+      <span class="dm-tab-no">··</span><span class="dm-tab-nm">更多</span></button>
+  </nav>
 </div>
+
+{# 面板名映射：供移动导航切 tab 时同步上下文条标题（由模板注入，Jinja 生成） #}
+<script>window.ADM_NAME_MAP = { {% for key, name in NAVI %}'{{ key }}': '{{ name }}'{{ ',' if not loop.last }}{% endfor %} };</script>
 
 {% endblock %}

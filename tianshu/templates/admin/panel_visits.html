@@ -1,0 +1,51 @@
+{# 面板：visits —— 访问统计
+   今日 PV/UV 大字 + 近 7 日趋势 + 热门页面 top10（路径 + 次数，宽度百分比条形）。
+   数据由 business.visit_stats() 提供：stats.today{ pv, uv } / stats.trend[{day,pv,uv}] / stats.top[{path,n}]。 #}
+{% set st = stats or {} %}
+{% set today = st.today or {} %}
+{% set trend = st.trend or [] %}
+{% set top = st.top or [] %}
+<div class="between">
+  <div>
+    <h1>访问统计</h1>
+    <p class="sub">只按 IP 摘要计数，不存任何个人信息。</p>
+  </div>
+</div>
+
+<div class="stats mt">
+  <div><b>{{ today.pv or 0 }}</b><span>今日 PV</span></div>
+  <div><b>{{ today.uv or 0 }}</b><span>今日 UV</span></div>
+</div>
+
+<h2 style="margin-top:22px">近 7 日趋势</h2>
+<div class="scroll panel mt">
+  <table>
+    <tr><th>日期</th><th>PV</th><th>UV</th></tr>
+    {% for r in trend %}
+    <tr>
+      <td>{{ r.day }}</td>
+      <td>{{ r.pv }}</td>
+      <td>{{ r.uv }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3" class="empty">还没有趋势数据</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<h2 style="margin-top:22px">热门页面 Top 10</h2>
+<div class="panel mt">
+  {% if top %}
+  {% set maxn = (top[0].n or 1) %}
+  {% for r in top %}
+  <div class="visit-bar">
+    <span class="visit-bar__no">{{ '%02d'|format(loop.index) }}</span>
+    <span class="visit-bar__path copy-mono">{{ r.path }}</span>
+    <span class="visit-bar__track"><i style="width:{{ ((r.n or 0) / maxn * 100)|round|int }}%"></i></span>
+    <span class="visit-bar__n">{{ r.n }}</span>
+  </div>
+  {% endfor %}
+  {% else %}
+  <p class="sub">还没有热门页面数据。</p>
+  {% endif %}
+</div>

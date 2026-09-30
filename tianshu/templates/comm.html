@@ -13,6 +13,23 @@
 </section>
 
 <div class="wrap3">
+  {# 服务端筛选条：type 全部/普通/缺位招募；topic 全部/情感/硬核/恐怖/欢乐（GET 回显 ftype/ftopic） #}
+  <form class="filterbar3 rv" method="get" action="{{ url_for('public.comm') }}" style="margin-top:clamp(16px,2.4vw,26px)">
+    <select name="type" aria-label="帖子类型">
+      <option value="">全部帖子</option>
+      <option value="chat" {{ 'selected' if (ftype or '') == 'chat' }}>普通动态</option>
+      <option value="recruit" {{ 'selected' if (ftype or '') == 'recruit' }}>缺位招募</option>
+    </select>
+    <select name="topic" aria-label="话题">
+      <option value="">全部话题</option>
+      {% for tp in ['情感','硬核','恐怖','欢乐'] %}
+      <option value="{{ tp }}" {{ 'selected' if (ftopic or '') == tp }}>{{ tp }}</option>
+      {% endfor %}
+    </select>
+    <button class="b3 b3--sm b3--solid" type="submit">筛选</button>
+    {% if ftype or ftopic %}<a class="b3 b3--sm b3--ghost" href="{{ url_for('public.comm') }}">重置</a>{% endif %}
+  </form>
+
   {# 类型是**页内筛**（tabs.js 管）：点一下立刻藏/显，不刷新、不换网址。
      全部帖子都已经渲染在下面，所以"全部"切回来也是瞬间的。
      data-filter="type" → 按帖子的 data-type 筛（不带就是按 data-status，后台那套）。 #}
@@ -31,7 +48,7 @@
     {# —— 左：帖子流 —— #}
     <div>
       {% for p in posts %}
-      <article class="rev3 rv" data-type="{{ p.type or 'chat' }}" style="--i:{{ loop.index0 }}">
+      <article class="rev3 rv{% if loop.first %} unfold{% endif %}" data-type="{{ p.type or 'chat' }}" style="--i:{{ loop.index0 }}">
         <div class="rev3__h rev3__h--author">
           <div class="rev3__author">
             <div class="rev3__avatar">
@@ -48,6 +65,10 @@
         <div class="rev3__title-row">
           {% if p.title %}<span class="rev3__w">{{ p.title }}</span>{% endif %}
           <span class="tag3">{{ TYPE_NAME.get(p.type, '动态') }}</span>
+          {% if p.postType == 'recruit' %}
+          <span class="tag3 tag3--accent">缺 {{ p.recruitNeed or '?' }} 人{% if p.topic %} · {{ p.topic }}{% endif %}{% if p.recruitRole %} · {{ p.recruitRole }}{% endif %}</span>
+          {% endif %}
+          {% if p.topic and p.postType != 'recruit' %}<span class="tag3">{{ p.topic }}</span>{% endif %}
         </div>
         <p class="rev3__t" style="white-space:pre-wrap">{{ p.text }}</p>
         <div class="rev3__a">
@@ -68,7 +89,7 @@
       </article>
       {% else %}
       <div class="empty3">
-        <p class="empty3__k">Empty</p>
+        <p class="empty3__k">No Posts</p>
         <h3 class="empty3__t">还没人唠嗑</h3>
         <p class="empty3__p">你可以第一个来：想拼的本、上局战报、新手攻略都行。</p>
       </div>
@@ -95,6 +116,14 @@
             </select>
           </div>
           <div class="field">
+            <label>话题</label>
+            <div class="chips3">
+              {% for tp in ['情感','硬核','恐怖','欢乐'] %}
+              <label class="chip-check"><input type="radio" name="topic" value="{{ tp }}"><span>{{ tp }}</span></label>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="field">
             <label>标题（可填可不填）</label>
             <input name="title" placeholder="一句话">
           </div>
@@ -102,8 +131,29 @@
             <label>内容</label>
             <textarea name="text" rows="5" placeholder="说点什么... 求拼车写清本子和时间"></textarea>
           </div>
+          {# 缺位招募开关：勾选才展开缺人/职位/剧本三个输入 #}
+          <div class="field">
+            <label class="chip-check" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="recruit-toggle"> <span>我要缺位招募（车上缺人）</span>
+            </label>
+          </div>
+          <div id="recruit-fields" style="display:none;border-top:1px dashed var(--d-rule);padding-top:12px">
+            <div class="field"><label>缺几人（数字）</label>
+              <input name="recruitNeed" type="number" min="1" max="10" placeholder="例：2"></div>
+            <div class="field"><label>缺什么位（例：推理位 / 情感位 / 机制位）</label>
+              <input name="recruitRole" placeholder="例：推理位"></div>
+            <div class="field"><label>哪本本（剧本名）</label>
+              <input name="recruitScript" placeholder="例：云使"></div>
+          </div>
           <button class="b3 b3--solid b3--wide" type="submit">发送</button>
         </form>
+        <script>
+        (function(){
+          var t=document.getElementById('recruit-toggle'), b=document.getElementById('recruit-fields');
+          if(!t||!b) return;
+          t.addEventListener('change', function(){ b.style.display = t.checked ? '' : 'none'; });
+        })();
+        </script>
         {% else %}
         <div class="note3">
           <b>上车登记后才能发帖、点赞</b><br>

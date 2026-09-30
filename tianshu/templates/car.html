@@ -12,6 +12,28 @@
 </section>
 
 <div class="wrap3">
+  {# 多维筛选条：GET 回显。q 剧本名 / players 人数 / time 时段 / diff 难度 #}
+  <form class="filterbar3 rv" method="get" action="{{ url_for('public.car') }}" style="margin-top:clamp(16px,2.4vw,26px)">
+    <input class="input" name="q" value="{{ q or '' }}" placeholder="搜剧本名" aria-label="剧本名">
+    <input class="input" name="players" value="{{ players or '' }}" placeholder="至少几人" aria-label="人数" style="max-width:120px">
+    <select name="time" aria-label="时段">
+      <option value="">全部时段</option>
+      {% for t_opt in ['上午', '下午', '晚上'] %}
+      <option value="{{ t_opt }}" {{ 'selected' if (time or '') == t_opt }}>{{ t_opt }}</option>
+      {% endfor %}
+    </select>
+    <select name="diff" aria-label="难度">
+      <option value="">全部难度</option>
+      {% for d_opt in [1,2,3,4,5] %}
+      <option value="{{ d_opt }}" {{ 'selected' if (diff or '')|string == d_opt|string }}>{{ d_opt }}/5</option>
+      {% endfor %}
+    </select>
+    <button class="b3 b3--sm b3--solid" type="submit">筛选</button>
+    {% if q or players or time or diff %}<a class="b3 b3--sm b3--ghost" href="{{ url_for('public.car') }}">重置</a>{% endif %}
+  </form>
+</div>
+
+<div class="wrap3">
   <div class="toolbar3">
     <span class="copy-mono">正在发车的局 · {{ cars|length }}</span>
     <div class="toolbar3__end">
@@ -25,12 +47,29 @@
     <article class="ccard3 rv" style="--i:{{ loop.index0 }}">
       <div class="ccard3__top">
         <span class="ccard3__tag">{{ c.day }} {{ c.time }}</span>
-        {% if c.full %}<span class="tag3 tag3--accent">已满锁车</span>
+        {% if c.closed %}<span class="tag3">已截止</span>
+        {% elif c.filled %}<span class="tag3 tag3--ok">补满发车</span>
+        {% elif c.full %}<span class="tag3 tag3--accent">已满锁车</span>
         {% elif c.need %}<span class="tag3 tag3--accent">差 {{ c.need }}！</span>
         {% else %}<span class="tag3 tag3--ok">人齐发车</span>{% endif %}
       </div>
 
       <h3 class="ccard3__title">{{ c.title }}</h3>
+
+      {# 倒计时：剩 X 小时 · 还差 Y 人（closed/filled 已封顶就不显示倒计时） #}
+      {% if not c.closed and not c.filled and c.deadlineIn and c.deadlineIn > 0 %}
+      <p class="ccard3__count copy-mono" style="margin:6px 0 0;color:var(--d-accent)">
+        剩 {{ (c.deadlineIn / 3600000)|round(method='ceil')|int }} 小时{% if c.need %} · 还差 {{ c.need }} 人{% endif %}
+      </p>
+      {% elif c.need %}
+      <p class="ccard3__count copy-mono" style="margin:6px 0 0;color:var(--d-ink-4)">还差 {{ c.need }} 人</p>
+      {% endif %}
+
+      {% if c.likeMind %}
+      <p class="ccard3__like" style="margin:6px 0 0;font-size:12.5px;color:var(--d-accent)">
+        有和你口味相近的玩家在车上
+      </p>
+      {% endif %}
 
       <div class="ccard3__meta">
         <span>车主 <b>{{ c.owner }}</b></span>
