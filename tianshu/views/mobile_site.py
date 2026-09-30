@@ -99,23 +99,39 @@ def api_scripts():
     return jsonify(rows)
 
 
+def _script_titles():
+    return {str(x.get("id")): x.get("title") or "剧本" for x in db.rows("scripts")}
+
+
 @bp.get("/m/api/sessions")
 def api_sessions():
+    """今日或指定日期场次，带余位。date=YYYY-MM-DD"""
+    day = request.args.get("date")
+    try:
+        ts = business.parse_day(day) if day else business.midnight()
+    except Exception:
+        ts = business.midnight()
     rooms = {str(r.get("id")): r for r in db.rows("rooms")}
+    titles = _script_titles()
     out = []
-    for s in business.today_sessions():
+    for s in business.sessions_of(ts):
         rid = str(s.get("roomId"))
         room = rooms.get(rid) or {}
+        cap = s.get("cap") or 0
+        joined = s.get("joined") or 0
         out.append({
             "id": s.get("id"),
+            "ts": s.get("ts"),
             "time": s.get("time") or "",
             "name": s.get("title") or "未命名场次",
-            "room": "%s · %s座" % (room.get("name") or "房间", room.get("cap") or s.get("cap") or ""),
-            "cap": s.get("cap") or 0,
-            "have": s.get("joined") or 0,
-            "script": s.get("sid"),
+            "room": "%s · %s座" % (room.get("name") or "房间", cap or ""),
+            "cap": cap,
+            "have": joined,
+            "left": max(0, cap - joined),
+            "sid": s.get("sid"),
+            "script": titles.get(str(s.get("sid")), "剧本"),
         })
-    return jsonify(out)
+    return jsonify({"date": business.day_label(ts), "sessions": out})
 
 
 @bp.get("/m/api/cars")
@@ -170,17 +186,23 @@ def api_me():
     for b in bookings:
         if str(b.get("phone")) == str(phone) and b.get("status") != "cancelled":
             recs.append({
+                "id": b.get("id"),
                 "name": b.get("title") or _titles.get(str(b.get("sid")) or "", "剧本"),
                 "time": _ago(b.get("ts")),
                 "state": _stmap.get(b.get("status"), "已预约"),
             })
+    now = business.now_ms()
+    coupons = [c for c in db.rows("coupons")
+               if str(c.get("phone")) == str(phone) and not c.get("used") and (c.get("exp") or 0) > now]
     return jsonify({
         "guest": False,
         "name": prof.get("nick") or u.get("username") or "玩家",
-        "initial": initial,
+        "initial": initial if not (str(initial).startswith("/img/") or str(initial).startswith("http")) else "",
+        "avatar": avatar if (str(avatar).startswith("/img/") or str(avatar).startswith("http")) else "",
         "phone": _mask_phone(phone),
         "id": u.get("invite") or "",
         "credit": u.get("credit") or 0,
+        "coupons": [{"id": c.get("id"), "name": c.get("name") or "优惠券", "amount": c.get("amount") or 0} for c in coupons],
         "stats": {"bookings": len(bookings), "reviews": len(reviews), "spent": spent},
         "records": recs[:20],
     })
@@ -242,6 +264,67 @@ def api_cars_create():
     })
     db.write("bookings", bookings)
     return jsonify({"ok": True, "id": bid})
+
+
+@bp.get("/m/api/reviews")
+def api_reviews():
+    """某剧本的评价列表。?sid=..."""
+    sid = request.args.get("sid")
+    rows = business.reviews_of(sid, only_visible=True)
+    return jsonify([{
+        "id": r.get("id"),
+        "name": r.get("nick") or r.get("username") or "玩家",
+        "avatar": r.get("avatar") or "",
+        "text": r.get("text") or "",
+        "rating": r.get("rating") or 0,
+        "time": _ago(r.get("createdAt")),
+    } for r in rows])
+
+
+@bp.post("/m/api/book")
+def api_book():
+    """预约占位（需登录）。表单：sid, sessionId, players, who, note, couponId"""
+    u = current_user()
+    if not u:
+        return jsonify({"error": "请先登录"}), 401
+    f = request.form
+    sid = f.get("sid") or f.get("sessionId")
+    if not sid:
+        return jsonify({"error": "缺少剧本"}), 400
+    session_id = f.get("sessionId")
+    ts = f.get("ts")
+    # 如果给了场次 id，把场次日期/time 补到表单，让 create_booking 省心
+    if session_id:
+        s = next((x for x in db.rows("sessions") if str(x.get("id")) == str(session_id)), None)
+        if s:
+            ts = s.get("ts")
+            # create_booking 用 ts_day 或 ts；把 time 作为 note 的一部分
+    ok, msg, booking = business.create_booking(u, {
+        "sid": sid,
+        "sessionId": session_id or "",
+        "ts": ts or "",
+        "players": f.get("players") or "1",
+        "who": f.get("who") or (u.get("profile") or {}).get("nick") or u.get("username") or "玩家",
+        "note": f.get("note") or "",
+        "couponId": f.get("couponId") or "0",
+    })
+    return jsonify({"ok": ok, "msg": msg, "id": booking.get("id") if booking else None})
+
+
+@bp.post("/m/api/booking/<int:bid>/cancel")
+def api_cancel_booking(bid):
+    """取消自己的预约"""
+    u = current_user()
+    if not u:
+        return jsonify({"error": "请先登录"}), 401
+    rows = db.rows("bookings")
+    hit = next((b for b in rows if b.get("id") == bid and str(b.get("phone")) == str(u.get("phone"))), None)
+    if not hit:
+        return jsonify({"error": "没找到这条预约"}), 404
+    hit.update(status="cancelled", cancelAt=business.now_ms(), cancelBy="user")
+    db.write("bookings", rows)
+    db.update("pays", lambda r: [dict(o, status="closed") if (o.get("bid") == bid and o.get("status") == "unpaid") else o for o in r])
+    return jsonify({"ok": True})
 
 
 # 简单的内容类型，避免依赖 Flask 的复杂猜测

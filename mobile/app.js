@@ -25,9 +25,23 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  function isImageUrl(u) {
+    u = String(u || '').trim();
+    if (!u) return false;
+    // 过滤掉占位字符串/表情也走兜底
+    if (/^(avatar|placeholder|none|null|undefined|🎭)$/i.test(u)) return false;
+    return /^https?:\/\//i.test(u) || /^\/(img|static|upload|m)\//i.test(u);
+  }
+  function coverURL(s, idx) {
+    var u = (s && (s.cover || s.img || s.poster)) || '';
+    if (isImageUrl(u)) return u;
+    // 没图时按顺序复用两张示范海报，避免全站只有渐变
+    var posters = ['/m/poster-n01.jpg', '/m/poster-n02.jpg'];
+    return posters[(idx == null ? 0 : idx) % posters.length];
+  }
   function avatarHTML(cls, av, initial) {
-    if (av && (av.indexOf('http') === 0 || av.indexOf('/img/') === 0))
-      return '<div class="' + cls + '"><img src="' + esc(av) + '" alt=""></div>';
+    if (isImageUrl(av))
+      return '<div class="' + cls + '"><img src="' + esc(av) + '" alt="" onerror="this.parentNode.innerHTML=\'' + esc(initial || '玩') + '\'"></div>';
     return '<div class="' + cls + '">' + esc(initial || '玩') + '</div>';
   }
 
@@ -53,7 +67,9 @@
       loadOne('/m/api/talks', STATIC.talks),
       loadOne('/m/api/me', STATIC.me)
     ]).then(function (r) {
-      D.scripts = r[0]; D.sessions = r[1]; D.cars = r[2]; D.talks = r[3]; D.me = r[4];
+      D.scripts = r[0];
+      D.sessions = (r[1] && r[1].sessions) ? r[1].sessions : (r[1] || []);
+      D.cars = r[2]; D.talks = r[3]; D.me = r[4];
       D.ready = true;
     });
   }
@@ -62,8 +78,9 @@
     var ss = D.scripts.slice(0, 2);
     var hi = $('#hero-imgs'), hc = $('#hero-cap');
     if (ss.length) {
-      hi.innerHTML = '<div class="photo hero-dark" style="background:' + esc(ss[0].grad) + '"></div>' +
-        (ss[1] ? '<div class="photo hero-bright" style="background:' + esc(ss[1].grad) + '"></div>' : '');
+      var durl = coverURL(ss[0], 0), burl = coverURL(ss[1] || {}, 1);
+      hi.innerHTML = '<div class="photo hero-dark" style="background-image:url(\'' + esc(durl) + '\'),' + esc(ss[0].grad) + '"></div>' +
+        (ss[1] ? '<div class="photo hero-bright" style="background-image:url(\'' + esc(burl) + '\'),' + esc(ss[1].grad) + '"></div>' : '');
       hc.innerHTML = ss.map(function (s, i) {
         return '<span><b>NO.0' + (i + 1) + '</b> ' + esc(s.title) + '</span>';
       }).join('');
@@ -73,9 +90,10 @@
     if (D.sessions.length) {
       $('#tonight-note').textContent = '今夜 ' + D.sessions.length + ' 场';
       var rows = D.sessions.slice(0, 6).map(function (s) {
-        return '<div class="trow"><span class="tt">' + esc(s.time || '') + '</span>' +
+        return '<div class="trow" role="button" tabindex="0" data-action="session" data-id="' + esc(s.id) + '">' +
+          '<span class="tt">' + esc(s.time || '') + '</span>' +
           '<div class="tn"><b>' + esc(s.name || '未命名场次') + '</b><small>' + esc(s.room || '') + '</small></div>' +
-          '<span class="ts">已报 ' + (s.have || 0) + '/' + (s.cap || '?') + '</span></div>';
+          '<span class="ts">余 ' + (s.left || 0) + '</span></div>';
       }).join('');
       t.innerHTML = '<div class="tonight-row"><span class="big-zero">' + D.sessions.length + '</span><span class="big-unit">场</span></div>' +
         '<p class="tonight-line">今晚这些场次要开本，挑一个凑进去。</p>' +
@@ -95,7 +113,7 @@
     $('#collage').innerHTML = cs.map(function (s, i) {
       var cls = i % 2 ? 'pcard-b' : 'pcard-a';
       return '<article class="pcard ' + cls + '" data-id="' + esc(s.id) + '" role="button" tabindex="0" aria-label="查看剧本：' + esc(s.title) + '">' +
-        '<div class="pcard-img"><div class="photo" style="background:' + esc(s.grad) + '"></div>' +
+        '<div class="pcard-img"><div class="photo" style="background-image:url(\'' + esc(coverURL(s, i)) + '\'),' + esc(s.grad) + '"></div>' +
         '<span class="pcard-no">0' + (i + 1) + '</span><span class="pcard-v">甜薯剧本杀</span></div>' +
         '<div class="pcard-info"><div class="pcard-name">' + esc(s.title) + '</div>' +
         '<div class="pcard-meta">' + esc(s.players) + ' · ' + esc(s.duration) + '</div>' +
@@ -120,7 +138,7 @@
     $('#scripts-grid').innerHTML = list.map(function (s, i) {
       return '<div class="srow" data-id="' + esc(s.id) + '" role="button" tabindex="0" aria-label="查看剧本：' + esc(s.title) + '">' +
         '<span class="srow-no">0' + (i + 1) + '</span>' +
-        '<div class="srow-thumb" style="background:' + esc(s.grad) + '"></div>' +
+        '<div class="srow-thumb" style="background-image:url(\'' + esc(coverURL(s, i)) + '\'),' + esc(s.grad) + '"></div>' +
         '<div class="srow-main"><div class="srow-name">' + esc(s.title) + '</div>' +
         '<div class="srow-meta">' + esc(s.players) + ' · ' + esc(s.duration) +
         ' <span class="tag">' + esc(s.difficulty) + '</span></div></div></div>';
@@ -171,13 +189,47 @@
       .catch(function () { toast('网络开了小差，待会儿再试'); });
   }
 
+  function bookSession(btn) {
+    if (D.me && D.me.guest) { toast('请先登录再预约'); openAuth('login'); return; }
+    var fd = new FormData();
+    fd.append('sid', btn.getAttribute('data-sid'));
+    fd.append('sessionId', btn.getAttribute('data-session'));
+    fd.append('players', '1');
+    fetch('/m/api/book', { method: 'POST', body: fd, credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j.error) { toast(j.error); return; }
+        toast(j.msg || '预约成功');
+        closeAllSheets();
+        ensureData().then(function () { renderHome(); renderMe(); });
+      })
+      .catch(function () { toast('网络开了小差，待会儿再试'); });
+  }
+
+  function cancelBooking(id) {
+    if (!id) return;
+    if (!confirm('确定取消这条预约？')) return;
+    fetch('/m/api/booking/' + id + '/cancel', { method: 'POST', credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j.error) { toast(j.error); return; }
+        toast('已取消');
+        ensureData().then(renderMe);
+      })
+      .catch(function () { toast('网络开了小差，待会儿再试'); });
+  }
+
   function renderMe() {
     var me = D.me || {}, card = $('#me-card');
     if (me.guest) {
-      card.innerHTML = '<div class="idcard"><div class="idav">甜</div><div><h3>还没入场登记</h3><p>登记后能看到你的打本记录</p></div></div>';
+      card.innerHTML = '<div class="idcard"><div class="idav">甜</div><div><h3>还没入场登记</h3><p>登记后能看到你的打本记录、优惠券和积分</p></div></div>';
     } else {
-      card.innerHTML = '<div class="idcard"><div class="idav">' + esc(me.initial || '甜') + '</div>' +
-        '<div><h3>' + esc(me.name || '玩家') + '</h3><p>' + esc(me.phone || '') + ' · 邀请码 ' + esc(me.id || '') + '</p></div></div>';
+      var coupons = (me.coupons || []).slice(0, 3).map(function (c) {
+        return '<span class="cpill">' + esc(c.name) + ' ¥' + (c.amount || 0) + '</span>';
+      }).join('');
+      card.innerHTML = '<div class="idcard">' + avatarHTML('idav', me.avatar, me.initial) +
+        '<div><h3>' + esc(me.name || '玩家') + '</h3><p>' + esc(me.phone || '') + ' · 邀请码 ' + esc(me.id || '') + '</p>' +
+        '<div class="idstat"><span>积分 ' + (me.credit || 0) + '</span>' + coupons + '</div></div></div>';
     }
     var recs = me.records || [];
     $('#record-note').textContent = recs.length + ' 条';
@@ -185,9 +237,13 @@
     else {
       $('#record-empty').hidden = true;
       $('#record-list').innerHTML = recs.map(function (r) {
-        return '<div class="rrow"><div class="rmain"><div class="rname">' + esc(r.name || '剧本') +
+        var canCancel = (r.state === '待开演' || r.state === '已预约');
+        return '<div class="rrow" ' + (r.id ? 'data-id="' + esc(r.id) + '"' : '') + '>' +
+          '<div class="rmain"><div class="rname">' + esc(r.name || '剧本') +
           '</div><div class="rtime">' + esc(r.time || '') + '</div></div>' +
-          '<span class="st ' + (r.state === '已取消' ? 'st-warn' : 'st-ok') + '">' + esc(r.state || '已预约') + '</span></div>';
+          '<button class="st ' + (r.state === '已取消' ? 'st-warn' : 'st-ok') + '" ' +
+          (canCancel ? 'data-action="cancel-booking" data-id="' + esc(r.id) + '"' : '') +
+          '>' + esc(r.state || '已预约') + '</button></div>';
       }).join('');
     }
   }
@@ -207,7 +263,7 @@
   function openSheet(id) {
     var s = D.scripts.filter(function (x) { return x.id === id; })[0];
     if (!s) return;
-    $('#sheet-photo').style.background = s.grad;
+    $('#sheet-photo').style.backgroundImage = 'url(' + coverURL(s) + '), ' + s.grad;
     var tags = (s.tags || []).map(function (x) { return '<span class="tag">' + esc(x) + '</span>'; }).join('') +
       '<span class="tag">' + esc(s.players) + '</span><span class="tag">' + esc(s.duration) + '</span>' +
       '<span class="tag">难度 ' + esc(s.difficulty) + '</span>';
@@ -217,6 +273,36 @@
       '<button class="btn btn-ghost btn-block" data-action="book" data-id="' + esc(s.id) + '">包下整场</button></div>' +
       '<p class="sheet-note">拼车和包场走桌面下单，点完跳过去。</p>';
     showSheet('#sheet', '#sheet-mask');
+    fetchReviews(s.id);
+  }
+
+  function fetchReviews(sid) {
+    fetch('/m/api/reviews?sid=' + encodeURIComponent(sid), { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (list) {
+        var box = $('#sheet-reviews');
+        if (!box || !list.length) { if (box) box.innerHTML = ''; return; }
+        box.innerHTML = '<h4 class="rev-head">玩过的人说</h4>' + list.map(function (x) {
+          return '<div class="rev">' + avatarHTML('rev-av', x.avatar, (x.name || '玩')[0]) +
+            '<div class="rev-body"><div class="rev-meta"><b>' + esc(x.name) + '</b><span>' + esc(x.time) + '</span></div>' +
+            '<p>' + esc(x.text) + '</p></div></div>';
+        }).join('');
+      })
+      .catch(function () {});
+  }
+
+  function openSessionSheet(id) {
+    var s = D.sessions.filter(function (x) { return String(x.id) === String(id); })[0];
+    if (!s) { toast('场次信息没找到'); return; }
+    var script = D.scripts.filter(function (x) { return String(x.id) === String(s.sid); })[0];
+    $('#sheet-photo').style.backgroundImage = 'url(' + coverURL(script || s, 0) + '), ' + ((script && script.grad) || s.grad || 'var(--paper-deep)');
+    $('#sheet-body').innerHTML = '<div class="sheet-no">场次</div><h2 class="sheet-title">' + esc(s.name || '未命名场次') + '</h2>' +
+      '<p class="sheet-desc">' + esc(s.time || '') + ' · ' + esc(s.room || '') + '<br>剧本：' + esc(s.script || '待定') + '</p>' +
+      '<div class="sheet-cta"><button class="btn btn-primary btn-block" data-action="book-session" data-sid="' + esc(s.sid) + '" data-session="' + esc(s.id) + '">报名占位</button>' +
+      '<button class="btn btn-ghost btn-block" data-action="close-sheet">先不约</button></div>' +
+      '<div id="sheet-reviews" class="reviews"></div>';
+    showSheet('#sheet', '#sheet-mask');
+    if (s.sid) fetchReviews(s.sid);
   }
 
   function openCarSheet() {
@@ -306,6 +392,9 @@
       else if (a === 'book') toast('包场请到桌面端下单');
       else if (a === 'join') toast('拼车入局请到桌面端下单');
       else if (a === 'clear-filter') { curCat = '全部'; query = ''; $('#search-input').value = ''; renderScripts(); }
+      else if (a === 'book-session') { bookSession(act); return; }
+      else if (a === 'cancel-booking') { cancelBooking(act.getAttribute('data-id')); return; }
+      else if (a === 'close-sheet') { closeAllSheets(); return; }
       return;
     }
     var chip = e.target.closest('.chip');
@@ -314,6 +403,8 @@
     if (card && (card.classList.contains('pcard') || card.classList.contains('srow'))) {
       openSheet(card.getAttribute('data-id')); return;
     }
+    var sess = e.target.closest('[data-action="session"]');
+    if (sess) { openSessionSheet(sess.getAttribute('data-id')); return; }
     var tabBtn = e.target.closest('[data-tab]');
     if (tabBtn) { goTab(tabBtn.getAttribute('data-tab')); return; }
   });
