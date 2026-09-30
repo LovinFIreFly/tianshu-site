@@ -193,7 +193,10 @@ def create_app():
         """
         import re as _re
         p = request.path
-        if p.startswith(('/m', '/static', '/health')):
+        # ⚠️ /img 必须放行：它是"上传的图片"，不是页面。
+        # 踩过的坑（2026-10）：手机 UA 请求 /img/cover/xxx.png 曾被这里 302 到 /m/，
+        # 结果手机上所有图片都变成一段 HTML —— 电脑上正常、手机上全白。
+        if p.startswith(('/m', '/static', '/img', '/health')):
             return
         if p.startswith(('/admin', '/dm')):
             return
