@@ -260,6 +260,7 @@ def me():
     coupons = [c for c in db.rows('coupons')
                if c.get('all') or str(c.get('phone')) == phone]
     order_of = {o.get('bid'): o for o in orders}
+    booking_of = {b.get('id'): b for b in bookings}   # 订单面板按 bid 反查预约（亮核销码用）
     fav_ids = set()
     for r in db.rows('favs'):
         if str(r.get('phone')) == phone:
@@ -293,7 +294,7 @@ def me():
     serviceWechat = business.get_settings().get('serviceWechat', '')
     return render_template('me.html', u=u, bookings=bookings, orders=orders,
                            coupons=coupons, notices=business.my_notices(u, 20), spent=spent,
-                           order_of=order_of, scripts=scripts_all, fav_ids=fav_ids,
+                           order_of=order_of, booking_of=booking_of, scripts=scripts_all, fav_ids=fav_ids,
                            reviewed={r.get('bid') for r in _revs},
                            my_reviews=my_reviews,
                            msgs=business.my_messages(u), days=next_days(7),

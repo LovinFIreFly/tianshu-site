@@ -225,9 +225,17 @@
               <td>¥{{ o.amount or 0 }}</td>
               <td style="font-family:var(--d-mono)">¥{{ o.deposit or 0 }}</td>
               <td>
-                {% if o.status == 'paid' %}<span class="tag3 tag3--accent">已付定金</span>
-                {% elif o.status == 'claimed' %}<span class="tag3">待小客服确认</span>
-                {% elif o.status == 'unpaid' %}<span class="tag3">待付定金</span>
+                {# 状态直接当入口（2026-10 反馈）：待付定金 / 待确认 → 点了就去客服支付页；
+                   已付 → 顺手把核销码亮在旁边。原来是一块死标签，客人还得回上面
+                   「预约」面板里找按钮 —— 整套流程（去支付 → 待确认 → 核销码）在这里一眼走完 #}
+                {% set bo = booking_of.get(o.bid) %}
+                {% if o.status == 'paid' %}
+                  <span class="tag3 tag3--accent">已付定金</span>
+                  {% if bo and bo.verifyCode %}<span class="copy-mono" style="margin-left:8px">核销码 {{ bo.verifyCode }}</span>{% endif %}
+                {% elif o.status == 'claimed' %}
+                  <a class="tag3" href="{{ url_for('user.pay_deposit', oid=o.id) }}" title="点开再看支付方式">待小客服确认 ›</a>
+                {% elif o.status == 'unpaid' %}
+                  <a class="tag3 tag3--accent" href="{{ url_for('user.pay_deposit', oid=o.id) }}" title="点开去付定金">待付定金 · 去支付 ›</a>
                 {% elif o.status == 'refunded' %}<span class="tag3">已退款</span>
                 {% else %}<span class="tag3">已关闭</span>{% endif %}
               </td>
