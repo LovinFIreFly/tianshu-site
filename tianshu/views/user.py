@@ -425,7 +425,7 @@ def cancel_booking(bid):
 @bp.post('/order/<int:oid>/<action>')
 @login_required
 def order_act(oid, action):
-    ok, msg = business.order_action(current_user(), oid, action,
+    ok, msg = business.order_action(current_user(), oid, action, is_staff=is_staff(),
                                     coupon_id=request.form.get('couponId'))
     flash(msg, 'ok' if ok else 'warn')
     return redirect(url_for('user.me'))
@@ -451,8 +451,10 @@ def pay_deposit(oid):
     点「确认支付定金」之后才给客人看，这样码不会在钱没到之前就流出去。
     """
     u = current_user()
+    # 员工也能看：后台「待付定金」那行有颗「客服支付页」按钮，跳的就是这一页 ——
+    # 方便店里把客服微信 / 群二维码那屏直接展示给客人看（2026-10 客人建议）。
     o = next((x for x in db.rows('pays') if str(x.get('id')) == str(oid)
-              and str(x.get('phone')) == str(u.get('phone'))), None)
+              and (str(x.get('phone')) == str(u.get('phone')) or is_staff())), None)
     if not o:
         flash('没找到这一单（可能已经取消了）', 'warn')
         return redirect(url_for('user.me'))

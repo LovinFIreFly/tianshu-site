@@ -23,7 +23,7 @@
     {# 口语化提示（九·交互细节） #}
     <p class="body-large hand" style="max-width:42ch;margin:var(--d-s5) auto 0;font-size:19px;color:var(--d-ink-2)">
       {% if code == 404 %}这本子被人借走啦，页面没找着。换个别的看看？
-      {% elif code == 403 %}这扇门只给店里人开，你先在门外等等～
+      {% elif code == 403 %}{{ msg or '这扇门只给店里人开，你先在门外等等～' }}
       {% else %}正帮你翻本子呢，稍等下再来试试。
       {% endif %}
     </p>

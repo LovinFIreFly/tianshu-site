@@ -13,7 +13,7 @@ import time
 from datetime import timedelta
 from urllib.parse import urlencode
 
-from flask import Flask, abort, g, jsonify, redirect, render_template, request, session
+from flask import Flask, abort, flash, g, jsonify, redirect, render_template, request, session
 from jinja2 import BaseLoader, FileSystemLoader, TemplateNotFound
 
 from config import IMG_DIR, ROOMS_DEFAULT, SEED_USERS, SESSION_DAYS, SETTINGS_DEFAULT, TEMPLATES_AUTO_RELOAD
@@ -261,6 +261,13 @@ def create_app():
                 return
             sent = request.form.get('_csrf') or request.headers.get('X-CSRF') or ''
             if not g.csrf or not secrets.compare_digest(str(sent), str(g.csrf)):
+                # 自愈（2026-10）：从浏览器缓存 / 很久前开的标签页里翻出来的旧页面没带令牌，
+                # 一提交就撞 403 —— 客人看到的是"这扇门只给店里人开"，其实只是页面放久了。
+                # 只要浏览器里明明有令牌 cookie，就把他送回去刷新一次再点，别一棍子打死。
+                # （cookie 都没有的才算真异常，仍走 403。）
+                if g.csrf and not sent and request.referrer:
+                    flash('页面放太久啦，已帮你刷新 —— 再点一次刚才那个按钮就好', 'warn')
+                    return redirect(request.referrer)
                 abort(403, '页面放太久，安全令牌对不上 —— 刷新一下页面再试')
 
     @app.after_request
@@ -269,6 +276,11 @@ def create_app():
         if not g.get('csrf'):
             resp.set_cookie('csrf', secrets.token_hex(16), max_age=SESSION_DAYS * 86400,
                             samesite='Lax', httponly=False)   # 这颗故意让 JS 可读：它不是会话，泄了也无害
+        # 页面一律不进缓存（2026-10）：不然「返回 / 历史记录」翻出的是很久以前的旧 HTML，
+        # 表单里没有安全令牌，一提交就是 403 —— "网站动不动 403"多半是它。
+        # 只限 HTML；图片 / css / js 静态资源照常缓存。
+        if resp.mimetype == 'text/html' and resp.status_code == 200:
+            resp.headers['Cache-Control'] = 'no-store'
         return resp
 
     @app.get('/health')

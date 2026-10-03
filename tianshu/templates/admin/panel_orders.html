@@ -67,7 +67,11 @@
               onsubmit="return confirm('标记「未到 / 中途跳车」？\n定金 ¥{{ o.deposit or 0 }} 按门店规矩不退，单子会关掉、位子放回池子。')">
           <button class="btn btn-sm" type="submit">标记未到 · 定金不退</button></form>
         {% endif %}
-        {% if not canConfirm and not canForfeit %}<span class="sub">—</span>{% endif %}
+        {% if o.status in ('unpaid', 'claimed') %}
+        <a class="btn btn-sm" style="margin-left:6px" target="_blank"
+           href="{{ url_for('user.pay_deposit', oid=o.id) }}">客服支付页</a>
+        {% endif %}
+        {% if not canConfirm and not canForfeit and o.status not in ('unpaid', 'claimed') %}<span class="sub">—</span>{% endif %}
       </td>
     </tr>
     {% else %}

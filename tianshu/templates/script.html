@@ -276,8 +276,9 @@
               <span class="sub">店里一般 13:00 / 15:30 / 19:00 / 20:30 开场，其它时间也可以商量</span>
             </div>
             <div class="field">
-              <label>人数（{{ lo }}-{{ hi }} 人）</label>
-              <input name="players" type="number" min="{{ lo }}" max="{{ hi }}" value="{{ lo }}">
+              <label>人数（{{ lo }}-{{ hi }} 人）<span class="sub">单开一辆车时固定 1 人，别人上车各付各的</span></label>
+              <input id="players-in" name="players" type="number" min="{{ lo }}" max="{{ hi }}" value="{{ lo }}"
+                     data-lo="{{ lo }}" data-hi="{{ hi }}">
             </div>
             <div class="field">
               <label>玩法</label>
@@ -294,7 +295,8 @@
               <option value="new">自己单开一辆车（我来组队）</option>
               <option value="join"{{ ' disabled' if not open_cars }}>加入已有的车（现在 {{ open_cars|length }} 辆有位）</option>
             </select>
-            <span class="sub">定金 ¥{{ car_deposit|int }} / 人，先付定金占住位子（<b>玩完由小客服退回</b>；没到场或中途跳车不退）；
+            <span class="sub">定金 ¥{{ car_deposit|int }} / 人：单开一辆车先收你 1 人的 ¥{{ car_deposit|int }}，
+              别人上车后每人再各付 ¥{{ car_deposit|int }}（<b>玩完由小客服退回</b>；没到场或中途跳车不退）；
               付完等小客服确认到账，核销码才会出现</span>
             {% if settings.carTags %}
             <label style="display:block;margin-top:10px">给这车贴标签（可多选）</label>
@@ -343,7 +345,7 @@
 
           {% if me %}
           <button class="b3 b3--accent b3--wide" type="submit">提交预约</button>
-          <p class="sub">定金 ¥{{ car_deposit|int }} / 人（拼车、包车都一样）：付完定金、小客服确认到账后核销码才显示；
+          <p class="sub">定金 ¥{{ car_deposit|int }} / 人：拼车每人一份（单开先收 1 人份）、包车按人数一次交齐 —— 付完定金、小客服确认到账后核销码才显示；
             <b>玩完由小客服退回</b>，没到场或中途跳车的不退。游玩费玩完再付（也可用券抵）。</p>
           {% else %}
           <a class="b3 b3--solid b3--wide" href="{{ url_for('user.login', next=request.path) }}">登录后预约</a>
@@ -409,11 +411,23 @@
   var car = document.getElementById('car-sel');
   var boxMode = document.getElementById('car-mode-box');
   var boxPick = document.getElementById('car-pick-box');
+  var pin = document.getElementById('players-in');
   if (!mode || !car || !boxMode || !boxPick) return;
   function sync() {
     var carpool = mode.value === '拼车';
     boxMode.style.display = carpool ? '' : 'none';
     boxPick.style.display = (carpool && car.value === 'join') ? '' : 'none';
+    /* 单开一辆车 = 你 1 个人先上车，别人再加入、各付各的定金。
+       所以人数一栏锁成 1 —— 不然把整桌位子一占，车刚开就"已满锁车" */
+    if (pin && carpool && car.value === 'new') {
+      if (!pin.dataset.keep) pin.dataset.keep = pin.value || pin.min || '1';
+      pin.value = 1; pin.min = 1; pin.max = 1; pin.disabled = true;
+    } else if (pin) {
+      pin.disabled = false;
+      pin.min = pin.dataset.lo || pin.min;
+      pin.max = pin.dataset.hi || pin.max;
+      if (pin.dataset.keep) { pin.value = pin.dataset.keep; delete pin.dataset.keep; }
+    }
   }
   mode.addEventListener('change', sync);
   car.addEventListener('change', sync);

@@ -35,12 +35,12 @@
   })();
   </script>
   <meta name="theme-color" content="#161310">
-  <meta name="description" content="{{ settings.shopName }}：藏在街角的剧本杀小店。挑本、拼车、到店开演，定金锁位玩完退回。">
+  <meta name="description" content="{{ settings.shopName }}：藏在学校里的剧本杀小店。挑本、拼车、到店开演，定金锁位玩完退回。">
   {# Open Graph：社交分享卡片。剧本页用 og_title/og_description/og_image 块覆盖。 #}
   <meta property="og:site_name" content="{{ settings.shopName }}">
   <meta property="og:type" content="{% block og_type %}website{% endblock %}">
   <meta property="og:title" content="{% block og_title %}{{ settings.shopName }}{% endblock %}">
-  <meta property="og:description" content="{% block og_description %}{{ settings.shopName }}：藏在街角的剧本杀小店。挑本、拼车、到店开演，定金锁位玩完退回。{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}{{ settings.shopName }}：藏在学校里的剧本杀小店。挑本、拼车、到店开演，定金锁位玩完退回。{% endblock %}">
   <meta property="og:image" content="{% block og_image %}{{ url_for('static', filename='icon.svg', _external=True) }}{% endblock %}">
   {# 埋点：页面加载后约 1.5s 用 sendBeacon 上报当前路径（POST /api/track），不阻塞渲染。 #}
   <script>
@@ -165,7 +165,7 @@
     <div class="dfoot__grid">
       <div>
         <div class="dfoot__brand">{{ settings.shopName }}</div>
-        <p class="dfoot__slogan">藏在街角的小店，陪你把每一场演完。</p>
+        <p class="dfoot__slogan">藏在学校的小店，陪你把每一场演完。</p>
       </div>
       <div>
         <h4>去挑本</h4>
@@ -196,7 +196,6 @@
       </div>
     </div>
 
-    <p class="dfoot__note hand">—— {{ settings.shopName }} 社长碎碎念：这周新本都内测过了，无雷，放心冲。</p>
     <div class="dfoot__bar">
       <span>© {{ year }} {{ settings.shopName }}・熬夜改本中</span>
       <span class="grow"></span>
