@@ -213,7 +213,8 @@
       <div class="tabpane" data-tab="orders">
         {% if orders %}
         <div class="block3" style="overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:13.5px">
+          {# min-width：手机上宁可横向滚也别把七列挤到出格（2026-10 反馈） #}
+          <table style="width:100%;min-width:560px;border-collapse:collapse;font-size:13.5px">
             <tr>
               <th>剧本</th><th>场次</th><th>人数</th><th>总价</th><th>定金</th><th>状态</th><th>下单时间</th>
             </tr>
@@ -226,10 +227,24 @@
               <td style="font-family:var(--d-mono)">¥{{ o.deposit or 0 }}</td>
               <td>
                 {# 状态直接当入口（2026-10 反馈）：待付定金 / 待确认 → 点了就去客服支付页；
-                   已付 → 顺手把核销码亮在旁边。原来是一块死标签，客人还得回上面
-                   「预约」面板里找按钮 —— 整套流程（去支付 → 待确认 → 核销码）在这里一眼走完 #}
+                   已付 → 顺手把核销码亮在旁边；核销到店后 → 变「支付游玩费」，
+                   付完待确认、确认完去评价 —— 整条流程在订单面板里一眼走完 #}
                 {% set bo = booking_of.get(o.bid) %}
-                {% if o.status == 'paid' %}
+                {% if o.status == 'paid' and bo and bo.status in ('arrived', 'done') %}
+                  {% if o.balStatus == 'paid' %}
+                    <span class="tag3 tag3--ok">游玩费已结清</span>
+                    {% if o.depositBack %}<span class="tag3 tag3--ok">定金 ¥{{ o.deposit }} 已退回</span>{% endif %}
+                    {% if bo.id in reviewed %}<span class="tag3 tag3--ok">已评价 ✓</span>
+                    {% else %}<a class="tag3 tag3--accent" href="{{ url_for('user.me') }}?tab=bookings">去评价 ›</a>{% endif %}
+                  {% elif o.balStatus == 'claimed' %}
+                    <span class="tag3">游玩费待小客服确认</span>
+                    <a class="tag3" href="{{ url_for('user.pay_deposit', oid=o.id) }}">再看支付方式 ›</a>
+                  {% elif (o.amount or 0) > 0 %}
+                    <a class="tag3 tag3--accent" href="{{ url_for('user.pay_deposit', oid=o.id) }}">支付游玩费 ¥{{ o.amount }} ›</a>
+                  {% else %}
+                    <span class="tag3 tag3--accent">已付定金</span>
+                  {% endif %}
+                {% elif o.status == 'paid' %}
                   <span class="tag3 tag3--accent">已付定金</span>
                   {% if bo and bo.verifyCode %}<span class="copy-mono" style="margin-left:8px">核销码 {{ bo.verifyCode }}</span>{% endif %}
                 {% elif o.status == 'claimed' %}

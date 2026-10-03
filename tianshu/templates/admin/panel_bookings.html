@@ -79,15 +79,25 @@
         {% else %}<span class="badge ok">已订</span>{% endif %}
       </td>
       <td>
+        {% set o = order_of.get(b.id) %}
         {% if b.status == 'booked' %}
-        <form method="post" action="{{ url_for('admin.verify') }}" style="display:inline">
-          <input type="hidden" name="code" value="{{ b.verifyCode }}">
-          <button class="btn btn-sm" type="submit">核销</button>
-        </form>
-        <form method="post" action="{{ url_for('admin.cancel_booking', bid=b.id) }}" style="display:inline"
-              onsubmit="return confirm('确定取消这条预约并退款？')">
-          <button class="btn btn-sm btn-danger" type="submit">取消</button>
-        </form>
+          {# 2026-10 流程改版：定金没确认到账（unpaid/claimed）不给核销 ——
+             核销按钮换成「确认支付定金」，点完这里自动变回「核销」；
+             老数据没有订单记录的仍然直接给核销，别把老单卡死 #}
+          {% if o and o.status in ('unpaid', 'claimed') %}
+          <form method="post" action="{{ url_for('admin.order_confirm', oid=o.id) }}" style="display:inline">
+            <button class="btn btn-sm btn-primary" type="submit">确认支付定金</button>
+          </form>
+          {% else %}
+          <form method="post" action="{{ url_for('admin.verify') }}" style="display:inline">
+            <input type="hidden" name="code" value="{{ b.verifyCode }}">
+            <button class="btn btn-sm" type="submit">核销</button>
+          </form>
+          {% endif %}
+          <form method="post" action="{{ url_for('admin.cancel_booking', bid=b.id) }}" style="display:inline"
+                onsubmit="return confirm('确定取消这条预约并退款？')">
+            <button class="btn btn-sm btn-danger" type="submit">取消</button>
+          </form>
         {% else %}—{% endif %}
       </td>
     </tr>

@@ -39,6 +39,14 @@ html[data-device="mobile"] .page {
 }
 @keyframes m-page { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
+/* —— 后台 / DM 工作台（.page--adm）不加入场动画 ——
+   为什么：这俩页面的「☰ 全部功能」抽屉是 position:fixed。祖先挂着 transform 动画
+   （哪怕 fill 完了值是 none）时，Chromium 会把 fixed 的定位基准从视口换成这个祖先 ——
+   结果遮罩还能盖住整页（看着像正常变暗），抽屉却被钉到**整页最底部**（屏幕外），
+   手机上点「☰ 全部」永远只见屏幕变暗、抽屉出不来（2026-10 用户实测踩坑）。
+   动画一关，fixed 回到视口基准，抽屉正常从底部滑出。 */
+html[data-device="mobile"] .page.page--adm { animation: none; }
+
 /* —— 顶栏：毛玻璃、贴顶、收起副标题与栏目条（底栏已接管导航） —— */
 html[data-device="mobile"] .tnav {
   position: sticky; top: 0; z-index: 60;

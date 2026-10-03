@@ -95,8 +95,11 @@ def bookings():
         s = b.get('status') or 'booked'
         if s in counts:
             counts[s] += 1
+    # 操作列要按订单状态决定给哪颗按钮：定金没确认 → 「确认支付定金」；
+    # 确认完 → 「核销」（2026-10 流程改版：没收到钱不让核销）
+    order_of = {o.get('bid'): o for o in db.rows('pays')}
     return render_template('admin/panel_bookings.html', rows=rows, status=status, q=kw,
-                           counts=counts)
+                           counts=counts, order_of=order_of)
 
 
 @bp.post('/bookings/<int:bid>/cancel')
@@ -556,8 +559,12 @@ def orders():
         if o.get('status') == 'paid':
             d = o.get('day') or '未知'
             by_day[d] = by_day.get(d, 0) + int(o.get('deposit') or 0)
+    # 预约状态按 bid 反查：人到店核销过（arrived/done）就不能再「标记未到」，
+    # 状态列也顺手亮个「已到店」徽章，这一单下一步该干嘛一目了然
+    bstat = {b.get('id'): b.get('status') for b in db.rows('bookings')}
     return render_template('admin/panel_orders.html', rows=rows, status=status,
-                           by_day=sorted(by_day.items(), key=lambda kv: kv[0], reverse=True)[:14])
+                           by_day=sorted(by_day.items(), key=lambda kv: kv[0], reverse=True)[:14],
+                           bstat=bstat)
 
 
 @staff_required

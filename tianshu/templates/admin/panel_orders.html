@@ -46,16 +46,22 @@
       <td>¥{{ o.amount or 0 }}</td>
       <td class="price">¥{{ o.deposit or 0 }}</td>
       <td>
+        {% set bst = bstat.get(o.bid) %}
         {% if o.forfeitAt %}<span class="badge bad">未到 · 不退</span>
         {% elif o.status == 'paid' %}<span class="badge ok">已付</span>
         {% elif o.status == 'claimed' %}<span class="badge warn">待客服确认</span>
         {% elif o.status == 'unpaid' %}<span class="badge">待付</span>
         {% elif o.status == 'refunded' %}<span class="badge bad">已退</span>
         {% else %}<span class="badge">{{ o.status }}</span>{% endif %}
+        {# 人已核销到店：亮个徽章，这一单接下来是收游玩费，不再是「标记未到」 #}
+        {% if bst in ('arrived', 'done') %}<span class="badge ok">已到店</span>{% endif %}
       </td>
       <td>
+        {% set bst = bstat.get(o.bid) %}
         {% set canConfirm = o.status in ('unpaid', 'claimed') or o.balStatus == 'claimed' %}
-        {% set canForfeit = o.status in ('paid', 'claimed') and not o.forfeitAt %}
+        {# 已到店（arrived/done）的单子不能再标「未到」—— 人都来了（2026-10） #}
+        {% set canForfeit = o.status in ('paid', 'claimed') and not o.forfeitAt
+                            and bst not in ('arrived', 'done') %}
         {% if canConfirm %}
         <form method="post" action="{{ url_for('admin.order_confirm', oid=o.id) }}" style="display:inline">
           <button class="btn btn-sm {{ 'btn-primary' if (o.status == 'claimed' or o.balStatus == 'claimed') else '' }}"
