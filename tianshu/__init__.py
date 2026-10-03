@@ -28,6 +28,9 @@ _MOBILE_UA_RE = re.compile(r'(?:iPhone|iPod|Android|Mobile|BlackBerry|IEMobile|O
 # static_v(fname) 的 mtime 缓存：每请求对每个静态文件 os.stat 一次太浪费，文件 mtime 不变就复用
 _static_v_cache = {}
 
+# 不需要 CSRF 令牌的写接口（见 csrf_guard 里的说明）：只记路径的匿名埋点
+_CSRF_FREE = {'/api/track', '/m/api/track'}
+
 
 class UiLoader(BaseLoader):
     """按"一代 / 二代"挑模板目录。
@@ -250,6 +253,12 @@ def create_app():
         """
         g.csrf = request.cookies.get('csrf') or ''
         if request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
+            # 埋点接口（桌面 /api/track、手机 /m/api/track）是页面加载后的匿名上报：
+            # 用的是 navigator.sendBeacon，它**发不了自定义请求头**、也带不上表单字段，
+            # 所以每个页面都会撞一次 403（控制台一片红，客人侧表现为"时不时报 403"）。
+            # 它只记一个路径、不改任何数据，属于安全例外，这里放行。
+            if request.path in _CSRF_FREE:
+                return
             sent = request.form.get('_csrf') or request.headers.get('X-CSRF') or ''
             if not g.csrf or not secrets.compare_digest(str(sent), str(g.csrf)):
                 abort(403, '页面放太久，安全令牌对不上 —— 刷新一下页面再试')

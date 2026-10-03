@@ -51,7 +51,7 @@
         <div class="sheet3__row" style="grid-template-columns:1fr auto">
           <span class="sheet3__m">
             <span class="car-mem-av" aria-hidden="true">{% if m.avatar and m.avatar.startswith('/img/') %}<img src="{{ m.avatar }}" alt="">{% else %}{{ (m.nick or '玩')[0] }}{% endif %}</span>
-            <b><a class="lnk" href="{{ url_for('public.user_profile', username=(m.nick or '')) }}">{{ m.nick }}</a>{% if m.owner %} 车主{% endif %}</b>
+            <b>{% if m.nick in user_names %}<a class="lnk" href="{{ url_for('public.user_profile', username=(m.nick or '')) }}">{{ m.nick }}</a>{% else %}{{ m.nick }}{% endif %}{% if m.owner %} 车主{% endif %}</b>
             <span>{{ m.players }} 人{% if m.gender %} · {{ m.gender }}{% endif %}{% if m.ageBucket %} · {{ m.ageBucket }}{% endif %}</span>
             {% if m.tags %}<span class="chips3" style="margin-top:6px">{% for t in m.tags %}<i class="tag3" style="margin:0 4px 0 0">{{ t }}</i>{% endfor %}</span>{% endif %}
           </span>

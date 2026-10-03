@@ -1006,7 +1006,10 @@ def mobile_index():
 def mobile_asset(filename):
     # 只允许文件级访问，阻止目录穿越
     full = os.path.normpath(os.path.join(_MOBILE_DIR, filename))
-    if not full.startswith(_MOBILE_DIR) or not os.path.isfile(full):
+    # 目录穿越防护：比的是「规范化后的绝对路径 + 分隔符」前缀，
+    # 光用 startswith(_MOBILE_DIR) 会被 /mobile2 这种同前缀的兄弟目录绕过去。
+    _root = os.path.abspath(_MOBILE_DIR) + os.sep
+    if not os.path.abspath(full).startswith(_root) or not os.path.isfile(full):
         return Response("not found", status=404)
     ext = os.path.splitext(full)[1].lower()
     mime = _MIME.get(ext, "application/octet-stream")

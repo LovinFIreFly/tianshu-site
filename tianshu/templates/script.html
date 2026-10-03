@@ -223,7 +223,9 @@
               <button class="b3 b3--sm b3--ghost fav-btn" type="submit">
                 {{ '❤' if (me and me.phone|string in (r.likes or [])) else '♡' }} {{ (r.likes or [])|length }}</button>
             </form>
+            {% if r.username in user_names %}
             <a class="b3 b3--sm b3--ghost" href="{{ url_for('public.user_profile', username=(r.username or '')) }}">看 TA 主页</a>
+            {% endif %}
           </div>
           {% if me and r.username == me.username %}
           <form class="row" style="margin-top:12px" method="post" action="{{ url_for('public.review_follow', rid=r.id) }}">

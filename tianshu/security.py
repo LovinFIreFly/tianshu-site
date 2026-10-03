@@ -126,6 +126,22 @@ def is_dm():
     return _biz().has_role(current_user(), 'dm', 'admin')
 
 
+def safe_next(candidate, fallback='/'):
+    """登录后要跳回哪页 —— 只认**站内**的相对路径。
+
+    开放重定向（OWASP）：原来直接 `redirect(request.args.get('next'))`，
+    别人可以发一个 `/login?next=https://假网站.com` 的链接，
+    客人登录完就被送到钓鱼站（地址栏看着像刚从咱这儿出来）。
+    这里挡掉：必须以 / 开头、不能是 //（协议相对，等于外站）、不能有反斜杠。
+    """
+    c = (candidate or '').strip()
+    if not c.startswith('/'):
+        return fallback
+    if c.startswith('//') or c.startswith('/\\') or '\\' in c:
+        return fallback
+    return c
+
+
 def login_required(view):
     @wraps(view)
     def wrapper(*a, **kw):

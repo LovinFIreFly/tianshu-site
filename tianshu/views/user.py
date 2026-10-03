@@ -13,7 +13,7 @@ from flask import (Blueprint, flash, jsonify, redirect, render_template, request
 from tianshu import business
 from tianshu.db import db
 from tianshu.security import (current_user, hash_password, is_staff, login_required, rate,
-                              rate_clear, rate_peek, verify_password)
+                              rate_clear, rate_peek, safe_next, verify_password)
 
 bp = Blueprint('user', __name__)
 
@@ -72,7 +72,7 @@ def login():
             session['phone'] = u.get('phone')
             business.audit(u.get('username'), business.role_of(u), '登录')
             flash('欢迎回来，%s' % ((u.get('profile') or {}).get('nick') or u.get('username')), 'ok')
-            return redirect(request.args.get('next') or url_for('public.home'))
+            return redirect(safe_next(request.args.get('next'), url_for('public.home')))
     return render_template('login.html')
 
 
@@ -137,7 +137,7 @@ def register():
             session['phone'] = phone
             flash('注册好了，你的邀请码是 %s（朋友用它注册，你俩各得一张 %s 元券）'
                   % (my_invite, invite_amount), 'ok')
-            return redirect(request.args.get('next') or url_for('public.home'))
+            return redirect(safe_next(request.args.get('next'), url_for('public.home')))
     return render_template('register.html')
 
 
@@ -280,10 +280,13 @@ def me():
     favGroups = {}
     for _g in ('want', 'done', 'avoid'):
         favGroups[_g] = [
+            # ⚠️ 模板 me.html 要显示价格，这里必须带上 price ——
+            # 漏了这个字段，「我的」页直接 500（UndefinedError: 'dict object' has no attribute 'price'）
             {'id': sid, 'title': scripts_by_id[sid].get('title', ''),
              'emoji': scripts_by_id[sid].get('emoji', ''),
              'cover': scripts_by_id[sid].get('cover', ''),
-             'diff': scripts_by_id[sid].get('diff', 0)}
+             'diff': scripts_by_id[sid].get('diff', 0),
+             'price': scripts_by_id[sid].get('price', 0)}
             for sid in _fg.get(_g, []) if sid in scripts_by_id
         ]
     myTags = list((u.get('profile') or {}).get('tags') or [])

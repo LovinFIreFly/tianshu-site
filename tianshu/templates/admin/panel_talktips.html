@@ -38,7 +38,9 @@
 {# 新增表单 #}
 <h2 style="margin-top:22px">补一条话术</h2>
 <div class="panel">
-  <form method="post" action="{{ url_for('admin.talktips') }}" class="form-inline" style="gap:12px;align-items:flex-end;flex-wrap:wrap">
+  {# ⚠️ 端点名是 admin.talktip_add（POST /admin/talktips/add）。
+     写成 admin.talktips 会在渲染时 BuildError —— 后台和 DM 工作台的「话术库」直接 500。 #}
+  <form method="post" action="{{ url_for('admin.talktip_add') }}" class="form-inline" style="gap:12px;align-items:flex-end;flex-wrap:wrap">
     <div class="field" style="margin:0"><label>分类</label>
       <select name="cat">
         {% for c_opt in ['开场白', '过渡', '结尾', '其他'] %}

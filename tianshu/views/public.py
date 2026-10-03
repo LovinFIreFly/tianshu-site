@@ -222,7 +222,10 @@ def script_detail(sid):
                            # 日历控件的可选范围：今天 ~ 30 天后（别再让客人翻无意义的月份）
                            day_min=business.iso_day(0), day_max=business.iso_day(30),
                            rating=_st.get('rating'), rating_n=_st.get('n'),
-                           canSeeReview=canSeeReview)
+                           canSeeReview=canSeeReview,
+                           # 评价里写的用户名不一定还是本站账号（改过名/注销/历史脏数据），
+                           # 模板用它决定要不要显示「看 TA 主页」—— 不判断就会点出 404
+                           user_names={str(d.get('username')) for d in db.rows('users')})
 
 
 @bp.get('/car')
@@ -295,7 +298,8 @@ def car_detail(cid):
     for m in msgs:
         m['mine'] = bool(u) and str(m.get('phone')) == str(u.get('phone'))
     return render_template('car_detail.html', car=car, msgs=msgs, is_owner=is_owner,
-                           tags=business.get_settings()['carTags'])
+                           tags=business.get_settings()['carTags'],
+                           user_names={str(x.get('username')) for x in db.rows('users')})
 
 
 @bp.post('/review/<int:rid>/like')
