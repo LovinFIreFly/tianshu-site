@@ -1210,6 +1210,65 @@ def backup_import():
     return redirect(url_for('admin.dashboard') + '#backup')
 
 
+# ---------------------------------------------------------------- 面板数据清空
+# 每个数据面板可以一键清空自己的记录（清测试数据用）。白名单写死：key → 要清的数据文件。
+# users 特殊处理：只删普通用户，管理员 / DM / 超管一律保留（不然把自己锁外面了）。
+_PANEL_PURGE = {
+    'sessions': ['sessions', 'rooms'],
+    'bookings': ['bookings'],
+    'orders': ['pays'],
+    'reviews': ['reviews'],
+    'messages': ['messages'],
+    'guides': ['guides', 'practices'],
+    'notice': ['notices'],
+    'dm': ['settles'],
+    'reports': ['reports'],
+    'logs': ['logs'],
+    'talktips': ['talktips'],
+    'invoices': ['invoices'],
+    'visits': ['visits'],          # visits 是 dict 结构，清成 {}
+}
+
+
+@bp.post('/panels/<key>/purge')
+@staff_required
+def panel_purge(key):
+    """清空某个面板的全部记录（清测试数据用）。
+
+    只有超级管理员能按；按下去之前先把整个 data/ 目录拷一份
+    （data_清空前-时间戳，跟备份导入同一套做法），手抖了能整包找回来。"""
+    me = current_user()
+    if me.get('super') is not True:
+        flash('只有超级管理员能清空记录', 'warn')
+        return redirect(url_for('admin.dashboard') + '#' + key)
+    if key != 'users' and key not in _PANEL_PURGE:
+        flash('这个栏位不支持清空', 'warn')
+        return redirect(url_for('admin.dashboard') + '#' + key)
+
+    import shutil
+    keep = os.path.join(os.path.dirname(DATA_DIR), 'data_清空前-%s' % time.strftime('%Y%m%d-%H%M%S'))
+    if os.path.isdir(DATA_DIR):
+        shutil.copytree(DATA_DIR, keep)
+
+    if key == 'users':
+        users = db.rows('users')
+        kept = [u for u in users
+                if u.get('super') is True
+                or u.get('role') in ('admin', 'dm')
+                or (set(business.roles_of(u)) & {'admin', 'dm'})]
+        n = len(users) - len(kept)
+        db.write('users', kept)
+        flash('已清空 %d 个普通用户（管理员和 DM 都留着）。清空前的完整数据在 %s'
+              % (n, os.path.basename(keep)), 'ok')
+    else:
+        for f in _PANEL_PURGE[key]:
+            data = db.read(f)
+            db.write(f, {} if isinstance(data, dict) else [])
+        flash('已清空。清空前的完整数据在 %s' % os.path.basename(keep), 'ok')
+    business.audit(me.get('username'), role(), '清空了「%s」栏位的全部记录' % key)
+    return redirect(url_for('admin.dashboard') + '?tab=' + key)
+
+
 # ---------------------------------------------------------------- 客户档案
 @bp.get('/users/<phone>')
 @staff_required

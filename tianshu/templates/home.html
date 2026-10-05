@@ -26,7 +26,8 @@
         <div class="dhero__cta rv" style="--i:4">
           <a class="b3 b3--solid" href="{{ url_for('public.scripts') }}">去挑本</a>
           <a class="b3" href="{{ url_for('public.car') }}">去拼车</a>
-          <a class="b3 b3--link" href="{{ url_for('public.group') }}">去组局 →</a>
+          {# 「去组局」删掉了（2026-10 反馈）：组局页和拼车大厅功能几乎重复，
+              两个入口摆在一起客人反而犹豫。/group 路由暂时保留，以后想做再说。 #}
         </div>
 
         <p class="dhero__lead rv" style="--i:5">
@@ -484,5 +485,54 @@
     </div>
   </div>
 </section>
+
+{# 剧友圈横滑墙（.marq3）：原来是纯 CSS 无限跑马灯，只能干看着。
+   这里改成 JS 驱动（rAF 匀速滚动）+ 指针拖拽：按住就能左右拖着看，松手继续滚，
+   悬停暂停保留。拖动用 transform 位移，循环宽度正好是内容的一半（模板里列表渲染了两遍）。 #}
+<script>
+(function () {
+  var marq = document.querySelector('.marq3');
+  if (!marq) return;
+  var track = marq.querySelector('.marq3__track');
+  if (!track) return;
+  track.style.animation = 'none';          // 停掉 CSS 动画，改 JS 驱动
+  track.style.cursor = 'grab';
+  marq.style.touchAction = 'pan-y';        // 手机上竖向滚动不受影响
+  var pos = 0, half = 0, hover = false, dragging = false, startX = 0, startPos = 0, lastT = 0;
+  function measure() { half = track.scrollWidth / 2; }
+  measure();
+  window.addEventListener('resize', measure);
+  function wrap(v) {                        // 保持 pos ∈ (-half, 0]，无限循环无缝衔接
+    if (half <= 0) return v;
+    v = v % half;
+    if (v > 0) v -= half;
+    return v;
+  }
+  function frame(ts) {
+    if (!lastT) lastT = ts;
+    var dt = Math.min(48, ts - lastT);
+    lastT = ts;
+    if (!hover && !dragging) pos -= dt * 0.032;   // ≈38s 滚一轮，跟原来 CSS 动画速度一致
+    pos = wrap(pos);
+    track.style.transform = 'translateX(' + pos + 'px)';
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  marq.addEventListener('pointerenter', function () { hover = true; });
+  marq.addEventListener('pointerleave', function () { hover = false; dragging = false; track.style.cursor = 'grab'; });
+  marq.addEventListener('pointerdown', function (e) {
+    dragging = true; startX = e.clientX; startPos = pos;
+    track.style.cursor = 'grabbing';
+    if (marq.setPointerCapture) { try { marq.setPointerCapture(e.pointerId); } catch (err) {} }
+  });
+  marq.addEventListener('pointermove', function (e) {
+    if (!dragging) return;
+    pos = wrap(startPos + (e.clientX - startX));
+    track.style.transform = 'translateX(' + pos + 'px)';
+  });
+  marq.addEventListener('pointerup', function () { dragging = false; track.style.cursor = 'grab'; });
+  marq.addEventListener('pointercancel', function () { dragging = false; track.style.cursor = 'grab'; });
+})();
+</script>
 
 {% endblock %}

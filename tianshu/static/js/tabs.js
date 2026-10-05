@@ -38,6 +38,16 @@
       .then(function (html) {
         pane.innerHTML = html;
         pane.removeAttribute('data-loading');
+        // innerHTML 塞进来的 <script> 浏览器是**不会执行**的（HTML 规范）——
+        // 得把它们克隆成新节点换回去才会跑。不补这一刀的话，懒加载面板里的
+        // 所有内联脚本全是死的：用户面板的「点卡片弹档案」没反应、话术库
+        // 面板的初始化也全不生效（2026-10 用户反馈"点用户卡片没反应"的根因）。
+        each(pane.querySelectorAll('script'), function (old) {
+          var s = document.createElement('script');
+          each(old.attributes, function (a) { s.setAttribute(a.name, a.value); });
+          s.textContent = old.textContent;
+          old.parentNode.replaceChild(s, old);   // 替换进 DOM 的瞬间浏览器才会执行
+        });
         each(pane.querySelectorAll('[data-filter]'), bindFilter);
         if (window.TS && typeof window.TS.reinit === 'function') window.TS.reinit(pane);
       })

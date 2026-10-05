@@ -106,4 +106,43 @@
 {# 面板名映射：供移动导航切 tab 时同步上下文条标题（由模板注入，Jinja 生成；与 dm/shell.html 同款） #}
 <script>window.ADM_NAME_MAP = { {% for key, name in NAVI %}'{{ key }}': '{{ name }}'{{ ',' if not loop.last }}{% endfor %} };</script>
 
+{# 数据面板右上角「清空记录」：一键清空该栏全部记录（清测试数据用）。
+   后端 POST /admin/panels/<key>/purge —— 仅超管、按白名单、清前自动整包备份（见 admin.py）。
+   注入时机：首屏直出的面板在下面直接补；懒加载的面板由 tabs.js 拉完 partial 后调
+   window.TS.reinit(pane) —— 这个钩子 tabs.js 早就预留了，这里终于把它接上。 #}
+<script>
+(function () {
+  var PURGE = {sessions:1, bookings:1, users:1, reviews:1, messages:1, orders:1,
+               guides:1, notice:1, dm:1, reports:1, logs:1, talktips:1, invoices:1, visits:1};
+  var URL_T = '{{ url_for("admin.panel_purge", key="__K__") }}';
+  function inject(pane) {
+    var key = pane.getAttribute('data-tab');
+    if (!PURGE[key] || pane.querySelector('.js-purge')) return;
+    if (/<!--\s*panel:/.test(pane.innerHTML)) return;   // 还是占位注释，等内容拉回来再说
+    var head = pane.querySelector('.between') ||
+               (pane.querySelector('h1') && pane.querySelector('h1').parentNode);
+    if (!head) return;
+    var f = document.createElement('form');
+    f.method = 'post';
+    f.action = URL_T.replace('__K__', encodeURIComponent(key));
+    f.className = 'js-purge';
+    f.style.marginLeft = 'auto';
+    f.style.flex = 'none';
+    f.addEventListener('submit', function (e) {
+      if (!confirm('确定清空这个栏位的全部记录？\n清空前会自动把整个数据目录备份一份，但请谨慎操作！')) {
+        e.preventDefault();
+      }
+    });
+    var b = document.createElement('button');
+    b.type = 'submit';
+    b.className = 'btn btn-sm btn-danger';
+    b.textContent = '清空记录';
+    f.appendChild(b);
+    head.appendChild(f);
+  }
+  window.TS = { reinit: function (pane) { inject(pane); } };
+  Array.prototype.forEach.call(document.querySelectorAll('.adm-main .tabpane'), inject);
+})();
+</script>
+
 {% endblock %}

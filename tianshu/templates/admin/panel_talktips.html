@@ -1,5 +1,5 @@
 {# 面板：talktips —— DM 话术库（admin / dm 共用此模板）
-   分类胶囊 GET 过滤（cat=开场白/过渡/结尾/其他）；列表 + 新增表单。 #}
+   分类胶囊就地筛选（data-filter=cat，不跳网址）；列表 + 新增表单。 #}
 <div class="between">
   <div>
     <h1>DM 话术库</h1>
@@ -7,17 +7,19 @@
   </div>
 </div>
 
-{# 分类胶囊：GET 过滤 #}
-<div class="row mt" style="gap:6px;flex-wrap:wrap">
-  <a class="pill {{ 'on' if not cat }}" href="{{ url_for('admin.dashboard') }}?tab=talktips">全部</a>
+{# 分类胶囊：改成 tabs.js 的就地筛选（data-filter=cat），不跳网址不刷新 ——
+   原来 ?cat= 每点一下整页重拉一次，后台体感一卡一卡（2026-10 反馈）。
+   data-show 直接写中文分类值，配合每条记录上的 data-cat。 #}
+<div class="row mt" style="gap:6px;flex-wrap:wrap" data-filter="cat">
+  <button type="button" class="pill on" data-show="all">全部</button>
   {% for c_opt in ['开场白', '过渡', '结尾', '其他'] %}
-  <a class="pill {{ 'on' if cat == c_opt }}" href="{{ url_for('admin.dashboard') }}?tab=talktips&cat={{ c_opt }}">{{ c_opt }}</a>
+  <button type="button" class="pill" data-show="{{ c_opt }}">{{ c_opt }}</button>
   {% endfor %}
 </div>
 
 {# 列表 #}
 {% for t in rows %}
-<div class="panel mt" data-cat="{{ t.cat or '' }}">
+<div class="panel mt" data-cat="{{ t.cat or '其他' }}">
   <div class="between">
     <div>
       <b>{{ t.title }}</b>
@@ -32,8 +34,10 @@
   </form>
 </div>
 {% else %}
-<div class="panel empty">这一类还没有话术。在下面补一条吧。</div>
+<div class="panel empty">还没有话术。在下面补一条吧。</div>
 {% endfor %}
+{# 就地筛选后当前分类一条都没有时显示（tabs.js 的 no-hit 约定） #}
+<div class="panel empty no-hit" hidden>这一类还没有话术，在下面补一条吧。</div>
 
 {# 新增表单 #}
 <h2 style="margin-top:22px">补一条话术</h2>

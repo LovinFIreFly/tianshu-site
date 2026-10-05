@@ -30,6 +30,7 @@
   <button type="button" class="cust-card" title="点开看档案"
           data-cust='{{ {
             'name': nick, 'phone': u.phone, 'credit': cr,
+            'avatar': ((u.profile or {}).get('avatar') or ''),
             'role': r.role, 'roles': r.roles, 'roleName': r.roleName, 'canEditRole': r.canEditRole,
             'visits': r.visits, 'spent': r.spent,
             'banned': (u.banned or False), 'banReason': u.banReason or '',
@@ -63,9 +64,13 @@
 {# ---------------- 点开后弹出来的档案 ---------------- #}
 <div class="mask" id="cust-mask">
   <div class="modal mid">
-    {# 头一条：左边是谁 + 信用分，右边 ✕ —— ✕ 不再浮在内容上面（以前它正好压着信用分那颗胶囊） #}
+    {# 头一条：头像 + 左边是谁 + 信用分，右边 ✕ —— ✕ 不再浮在内容上面（以前它正好压着信用分那颗胶囊） #}
     <div class="m-head">
-      <div>
+      <span id="c-ava" aria-hidden="true"
+            style="width:52px;height:52px;flex:none;border:1.5px solid var(--ink);border-radius:50%;
+                   overflow:hidden;display:flex;align-items:center;justify-content:center;
+                   font-size:24px;line-height:1;background:var(--paper-3)"></span>
+      <div style="min-width:0">
         <span class="kicker" id="c-role">普通用户</span>
         <h2 id="c-name">—</h2>
         <p class="sub" id="c-sub" style="margin:var(--sp-2) 0 0">—</p>
@@ -167,6 +172,14 @@
     if (mask.parentNode !== document.body) { document.body.appendChild(mask); }
 
     var url = function (k) { return U[k].replace('__P__', encodeURIComponent(c.phone)); };
+    // 弹窗头像：真头像就摆 img；emoji（注册默认 🎭）或没传就显示 emoji / 昵称首字
+    var ava = byId('c-ava');
+    var isUrl = c.avatar && (c.avatar.lastIndexOf('/img/', 0) === 0 || c.avatar.lastIndexOf('http', 0) === 0);
+    if (isUrl) {
+      ava.innerHTML = '<img alt="" style="width:100%;height:100%;object-fit:cover" src="' + c.avatar.replace(/"/g, '%22') + '">';
+    } else {
+      ava.textContent = c.avatar || (c.name || '?').slice(0, 1);
+    }
     byId('c-role').textContent = c.roleName;
     byId('c-name').textContent = c.name;
     byId('c-sub').textContent = c.phone.slice(0, 3) + '****' + c.phone.slice(-4)

@@ -662,6 +662,15 @@ img{max-width:100%}
 .flash.error::before,.flash.warn::before{color:#fff;opacity:.7}
 .flash.info{background:var(--d-info);border-color:var(--d-info);color:#fff}
 .flash.is-out{animation:d-fade-out .32s var(--d-ease) forwards}
+/* 深色模式：带类别的提示条别再用「浅色底 + 白字」—— 深色令牌把 --ok/--bad 换成了
+   浅色调（本意是深底上的文字色），白字压上去对比度只剩约 2:1，「上车成功」这类
+   提示等于隐形（用户反馈"点上车没反应"的帮凶之一 —— 其实上车成功了只是看不见提示）。
+   深色下统一改成深底 + 亮字。 */
+html[data-theme="dark"] .flash{background:var(--d-paper-2);color:var(--d-ink);border-color:var(--d-ink-3)}
+html[data-theme="dark"] .flash.ok{background:#17301F;color:#9FD8AB;border-color:#2E5C3A}
+html[data-theme="dark"] .flash.error,
+html[data-theme="dark"] .flash.warn{background:#38201A;color:#F0A48E;border-color:#6E3A2C}
+html[data-theme="dark"] .flash.info{background:#18263B;color:#A9C4EC;border-color:#34517A}
 
 /* --------------------------------------------------------------------------
    13. 入场动效

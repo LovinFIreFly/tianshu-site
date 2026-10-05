@@ -15,7 +15,7 @@ import time
 from tianshu.db import db
 from tianshu.security import hash_password, verify_password
 from config import DEMO_CODE, IMG_DIR, MAX_IMG_BYTES, PLAYER_TAGS, WEEK
-from tianshu._ttlcache import get_or_set
+from tianshu._ttlcache import get_or_set, invalidate
 
 # ---------------------------------------------------------------- 小工具
 def now_ms():
@@ -1977,6 +1977,18 @@ def order_action(user, order_id, action, is_staff=False, reason='', coupon_id='0
 
 # ---------------------------------------------------------------- 拼车动作 ★
 def car_action(user, car_id, action, form=None):
+    """上车 / 退出 / 候补 / 聊两句（对外入口）。
+
+    车队任何写操作成功后立刻作废 car_pool 的 15 秒缓存 —— 不然上车成功了，
+    页面还端着旧成员表，成员数不变、按钮不消失，看着就像"点了没用"
+    （真实踩坑：2026-10 用户反馈，Playwright 复现坐实）。"""
+    ok, msg = _car_action(user, car_id, action, form)
+    if ok:
+        invalidate('car_pool')
+    return ok, msg
+
+
+def _car_action(user, car_id, action, form=None):
     """上车 / 退出 / 候补 / 聊两句"""
     form = form or {}
     phone, name = user.get('phone'), user.get('username')

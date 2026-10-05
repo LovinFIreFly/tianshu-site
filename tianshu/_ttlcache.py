@@ -29,3 +29,13 @@ def get_or_set(key, ttl, producer):
         with _lock:
             _cache[key] = (time.time(), val)
     return val
+
+
+def invalidate(*keys):
+    """写操作后手动作废缓存 —— 不调它的话，页面最长会回显一整个 TTL 的旧数据。
+
+    真实踩坑：上车成功后 car_pool 还端着 15 秒前的旧成员表，详情页成员数不变、
+    「我要上车」按钮还杵在那，客人以为点了没用（2026-10 用户反馈）。"""
+    with _lock:
+        for k in keys:
+            _cache.pop(k, None)
