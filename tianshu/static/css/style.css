@@ -95,6 +95,9 @@
 html[data-theme="dark"]{
   color-scheme:dark;
   --paper:#141312; --paper-2:#1D1A17; --paper-3:#1A1815;
+  /* design2.css 的暖白卡底只有浅色值、自己不随主题翻 —— 深色下后台统计卡
+     （今日 PV/UV 那些）会变成白底 + 浅字、什么都看不见，这里补上墨版值 */
+  --surface-warm:#1D1A17;
   --ink:#F4F1EA; --ink-2:#E4DED2; --ink-3:#B3ADA2; --ink-4:#8B857B;
   --rule:rgba(244,241,234,.3); --rule-strong:rgba(244,241,234,.55);
   --vermilion:#E4503A; --vermilion-600:#F26B54; --vermilion-050:rgba(228,80,58,.14);

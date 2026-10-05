@@ -209,6 +209,13 @@ html[data-device="mobile"] .ticker3 {
   margin-bottom: 8px;
 }
 
+/* —— 深色模式：后台小字提亮 ——
+   用户卡片的「来过 N 次 · 消费 ¥N」走 --ink-4，墨版下 #8B857B 压在深底上
+   快看不见了（2026-10 手机端反馈截图）；深色下统一提到 --d-ink-2 的亮度 */
+html[data-device="mobile"][data-theme="dark"] .cust-card .info small { color: var(--d-ink-2); }
+html[data-device="mobile"][data-theme="dark"] .cust-card { border-color: var(--d-ink-3); }
+html[data-device="mobile"][data-theme="dark"] .adm-main .sub { color: var(--d-ink-2); }
+
 /* —— 降噪：开了「减少动态」就全静 —— */
 @media (prefers-reduced-motion: reduce) {
   html[data-device="mobile"] * {

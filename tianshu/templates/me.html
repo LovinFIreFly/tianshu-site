@@ -136,8 +136,11 @@
               <select name="vibe"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></div>
             <div class="field" style="max-width:74px"><label>房间</label>
               <select name="room"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></div>
+            {# 「匿名」勾选框：.agree 的视觉小方块是靠里面的 <span class="dot"> 画出来的
+               （CSS：.agree:has(input:checked) .dot），之前漏了这个 span —— 只剩"匿名"两个
+               字、没有框，客人不知道点哪儿。补上就有一个可点的小方框：勾上=匿名 #}
             <label class="agree" style="margin-bottom:11px">
-              <input type="checkbox" name="anonymous" value="1"> 匿名
+              <input type="checkbox" name="anonymous" value="1"><span class="dot"></span>匿名
             </label>
             <button class="b3 b3--sm b3--solid" type="submit">提交评价</button>
           </form>
@@ -169,9 +172,17 @@
                 <a class="b3 b3--sm b3--accent" href="{{ url_for('user.pay_deposit', oid=o.id) }}">支付游玩费 ¥{{ _bal }}</a>
               {% endif %}
             {% elif b.status != 'cancelled' %}
-              {% if o and o.status in ('unpaid','paid') %}
+              {% set _hrs = ((b.ts or 0) - tsnow) / 3600000 %}
+              {% if o and o.status in ('unpaid','paid') and _hrs >= 24 %}
+              {# 距开场 24 小时开外才给退定金按钮；不足 24 小时按钮根本不出现，
+                 只给「不玩了」（定金不退）—— 免得点了才被后端拦一道 #}
               <form method="post" action="{{ url_for('user.order_act', oid=o.id, action='refund') }}">
                 <button class="b3 b3--sm" type="submit">临时跳车 / 退定金</button></form>
+              {% elif o and o.status in ('unpaid','paid') %}
+              <span class="tag3" title="开场前 24 小时内取消，定金不退">距开场不足 24 小时 · 定金不退</span>
+              <form method="post" action="{{ url_for('user.cancel_booking', bid=b.id) }}"
+                    onsubmit="return confirm('开场前 24 小时内取消，定金不退。确定不玩了？')">
+                <button class="b3 b3--sm" type="submit">不玩了</button></form>
               {% else %}
               <form method="post" action="{{ url_for('user.cancel_booking', bid=b.id) }}">
                 <button class="b3 b3--sm" type="submit">不玩了</button></form>
@@ -494,7 +505,29 @@
   </div>
 </div>
 
-{# 复制客服微信 + 小 toast #}
+{# 打分星星：原来是纯 CSS（label→radio 关联 + :checked/~ 兄弟选择器），
+   实测「点击没反应、挪开鼠标星星停在最后悬停的位置」（触屏 :hover 粘滞 + 关联链路脆弱）。
+   这里用 JS 直接接管：点 label 强制勾上对应 radio、change 时同步 .on 类 —— 视觉永远跟手。 #}
+<script>
+(function(){
+  Array.prototype.forEach.call(document.querySelectorAll('.stars'), function(s){
+    var ins = s.querySelectorAll('input'), lbs = s.querySelectorAll('label');
+    function sync(){
+      var at = -1, k;
+      for (k = 0; k < ins.length; k++) if (ins[k].checked) { at = k; break; }
+      for (k = 0; k < lbs.length; k++) lbs[k].classList.toggle('on', at >= 0 && k >= at);
+    }
+    s.addEventListener('click', function(e){
+      var l = e.target && e.target.closest ? e.target.closest('label') : null;
+      if (!l) return;
+      var inp = document.getElementById(l.getAttribute('for'));
+      if (inp) { inp.checked = true; sync(); }
+    });
+    s.addEventListener('change', sync);
+    sync();
+  });
+})();
+</script>
 <script>
 (function(){
   var btn=document.getElementById('svc-copy-btn');

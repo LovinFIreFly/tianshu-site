@@ -292,9 +292,12 @@ def me():
         ]
     myTags = list((u.get('profile') or {}).get('tags') or [])
     serviceWechat = business.get_settings().get('serviceWechat', '')
+    # 模板要用当前时间算「距开场几小时」：< 24h 不给退定金按钮（business.order_action
+    # 的 freeCancelHours=24 规则在后端照样兜底，这里只是让按钮提前消失、别点了才被拦）
     return render_template('me.html', u=u, bookings=bookings, orders=orders,
                            coupons=coupons, notices=business.my_notices(u, 20), spent=spent,
                            order_of=order_of, booking_of=booking_of, scripts=scripts_all, fav_ids=fav_ids,
+                           tsnow=business.now_ms(),
                            reviewed={r.get('bid') for r in _revs},
                            my_reviews=my_reviews,
                            msgs=business.my_messages(u), days=next_days(7),

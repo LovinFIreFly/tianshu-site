@@ -36,7 +36,14 @@
             'logs': (u.creditLogs or [])[:6],
             'recent': (r.recent | map(attribute='title') | list)
           }|tojson }}'>
-    <span class="av">{{ nick[0] }}</span>
+    {# 头像：传了自定义头像（/img/… 或外链）就显示真头像，否则回落到
+       profile.avatar 里的 emoji（注册默认 🎭）、再没有才显示昵称首字 #}
+    {% set _av = (u.profile or {}).get('avatar') or '' %}
+    {% if _av.startswith('/img/') or _av.startswith('http') %}
+    <img class="av" src="{{ _av }}" alt="">
+    {% else %}
+    <span class="av">{{ _av or nick[0] }}</span>
+    {% endif %}
     <span class="info">
       <b>{{ nick }}{% if u.banned %}<span class="badge bad" style="margin-left:6px">已拉黑</span>{% endif %}</b>
       <small>{{ u.phone[:3] }}****{{ u.phone[-4:] }} · 来过 {{ r.visits }} 次 · 消费 ¥{{ r.spent }}</small>

@@ -969,10 +969,16 @@ input[type="file"]::file-selector-button:hover{background:var(--d-paper-3)}
 .stars label{font-size:22px;line-height:1;padding:3px 2px;
   transition:color .15s,transform .15s var(--d-ease)}
 .stars input:checked ~ label{color:var(--d-accent)}
-.stars label:hover{transform:scale(1.14)}
-/* 悬停时改用"预览"色：先把已选中的复原，再把悬停那颗及其左边点亮（跟手不打架） */
-.stars:hover input:checked ~ label{color:var(--d-rule-2)}
-.stars label:hover,.stars label:hover ~ label{color:var(--d-accent)}
+/* JS 兜底（me.html 底部脚本）：change 时给选中那颗及左边的星星挂 .on ——
+   视觉选中态不再只依赖 radio 的 :checked/~ 级联，点了必亮 */
+.stars label.on{color:var(--d-accent)}
+/* 悬停预览只给真有鼠标的设备：触屏上 :hover 会"粘"在最后点过的星星上不走
+   （用户反馈的「挪开鼠标星星定在最后停的地方」就是它），媒体查询一挡就干净了 */
+@media (hover: hover) {
+  .stars label:hover{transform:scale(1.14)}
+  .stars:hover input:checked ~ label{color:var(--d-rule-2)}
+  .stars label:hover,.stars label:hover ~ label{color:var(--d-accent)}
+}
 .stars input:focus-visible + label{outline:2px solid var(--d-accent);outline-offset:2px}
 
 /* 「我自己的评价」：订单/预约卡片里，评价完把打过什么直接摆出来（只显示"已评价"太没交代） */

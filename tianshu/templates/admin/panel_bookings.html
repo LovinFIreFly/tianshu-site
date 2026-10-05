@@ -81,10 +81,15 @@
       <td>
         {% set o = order_of.get(b.id) %}
         {% if b.status == 'booked' %}
-          {# 2026-10 流程改版：定金没确认到账（unpaid/claimed）不给核销 ——
-             核销按钮换成「确认支付定金」，点完这里自动变回「核销」；
-             老数据没有订单记录的仍然直接给核销，别把老单卡死 #}
-          {% if o and o.status in ('unpaid', 'claimed') %}
+          {# 2026-10 流程改版：定金没确认到账不给核销 ——
+             · unpaid（客人还没去付）→ 只显示「待客户支付定金」，没有可点的按钮，
+               管理员不能替客人凭空确认；
+             · claimed（客人在支付页点了「我已完成支付」）→ 才出现「确认支付定金」，
+               点完自动变回「核销」；
+             · 老数据没有订单记录的仍然直接给核销，别把老单卡死 #}
+          {% if o and o.status == 'unpaid' %}
+          <span class="badge" title="客人在「我的→订单」点「去支付」后才来这里确认">待客户支付定金</span>
+          {% elif o and o.status == 'claimed' %}
           <form method="post" action="{{ url_for('admin.order_confirm', oid=o.id) }}" style="display:inline">
             <button class="btn btn-sm btn-primary" type="submit">确认支付定金</button>
           </form>
