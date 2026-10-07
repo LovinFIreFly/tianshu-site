@@ -99,7 +99,10 @@ def bookings():
     # 确认完 → 「核销」（2026-10 流程改版：没收到钱不让核销）
     order_of = {o.get('bid'): o for o in db.rows('pays')}
     return render_template('admin/panel_bookings.html', rows=rows, status=status, q=kw,
-                           counts=counts, order_of=order_of)
+                           counts=counts, order_of=order_of,
+                           # 「车主车队」区块（提前截止 / 标记补满）要的就是这个 cars；
+                           # 之前没传，模板的 `if cars is defined` 恒为假，整块永远不显示（2026-10 自检发现）
+                           cars=business.car_pool())
 
 
 @bp.post('/bookings/<int:bid>/cancel')
@@ -1410,7 +1413,9 @@ def invoice_done(iid):
 
 def visits_panel():
     """访问统计面板：今日 PV/UV + 近 7 日趋势 + 热门页面 top10（仅 admin）"""
-    return render_template('admin/panel_visits.html', st=business.visit_stats())
+    # 模板里读的是 stats（{today{pv,uv} / trend / top}）—— 这里必须叫 stats，
+    # 写成 st 的话模板的 `stats or {}` 永远取到空字典，面板会一直显示 0（2026-10 自检发现）
+    return render_template('admin/panel_visits.html', stats=business.visit_stats())
 
 
 @bp.post('/bookings/<int:cid>/car-close')
