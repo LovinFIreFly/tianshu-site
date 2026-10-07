@@ -11,12 +11,10 @@
     <div class="dhero__grid">
 
       <div class="dhero__main">
-        <p class="dhero__kicker rv">下班别走，换个身份过一晚</p>
         {# 文字遮罩升起（Awwwards 获奖站最常用的一招）：每行藏在一条框里往上推 #}
         <h1 class="dhero__title">
-          <span class="ln"><i><em>今晚开一本吧</em></i></span>
+          <span class="ln"><i><em>今天开一本吧</em></i></span>
         </h1>
-        <p class="dhero__sub rv" style="--i:2">选好本，凑齐人，下班直接来。DM、场地、零食都给你备好了。</p>
 
         <form class="sform3 rv" style="--i:3" method="get" action="{{ url_for('public.scripts') }}" role="search">
           <input class="sform3__in" name="q" placeholder="找找你想冲的本" aria-label="搜剧本" value="{{ request.args.get('q','') }}">

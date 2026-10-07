@@ -213,7 +213,8 @@ img{max-width:100%}
 .dhero__kicker::before,.dhero__kicker::after{content:"";flex:1;height:1px;background:var(--d-hair);max-width:64px}
 .dhero__title{margin:clamp(12px,1.6vw,20px) auto clamp(10px,1.3vw,16px);text-align:center;
   font-family:var(--d-serif);font-weight:700;line-height:1.04;letter-spacing:var(--d-track-display);
-  font-size:min(var(--d-fs-display),6.4vw,74px);color:var(--d-stage-ink)}
+  /* 上下两行辅文案删掉后标题独占首屏，字号放大一档（2026-10 反馈） */
+  font-size:min(var(--d-fs-display),7.6vw,92px);color:var(--d-stage-ink)}
 .dhero__title em{font-style:normal;position:relative;white-space:nowrap}
 .dhero__title em::after{content:"";position:absolute;left:-2%;right:-2%;bottom:.08em;height:.09em;
   background:var(--d-accent);opacity:.9;transform:scaleX(0);transform-origin:left;
@@ -895,7 +896,7 @@ input[type="file"]::file-selector-button:hover{background:var(--d-paper-3)}
    -------------------------------------------------------------------------- */
 @media(max-width:833px){
   .dhero{padding-top:calc(var(--d-nav-h) + 18px)}
-  .dhero__title{font-size:clamp(31px,8.6vw,48px)}
+  .dhero__title{font-size:clamp(34px,9.8vw,58px)}
   .ticker3 > *{min-width:50%;flex:1 1 50%;border-top:1px solid var(--d-rule)}
   .ticker3 > *:nth-child(-n+2){border-top:0}
   .ticker3 > *:nth-child(odd){border-left:0}
