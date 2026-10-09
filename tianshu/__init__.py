@@ -13,7 +13,7 @@ import time
 from datetime import timedelta
 from urllib.parse import urlencode
 
-from flask import Flask, abort, flash, g, jsonify, redirect, render_template, request, session
+from flask import Flask, abort, flash, g, jsonify, redirect, render_template, request, send_from_directory, session
 from jinja2 import BaseLoader, FileSystemLoader, TemplateNotFound
 
 from config import IMG_DIR, ROOMS_DEFAULT, SEED_USERS, SESSION_DAYS, SETTINGS_DEFAULT, TEMPLATES_AUTO_RELOAD
@@ -299,6 +299,20 @@ def create_app():
         # 只限 HTML；图片 / css / js 静态资源照常缓存。
         if resp.mimetype == 'text/html' and resp.status_code == 200:
             resp.headers['Cache-Control'] = 'no-store'
+        return resp
+
+    @app.get('/sw.js')
+    def service_worker():
+        """把 Service Worker 放在站点**根路径**下。
+
+        2026-10 修复：SW 的可控范围由脚本所在路径决定 —— 放在 /static/sw.js 时
+        默认只能管 /static/*，页面导航的"断网回退"分支永远不会被触发，
+        离线外壳等于白做。这里从根路径提供，scope 才是整站。
+        """
+        resp = send_from_directory(os.path.join(app.root_path, 'static'), 'sw.js',
+                                   mimetype='application/javascript')
+        resp.headers['Cache-Control'] = 'no-cache'
+        resp.headers['Service-Worker-Allowed'] = '/'
         return resp
 
     @app.get('/health')

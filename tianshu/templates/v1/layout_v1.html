@@ -131,7 +131,8 @@
 <script src="{{ url_for('static', filename='js/tabs.js') }}" defer></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('/static/sw.js').catch(function(){});
+    // 2026-10 修复：改用根路径 /sw.js，让 SW 作用域覆盖整站（原 /static/sw.js 只覆盖 /static/）
+    navigator.serviceWorker.register('/sw.js').catch(function(){});
   }
 </script>
 {% block extra_js %}{% endblock %}

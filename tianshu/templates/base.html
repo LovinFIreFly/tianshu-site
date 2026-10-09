@@ -262,7 +262,10 @@
 <script src="{{ url_for('static', filename='js/emojisvg.js', v=static_v('js/emojisvg.js')) }}" defer></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('/static/sw.js').catch(function(){});
+    // 2026-10 修复：注册到站点根路径（/sw.js），SW 才能拿到全站 scope。
+    // 以前注册 /static/sw.js，默认作用域只有 /static/*，
+    // 页面导航的离线回退分支永远不会触发，离线外壳等于没做。
+    navigator.serviceWorker.register('/sw.js').catch(function(){});
   }
 </script>
 {% block extra_js %}{% endblock %}

@@ -4,7 +4,8 @@
    · 样式表 / 图标等 /static 静态资源：网络优先，失败回退缓存
    · 其余写操作 / 跨域一律不碰
 */
-const CACHE = 'tianshu-shell-v4';   // v4：新增 HTML 导航回退 + 整站外壳缓存升级
+// v5：缓存前一律校验 res.ok（v4 会把 404/500/302 也存下来，离线时当成正常页面返回）
+const CACHE = 'tianshu-shell-v5';
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/', '/static/css/style.css', '/static/icon.svg',
@@ -29,8 +30,12 @@ self.addEventListener('fetch', e => {
   if (isNav) {
     e.respondWith(
       fetch(req).then(res => {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+        // 2026-10 修复：只缓存真正成功的响应。以前 404 / 500 / 登录跳转也被
+        // 写进缓存，客人离线或再次访问时拿到的是错误页，还以为是网站坏了。
+        if (res && res.ok && res.type === 'basic') {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+        }
         return res;
       }).catch(() => caches.match(req).then(hit => hit || caches.match('/')))
     );
@@ -41,8 +46,10 @@ self.addEventListener('fetch', e => {
   if (!url.pathname.startsWith('/static/')) return;       // 其余 API/数据走网络，别缓存
   e.respondWith(
     fetch(req).then(res => {
-      const copy = res.clone();
-      caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+      if (res && res.ok && res.type === 'basic') {   // 同上：错误响应不进缓存
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+      }
       return res;
     }).catch(() => caches.match(req).then(hit => hit || Response.error()))
   );
