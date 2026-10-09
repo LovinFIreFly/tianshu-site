@@ -450,7 +450,10 @@ def adjust_credit(phone, delta, reason, who='系统'):
     if not me:
         return None, None
     before = int(me.get('credit', 100))
-    after = max(0, min(120, before + int(delta)))
+    try:                                    # 2026-10：参数不是数字时别让接口 500
+        after = max(0, min(120, before + int(delta)))
+    except (TypeError, ValueError):
+        return None, None
     me['credit'] = after
     logs = me.get('creditLogs') or []
     logs.insert(0, {'id': now_ms(), 'delta': after - before, 'reason': reason or '门店调整',
@@ -1180,6 +1183,15 @@ def send_mail(to, subject, body, st=None, code=''):
         return False, str(e)[:180]
 
 
+def _mask_email(addr):
+    """日志用的邮箱脱敏：a***@x.com（2026-10：日志里不再出现完整地址与验证码）"""
+    s = str(addr or '')
+    if '@' not in s:
+        return (s[:1] + '***') if s else ''
+    name, dom = s.split('@', 1)
+    return (name[:1] + '***@' + dom)
+
+
 def send_code(email, purpose):
     """发验证码。返回 (验证码, 是否真发出去了, 错误说明)。
 
@@ -1218,8 +1230,10 @@ def send_code(email, purpose):
         threading.Thread(target=_send_code_async,
                          args=(to, purpose, subject, body, st, code), daemon=True).start()
         return code, True, ''
-    print('[验证码] %s（%s）：%s%s'
-          % (to, purpose, code, ('    也可以直接用 %s' % DEMO_CODE) if is_dev_request() else ''))
+    # 2026-10 修复：日志里**绝不打印验证码明文** —— 能读到日志的人
+    # 就能拿它注册任意账号、重置别人密码。邮箱也一并脱敏。
+    print('[验证码] %s（%s）：已生成，明文不落日志%s'
+          % (_mask_email(to), purpose, ('（本机可用通用码）' if is_dev_request() else '')))
     return code, False, '还没配置发信通道'
 
 
@@ -1227,8 +1241,9 @@ def _send_code_async(to, purpose, subject, body, st, code):
     """后台线程里发验证码邮件：失败只打日志，不影响用户拿码（码已落库）。"""
     try:
         ok, err = send_mail(to, subject, body, st, code=code)
-        print('[验证码] 发往 %s（%s）：%s  →  %s（通道 %s）'
-              % (to, purpose, code, '已发送' if ok else '发送失败：%s' % err, mail_provider(st) or '未配置'))
+        print('[验证码] 发往 %s（%s）→ %s（通道 %s）'
+              % (_mask_email(to), purpose, '已发送' if ok else '发送失败：%s' % err,
+                 mail_provider(st) or '未配置'))
     except Exception as e:
         print('[验证码] 后台发信异常（码已落库）：%s: %s' % (type(e).__name__, e))
 
@@ -1392,7 +1407,15 @@ def adjust_balance(phone, delta, note='', by='系统'):
     if not me:
         return None, None
     before = int(me.get('balance') or 0)
-    after = max(0, before + int(delta))
+    # 2026-10 修复：不要把负余额静默截成 0。
+    # 那样调用方以为扣款成功了，实际根本没扣够 —— 并发时同一笔余额能被两单各抵一次。
+    # 扣不动就明确返回失败（None），让调用方去提示"余额不足"。
+    try:
+        after = before + int(delta)
+    except (TypeError, ValueError):
+        return None, None
+    if after < 0:
+        return None, None
     me['balance'] = after
     logs = me.get('walletLogs') or []
     logs.insert(0, {'id': now_ms(), 'delta': after - before, 'note': note, 'by': by, 'at': now_ms()})
@@ -1507,8 +1530,10 @@ def invoice_apply(user, oid, form):
         return False, '订单不存在'
     if str(order.get('phone')) != str(user.get('phone')):
         return False, '这不是你的订单'
-    if order.get('status') != 'paid':
-        return False, '只有已支付的订单才能申请开票'
+    # 2026-10 修复：status='paid' 只代表**定金**已确认，游玩费是 balStatus。
+    # 原来只看 status，客人付个定金就能把整单全额开成发票（钱还没收就先开票）。
+    if order.get('status') != 'paid' or order.get('balStatus') != 'paid':
+        return False, '只有定金和游玩费都已确认到账的订单才能申请开票'
     rows = db.rows('invoices')
     if any(str(x.get('oid')) == str(oid) for x in rows):
         return False, '这单已经申请过发票了，别重复提交'
@@ -1560,14 +1585,22 @@ def _ip_hash(ip):
 def track_visit(ip, path):
     """记一次页面访问。visits.json 是 dict 结构（不是 rows 数组）：
     {'days': {day: {ipHash: {path: n}}}, 'updated': ms}。path 计数 +1。"""
-    path = clean(path or '/', 200) or '/'
+    path = clean(path or '/', 120) or '/'
     day = iso_day(0)
     data = db.read('visits')
     if not isinstance(data, dict):
         data = {}
     days = data.setdefault('days', {})
+    # 2026-10 修复：埋点是**匿名可调用**的接口，path 又完全不清理，
+    # 谁刷一堆不同路径就能把 visits.json 撑到无限大、让每次请求越来越慢。
+    # 这里做三件事：丢掉 30 天前的旧数据、path 截断（上面 120）、
+    # 单个 IP 每天最多记 200 个不同路径。
+    for old in [k for k in days if k < iso_day(-30)]:
+        days.pop(old, None)
     d = days.setdefault(day, {})
     h = d.setdefault(_ip_hash(ip), {})
+    if path not in h and len(h) >= 200:
+        return
     h[path] = int(h.get(path) or 0) + 1
     data['updated'] = now_ms()
     db.write('visits', data)
@@ -1682,14 +1715,21 @@ def create_booking(user, form):
         return False, '该剧本已下架', None
 
     # 日期两种交法都认：日历控件给的是 '2026-09-30'（ts_day），场次按钮给的是毫秒（ts）
-    ts = int(form.get('ts') or 0) or parse_day(form.get('ts_day'))
+    try:                                    # 2026-10：非数字不要抛 500，退回按日历日期解析
+        ts = int(form.get('ts') or 0)
+    except (TypeError, ValueError):
+        ts = 0
+    ts = ts or parse_day(form.get('ts_day'))
     tm = str(form.get('time') or '19:00')
     if not ts:
         return False, '请选择日期', None
     if ts < midnight():
         return False, '日期不能选今天以前的', None
     lo, hi = player_range(sc)
-    players = max(1, min(hi, int(form.get('players') or lo)))
+    try:                                    # 2026-10：人数填了非数字就按剧本下限，别 500
+        players = max(1, min(hi, int(form.get('players') or lo)))
+    except (TypeError, ValueError):
+        players = lo
     mode = '包车' if form.get('mode') == '包车' else '拼车'
     bookings = db.rows('bookings')
 
@@ -1731,6 +1771,17 @@ def create_booking(user, form):
             if left < players:
                 return False, '该场次只剩 %d 个位置了，改下人数或换个时段' % max(0, left), None
             session_id = ses.get('id')
+    else:
+        # 2026-10 修复：**加入别人的车**以前只查车容量，完全不查场次总容量。
+        # 车没满、但这场（房间）已经坐不下时照样能上车，到店才发现没位子 —— 超卖。
+        ses = next((x for x in db.rows('sessions')
+                    if str(x.get('id')) == str(session_id)), None)
+        if ses and (ses.get('cap') or 0) > 0:
+            used = sum((b.get('players') or 1) for b in bookings
+                       if str(b.get('sessionId')) == str(session_id)
+                       and b.get('status') != 'cancelled')
+            if (ses.get('cap') or 0) - used < players:
+                return False, '这场已经满了，换个时段或者改下人数', None
 
     # ② 线上选角：得后台给这个本开了"可提前选角"才行，且同一角色只能一人
     role = ''
@@ -1785,7 +1836,10 @@ def create_booking(user, form):
                'carOwner': (join_car.get('username') if join_car
                             else (user.get('username') if mode == '拼车' else None)),
                'carCap': (join_car.get('carCap') if join_car else hi),
-               'carMin': (join_car.get('carMin') if join_car else min(lo, players)),
+               # 2026-10 修复：原来是 min(lo, players)，而新开车时 players 被强制成 1，
+               # 于是四人本也被存成"最低 1 人"—— 一开车就显示已满足最低人数，
+               # 倒计时和缺人提示全失真。最低人数应取**剧本**下限，且不超过车上限。
+               'carMin': (join_car.get('carMin') if join_car else max(1, min(lo, hi))),
                'carTags': (list(join_car.get('carTags') or []) if join_car
                            else [clean(t, 10) for t in form.getlist('carTags') if clean(t, 10)][:4]),
                'reserved': 0, 'sessionId': session_id,
@@ -2139,7 +2193,10 @@ def _car_action(user, car_id, action, form=None):
         """车主留几个熟人位（别人就占不满了）"""
         if str(ob.get('phone')) != str(phone) and not user.get('_staff'):
             return False, '只有车主能留位'
-        n = max(0, min(3, int(form.get('n') or 0)))
+        try:                                # 2026-10：非数字不要 500
+            n = max(0, min(3, int(form.get('n') or 0)))
+        except (TypeError, ValueError):
+            return False, '留位数量填得不对'
         ob['reserved'] = n
         db.write('bookings', bookings)
         return True, '留了 %d 个熟人位' % n
