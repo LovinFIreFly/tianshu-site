@@ -268,7 +268,10 @@ def coupon():
     else:
         cut = business.now_ms() - sleep_days * 86400000
         for u in users:
-            if not business.has_role(u, 'dm', 'admin'):   # 多角色：员工（DM/管理员）不算普通用户
+            # 多角色：员工（DM/管理员）不算普通用户，要跳过。
+            # 2026-10 修复：原来这里多写了个 not，变成"不是员工就跳过"，
+            # 结果券全发给了 DM 和管理员，真正的普通客人一张都收不到。
+            if business.has_role(u, 'dm', 'admin'):
                 continue
             if scope == 'all':
                 picked.append(u)

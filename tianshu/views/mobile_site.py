@@ -347,6 +347,9 @@ def api_me():
             "day": o.get("day") or "", "time": o.get("time") or "", "players": o.get("players") or 1,
             "amount": o.get("amount") or 0, "deposit": o.get("deposit") or 0,
             "payable": o.get("payable") or 0, "status": o.get("status") or "unpaid",
+            # 2026-10 修复：前端靠 balStatus 判断"要不要出现付游玩费按钮"，
+            # 以前这里没返回该字段，app.js 的判断恒为假 —— 手机端永远付不了尾款。
+            "balStatus": o.get("balStatus") or "",
         })
     favs = []
     for r in db.rows("favs"):
@@ -934,6 +937,10 @@ def api_car_detail(cid):
     if not booking:
         return jsonify({"error": "没这辆车"}), 404
     u = current_user()
+    # 2026-10 修复：以前这个函数不看登录，任何人按 id 遍历就能把所有车队的
+    # 成员昵称和车内聊天全部拉走（隐私泄露）。车队详情改为登录后可见。
+    if not u:
+        return jsonify({"error": "请先登录"}), 401
     me_phone = u.get("phone") if u else ""
     # 从 car_pool 取数据层已算好的扩展字段（倒计时/截止/补满/难度/口味相近）
     enriched = next((c for c in business.car_pool(me_phone) if str(c.get("id")) == str(cid)), {})
@@ -947,7 +954,9 @@ def api_car_detail(cid):
         "day": booking.get("day") or "", "time": booking.get("time") or "",
         "who": op.get("nick") or owner.get("username") or "玩家",
         "tags": booking.get("carTags") or [],
-        "members": [{"nick": m.get("nick") or "玩家", "tags": list(m.get("tags") or [])}
+        # 前端读的是 name，这里补上（否则拼车成员一律显示成"玩家"）
+        "members": [{"nick": m.get("nick") or "玩家", "name": m.get("nick") or "玩家",
+                     "tags": list(m.get("tags") or [])}
                     for m in (enriched.get("members") or booking.get("members") or [])],
         "msgs": msgs,
         "deadline": enriched.get("deadline") or booking.get("carDeadline") or 0,
@@ -973,6 +982,16 @@ def api_car_msg(cid):
     text = business.clean(request.form.get("text"), 200)
     if not text:
         return jsonify({"error": "说点什么再发"}), 400
+    # 2026-10 修复：以前只校验"登录了没"，任何登录用户都能往任意车队灌消息。
+    # 现在要求是车主或本车成员（car_pool 的 mine 标记）。
+    booking = next((b for b in db.rows("bookings") if str(b.get("id")) == str(cid)), None)
+    if not booking:
+        return jsonify({"error": "没这辆车"}), 404
+    me = str(u.get("phone") or "")
+    if str(booking.get("phone")) != me:
+        enriched = next((c for c in business.car_pool(me) if str(c.get("id")) == str(cid)), {})
+        if not enriched.get("mine"):
+            return jsonify({"error": "你不在这一车里，不能发言"}), 403
     db.update("carmsgs", lambda rows: rows + [{
         "id": business.now_ms(), "carId": cid,
         "nick": (u.get("profile") or {}).get("nick") or u.get("username"),

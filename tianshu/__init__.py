@@ -184,6 +184,19 @@ def create_app():
             env._ui_ver = v
 
     @app.before_request
+    def secure_session_cookie():
+        """HTTPS 访问时给登录 Cookie 打上 Secure（2026-10 修复）。
+
+        会话要存 180 天，如果 Cookie 能通过明文 HTTP 发出去，被截获后危害期非常长。
+        这里按当次请求判断：线上走 Caddy（HTTPS）自动生效；本地 http 调试不受影响。
+        """
+        try:
+            if request.is_secure and not app.config.get('SESSION_COOKIE_SECURE'):
+                app.config['SESSION_COOKIE_SECURE'] = True
+        except Exception:
+            pass
+
+    @app.before_request
     def mark_shell():
         """从**客户端壳**里进来的（网址带 ?shell=desktop）—— 记一笔。
 

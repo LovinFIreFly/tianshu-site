@@ -1826,12 +1826,15 @@ def order_action(user, order_id, action, is_staff=False, reason='', coupon_id='0
                      % (order.get('username'), order.get('title'), order.get('deposit')), 'pay')
         return True, '已提交，等小客服确认到账（确认后核销码才显示）'
 
-    # 确认收到定金：管理员 / 前台在「订单」页点；客人自己点的话只允许从 unpaid 走
+    # 确认收到定金：**只能门店点**（管理员 / 前台 / 该场 DM）
+    # 2026-10 修复：以前客人自己点 pay 也能把 unpaid 单直接置成 paid ——
+    # 等于自己给自己确认收款，核销码白拿，定金确认这道人工核验形同虚设。
+    # 客人只能走 claim（"我已支付"提交），确认权必须留在门店。
     if action == 'pay':
+        if not is_staff:
+            return False, '定金到账要由门店确认；你先点「我已支付」提交，等小客服核对'
         if order.get('status') not in ('unpaid', 'claimed'):
             return False, '这个订单现在付不了'
-        if not is_staff and order.get('status') == 'claimed':
-            return False, '这单已经提交过了，等店里确认'
         order.update(status='paid', paidAt=now_ms(),
                      tradeNo=('STAFF%d' if is_staff else 'LOCAL%d') % now_ms())
         db.write('pays', pays)
@@ -1850,18 +1853,22 @@ def order_action(user, order_id, action, is_staff=False, reason='', coupon_id='0
         # 如果这单还没用券，客人可能在支付页选了一张券；在这里一次性应用并标记为已用。
         # 老数据：couponId != 0 表示预约时已经抵过了（amount 已经是抵扣后的），直接沿用。
         cid = str(coupon_id or '')
-        coupons = db.rows('coupons')
         if not int(order.get('couponId') or 0) and cid and cid != '0':
-            coupon = next((c for c in coupons
-                           if str(c.get('id')) == cid and not c.get('used')
-                           and (c.get('all') or str(c.get('phone')) == str(user.get('phone')))
-                           and (not c.get('exp') or c.get('exp') > now_ms())), None)
-            if not coupon:
-                return False, '这张券用不了（可能过期、已用过或不属于你）'
-            order.update(couponId=cid,
-                         amount=max(0, int(order.get('amount') or 0) - int(coupon.get('amount') or 0)))
-            db.update('coupons', lambda rows: [dict(c, used=True, usedAt=now_ms())
-                                               if str(c.get('id')) == cid else c for c in rows])
+            # 券的「校验 → 改订单 → 标记已用 → 落盘」必须一气呵成：
+            # 以前跨两张表且无锁，两个请求能同时读到 used=False，同一张券抵两次（2026-10 修复）
+            with db.transaction():
+                coupons = db.rows('coupons')
+                coupon = next((c for c in coupons
+                               if str(c.get('id')) == cid and not c.get('used')
+                               and (c.get('all') or str(c.get('phone')) == str(user.get('phone')))
+                               and (not c.get('exp') or c.get('exp') > now_ms())), None)
+                if not coupon:
+                    return False, '这张券用不了（可能过期、已用过或不属于你）'
+                order.update(couponId=cid,
+                             amount=max(0, int(order.get('amount') or 0) - int(coupon.get('amount') or 0)))
+                db.write('pays', pays)
+                db.update('coupons', lambda rows: [dict(c, used=True, usedAt=now_ms())
+                                                   if str(c.get('id')) == cid else c for c in rows])
 
         bal = max(0, int(order.get('amount') or 0))
         if bal <= 0:
@@ -1877,6 +1884,10 @@ def order_action(user, order_id, action, is_staff=False, reason='', coupon_id='0
         return True, '已提交，等小客服确认到账（确认后就能点评了）'
 
     if action == 'pay-bal':
+        # 同 pay：确认收款只能门店做。以前客人能直接把 balStatus 置成 paid，
+        # 不付钱就解锁点评、还触发"定金已退回"通知。
+        if not is_staff:
+            return False, '游玩费到账要由门店确认；你先点「我已支付」提交'
         bal = max(0, int(order.get('amount') or 0))
         if order.get('balStatus') == 'paid':
             return False, '这单的游玩费已经确认过了'
@@ -1894,6 +1905,11 @@ def order_action(user, order_id, action, is_staff=False, reason='', coupon_id='0
         order.update(balStatus='paid', balPaidAt=now_ms())
         if back:
             order['depositBack'] = now_ms()
+            # 定金里如果用会员余额抵过，要把那部分加回钱包 ——
+            # 以前只记 depositBack（对外退款），余额却没退回，客人的余额平白少了（2026-10 修复）
+            if int(order.get('balanceUsed') or 0) > 0:
+                adjust_balance(order.get('phone'), int(order.get('balanceUsed')),
+                               '《%s》玩完，退回定金里抵扣的余额' % order.get('title'), '系统')
         db.write('pays', pays)
         notify(order.get('phone'), '游玩费已确认 ✅',
                '《%s》%s 的游玩费 ¥%d 收到了。%s去「我的预约」给剧本和 DM 打分吧，等你一句话～'
@@ -1917,12 +1933,16 @@ def order_action(user, order_id, action, is_staff=False, reason='', coupon_id='0
     if action == 'refund':
         if order.get('status') not in ('paid', 'unpaid', 'claimed'):
             return False, '这一单退不了'
-        hours = ((booking.get('ts') or 0) - now_ms()) / 3600000 if booking else 999
+        # 预约缺失时不能假设"离开场还早"：以前给 999 小时等于永远判定为可免费退，
+        # 会对一笔**根本没收过**的钱发出"已原路退回"通知（虚假退款）。
+        # 缺预约时按"不可免费退"处理，交给门店人工判断（2026-10 修复）
+        hours = ((booking.get('ts') or 0) - now_ms()) / 3600000 if booking else -1
         free = hours >= float(st['freeCancelHours'])          # 距开场还够不够免费取消的时限
+        was_paid = order.get('status') == 'paid'              # 这笔定金到底收过没有
         if not free and not is_staff:
             return False, '距开场不足 %s 小时，按门店规矩定金不退，特殊情况联系门店' % st['freeCancelHours']
         order.update(status='refunded' if free else 'closed', refundAt=now_ms(),
-                     refundAmount=order.get('deposit') if free else 0)
+                     refundAmount=(order.get('deposit') if (free and was_paid) else 0))
         db.write('pays', pays)
         if int(order.get('balanceUsed') or 0) > 0:          # 用余额抵的那部分，退回余额
             adjust_balance(order.get('phone'), int(order['balanceUsed']),
@@ -1930,16 +1950,26 @@ def order_action(user, order_id, action, is_staff=False, reason='', coupon_id='0
         if booking:
             booking.update(status='cancelled', cancelAt=now_ms(), cancelBy='staff' if is_staff else 'user')
             db.write('bookings', bookings)
-            if not free and not is_staff and int(st['lateCancelPenalty']) > 0:
-                adjust_credit(order.get('phone'), -int(st['lateCancelPenalty']) * 10, '临期取消', '系统')
+            # 2026-10：原来这里有一句"临期取消扣信用分"，但它上面已经
+            # `if not free and not is_staff: return False` 提前返回了，永远走不到（死代码），
+            # 导致后台的「临期取消扣分」配置形同虚设。扣分改由 cancel_booking 统一负责。
         # 退款进度通知（#150）：核验结论——refund 分支原本就有一条 kind='pay' 通知；
         # 这里把免费退定金的文案明确为「已发起原路退回，1-3 工作日到账」，对齐 spec「退款已发起/已到账」。
         # 本流程是单步原子退款（发起即处理），无需再拆两条通知。
-        notify(order.get('phone'), '退款已发起' if free else '已取消',
-               ('《%s》定金 ¥%d 已发起原路退回，1-3 个工作日到账，请留意。'
-                % (order.get('title'), order.get('deposit'))) if free
-               else ('《%s》的预约取消了，超时定金不退' % order.get('title')), 'pay')
-        return True, '已退款' if free else '已取消（超时定金不退）'
+        # 只有**确实收过钱**的单才说"已原路退回"；没收过的只说取消，
+        # 否则客人以为钱会退回来、实际账上从来没进过这笔（2026-10 修复）
+        if free and was_paid:
+            notify(order.get('phone'), '退款已发起',
+                   '《%s》定金 ¥%d 已发起原路退回，1-3 个工作日到账，请留意。'
+                   % (order.get('title'), order.get('deposit')), 'pay')
+        elif free:
+            notify(order.get('phone'), '已取消',
+                   '《%s》已取消（这单定金此前未确认到账，无需退款）。' % order.get('title'), 'pay')
+        else:
+            notify(order.get('phone'), '已取消',
+                   '《%s》的预约取消了，超时定金不退' % order.get('title'), 'pay')
+        return True, (('已退款' if was_paid else '已取消（定金此前未确认到账）') if free
+                      else '已取消（超时定金不退）')
 
     # 标记未到 / 中途跳车：按门店规矩**定金不退**（这笔钱门店收了）。
     # 只有门店能点（staff_required）：钱的事不能让客人自己操作。

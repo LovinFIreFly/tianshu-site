@@ -116,9 +116,26 @@ ROOMS_DEFAULT = [
 ]
 
 # ---------------------------------------------------------------- 微信小程序
-# AppID 已固定；AppSecret 填上后微信登录（code2session）才能生效
+def _load_mp_secret():
+    """读取小程序 AppSecret：先环境变量，再 gitignore 过的 mp_secret.txt。
+
+    AppSecret 是长期有效的服务端凭据，一旦写进源码就会进仓库和备份包，
+    泄露后只能去微信后台重置，所以这里绝不写死（2026-10 修复）。
+    """
+    v = os.environ.get('MP_SECRET', '')
+    if v:
+        return v.strip()
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mp_secret.txt'),
+                  'r', encoding='utf-8') as f:
+            return f.read().strip()
+    except OSError:
+        return ''
+
+# AppID 不是秘密可以直接写；AppSecret 走 _load_mp_secret()，
+# 从环境变量 MP_SECRET 或 gitignore 的 mp_secret.txt 读取，源码里不留明文
 MP_APPID = 'wxcca16dee1c8fc425'
-MP_SECRET = ''
+MP_SECRET = _load_mp_secret()
 
 # 订阅消息模板 ID：在小程序后台「功能 → 订阅消息」里申请对应模板后填到这里。
 # 留空表示不发；支持一次发多条。示例：
