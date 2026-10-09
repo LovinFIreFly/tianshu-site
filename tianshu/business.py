@@ -826,6 +826,10 @@ def broadcast(title, text, scope='all'):
             if last >= cut:
                 continue
         hit.append(u)
+    # 2026-10 修复：一个人都没筛出来时**不要建这条通知**。
+    # 空 to 在读取侧会被当成"发给所有人"，一次没选中的群发就会变成全站广播。
+    if not hit:
+        return 0
     rows = db.rows('notices')
     row = {'id': now_ms(), 'title': title, 'text': text, 'at': now_ms(), 'by': '门店',
            'kind': 'broadcast', 'to': [str(u.get('phone')) for u in hit], 'readBy': []}
@@ -1311,11 +1315,37 @@ def change_password(user, old_pw, new_pw):
 
 
 def delete_account(user):
-    """注销：账号 + 名下数据一起删（客人有这个权利，别留着）"""
+    """注销：账号 + 名下数据一起删（客人有这个权利，别留着）
+
+    2026-10 修复：以前只清 6 张表，posts / reviews / invoices / codes / wants /
+    notices 里仍留着这个人的手机号或昵称，等于"注销了但个人信息还在"。
+    现在把带个人标识的表都过一遍，整段放进事务里（中途失败不会留下"删了一半"的状态）。
+    """
     phone = str(user.get('phone'))
-    db.write('users', [x for x in db.rows('users') if str(x.get('phone')) != phone])
-    for key in ('bookings', 'pays', 'messages', 'coupons', 'favs'):
-        db.write(key, [x for x in db.rows(key) if str(x.get('phone')) != phone])
+    uname = str(user.get('username') or '')
+    with db.transaction():
+        db.write('users', [x for x in db.rows('users') if str(x.get('phone')) != phone])
+        for key in ('bookings', 'pays', 'messages', 'coupons', 'favs',
+                    'posts', 'invoices', 'codes', 'wants', 'reviews'):
+            out = []
+            for x in db.rows(key):
+                if str(x.get('phone') or '') == phone:
+                    continue
+                if uname and str(x.get('username') or '') == uname:
+                    continue
+                out.append(x)
+            db.write(key, out)
+        # 站内通知：从收件人列表里去掉他；收件人空了的整条删掉
+        ns = []
+        for n in db.rows('notices'):
+            to = n.get('to')
+            if isinstance(to, list):
+                left = [t for t in to if str(t) != phone]
+                if not left:
+                    continue
+                n = dict(n, to=left)
+            ns.append(n)
+        db.write('notices', ns)
     audit(user.get('username'), role_of(user), '注销了账号（名下数据一并删除）')
     return True, '账号已注销，数据也清了'
 

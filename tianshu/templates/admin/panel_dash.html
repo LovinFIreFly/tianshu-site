@@ -293,7 +293,8 @@
       <div class="field"><label>SMTP 发信地址（= 登录账号）</label>
         <input name="smtpUser" value="{{ settings.smtpUser }}" placeholder="noreply@lovinfirefly.cn"></div>
       <div class="field"><label>SMTP 密码（邮件推送控制台里单独设的那个）</label>
-        <input name="smtpPass" type="password" value="{{ settings.smtpPass }}" autocomplete="new-password"></div>
+        <input name="smtpPass" type="password" value="" autocomplete="new-password"
+               placeholder="留空表示不修改（已保存的密码不会回显到页面上）"></div>
       <div class="field"><label>发件人显示地址（可留空，默认同发信地址）</label>
         <input name="smtpFrom" value="{{ settings.smtpFrom }}"></div>
     </div>

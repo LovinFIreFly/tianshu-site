@@ -776,7 +776,9 @@ def settings():
     for k in ('smtpHost', 'smtpUser', 'smtpFrom'):
         if f.get(k) is not None:
             rows[k] = business.clean(f.get(k), 80)
-    if f.get('smtpPass') is not None:
+    # 2026-10 修复：**留空表示不修改**。以前提交空串会把已保存的 SMTP 密码清空，
+    # 管理员改个店名再保存，邮件通道就悄悄失效了。
+    if f.get('smtpPass'):
         rows['smtpPass'] = business.clean(f.get('smtpPass'), 120)
     if f.get('smtpPort'):
         try:

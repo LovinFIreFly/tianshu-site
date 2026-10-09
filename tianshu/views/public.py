@@ -448,7 +448,10 @@ def user_profile(username):
         return render_template('error.html', code=404, msg='没有这个人'), 404
     me = _cu()
     following = me and str(username) in [str(x) for x in (me.get('following') or [])]
-    return render_template('profile.html', who=u, role_name=business.roles_text(u),
+    # 2026-10 修复：模板拿 role_name 比的是 'dm' / 'user' 这类**英文标识**，
+    # 而 roles_text() 返回的是"普通用户、DM"这种中文串，导致分支永远落空
+    # （所有人的徽章都显示成"门店"，DM 的"可开本"区块也永远不显示）。
+    return render_template('profile.html', who=u, role_name=business.role_of(u),
                            following=following, scripts=db.rows('scripts'),
                            reviews=[r for r in business.reviews_of() if str(r.get('username')) == str(username)],
                            followers=len(u.get('followers') or []))
