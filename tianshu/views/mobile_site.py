@@ -18,9 +18,9 @@ import secrets
 import time
 
 from flask import Blueprint, Response, current_app, jsonify, request
-from tianshu import business
+from tianshu import business, mp
 from tianshu.db import db
-from tianshu.security import current_user, hash_password
+from tianshu.security import current_user, hash_password, verify_password
 
 bp = Blueprint("mobile_site", __name__)
 
@@ -1028,3 +1028,85 @@ def mobile_asset(filename):
 def _read(filename):
     with open(os.path.join(_MOBILE_DIR, filename), "r", encoding="utf-8") as f:
         return f.read()
+
+
+# ---------------------------------------------------------------- 微信小程序
+# 注意：小程序没有 Cookie 概念，所有写请求都靠 Authorization: Bearer <token> 鉴权。
+# __init__.py 里的 csrf_guard 已识别该头部并自动跳过 CSRF；下面两个「登录/绑定」接口
+# 本身也放进 _CSRF_FREE，这样哪怕没 token 也能调用。
+
+
+@bp.post("/m/api/mp/login")
+def mp_login():
+    """小程序 wx.login 拿 code 换 openid；若该 openid 已绑定账号，直接返回长期 token。"""
+    data = request.get_json(silent=True) or request.form or {}
+    code = (data.get('code') or '').strip()
+    if not code:
+        return jsonify(ok=False, msg='缺少 code')
+
+    openid, err = mp.jscode2session(code)
+    if err:
+        return jsonify(ok=False, msg=err)
+
+    # 找已绑定该 openid 的账号
+    rows = db.rows('users') or []
+    user = None
+    for u in rows:
+        if u.get('mpOpenid') == openid:
+            user = u
+            break
+
+    if user:
+        if user.get('banned'):
+            return jsonify(ok=False, msg='账号已被禁用')
+        token = mp.issue_token(user['phone'], openid=openid)
+        return jsonify(ok=True, token=token,
+                       phone=user['phone'],
+                       nick=(user.get('profile') or {}).get('nick'))
+    # 没绑定过：让前端走绑定流程（手机号+密码）
+    return jsonify(ok=False, needBind=True, openid=openid)
+
+
+@bp.post("/m/api/mp/bind")
+def mp_bind():
+    """首次使用：用手机号+密码绑定 openid，之后即可一键登录。"""
+    data = request.get_json(silent=True) or request.form or {}
+    phone = (data.get('phone') or '').strip()
+    password = (data.get('password') or '')
+    openid = (data.get('openid') or '').strip()
+
+    if not phone or not password or not openid:
+        return jsonify(ok=False, msg='缺少手机号、密码或 openid')
+
+    user = db.one('users', phone=phone)
+    if not user:
+        return jsonify(ok=False, msg='手机号未注册')
+    if not verify_password(password, user.get('password')):
+        return jsonify(ok=False, msg='密码错误')
+    if user.get('banned'):
+        return jsonify(ok=False, msg='账号已被禁用')
+
+    # 写回 openid 绑定关系
+    user['mpOpenid'] = openid
+    db.write('users', [u if u.get('phone') != phone else user for u in (db.rows('users') or [])])
+    mp.clean_expired_tokens()
+    token = mp.issue_token(phone, openid=openid)
+    return jsonify(ok=True, token=token,
+                   phone=phone,
+                   nick=(user.get('profile') or {}).get('nick'))
+
+
+@bp.post("/m/api/mp/subscribe")
+def mp_subscribe_send():
+    """手动触发订阅消息（示例：管理员/顾客在小程序内触发后，服务端代发）。"""
+    data = request.get_json(silent=True) or request.form or {}
+    template_id = (data.get('template_id') or '').strip()
+    page = (data.get('page') or '').strip()
+    payload_data = data.get('data') or {}
+    openid = (data.get('openid') or '').strip()
+
+    if not all([template_id, openid]):
+        return jsonify(ok=False, msg='缺少 template_id 或 openid')
+
+    ok, err = mp.send_subscribe(openid, template_id, page or 'pages/index/index', payload_data)
+    return jsonify(ok=ok, msg=err or '')

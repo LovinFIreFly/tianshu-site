@@ -89,9 +89,19 @@ def rate_clear(*keys):
 
 # ---------------------------------------------------------------- 身份
 def current_user():
-    """当前登录的账号（没登录返回 None）。一次请求只查一次库"""
+    """当前登录的账号（没登录返回 None）。一次请求只查一次库。
+
+    支持两种鉴权：
+      1. Flask Session（桌面站、手机 H5）
+      2. Authorization: Bearer <token>（微信小程序）
+    """
     if not hasattr(g, '_user'):
         phone = session.get('phone')
+        # 小程序等无 Cookie 客户端用 Bearer token
+        if not phone:
+            # 延迟导入，避免 security / mp 顶层互相 import
+            from tianshu import mp
+            phone = mp.valid_token_from_request()
         g._user = db.one('users', phone=phone) if phone else None
         if g._user and g._user.get('banned'):          # 被拉黑的当场踢下线
             session.clear()

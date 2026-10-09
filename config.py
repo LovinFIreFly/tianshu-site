@@ -114,3 +114,15 @@ ROOMS_DEFAULT = [
     {'id': 2, 'name': 'B房', 'cap': 8, 'dev': '投影 + 音响 + 换装间'},
     {'id': 3, 'name': '大房', 'cap': 10, 'dev': '环绕音响 + 灯光舞台'},
 ]
+
+# ---------------------------------------------------------------- 微信小程序
+# AppID 已固定；AppSecret 填上后微信登录（code2session）才能生效
+MP_APPID = 'wxcca16dee1c8fc425'
+MP_SECRET = ''
+
+# 订阅消息模板 ID：在小程序后台「功能 → 订阅消息」里申请对应模板后填到这里。
+# 留空表示不发；支持一次发多条。示例：
+#   MP_TMPL_BOOK  = 'xxxxx'   # 预约结果通知（剧本名、开场时间、人数等关键字）
+#   MP_TMPL_REMIND = 'yyyyy'  # 开场提醒（时间、地点、人数等关键字）
+MP_TMPL_BOOK = ''
+MP_TMPL_REMIND = ''

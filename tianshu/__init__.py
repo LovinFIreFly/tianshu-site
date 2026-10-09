@@ -29,7 +29,8 @@ _MOBILE_UA_RE = re.compile(r'(?:iPhone|iPod|Android|Mobile|BlackBerry|IEMobile|O
 _static_v_cache = {}
 
 # 不需要 CSRF 令牌的写接口（见 csrf_guard 里的说明）：只记路径的匿名埋点
-_CSRF_FREE = {'/api/track', '/m/api/track'}
+# 小程序登录 / 绑定用 Bearer token 鉴权，不是 Cookie，CSRF 对它无意义，直接放行。
+_CSRF_FREE = {'/api/track', '/m/api/track', '/m/api/mp/login', '/m/api/mp/bind'}
 
 
 class UiLoader(BaseLoader):
@@ -253,6 +254,10 @@ def create_app():
         """
         g.csrf = request.cookies.get('csrf') or ''
         if request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
+            # 小程序用 Bearer token 鉴权，与 Cookie/CSRF 无关，直接放行。
+            from tianshu import mp
+            if mp.valid_token_from_request():
+                return
             # 埋点接口（桌面 /api/track、手机 /m/api/track）是页面加载后的匿名上报：
             # 用的是 navigator.sendBeacon，它**发不了自定义请求头**、也带不上表单字段，
             # 所以每个页面都会撞一次 403（控制台一片红，客人侧表现为"时不时报 403"）。
