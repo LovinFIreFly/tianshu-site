@@ -1,0 +1,63 @@
+page {
+  background: #15131f;
+  color: #f1f1f5;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif;
+  font-size: 28rpx;
+}
+.container {
+  padding: 24rpx;
+}
+.card {
+  background: #1e1c2a;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+}
+.title {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 16rpx;
+}
+.subtitle {
+  font-size: 26rpx;
+  color: #999;
+  margin-bottom: 12rpx;
+}
+.btn-primary {
+  background: #ff6f61;
+  color: #fff;
+  border-radius: 12rpx;
+  text-align: center;
+  padding: 22rpx 0;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+.btn-ghost {
+  border: 1rpx solid #ff6f61;
+  color: #ff6f61;
+  border-radius: 12rpx;
+  text-align: center;
+  padding: 20rpx 0;
+  font-size: 30rpx;
+}
+.empty {
+  text-align: center;
+  color: #777;
+  padding: 60rpx 0;
+  font-size: 26rpx;
+}
+.tag {
+  display: inline-block;
+  background: #2f2c42;
+  color: #d4d0e8;
+  border-radius: 8rpx;
+  padding: 6rpx 14rpx;
+  font-size: 22rpx;
+  margin-right: 10rpx;
+  margin-bottom: 10rpx;
+}
+.price {
+  color: #ff6f61;
+  font-weight: 600;
+}

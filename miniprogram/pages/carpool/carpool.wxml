@@ -1,0 +1,13 @@
+<view class="container">
+  <view wx:for="{{list}}" wx:key="id" class="card">
+    <text class="s-title">{{item.title}}</text>
+    <text class="subtitle">{{item.day}} {{item.time}}</text>
+    <view style="margin-top:12rpx;">
+      <text class="tag">{{item.joined}}/{{item.cap}}人</text>
+      <text class="tag">还差{{item.need}}人</text>
+      <text class="tag" wx:if="{{item.closed}}">已截止</text>
+      <text class="tag" wx:if="{{item.filled}}">已补满</text>
+    </view>
+  </view>
+  <view wx:if="{{!list.length && !loading}}" class="empty">暂无拼车队伍</view>
+</view>

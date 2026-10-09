@@ -1,0 +1,38 @@
+<view class="container">
+  <view class="hero">
+    <text class="hero-title">今天开一本吧</text>
+    <text class="hero-sub">甜薯剧本杀 · 挑好本 · 凑齐人 · 直接开本</text>
+  </view>
+
+  <view class="card" wx:if="{{today.length}}">
+    <view class="title">今日场次</view>
+    <view wx:for="{{today}}" wx:key="id" class="row">
+      <text>{{item.name}}</text>
+      <text class="subtitle">{{item.time}} · {{item.joined}}/{{item.cap}}人</text>
+    </view>
+  </view>
+  <view wx:else class="empty">今天还没有排场次</view>
+
+  <view class="card">
+    <view class="title" bindtap="goScripts">热玩剧本 <text class="arrow">›</text></view>
+    <view wx:for="{{scripts}}" wx:key="id" class="script-item" bindtap="goScript" data-sid="{{item.id}}">
+      <image class="cover" src="{{item.cover || '/assets/tab/home.png'}}" mode="aspectFill"/>
+      <view class="info">
+        <text class="s-title">{{item.title}}</text>
+        <view class="tags">
+          <text class="tag" wx:for="{{item.tags || []}}" wx:key="index">{{item}}</text>
+        </view>
+        <text class="price">¥{{item.price}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="title" bindtap="goCarpool">正在拼车 <text class="arrow">›</text></view>
+    <view wx:for="{{cars}}" wx:key="id" class="car-item" bindtap="goCar" data-cid="{{item.id}}">
+      <text class="s-title">{{item.title}}</text>
+      <text class="subtitle">{{item.day}} {{item.time}} · 还差{{item.need}}人 · {{item.joined}}/{{item.cap}}</text>
+    </view>
+    <view wx:if="{{!cars.length}}" class="empty">暂无拼车队伍</view>
+  </view>
+</view>

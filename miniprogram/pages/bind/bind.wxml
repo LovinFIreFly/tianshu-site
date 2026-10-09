@@ -1,0 +1,12 @@
+<view class="container" style="padding-top:100rpx;">
+  <view class="title" style="text-align:center;">绑定甜薯账号</view>
+  <view class="subtitle" style="text-align:center;margin-bottom:60rpx;">首次使用小程序，请用网站账号登录以绑定微信</view>
+
+  <view class="card">
+    <input class="input" placeholder="手机号" type="number" value="{{phone}}" bindinput="onInputPhone"/>
+    <input class="input" placeholder="密码" password value="{{password}}" bindinput="onInputPwd" style="margin-top:20rpx;"/>
+  </view>
+
+  <view class="btn-primary" bindtap="submit" style="margin-top:40rpx;">登录并绑定</view>
+  <view class="btn-ghost" bindtap="guest" style="margin-top:24rpx;">先随便逛逛</view>
+</view>

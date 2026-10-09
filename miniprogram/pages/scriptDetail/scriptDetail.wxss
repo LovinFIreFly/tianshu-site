@@ -1,0 +1,16 @@
+.big-cover {
+  width: 100%;
+  height: 420rpx;
+  border-radius: 16rpx;
+  background: #2f2c42;
+  margin-bottom: 24rpx;
+}
+.body-text {
+  color: #c9c6dc;
+  line-height: 1.7;
+  font-size: 27rpx;
+}
+.review-item {
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #2a2838;
+}

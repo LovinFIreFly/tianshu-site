@@ -1,0 +1,30 @@
+.search-bar {
+  display: flex;
+  margin-bottom: 20rpx;
+}
+.search-input {
+  flex: 1;
+  background: #1e1c2a;
+  border-radius: 12rpx;
+  padding: 18rpx 20rpx;
+  color: #fff;
+}
+.search-btn {
+  margin-left: 16rpx;
+  color: #ff6f61;
+  line-height: 72rpx;
+  padding: 0 20rpx;
+}
+.script-card {
+  display: flex;
+}
+.cover {
+  width: 180rpx;
+  height: 240rpx;
+  border-radius: 12rpx;
+  background: #2f2c42;
+  margin-right: 22rpx;
+}
+.info {
+  flex: 1;
+}

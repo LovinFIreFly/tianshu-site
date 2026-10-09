@@ -1,0 +1,50 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/scripts/scripts",
+    "pages/scriptDetail/scriptDetail",
+    "pages/carpool/carpool",
+    "pages/me/me",
+    "pages/bind/bind"
+  ],
+  "window": {
+    "navigationBarTitleText": "甜薯剧本杀",
+    "navigationBarBackgroundColor": "#15131f",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#15131f"
+  },
+  "tabBar": {
+    "color": "#888888",
+    "selectedColor": "#ff6f61",
+    "backgroundColor": "#1a1824",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "assets/tab/home.png",
+        "selectedIconPath": "assets/tab/home_on.png"
+      },
+      {
+        "pagePath": "pages/scripts/scripts",
+        "text": "本本",
+        "iconPath": "assets/tab/script.png",
+        "selectedIconPath": "assets/tab/script_on.png"
+      },
+      {
+        "pagePath": "pages/carpool/carpool",
+        "text": "拼车",
+        "iconPath": "assets/tab/car.png",
+        "selectedIconPath": "assets/tab/car_on.png"
+      },
+      {
+        "pagePath": "pages/me/me",
+        "text": "我的",
+        "iconPath": "assets/tab/me.png",
+        "selectedIconPath": "assets/tab/me_on.png"
+      }
+    ]
+  },
+  "permission": {},
+  "sitemapLocation": "sitemap.json"
+}

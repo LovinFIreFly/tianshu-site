@@ -1,0 +1,50 @@
+.hero {
+  padding: 60rpx 0 40rpx;
+  text-align: center;
+}
+.hero-title {
+  display: block;
+  font-size: 64rpx;
+  font-weight: 800;
+  color: #ff6f61;
+  line-height: 1.2;
+}
+.hero-sub {
+  display: block;
+  margin-top: 16rpx;
+  color: #aaa;
+  font-size: 26rpx;
+}
+.row {
+  display: flex;
+  justify-content: space-between;
+  padding: 14rpx 0;
+  border-bottom: 1rpx solid #2a2838;
+}
+.script-item, .car-item {
+  display: flex;
+  margin-bottom: 20rpx;
+}
+.cover {
+  width: 160rpx;
+  height: 210rpx;
+  border-radius: 12rpx;
+  background: #2f2c42;
+  margin-right: 20rpx;
+}
+.info {
+  flex: 1;
+}
+.s-title {
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 10rpx;
+}
+.tags {
+  margin-bottom: 10rpx;
+}
+.arrow {
+  color: #888;
+}

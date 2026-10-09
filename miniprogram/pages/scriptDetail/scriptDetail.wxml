@@ -1,0 +1,24 @@
+<view class="container" wx:if="{{script}}">
+  <image class="big-cover" src="{{script.cover || '/assets/tab/script.png'}}" mode="aspectFill"/>
+  <view class="title">{{script.title}}</view>
+  <view class="subtitle">
+    {{script.min}}-{{script.max}}人 · {{script.duration}} · 难度{{script.diff}} · ¥{{script.price}}
+  </view>
+  <view class="tags">
+    <text class="tag" wx:for="{{script.tags || []}}" wx:key="index">{{item}}</text>
+  </view>
+  <view class="card">
+    <view class="title">简介</view>
+    <text class="body-text">{{script.intro || '暂无简介'}}</text>
+  </view>
+  <view class="card">
+    <view class="title">评价</view>
+    <view wx:for="{{reviews}}" wx:key="id" class="review-item">
+      <text class="body-text">{{item.text || '（无文字评价）'}}</text>
+      <text class="subtitle">{{item.nick || '匿名'}} · {{item.score}}分</text>
+    </view>
+    <view wx:if="{{!reviews.length}}" class="empty">暂无评价</view>
+  </view>
+  <view class="btn-primary" style="margin-top:20rpx;" bindtap="book">去预约/拼车</view>
+</view>
+<view wx:else class="empty">加载中…</view>

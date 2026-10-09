@@ -1,0 +1,19 @@
+<view class="container">
+  <view wx:if="{{user}}" class="card profile">
+    <text class="title">{{user.profile.nick || user.username || '剧本杀玩家'}}</text>
+    <text class="subtitle">手机号 {{user.phone}}</text>
+    <text class="subtitle">信用分 {{user.credit || 0}} · 券 {{user.coupons ? user.coupons.length : 0}} 张</text>
+  </view>
+  <view wx:if="{{user}}" class="card">
+    <view class="title">我的预约</view>
+    <view wx:for="{{user.bookings || []}}" wx:key="id" class="row">
+      <text>{{item.title || '预约'}}</text>
+      <text class="subtitle">{{item.day}} {{item.time}}</text>
+    </view>
+    <view wx:if="{{!(user.bookings && user.bookings.length)}}" class="empty">暂无预约</view>
+  </view>
+  <view wx:if="{{user}}" class="btn-ghost" bindtap="logout" style="margin-top:30rpx;">退出登录</view>
+  <view wx:else class="empty" style="padding-top:120rpx;">
+    <view class="btn-primary" bindtap="goBind">登录 / 绑定账号</view>
+  </view>
+</view>
