@@ -17,6 +17,15 @@ from tianshu.db import db
 from tianshu.security import current_user, dm_required, is_staff, role, staff_required
 from config import DATA_DIR, SESSION_TIMES, TAG_PRESETS
 
+
+def _int(v, default=0):
+    """2026-10：后台表单里可能传来非数字（手滑/空格），直接 int() 会 500。
+    统一走这里，解析失败就回退默认值。"""
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return default
+
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 
@@ -177,7 +186,7 @@ def users():
 @bp.post('/users/<phone>/credit')
 @staff_required
 def set_credit(phone):
-    delta = int(request.form.get('delta') or 0)
+    delta = _int(request.form.get('delta'), 0)
     reason = business.clean(request.form.get('reason'), 40) or '门店调整'
     before, after = business.adjust_credit(phone, delta, reason, current_user().get('username'))
     flash('信用分 %s → %s（原因：%s）' % (before, after, reason) if before is not None else '没这个账号',
@@ -224,7 +233,7 @@ def ban(phone):
 @staff_required
 def recharge(phone):
     """会员充值（余额记在账号上，以后下单可以抵扣）"""
-    amount = int(request.form.get('amount') or 0)
+    amount = _int(request.form.get('amount'), 0)
     rows = db.rows('users')
     hit = next((u for u in rows if str(u.get('phone')) == str(phone)), None)
     if not hit or not amount:
@@ -247,9 +256,9 @@ def recharge(phone):
 def coupon():
     """发券：默认发给"好久没来"的客人（sleepDays 天没消费），也可以选全员或指定用户"""
     scope = request.form.get('scope') or 'sleeping'
-    amount = int(request.form.get('amount') or 20)
-    days = int(request.form.get('days') or 30)
-    sleep_days = int(request.form.get('sleepDays') or 30)
+    amount = _int(request.form.get('amount'), 20)
+    days = _int(request.form.get('days'), 30)
+    sleep_days = _int(request.form.get('sleepDays'), 30)
     bookings = db.rows('bookings')
     users = db.rows('users')
     picked = []
@@ -317,7 +326,7 @@ def script_new():
     rows.append({'id': new_id, 'title': business.clean(request.form.get('title'), 30) or '新剧本',
                  'emoji': business.clean(request.form.get('emoji'), 4) or '🎭', 'tags': [],
                  'players': '6人', 'dur': '约4小时', 'diff': 3,
-                 'price': int(request.form.get('price') or 128), 'desc': '',
+                 'price': _int(request.form.get('price'), 128), 'desc': '',
                  'type': '盒装', 'stock': '在库', 'onSale': True, 'allowRolePick': False,
                  'roles': [], 'dms': [], 'hot': False, 'isNew': True, 'createdAt': business.now_ms()})
     db.write('scripts', rows)
@@ -517,7 +526,7 @@ def script_save(sid):
     if f.get('title'):
         hit['title'] = business.clean(f.get('title'), 30)
     if f.get('price'):
-        hit['price'] = int(f.get('price'))
+        hit['price'] = _int(f.get('price'))
     hit['onSale'] = f.get('onSale') == '1'
     hit['allowRolePick'] = f.get('allowRolePick') == '1'      # 开了客人才能在网页上选角色
     if f.get('players'):
@@ -938,7 +947,7 @@ def booking_arrange(bid):
 @staff_required
 def session_new():
     f = request.form
-    ts = int(f.get('ts') or business.midnight())
+    ts = _int(f.get('ts'), business.midnight())
     tm = str(f.get('time') or '19:00')
     room = business.clean(f.get('roomId'), 20)
     busy = business.room_busy(room, ts, tm)
@@ -952,7 +961,7 @@ def session_new():
     rows = db.rows('sessions')
     rows.append({'id': max([int(x.get('id') or 0) for x in rows] or [0]) + 1,
                  'sid': (sc or {}).get('id'), 'title': (sc or {}).get('title') or '临时场',
-                 'ts': ts, 'time': tm, 'roomId': room, 'cap': int(f.get('cap') or 6),
+                 'ts': ts, 'time': tm, 'roomId': room, 'cap': _int(f.get('cap'), 6),
                  'dm': dm_phone, 'dmName': (dm or {}).get('username') or '',
                  'status': 'open', 'createdAt': business.now_ms()})
     db.write('sessions', rows)
@@ -1003,7 +1012,7 @@ def room_new():
     else:
         rows = db.rows('rooms')
         rows.append({'id': max([int(x.get('id') or 0) for x in rows] or [0]) + 1, 'name': name,
-                     'cap': int(request.form.get('cap') or 6), 'dev': business.clean(request.form.get('dev'), 40)})
+                     'cap': _int(request.form.get('cap'), 6), 'dev': business.clean(request.form.get('dev'), 40)})
         db.write('rooms', rows)
         flash('加了房间：%s' % name, 'ok')
     return redirect(url_for('admin.dashboard') + '#sessions')
@@ -1075,7 +1084,7 @@ def guide_new():
         if len(parts) >= 2 and parts[1].startswith(('http://', 'https://')):
             links.append({'name': parts[0] or '参考资料', 'url': parts[1]})
     db.update('guides', lambda rows: rows + [{
-        'id': business.now_ms(), 'sid': int(f.get('sid') or 0), 'type': f.get('type') or '解析',
+        'id': business.now_ms(), 'sid': _int(f.get('sid'), 0), 'type': f.get('type') or '解析',
         'title': business.clean(f.get('title'), 60) or '未命名资料',
         'text': business.clean(f.get('text'), 5000), 'links': links[:8],
         'by': current_user().get('username'), 'at': business.now_ms()}])
