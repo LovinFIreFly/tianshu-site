@@ -1,0 +1,532 @@
+/* ============================================================================
+   三代骨架 · 卷宗（ui=6）
+   ----------------------------------------------------------------------------
+   一个承诺：这个网站是一份案件卷宗。每一场局都是一次「立案」。
+
+   统领概念：侦探的「卷宗」—— 牛皮纸档案袋、图钉、红线、手写编号、蜡封。
+
+   与其它四套的根本差别（不是换色，是换骨架）：
+     · 开本：有装订线，是印刷品
+     · 卷宗：没有装订线，是**贴在墙上的证据**——卡片会轻微歪，图钉钉住，
+       卡片之间用红线连起来
+     · ★「乱中有序」的落点：**只有四个固定角度 + 三档错位**，按 nth-child(4n+k)
+       循环。远看是随手钉的一片，近看每张都在自己的格子里、字全都正着读。
+       悬停时那张会摆正 + 微微抬起。手机端角度减半、去掉位移。
+     · 动效：红线从上一张卡"画"到下一张（描边进度），卡片逐张钉上来
+
+   配色（有出处）：
+     底 = 石灰墙 #D9D3C8（真的一面被贴满纸的墙，不是米白奶油）
+     档案袋 = 牛皮纸 #C9A26B / 卡纸 #E8D9BB
+     字 = 铅笔黑 #1C1A17
+     重点 = 蜡封红 #8C2318（红线、印章、蜡封）
+   ========================================================================== */
+
+html[data-ui="6"]{
+  --fi-wall:#D9D3C8;
+  --fi-wall-2:#CFC8BC;
+  --fi-board:#C9A26B;
+  --fi-card:#E8D9BB;
+  --fi-card-2:#DCC99F;
+  --fi-ink:#1C1A17;
+  --fi-ink-2:#39352E;
+  --fi-ink-3:#5C564B;
+  --fi-ink-4:#847D70;
+  --fi-wax:#8C2318;
+  --fi-wax-2:#6E1B12;
+  --fi-pencil:#4A453E;
+  --fi-rule:rgba(28,26,23,.22);
+  --fi-rule-2:rgba(28,26,23,.36);
+  --fi-wax-050:rgba(140,35,24,.08);
+
+  /* 受控散落：四个固定角度 + 三档纵向错位。全站只用这四个值，不随机。 */
+  --fi-r1:-1.6deg;
+  --fi-r2:-0.5deg;
+  --fi-r3:0.6deg;
+  --fi-r4:1.8deg;
+
+  --fi-serif:'Noto Serif SC','Source Han Serif SC',Songti SC,STSong,Georgia,serif;
+  --fi-sans:'PingFang SC','Microsoft YaHei',system-ui,-apple-system,sans-serif;
+  --fi-mono:ui-monospace,'SFMono-Regular','Menlo',Consolas,monospace;
+  --fi-hand:'STKaiti','Kaiti SC','KaiTi','楷体',cursive;
+
+  /* ★ 令牌重置 —— 见 design-t4.css 顶部说明 */
+  --paper:var(--fi-wall);        --paper-2:var(--fi-wall-2);   --paper-3:var(--fi-card);
+  --ink:var(--fi-ink);           --ink-2:var(--fi-ink-2);
+  --ink-3:var(--fi-ink-3);       --ink-4:var(--fi-ink-4);
+  --stage:var(--fi-ink);         --stage-ink:var(--fi-card);
+  --stage-hair:rgba(232,217,187,.20);
+  --stage-ink-2:rgba(232,217,187,.68);
+  --rule:var(--fi-rule);         --rule-strong:var(--fi-rule-2);
+  --vermilion:var(--fi-wax);     --vermilion-600:var(--fi-wax-2);
+  --vermilion-050:var(--fi-wax-050);
+  --gold:var(--fi-board);        --seal:var(--fi-wax);
+  --r:0px; --r-lg:0px; --r-pill:0px;
+}
+
+html[data-ui="6"] body{
+  background:var(--fi-wall);
+  color:var(--fi-ink);
+  font-family:var(--fi-sans);
+  -webkit-font-smoothing:antialiased;
+  /* 石灰墙：抹灰的斜纹，**不是方格**（方格是 AI 味重灾区） */
+  background-image:
+    repeating-linear-gradient(115deg,
+      rgba(255,255,255,.05) 0 2px,
+      transparent 2px 7px),
+    repeating-linear-gradient(-35deg,
+      rgba(0,0,0,.022) 0 1px,
+      transparent 1px 11px);
+}
+html[data-ui="6"] ::selection{background:var(--fi-wax);color:var(--fi-card)}
+html[data-ui="6"] :focus-visible{outline:2px solid var(--fi-wax);outline-offset:3px}
+html[data-ui="6"] .glow3{display:none !important}
+
+/* --------------------------------------------------------------------------
+   1. 骨架
+   -------------------------------------------------------------------------- */
+html[data-ui="6"] .v3shell{display:block;background:transparent}
+html[data-ui="6"] .v3rail{display:none}
+html[data-ui="6"] .v3canvas{background:transparent;padding:0;margin-left:0 !important}
+html[data-ui="6"] .v3main{
+  width:100%;max-width:1200px;
+  margin-left:auto !important; margin-right:auto !important;
+  padding:0 clamp(20px,5vw,64px);
+  background:transparent;
+  position:relative;
+}
+
+/* 卷宗的"案卷号"沿：顶部一条打孔纸带 */
+html[data-ui="6"] .v3shell::before{
+  content:'';
+  position:fixed; top:0; left:0; right:0; height:8px;
+  z-index:70; pointer-events:none;
+  background:
+    repeating-linear-gradient(90deg,
+      transparent 0 14px,
+      var(--fi-wax) 14px 20px,
+      transparent 20px 34px);
+  opacity:.5;
+}
+
+/* 页脚：卷宗的封底 */
+html[data-ui="6"] .v3foot{
+  background:var(--fi-board);
+  border-top:2px solid var(--fi-ink);
+  color:var(--fi-ink-2);
+  margin-top:clamp(40px,7vw,88px);
+}
+html[data-ui="6"] .v3foot__brand{color:var(--fi-ink);font-family:var(--fi-serif)}
+html[data-ui="6"] .v3foot__head{color:var(--fi-ink-2)}
+html[data-ui="6"] .v3foot__col a{color:var(--fi-ink-2)}
+html[data-ui="6"] .v3foot__col a:hover{color:var(--fi-wax)}
+html[data-ui="6"] .v3foot__meta span{color:var(--fi-ink-3)}
+
+/* --------------------------------------------------------------------------
+   2. 首屏 = 卷宗封面：一叠贴上去的档案
+   -------------------------------------------------------------------------- */
+html[data-ui="6"] .v3hero{
+  padding:clamp(60px,11vh,140px) 0 clamp(44px,7vw,88px);
+  border-bottom:2px solid var(--fi-ink);
+  position:relative; overflow:visible;
+}
+html[data-ui="6"] .v3hero::after{content:none !important;animation:none !important}
+html[data-ui="6"] .v3hero__t .ln{display:inline;overflow:visible;padding:0}
+html[data-ui="6"] .v3hero__t .ln > i{display:inline;transform:none !important;animation:none !important}
+
+html[data-ui="6"] .v3hero--split{display:block !important}
+html[data-ui="6"] .v3hero__k{
+  display:inline-block;
+  font-family:var(--fi-mono); font-size:11.5px; letter-spacing:.34em;
+  color:var(--fi-card);
+  background:var(--fi-ink);
+  padding:5px 12px;
+  margin:0 0 clamp(22px,3.4vw,36px);
+  transform:rotate(var(--fi-r2));
+  text-transform:none;
+}
+html[data-ui="6"] .v3hero__t{
+  margin:0;
+  font-family:var(--fi-serif); font-weight:900;
+  font-size:clamp(44px,8.4vw,112px);
+  line-height:1.04; letter-spacing:-.015em;
+  color:var(--fi-ink);
+  max-width:12ch;
+}
+/* 蜡封红：标题里的 em 用一条"划重点"的粗下划线（像用红笔在卷宗上划的）。
+   ⚠️ inline 的 em 上挂绝对定位伪元素会横跨换行 —— 加 inline-block 锚住。 */
+html[data-ui="6"] .v3hero__t em{
+  font-style:normal; position:relative; display:inline-block;
+  padding:0 .04em;
+}
+html[data-ui="6"] .v3hero__t em::before{
+  content:'';
+  position:absolute; left:-.02em; right:-.02em; bottom:.05em;
+  height:.11em;
+  background:var(--fi-wax);
+  opacity:.82;
+  transform:rotate(-.7deg);
+}
+html[data-ui="6"] .v3hero__t em::after{content:none !important;animation:none !important}
+
+html[data-ui="6"] .v3hero__row{margin-top:clamp(28px,4.4vw,48px)}
+html[data-ui="6"] .v3hero__row .sform3{max-width:540px}
+html[data-ui="6"] .v3hero__stats{
+  margin-top:clamp(36px,5.6vw,64px);
+  padding-top:clamp(18px,2.6vw,28px);
+  border-top:2px solid var(--fi-ink);
+  gap:clamp(22px,3.6vw,52px);
+}
+html[data-ui="6"] .v3hero__stats b{
+  font-family:var(--fi-serif); font-weight:900;
+  font-size:clamp(26px,3.4vw,40px); color:var(--fi-ink);
+}
+html[data-ui="6"] .v3hero__stats span{
+  font-family:var(--fi-mono); letter-spacing:.2em; color:var(--fi-ink-3);
+}
+
+/* --------------------------------------------------------------------------
+   3. 卷宗卡片（= 证据卡）：受控散落 + 图钉 + 牛皮纸纤维
+   -------------------------------------------------------------------------- */
+html[data-ui="6"] .fi-card{
+  position:relative;
+  background:var(--fi-card);
+  border:1px solid var(--fi-rule-2);
+  padding:clamp(16px,2.4vw,26px);
+  /* 牛皮纸纤维：横向的一道道细纹，**不是方格** */
+  background-image:
+    repeating-linear-gradient(0deg,
+      rgba(140,110,60,.055) 0 1px,
+      transparent 1px 5px),
+    repeating-linear-gradient(90deg,
+      rgba(140,110,60,.03) 0 1px,
+      transparent 1px 9px);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.45) inset,
+    0 6px 14px -8px rgba(28,26,23,.42);
+  transform:rotate(var(--fi-rot,0deg)) translateY(var(--fi-dy,0px));
+  transition:transform .42s cubic-bezier(.22,.68,.24,1), box-shadow .42s;
+}
+/* 图钉 */
+html[data-ui="6"] .fi-card::before{
+  content:'';
+  position:absolute; top:-7px; left:50%;
+  width:14px; height:14px; margin-left:-7px;
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 35% 32%, #E9B4AC 0 18%, var(--fi-wax) 22% 62%, var(--fi-wax-2) 66% 100%);
+  box-shadow:0 2px 3px rgba(28,26,23,.42);
+  z-index:2;
+}
+/* 悬停摆正 + 抬起 */
+html[data-ui="6"] .fi-card:hover{
+  transform:rotate(0deg) translateY(-6px) !important;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.5) inset,
+    0 18px 30px -14px rgba(28,26,23,.5);
+  z-index:5;
+}
+
+/* ★ 受控散落：四个固定角度按 4n+k 循环，三档错位。绝不随机。 */
+html[data-ui="6"] .fi-sheet > .fi-card:nth-child(4n+1){--fi-rot:var(--fi-r1);--fi-dy:7px}
+html[data-ui="6"] .fi-sheet > .fi-card:nth-child(4n+2){--fi-rot:var(--fi-r2);--fi-dy:-5px}
+html[data-ui="6"] .fi-sheet > .fi-card:nth-child(4n+3){--fi-rot:var(--fi-r3);--fi-dy:4px}
+html[data-ui="6"] .fi-sheet > .fi-card:nth-child(4n+4){--fi-rot:var(--fi-r4);--fi-dy:-3px}
+
+/* 卡片上的红色"案卷号"标签 */
+html[data-ui="6"] .fi-card__no{
+  display:inline-block;
+  font-family:var(--fi-mono); font-size:10.5px; letter-spacing:.22em;
+  color:var(--fi-card); background:var(--fi-wax);
+  padding:3px 8px; margin-bottom:12px;
+}
+html[data-ui="6"] .fi-card__t{font-family:var(--fi-serif);font-weight:900;color:var(--fi-ink)}
+html[data-ui="6"] .fi-card__d{color:var(--fi-ink-3);font-size:13.5px}
+/* 手写批注 */
+html[data-ui="6"] .fi-card__note{
+  font-family:var(--fi-hand); color:var(--fi-wax);
+  font-size:14px; transform:rotate(-1.2deg);
+  display:inline-block;
+}
+
+/* --------------------------------------------------------------------------
+   4. 组件重绘：全部变成"贴在墙上的档案"
+   -------------------------------------------------------------------------- */
+html[data-ui="6"] .v3sec{
+  display:block !important;
+  border-top:0 !important;
+  padding:clamp(38px,5.6vw,74px) 0 clamp(44px,6.6vw,86px);
+  position:relative;
+}
+html[data-ui="6"] .v3sec > .v3sec__no{
+  display:inline-block !important;
+  writing-mode:horizontal-tb !important;
+  font-family:var(--fi-mono); font-size:11px;
+  letter-spacing:.28em; color:var(--fi-card);
+  background:var(--fi-ink);
+  padding:4px 10px;
+  margin:0 0 clamp(14px,2vw,22px);
+  transform:rotate(var(--fi-r1));
+  justify-self:start;
+}
+html[data-ui="6"] .v3sec > *{grid-column:auto !important}
+html[data-ui="6"] .v3sec__title{
+  font-family:var(--fi-serif); font-weight:900;
+  font-size:clamp(23px,3vw,34px); color:var(--fi-ink);
+  display:flex; align-items:baseline; gap:14px;
+  margin:0 0 clamp(20px,3vw,34px);
+}
+html[data-ui="6"] .v3sec__title small{
+  font-family:var(--fi-mono); letter-spacing:.24em; color:var(--fi-ink-3);
+}
+
+/* 海报卡 → 证据卡 */
+html[data-ui="6"] .pcard3{
+  background:var(--fi-card);
+  border:1px solid var(--fi-rule-2);
+  border-radius:0; box-shadow:0 4px 12px -8px rgba(28,26,23,.4);
+  position:relative;
+}
+html[data-ui="6"] .pcard3::before{
+  content:''; position:absolute; top:-6px; left:50%;
+  width:12px; height:12px; margin-left:-6px; border-radius:50%;
+  background:radial-gradient(circle at 35% 32%, #E9B4AC 0 18%, var(--fi-wax) 22% 64%, var(--fi-wax-2) 68% 100%);
+  box-shadow:0 2px 3px rgba(28,26,23,.42); z-index:2;
+}
+html[data-ui="6"] .pcard3__title{font-family:var(--fi-serif)}
+html[data-ui="6"] .pcard3__price{color:var(--fi-wax);font-family:var(--fi-mono)}
+html[data-ui="6"] .pcard3__type,
+html[data-ui="6"] .pcard3__meta{font-family:var(--fi-mono);color:var(--fi-ink-3)}
+
+/* 拼车卡 → 立案条 */
+html[data-ui="6"] .ccard3{
+  background:var(--fi-card); border:1px solid var(--fi-rule-2);
+  border-left:3px solid var(--fi-wax);
+  border-radius:0; box-shadow:0 4px 12px -8px rgba(28,26,23,.4);
+}
+html[data-ui="6"] .ccard3__title{font-family:var(--fi-serif)}
+html[data-ui="6"] .ccard3__count b{color:var(--fi-wax)}
+html[data-ui="6"] .ccard3__meta{color:var(--fi-ink-3)}
+
+/* 编号清单 → 目录页 */
+html[data-ui="6"] .idx3{border-top:2px solid var(--fi-ink)}
+html[data-ui="6"] .idx3 li{border-bottom:1px solid var(--fi-rule)}
+html[data-ui="6"] .idx3__no{font-family:var(--fi-mono);color:var(--fi-wax)}
+html[data-ui="6"] .idx3__main b{font-family:var(--fi-serif)}
+html[data-ui="6"] .idx3 a::before{background:var(--fi-wax-050)}
+html[data-ui="6"] .idx3 a:hover .idx3__arrow{color:var(--fi-wax)}
+
+/* 海报轨 */
+html[data-ui="6"] .rail3__bar{background:var(--fi-rule-2)}
+html[data-ui="6"] .rail3__bar i{background:var(--fi-wax)}
+html[data-ui="6"] .rail3__nav button{
+  border:1px solid var(--fi-rule-2); background:var(--fi-card);
+  color:var(--fi-ink); border-radius:0;
+}
+html[data-ui="6"] .rail3__nav button:hover{
+  background:var(--fi-ink); color:var(--fi-card); border-color:var(--fi-ink);
+}
+
+/* 跑马灯 */
+html[data-ui="6"] .marq3{border-top:2px solid var(--fi-ink);border-bottom:1px solid var(--fi-rule-2)}
+html[data-ui="6"] .marq3__t{font-family:var(--fi-serif)}
+html[data-ui="6"] .marq3__who{color:var(--fi-wax)}
+html[data-ui="6"] .marq3__s{color:var(--fi-ink-3)}
+
+/* 便签块 → 手写便条（真的斜一点，但只有这一个角度） */
+html[data-ui="6"] .chalk3{
+  background:var(--fi-card-2) !important;
+  border:1px solid var(--fi-rule-2) !important;
+  border-radius:0 !important;
+  transform:rotate(var(--fi-r1)) !important;
+  box-shadow:0 6px 14px -8px rgba(28,26,23,.44) !important;
+  position:relative;
+}
+html[data-ui="6"] .chalk3::before{
+  content:''; position:absolute; top:-7px; left:26px;
+  width:13px; height:13px; border-radius:50%;
+  background:radial-gradient(circle at 35% 32%, #E9B4AC 0 18%, var(--fi-wax) 22% 64%, var(--fi-wax-2) 68% 100%);
+  box-shadow:0 2px 3px rgba(28,26,23,.42);
+}
+html[data-ui="6"] .chalk3__pin{display:none}
+html[data-ui="6"] .chalk3__k{color:var(--fi-wax);font-family:var(--fi-mono);letter-spacing:.24em}
+html[data-ui="6"] .chalk3__t{font-family:var(--fi-serif)}
+html[data-ui="6"] .chalk3__b{color:var(--fi-ink-2)}
+
+/* 店墙 */
+html[data-ui="6"] .shopwall3__item{
+  background:var(--fi-card); border:1px solid var(--fi-rule-2);
+  padding:clamp(14px,2vw,22px);
+  box-shadow:0 4px 12px -8px rgba(28,26,23,.4);
+}
+html[data-ui="6"] .shopwall3__intro{font-family:var(--fi-serif)}
+
+/* 流水表 → 记录表 */
+html[data-ui="6"] .sheet3{border-top:2px solid var(--fi-ink);background:var(--fi-card)}
+html[data-ui="6"] .sheet3__row{border-bottom:1px solid var(--fi-rule)}
+html[data-ui="6"] .sheet3__t{font-family:var(--fi-serif)}
+html[data-ui="6"] .sheet3__m{font-family:var(--fi-mono);color:var(--fi-ink-3)}
+
+/* 实时条 */
+html[data-ui="6"] .realstrip{
+  background:var(--fi-ink); color:var(--fi-card);
+  border-top:0; border-bottom:0;
+}
+html[data-ui="6"] .realstrip__v{font-family:var(--fi-mono);color:var(--fi-card)}
+html[data-ui="6"] .realstrip__k{color:rgba(232,217,187,.6)}
+html[data-ui="6"] .realstrip__pick{color:var(--fi-board)}
+
+/* 底部数据带 */
+html[data-ui="6"] .ticker3{border-top:1px solid var(--fi-rule-2);border-bottom:1px solid var(--fi-rule-2)}
+html[data-ui="6"] .ticker3 > *{border-left:1px solid var(--fi-rule)}
+html[data-ui="6"] .count3{color:var(--fi-wax)}
+
+/* 按钮 / 标签 */
+html[data-ui="6"] .b3{border-radius:0 !important;font-family:var(--fi-sans)}
+html[data-ui="6"] .b3--solid{background:var(--fi-ink);border-color:var(--fi-ink);color:var(--fi-card)}
+html[data-ui="6"] .b3--accent{background:var(--fi-wax);border-color:var(--fi-wax);color:var(--fi-card)}
+html[data-ui="6"] .b3{border-color:var(--fi-rule-2);color:var(--fi-ink)}
+html[data-ui="6"] .b3:hover{border-color:var(--fi-ink)}
+html[data-ui="6"] .tag3{border-radius:0 !important;font-family:var(--fi-mono);background:transparent}
+html[data-ui="6"] .tag3--accent{border-color:var(--fi-wax);color:var(--fi-wax)}
+html[data-ui="6"] .chip3,
+html[data-ui="6"] .chips3__lab{border-radius:0 !important}
+html[data-ui="6"] .chips3__lab{color:var(--fi-ink-3)}
+
+/* 页头 / 空态 / 侧标题 */
+html[data-ui="6"] .v3head__t{font-family:var(--fi-serif)}
+html[data-ui="6"] .v3head__k{color:var(--fi-card);background:var(--fi-ink);display:inline-block;padding:4px 10px;letter-spacing:.3em;font-family:var(--fi-mono)}
+html[data-ui="6"] .v3head__lead{color:var(--fi-ink-3)}
+html[data-ui="6"] .sidehead3{font-family:var(--fi-mono);color:var(--fi-ink-3);letter-spacing:.24em}
+html[data-ui="6"] .empty3__t{font-family:var(--fi-serif)}
+html[data-ui="6"] .empty3__s{color:var(--fi-ink-3)}
+
+/* 表单 */
+html[data-ui="6"] .sform3__in,
+html[data-ui="6"] input.input,
+html[data-ui="6"] .field input,
+html[data-ui="6"] .field select,
+html[data-ui="6"] .field textarea{
+  border-radius:0 !important;
+  background:var(--fi-card) !important;
+  border:1px solid var(--fi-rule-2) !important;
+  color:var(--fi-ink) !important;
+}
+html[data-ui="6"] .sform3__in:focus,
+html[data-ui="6"] .field input:focus,
+html[data-ui="6"] .field textarea:focus{
+  border-color:var(--fi-wax) !important; box-shadow:none !important;
+}
+html[data-ui="6"] .sform3__btn{
+  border-radius:0 !important;
+  background:var(--fi-ink); color:var(--fi-card); border-color:var(--fi-ink);
+}
+
+/* 评价卡 → 证词 */
+html[data-ui="6"] .rev3{
+  background:var(--fi-card); border:1px solid var(--fi-rule-2);
+  padding:clamp(14px,2vw,22px);
+  position:relative;
+  transform:rotate(var(--fi-rot,var(--fi-r2))) translateY(var(--fi-dy,0px));
+  transition:transform .42s cubic-bezier(.22,.68,.24,1), box-shadow .42s;
+  box-shadow:0 5px 13px -9px rgba(28,26,23,.42);
+}
+/* 评价卡也有图钉 + 悬停摆正（跟证据卡同一套规则，保持一致） */
+html[data-ui="6"] .rev3::before{
+  content:''; position:absolute; top:-6px; left:22px;
+  width:12px; height:12px; border-radius:50%;
+  background:radial-gradient(circle at 35% 32%, #E9B4AC 0 18%, var(--fi-wax) 22% 64%, var(--fi-wax-2) 68% 100%);
+  box-shadow:0 2px 3px rgba(28,26,23,.42); z-index:2;
+}
+html[data-ui="6"] .rev3:hover{
+  transform:rotate(0deg) translateY(-5px);
+  box-shadow:0 16px 28px -14px rgba(28,26,23,.48);
+  z-index:5;
+}
+html[data-ui="6"] .rev3:nth-child(4n+1){--fi-rot:var(--fi-r1);--fi-dy:6px}
+html[data-ui="6"] .rev3:nth-child(4n+2){--fi-rot:var(--fi-r2);--fi-dy:-4px}
+html[data-ui="6"] .rev3:nth-child(4n+3){--fi-rot:var(--fi-r3);--fi-dy:3px}
+html[data-ui="6"] .rev3:nth-child(4n+4){--fi-rot:var(--fi-r4);--fi-dy:-2px}
+html[data-ui="6"] .rev3__t{font-family:var(--fi-serif)}
+html[data-ui="6"] .rev3__author{font-family:var(--fi-hand);color:var(--fi-ink-2)}
+
+/* ★ 散落容器的呼吸：歪着的卡片会被旋转"顶出"容器，跟上下标题打架。
+   给容器加纵向 padding + 一点点横向余量，让歪出去的角仍然落在自己家里。 */
+html[data-ui="6"] .mason3{
+  padding:clamp(12px,1.8vw,20px) clamp(6px,1vw,12px) clamp(16px,2.2vw,26px);
+}
+html[data-ui="6"] .split3,
+html[data-ui="6"] .rail3__track{padding-top:clamp(12px,1.8vw,20px);padding-bottom:clamp(14px,2vw,22px)}
+html[data-ui="6"] .v3sec__title + .mason3,
+html[data-ui="6"] .v3sec__title + .split3{margin-top:clamp(6px,1vw,12px)}
+
+/* 暗场抬头 → 卷宗封套 */
+html[data-ui="6"] .dsec--stage{background:var(--fi-board);border-top:2px solid var(--fi-ink)}
+html[data-ui="6"] .dsec__no{color:var(--fi-wax);font-family:var(--fi-mono)}
+html[data-ui="6"] .dsec__title{font-family:var(--fi-serif);color:var(--fi-ink)}
+html[data-ui="6"] .dsec__lead{color:var(--fi-ink-2)}
+
+html[data-ui="6"] .note3{background:var(--fi-card);border-color:var(--fi-rule-2);color:var(--fi-ink-2)}
+
+/* --------------------------------------------------------------------------
+   5. 动效：红线（把相邻两张卡连起来，描边进度）
+   -------------------------------------------------------------------------- */
+html[data-ui="6"] .fi-threads{
+  position:absolute; inset:0;
+  width:100%; height:100%;
+  pointer-events:none; z-index:1;
+  overflow:visible;
+}
+html[data-ui="6"] .fi-threads path{
+  fill:none;
+  stroke:var(--fi-wax);
+  stroke-width:1.4;
+  stroke-linecap:round;
+  opacity:.62;
+  stroke-dasharray:var(--fi-len,400);
+  stroke-dashoffset:var(--fi-len,400);
+}
+html[data-ui="6"] .fi-threads path.fi-draw{
+  transition:stroke-dashoffset .96s cubic-bezier(.3,.7,.3,1);
+  stroke-dashoffset:0;
+}
+
+/* 卡片逐张钉上来（默认可见，JS 只是加个入场；JS 挂了也正常） */
+html[data-ui="6"] .fi-in{
+  animation:fi-pin .52s cubic-bezier(.22,.68,.24,1) both;
+}
+@keyframes fi-pin{
+  from{opacity:0; transform:rotate(var(--fi-rot,0deg)) translateY(calc(var(--fi-dy,0px) - 12px)) scale(.985)}
+  to{opacity:1; transform:rotate(var(--fi-rot,0deg)) translateY(var(--fi-dy,0px)) scale(1)}
+}
+
+/* --------------------------------------------------------------------------
+   6. 手机端：角度减半、去掉错位（窄屏里歪 1.8° 会显乱）
+   -------------------------------------------------------------------------- */
+@media (max-width:900px){
+  html[data-ui="6"]{
+    --fi-r1:-0.8deg; --fi-r2:-0.25deg; --fi-r3:0.3deg; --fi-r4:0.9deg;
+  }
+  html[data-ui="6"] .v3hero{padding:clamp(44px,9vh,80px) 0 clamp(34px,6vw,56px)}
+  html[data-ui="6"] .fi-sheet > .fi-card{--fi-dy:0px}
+  html[data-ui="6"] .fi-card:hover{transform:rotate(0deg) translateY(-3px) !important}
+  html[data-ui="6"] .fi-threads{display:none}
+  html[data-ui="6"] .chalk3{transform:rotate(var(--fi-r2)) !important}
+}
+
+@media (prefers-reduced-motion:reduce){
+  html[data-ui="6"] *{animation-duration:.001ms !important;transition-duration:.001ms !important}
+  html[data-ui="6"] .fi-threads path{stroke-dashoffset:0 !important}
+  html[data-ui="6"] .fi-card{transform:none !important}
+}
+
+/* --------------------------------------------------------------------------
+   7. 收口 / 安全网
+   -------------------------------------------------------------------------- */
+html[data-ui="6"] .scrollbar3{background:var(--fi-wax)}
+html[data-ui="6"] .v3canvas,
+html[data-ui="6"] .v3shell{min-width:0;max-width:100%}
+html[data-ui="6"] .v3main{min-width:0;position:relative}
+html[data-ui="6"] .dsec,
+html[data-ui="6"] .band,
+html[data-ui="6"] .v3sec,
+html[data-ui="6"] .split3{min-width:0;max-width:100%;overflow-x:clip}

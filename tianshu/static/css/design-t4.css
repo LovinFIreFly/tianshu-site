@@ -1,0 +1,385 @@
+/* ============================================================================
+   三代骨架 · 开本（ui=4）
+   ----------------------------------------------------------------------------
+   一个承诺：这个网站是一本装订好的书，你正在翻它。
+
+   统领概念：书的「开本」—— 版心、装订线、页码、逐字墨迹。
+
+   与其它四套的根本差别（不是换色，是换骨架）：
+     · 剧幕：场次是主角，首屏是节目单
+     · 开本：剧本是主角，首屏是封面，往下是「内页」，节与节之间是「跨页」
+     · 版面：左侧一条贯穿全站的装订线（缝线），正文收进版心，章节带页码
+     · 动效：标题逐字落墨（先淡灰 → 再显影），章节像翻页一样从装订线方向推入
+
+   配色（都有现实出处）：
+     版心纸 = 生宣白 / 棉纸白 #F7F5F0（不是奶油米黄 —— 米黄是 AI 味重灾区）
+     字      = 松烟墨 #17171A（偏冷的黑，不是暖褐）
+     朱砂    = #C8321E（印章、句读、页码的重点色，全站只此一色）
+     辅助    = 黛蓝 #2B3A4A（极少量，只用于「已结束」状态，模拟蓝墨水）
+   ========================================================================== */
+
+html[data-ui="4"]{
+  --bk-paper:#F7F5F0;
+  --bk-paper-2:#EFECE5;
+  --bk-paper-3:#FCFBF8;
+  --bk-ink:#17171A;
+  --bk-ink-2:#2C2C31;
+  --bk-ink-3:#55555C;
+  --bk-ink-4:#83838C;
+  --bk-cinnabar:#C8321E;
+  --bk-cinnabar-2:#A32414;
+  --bk-indigo:#2B3A4A;
+  --bk-rule:rgba(23,23,26,.16);
+  --bk-rule-2:rgba(23,23,26,.30);
+  --bk-seal:rgba(200,50,30,.07);
+  --bk-gutter:clamp(30px,4.4vw,66px);
+  --bk-serif:'Noto Serif SC','Source Han Serif SC',Songti SC,STSong,'SimSun',Georgia,serif;
+  --bk-sans:system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+  --bk-mono:ui-monospace,'SFMono-Regular','Menlo',Consolas,monospace;
+
+  /* ★ 令牌重置（必须留在本文件，后面所有 var(--d-*) 才落到开本这套）。
+     design-v3.css 在 :root 上把 --paper/--ink/--vermilion 换成了
+     「暖燕麦 + 墨绿黑 + 苔绿」（竖排导轨那套），而 design3.css 有 160 处
+     走 var(--d-ink) → var(--ink)。逐个覆盖组件不现实 —— 必须整组换原料。 */
+  --paper:var(--bk-paper);      --paper-2:var(--bk-paper-2);  --paper-3:var(--bk-paper-3);
+  --ink:var(--bk-ink);          --ink-2:var(--bk-ink-2);
+  --ink-3:var(--bk-ink-3);      --ink-4:var(--bk-ink-4);
+  --stage:var(--bk-ink);        --stage-ink:var(--bk-paper);
+  --stage-hair:rgba(247,245,240,.18);
+  --stage-ink-2:rgba(247,245,240,.66);
+  --rule:var(--bk-rule);        --rule-strong:var(--bk-rule-2);
+  --vermilion:var(--bk-cinnabar); --vermilion-600:var(--bk-cinnabar-2);
+  --vermilion-050:var(--bk-seal);
+  --gold:#A8802A;               --seal:var(--bk-cinnabar);
+  --r:0px; --r-lg:0px; --r-pill:0px;
+}
+
+html[data-ui="4"] body{
+  background:var(--bk-paper);
+  color:var(--bk-ink);
+  font-family:var(--bk-sans);
+  -webkit-font-smoothing:antialiased;
+}
+html[data-ui="4"] ::selection{background:var(--bk-cinnabar);color:var(--bk-paper)}
+html[data-ui="4"] :focus-visible{outline:2px solid var(--bk-cinnabar);outline-offset:3px}
+html[data-ui="4"] .glow3{display:none !important}
+
+/* --------------------------------------------------------------------------
+   1. 骨架：左导轨 → 装订线；画布居中
+   -------------------------------------------------------------------------- */
+html[data-ui="4"] .v3shell{display:block;background:var(--bk-paper)}
+html[data-ui="4"] .v3rail{display:none}
+html[data-ui="4"] .v3canvas{background:var(--bk-paper);padding:0;margin-left:0 !important}
+html[data-ui="4"] .v3main{
+  position:relative;
+  width:100%;max-width:1180px;
+  margin-left:auto !important; margin-right:auto !important;
+  padding:0 clamp(20px,5vw,72px) 0 calc(var(--bk-gutter) + clamp(20px,5vw,72px));
+  background:var(--bk-paper);
+}
+/* 装订线：贯穿全站的一条墨线 */
+html[data-ui="4"] .v3main::before{
+  content:'';
+  position:absolute; top:0; bottom:0;
+  left:calc(var(--bk-gutter) * .45 + clamp(20px,5vw,72px) * .45);
+  width:1px; background:var(--bk-rule-2);
+  pointer-events:none;
+}
+/* 缝线：贴着装订线的短横杠，模拟线圈本的穿线 */
+html[data-ui="4"] .v3main::after{
+  content:'';
+  position:absolute; top:0; bottom:0;
+  left:calc(var(--bk-gutter) * .45 + clamp(20px,5vw,72px) * .45 - 5px);
+  width:11px;
+  background:repeating-linear-gradient(
+      to bottom,
+      var(--bk-cinnabar) 0 3px,
+      transparent 3px 8px,
+      var(--bk-rule-2) 8px 10px,
+      transparent 10px 46px);
+  opacity:.5;
+  pointer-events:none;
+}
+
+/* 页脚：书的版权页 */
+html[data-ui="4"] .v3foot{
+  background:var(--bk-paper-2);
+  border-top:1px solid var(--bk-rule-2);
+  color:var(--bk-ink-3);
+}
+html[data-ui="4"] .v3foot__brand{color:var(--bk-ink);font-family:var(--bk-serif)}
+html[data-ui="4"] .v3foot__col a{color:var(--bk-ink-3)}
+html[data-ui="4"] .v3foot__col a:hover{color:var(--bk-cinnabar)}
+
+/* --------------------------------------------------------------------------
+   2. 首屏 = 封面（整屏，版心内，像扉页）
+   -------------------------------------------------------------------------- */
+html[data-ui="4"] .v3hero{
+  padding:clamp(64px,12vh,150px) 0 clamp(52px,8vw,96px);
+  border-bottom:1px solid var(--bk-rule);
+  position:relative; overflow:visible;
+}
+html[data-ui="4"] .v3hero::after{content:none !important;animation:none !important}
+html[data-ui="4"] .v3hero__t .ln{display:inline;overflow:visible;padding:0}
+html[data-ui="4"] .v3hero__t .ln > i{display:inline;transform:none !important;animation:none !important}
+
+/* 封面不做左右分栏 —— 改上下层次（标题 → 搜索 → 按钮 → 数字 → 场次题记） */
+html[data-ui="4"] .v3hero--split{display:block !important}
+html[data-ui="4"] .v3hero__k{
+  font-family:var(--bk-mono); font-size:11.5px; letter-spacing:.42em;
+  color:var(--bk-cinnabar); margin:0 0 clamp(22px,3.4vw,38px);
+  text-transform:none;
+}
+html[data-ui="4"] .v3hero__t{
+  margin:0;
+  font-family:var(--bk-serif); font-weight:900;
+  font-size:clamp(52px,10.2vw,132px);
+  line-height:1.02; letter-spacing:-.02em;
+  color:var(--bk-ink);
+  max-width:11ch;
+}
+/* 朱砂句读：标题里的 em 用一个方块印（不是二代那条会动的下划线）。
+   ⚠️ em 是 inline，绝对定位的 ::before 会跟着行盒跑偏 —— 加 inline-block 锚住。 */
+html[data-ui="4"] .v3hero__t em{
+  font-style:normal; color:var(--bk-ink);
+  position:relative; display:inline-block;
+  padding-right:.16em;
+}
+html[data-ui="4"] .v3hero__t em::before{
+  content:'';
+  position:absolute; right:-.05em; top:.12em;
+  width:.19em; height:.19em;
+  background:var(--bk-cinnabar);
+  transform:rotate(45deg);
+}
+html[data-ui="4"] .v3hero__t em::after{content:none !important;animation:none !important}
+
+html[data-ui="4"] .v3hero__row{margin-top:clamp(30px,4.6vw,52px)}
+html[data-ui="4"] .v3hero__row .sform3{max-width:560px}
+html[data-ui="4"] .v3hero__stats{
+  margin-top:clamp(40px,6vw,72px);
+  padding-top:clamp(20px,2.6vw,30px);
+  border-top:1px solid var(--bk-rule);
+  gap:clamp(22px,3.6vw,52px);
+}
+html[data-ui="4"] .v3hero__stats b{
+  font-family:var(--bk-serif); font-weight:900;
+  font-size:clamp(26px,3.4vw,40px); color:var(--bk-ink);
+}
+html[data-ui="4"] .v3hero__stats span{
+  font-family:var(--bk-mono); letter-spacing:.22em; color:var(--bk-ink-4);
+}
+/* 场次牌：封面的「题记」，不是漂浮卡 */
+html[data-ui="4"] .v3hero__aside{margin-top:clamp(44px,7vw,80px);max-width:640px}
+html[data-ui="4"] .board3{
+  border-top:1px solid var(--bk-ink);
+  padding-top:clamp(14px,2vw,20px);
+}
+html[data-ui="4"] .board3__head h2{color:var(--bk-ink-3);letter-spacing:.24em}
+html[data-ui="4"] .board3__row{border-bottom:1px solid var(--bk-rule)}
+html[data-ui="4"] .board3__t{color:var(--bk-cinnabar)}
+html[data-ui="4"] .board3__n{font-family:var(--bk-serif)}
+html[data-ui="4"] .board3__s b{color:var(--bk-cinnabar)}
+
+/* --------------------------------------------------------------------------
+   3. 章节 = 跨页：编号移进版心，做成页码
+   -------------------------------------------------------------------------- */
+html[data-ui="4"] .v3sec{
+  display:block !important;
+  border-top:1px solid var(--bk-rule);
+  padding:clamp(40px,6vw,78px) 0 clamp(46px,7vw,90px);
+  position:relative;
+}
+html[data-ui="4"] .v3sec > .v3sec__no{
+  display:block !important;
+  writing-mode:horizontal-tb !important;
+  font-family:var(--bk-mono); font-size:11.5px;
+  letter-spacing:.28em; color:var(--bk-cinnabar);
+  padding:0 0 clamp(10px,1.6vw,16px);
+  justify-self:start;
+}
+html[data-ui="4"] .v3sec > *{grid-column:auto !important}
+html[data-ui="4"] .v3sec__title{
+  font-family:var(--bk-serif); font-weight:900;
+  font-size:clamp(23px,3vw,34px); color:var(--bk-ink);
+  display:flex; align-items:baseline; gap:14px;
+  margin:0 0 clamp(20px,3vw,34px);
+}
+html[data-ui="4"] .v3sec__title small{
+  font-family:var(--bk-mono); letter-spacing:.24em; color:var(--bk-ink-4);
+}
+
+/* --------------------------------------------------------------------------
+   4. 组件重绘（书里的一切都是"印在纸上"的）
+   -------------------------------------------------------------------------- */
+/* 海报卡：书里的插图 */
+html[data-ui="4"] .pcard3{
+  background:transparent;
+  border:0; border-bottom:1px solid var(--bk-rule);
+  border-radius:0; box-shadow:none;
+  transition:transform .36s cubic-bezier(.22,.68,.24,1);
+}
+html[data-ui="4"] .pcard3:hover{transform:translateY(-4px)}
+html[data-ui="4"] .pcard3__cover{border:1px solid var(--bk-rule)}
+html[data-ui="4"] .pcard3__title{font-family:var(--bk-serif)}
+html[data-ui="4"] .pcard3__price{color:var(--bk-cinnabar);font-family:var(--bk-mono)}
+html[data-ui="4"] .pcard3__type,
+html[data-ui="4"] .pcard3__meta{font-family:var(--bk-mono);color:var(--bk-ink-4)}
+
+/* 拼车卡：一条条"登记在册"的条目 */
+html[data-ui="4"] .ccard3{
+  background:transparent; border:0;
+  border-top:1px solid var(--bk-ink);
+  padding:clamp(14px,2vw,20px) 0;
+  box-shadow:none;
+}
+html[data-ui="4"] .ccard3__title{font-family:var(--bk-serif)}
+html[data-ui="4"] .ccard3__count b{color:var(--bk-cinnabar)}
+
+/* 编号清单：页码式索引 */
+html[data-ui="4"] .idx3{border-top:1px solid var(--bk-ink)}
+html[data-ui="4"] .idx3 li{border-bottom:1px solid var(--bk-rule)}
+html[data-ui="4"] .idx3__no{font-family:var(--bk-mono);color:var(--bk-cinnabar)}
+html[data-ui="4"] .idx3__main b{font-family:var(--bk-serif)}
+html[data-ui="4"] .idx3 a::before{background:var(--bk-seal)}
+html[data-ui="4"] .idx3 a:hover .idx3__arrow{color:var(--bk-cinnabar)}
+
+/* 横向海报轨：像书脊排开 */
+html[data-ui="4"] .rail3__bar{height:1px;background:var(--bk-rule-2)}
+html[data-ui="4"] .rail3__bar i{background:var(--bk-cinnabar)}
+html[data-ui="4"] .rail3__nav button{
+  border:1px solid var(--bk-rule-2); background:transparent;
+  color:var(--bk-ink); border-radius:0;
+}
+html[data-ui="4"] .rail3__nav button:hover{
+  background:var(--bk-ink); color:var(--bk-paper); border-color:var(--bk-ink);
+}
+
+/* 跑马灯：书页边注 */
+html[data-ui="4"] .marq3{border-top:1px solid var(--bk-ink);border-bottom:1px solid var(--bk-rule)}
+html[data-ui="4"] .marq3__t{font-family:var(--bk-serif)}
+html[data-ui="4"] .marq3__who{color:var(--bk-cinnabar)}
+
+/* 便签块 → 书里的"引文块"：左侧朱砂竖线 */
+html[data-ui="4"] .chalk3{
+  background:transparent !important;
+  border:0 !important;
+  border-left:2px solid var(--bk-cinnabar) !important;
+  padding:clamp(14px,2vw,22px) 0 clamp(14px,2vw,22px) clamp(16px,2.4vw,26px) !important;
+  transform:none !important;
+  box-shadow:none !important;
+}
+html[data-ui="4"] .chalk3__pin{display:none}
+html[data-ui="4"] .chalk3__k{color:var(--bk-cinnabar);font-family:var(--bk-mono);letter-spacing:.24em}
+html[data-ui="4"] .chalk3__t{font-family:var(--bk-serif)}
+html[data-ui="4"] .chalk3__b{color:var(--bk-ink-3)}
+
+/* 店墙：书末的「关于这家店」 */
+html[data-ui="4"] .shopwall3__item{
+  border-top:1px solid var(--bk-rule);
+  padding-top:clamp(12px,1.8vw,18px);
+}
+html[data-ui="4"] .shopwall3__intro{font-family:var(--bk-serif)}
+
+/* 流水表：账页 */
+html[data-ui="4"] .sheet3{border-top:1px solid var(--bk-ink)}
+html[data-ui="4"] .sheet3__row{border-bottom:1px solid var(--bk-rule)}
+html[data-ui="4"] .sheet3__t{font-family:var(--bk-serif)}
+html[data-ui="4"] .sheet3__m{font-family:var(--bk-mono);color:var(--bk-ink-4)}
+
+/* 实时条 */
+html[data-ui="4"] .realstrip{border-top:1px solid var(--bk-rule);border-bottom:1px solid var(--bk-rule)}
+html[data-ui="4"] .realstrip__v{font-family:var(--bk-mono);color:var(--bk-ink)}
+html[data-ui="4"] .realstrip__k{color:var(--bk-ink-4)}
+html[data-ui="4"] .realstrip__pick{color:var(--bk-cinnabar)}
+
+/* 按钮 / 标签：书里没有圆角，没有渐变 */
+html[data-ui="4"] .b3{border-radius:0 !important;font-family:var(--bk-sans)}
+html[data-ui="4"] .b3--solid{background:var(--bk-ink);border-color:var(--bk-ink);color:var(--bk-paper)}
+html[data-ui="4"] .b3--accent{background:var(--bk-cinnabar);border-color:var(--bk-cinnabar);color:var(--bk-paper)}
+html[data-ui="4"] .tag3{border-radius:0 !important;font-family:var(--bk-mono)}
+html[data-ui="4"] .tag3--accent{border-color:var(--bk-cinnabar);color:var(--bk-cinnabar)}
+html[data-ui="4"] .chip3,
+html[data-ui="4"] .chips3__lab{border-radius:0 !important}
+
+/* 页头 / 空态 / 侧标题 */
+html[data-ui="4"] .v3head__t{font-family:var(--bk-serif)}
+html[data-ui="4"] .v3head__k{color:var(--bk-cinnabar);font-family:var(--bk-mono);letter-spacing:.3em}
+html[data-ui="4"] .v3head__lead{color:var(--bk-ink-3)}
+html[data-ui="4"] .sidehead3{font-family:var(--bk-mono);color:var(--bk-ink-4);letter-spacing:.24em}
+html[data-ui="4"] .empty3__t{font-family:var(--bk-serif)}
+html[data-ui="4"] .empty3__s{color:var(--bk-ink-4)}
+
+/* 表单：印在纸上的书写线 */
+html[data-ui="4"] .sform3__in,
+html[data-ui="4"] input.input,
+html[data-ui="4"] .field input,
+html[data-ui="4"] .field select,
+html[data-ui="4"] .field textarea{
+  border-radius:0 !important;
+  background:transparent !important;
+  border:0 !important;
+  border-bottom:1px solid var(--bk-rule-2) !important;
+}
+html[data-ui="4"] .sform3__in:focus,
+html[data-ui="4"] .field input:focus,
+html[data-ui="4"] .field textarea:focus{
+  border-bottom-color:var(--bk-cinnabar) !important;
+  box-shadow:none !important;
+}
+html[data-ui="4"] .sform3__btn{
+  border-radius:0 !important;
+  background:var(--bk-ink); color:var(--bk-paper); border-color:var(--bk-ink);
+}
+
+/* --------------------------------------------------------------------------
+   5. 逐字墨迹：标题先是一层淡灰的"未落墨"，JS 再逐字显影
+   （内容默认可见 —— JS 挂了也只是正常显示，不会丢内容）
+   -------------------------------------------------------------------------- */
+html[data-ui="4"] .bk-ink{color:inherit}
+html[data-ui="4"] .bk-ink .bk-ink__ch{transition:color .34s ease,opacity .34s ease}
+html[data-ui="4"] .bk-ink .bk-ink__ch.is-off{color:var(--bk-ink-4);opacity:.28}
+
+/* 章节像翻页一样推入 */
+html[data-ui="4"] .v3sec.bk-page{
+  opacity:0; transform:translateX(-14px);
+  transition:opacity .62s cubic-bezier(.22,.68,.24,1), transform .62s cubic-bezier(.22,.68,.24,1);
+}
+html[data-ui="4"] .v3sec.bk-page.bk-in{opacity:1;transform:translateX(0)}
+
+/* --------------------------------------------------------------------------
+   6. 手机端
+   -------------------------------------------------------------------------- */
+@media (max-width:900px){
+  html[data-ui="4"]{--bk-gutter:20px}
+  html[data-ui="4"] .v3main{
+    padding-left:clamp(16px,4.4vw,26px);
+    padding-right:clamp(16px,4.4vw,26px);
+  }
+  html[data-ui="4"] .v3main::before{left:calc(clamp(16px,4.4vw,26px) * .5)}
+  html[data-ui="4"] .v3main::after{display:none}
+  html[data-ui="4"] .v3hero{padding:clamp(40px,9vh,70px) 0 clamp(34px,7vw,56px)}
+  html[data-ui="4"] .v3hero__stats{gap:20px 30px}
+  html[data-ui="4"] .v3sec.bk-page{transform:none;transition:opacity .5s ease}
+}
+
+@media (prefers-reduced-motion:reduce){
+  html[data-ui="4"] *{animation-duration:.001ms !important;transition-duration:.001ms !important}
+  html[data-ui="4"] .v3sec.bk-page{opacity:1 !important;transform:none !important}
+}
+
+/* --------------------------------------------------------------------------
+   7. 收口 / 安全网
+   -------------------------------------------------------------------------- */
+html[data-ui="4"] .scrollbar3{background:var(--bk-cinnabar)}
+
+/* 任何 grid/flex 子项都允许收缩，避免长内容撑破容器。
+   注意：这里**不给 .v3main 加 max-width** —— 那会盖掉上面的版面宽度，
+   让内容重新铺满整屏。 */
+html[data-ui="4"] .v3canvas,
+html[data-ui="4"] .v3shell{min-width:0;max-width:100%}
+html[data-ui="4"] .v3main{min-width:0}
+html[data-ui="4"] .dsec,
+html[data-ui="4"] .band,
+html[data-ui="4"] .v3sec,
+html[data-ui="4"] .split3{min-width:0;max-width:100%;overflow-x:clip}

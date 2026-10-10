@@ -1,0 +1,455 @@
+/* ============================================================================
+   三代骨架 · 站牌（ui=8）
+   ----------------------------------------------------------------------------
+   一个承诺：这个网站是店门口那块公告板。所有事都写在一张张小纸片上钉着。
+
+   统领概念：街区的「公告板」—— 图钉、胶带、荧光笔、手写体、扶手线、微摆。
+
+   与其它四套的根本差别（不是换色，是换骨架）：
+     · 卷宗：深色牛皮纸 + 红线 + 图钉，气质是"侦探在办案"
+     · 站牌：浅水泥墙 + 胶带 + 荧光笔 + 手写体，气质是"街坊在看通知"
+       卡片更小更密（公告板是很多张小纸），排版更像便利贴而不是档案
+     · 动效：纸片随滚动速度轻微摆动（--nb-sway，按速度归一化，最多 ±1.1°）
+     · 交互：重点句用荧光笔划（半透明黄色压在字下面，不是背景色块）
+
+   配色（有出处）：
+     墙 = 水泥灰白 #EBE7DE（公告栏的水泥板，比米白冷、比灰暖）
+     字 = 铅笔灰 #3A3733
+     荧光黄 #E8C547（荧光笔）
+     记号红 #C0392B（圆珠笔划重点）
+   ========================================================================== */
+
+html[data-ui="8"]{
+  --nb-wall:#EBE7DE;
+  --nb-wall-2:#E1DCD1;
+  --nb-paper:#FBF9F4;
+  --nb-pencil:#3A3733;
+  --nb-pencil-2:#55514A;
+  --nb-pencil-3:#7A756C;
+  --nb-chalk:#E8C547;
+  --nb-marker:#C0392B;
+  --nb-marker-2:#9C2C20;
+  --nb-tape:rgba(226,216,186,.72);
+  --nb-rule:rgba(58,55,51,.20);
+  --nb-rule-2:rgba(58,55,51,.34);
+
+  --nb-serif:'Noto Serif SC','Source Han Serif SC',Songti SC,Georgia,serif;
+  --nb-sans:system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+  --nb-mono:ui-monospace,'SFMono-Regular','Menlo',Consolas,monospace;
+  --nb-hand-b:'STKaiti','Kaiti SC','KaiTi','楷体','Caveat',cursive;
+
+  /* ★ 令牌重置 —— 见 design-t4.css 顶部说明 */
+  --paper:var(--nb-wall);        --paper-2:var(--nb-wall-2);   --paper-3:var(--nb-paper);
+  --ink:var(--nb-pencil);        --ink-2:var(--nb-pencil-2);
+  --ink-3:var(--nb-pencil-2);    --ink-4:var(--nb-pencil-3);
+  --stage:var(--nb-pencil);      --stage-ink:var(--nb-paper);
+  --stage-hair:rgba(251,249,244,.20);
+  --stage-ink-2:rgba(251,249,244,.70);
+  --rule:var(--nb-rule);         --rule-strong:var(--nb-rule-2);
+  --vermilion:var(--nb-marker);  --vermilion-600:var(--nb-marker-2);
+  --vermilion-050:rgba(192,57,43,.09);
+  --gold:var(--nb-chalk);        --seal:var(--nb-marker);
+  --r:2px; --r-lg:3px; --r-pill:3px;
+}
+
+html[data-ui="8"] body{
+  background:var(--nb-wall);
+  color:var(--nb-pencil);
+  font-family:var(--nb-sans);
+  -webkit-font-smoothing:antialiased;
+  /* 水泥板：抹灰的斜纹（**不是方格**） */
+  background-image:
+    repeating-linear-gradient(108deg,
+      rgba(255,255,255,.05) 0 2px,
+      transparent 2px 8px),
+    repeating-linear-gradient(-28deg,
+      rgba(0,0,0,.02) 0 1px,
+      transparent 1px 13px);
+}
+html[data-ui="8"] ::selection{background:var(--nb-chalk);color:var(--nb-pencil)}
+html[data-ui="8"] :focus-visible{outline:2px solid var(--nb-marker);outline-offset:3px}
+html[data-ui="8"] .glow3{display:none !important}
+
+/* --------------------------------------------------------------------------
+   1. 骨架
+   -------------------------------------------------------------------------- */
+html[data-ui="8"] .v3shell{display:block;background:transparent;position:relative}
+html[data-ui="8"] .v3rail{display:none}
+html[data-ui="8"] .v3canvas{background:transparent;padding:0;margin-left:0 !important}
+html[data-ui="8"] .v3main{
+  width:100%;max-width:1160px;
+  margin-left:auto !important; margin-right:auto !important;
+  padding:0 clamp(20px,5vw,60px);
+  background:transparent;
+  position:relative;
+}
+
+/* 公告板的"扶手线"：左右两条竖着的挂线（装饰） */
+html[data-ui="8"] .nb-rail{
+  position:fixed; top:0; bottom:0; left:0;
+  width:10px; z-index:64; pointer-events:none;
+  background:repeating-linear-gradient(
+    to bottom,
+    rgba(58,55,51,.14) 0 3px,
+    transparent 3px 14px);
+}
+
+/* 页脚：板子底部的一排胶带 */
+html[data-ui="8"] .v3foot{
+  background:var(--nb-wall-2);
+  border-top:1px dashed var(--nb-rule-2);
+  color:var(--nb-pencil-2);
+  margin-top:clamp(40px,6vw,80px);
+}
+html[data-ui="8"] .v3foot__brand{color:var(--nb-pencil);font-family:var(--nb-hand-b);font-size:24px}
+html[data-ui="8"] .v3foot__col a{color:var(--nb-pencil-2)}
+html[data-ui="8"] .v3foot__col a:hover{color:var(--nb-marker)}
+html[data-ui="8"] .v3foot__meta span{color:var(--nb-pencil-3)}
+
+/* --------------------------------------------------------------------------
+   2. 首屏 = 板子正中最显眼的那张通知
+   -------------------------------------------------------------------------- */
+html[data-ui="8"] .v3hero{
+  padding:clamp(56px,10vh,136px) 0 clamp(42px,6.6vw,86px);
+  border-bottom:2px dashed var(--nb-rule-2);
+  position:relative; overflow:visible;
+}
+html[data-ui="8"] .v3hero::after{content:none !important;animation:none !important}
+html[data-ui="8"] .v3hero__t .ln{display:inline;overflow:visible;padding:0}
+html[data-ui="8"] .v3hero__t .ln > i{display:inline;transform:none !important;animation:none !important}
+
+html[data-ui="8"] .v3hero--split{display:block !important}
+html[data-ui="8"] .v3hero__k{
+  display:inline-block;
+  font-family:var(--nb-mono); font-size:11.5px; letter-spacing:.32em;
+  color:var(--nb-pencil-2);
+  background:var(--nb-tape);
+  padding:5px 14px;
+  margin:0 0 clamp(20px,3.2vw,34px);
+  transform:rotate(-1.1deg);
+  box-shadow:0 1px 3px rgba(58,55,51,.12);
+  text-transform:none;
+}
+html[data-ui="8"] .v3hero__t{
+  margin:0;
+  font-family:var(--nb-sans); font-weight:800;
+  font-size:clamp(42px,8.2vw,112px);
+  line-height:1.06; letter-spacing:-.012em;
+  color:var(--nb-pencil);
+  max-width:13ch;
+}
+/* 荧光笔划重点：半透明黄压在字下 58% 处（不是背景色块） */
+html[data-ui="8"] .v3hero__t em{
+  font-style:normal; position:relative;
+  background:linear-gradient(transparent 56%, var(--nb-chalk) 56%, var(--nb-chalk) 94%, transparent 94%);
+  padding:0 .06em;
+}
+html[data-ui="8"] .v3hero__t em::before{content:none !important}
+html[data-ui="8"] .v3hero__t em::after{content:none !important;animation:none !important}
+
+html[data-ui="8"] .v3hero__row{margin-top:clamp(28px,4.4vw,48px)}
+html[data-ui="8"] .v3hero__row .sform3{max-width:540px}
+html[data-ui="8"] .v3hero__stats{
+  margin-top:clamp(36px,5.6vw,64px);
+  padding-top:clamp(18px,2.6vw,28px);
+  border-top:2px dashed var(--nb-rule-2);
+  gap:clamp(22px,3.6vw,52px);
+}
+html[data-ui="8"] .v3hero__stats b{
+  font-family:var(--nb-sans); font-weight:800;
+  font-size:clamp(26px,3.4vw,40px); color:var(--nb-pencil);
+}
+html[data-ui="8"] .v3hero__stats span{
+  font-family:var(--nb-mono); letter-spacing:.18em; color:var(--nb-pencil-3);
+}
+
+/* 首屏那张"最显眼通知"：白纸 + 胶带 + 微摆 */
+html[data-ui="8"] .v3hero__aside{
+  margin:clamp(42px,6.4vw,76px) 0 0;
+  max-width:640px;
+  background:var(--nb-paper);
+  padding:clamp(18px,2.6vw,28px);
+  box-shadow:0 6px 16px -10px rgba(58,55,51,.4);
+  position:relative;
+  transform:rotate(calc(-0.9deg + var(--nb-sway,0deg)));
+  transition:transform .3s ease-out;
+}
+html[data-ui="8"] .v3hero__aside::before{        /* 胶带 */
+  content:'';
+  position:absolute; top:-11px; left:28px;
+  width:76px; height:22px;
+  background:var(--nb-tape);
+  transform:rotate(-3.4deg);
+  box-shadow:0 1px 3px rgba(58,55,51,.14);
+}
+html[data-ui="8"] .board3{border-top:0;padding-top:0}
+html[data-ui="8"] .board3__head h2{color:var(--nb-pencil-2);letter-spacing:.2em}
+html[data-ui="8"] .board3__row{border-bottom:1px dashed var(--nb-rule)}
+html[data-ui="8"] .board3__row:hover{background:rgba(232,197,71,.18);padding-inline:8px}
+html[data-ui="8"] .board3__t{color:var(--nb-marker);font-family:var(--nb-mono)}
+html[data-ui="8"] .board3__n{font-family:var(--nb-sans);font-weight:700}
+html[data-ui="8"] .board3__n small{color:var(--nb-pencil-3)}
+html[data-ui="8"] .board3__s{color:var(--nb-pencil-3)}
+html[data-ui="8"] .board3__s b{color:var(--nb-marker)}
+
+/* --------------------------------------------------------------------------
+   3. 每一节 = 板子上的一栏通知
+   -------------------------------------------------------------------------- */
+html[data-ui="8"] .v3sec{
+  display:block !important;
+  border-top:0 !important;
+  padding:clamp(38px,5.6vw,74px) 0 clamp(44px,6.6vw,86px);
+  position:relative;
+}
+html[data-ui="8"] .v3sec > .v3sec__no{
+  display:inline-block !important;
+  writing-mode:horizontal-tb !important;
+  font-family:var(--nb-hand-b); font-size:19px;
+  color:var(--nb-marker);
+  margin:0 0 clamp(8px,1.4vw,14px);
+  transform:rotate(-1.6deg);
+  justify-self:start;
+}
+html[data-ui="8"] .v3sec > *{grid-column:auto !important}
+html[data-ui="8"] .v3sec__title{
+  font-family:var(--nb-sans); font-weight:800;
+  font-size:clamp(23px,3vw,34px); color:var(--nb-pencil);
+  display:flex; align-items:baseline; gap:14px;
+  margin:0 0 clamp(20px,3vw,34px);
+}
+html[data-ui="8"] .v3sec__title small{
+  font-family:var(--nb-mono); letter-spacing:.22em; color:var(--nb-pencil-3);
+}
+html[data-ui="8"] .v3sec + .v3sec::before{
+  content:''; position:absolute; top:0; left:0; right:0;
+  height:0; border-top:2px dashed var(--nb-rule);
+}
+
+/* --------------------------------------------------------------------------
+   4. 组件重绘：全变成贴在板上的纸片
+   -------------------------------------------------------------------------- */
+/* 海报卡 = 一张钉着的纸 */
+html[data-ui="8"] .pcard3{
+  background:var(--nb-paper);
+  border:0; border-radius:2px;
+  box-shadow:0 6px 16px -10px rgba(58,55,51,.44);
+  position:relative;
+  transform:rotate(calc(-0.7deg + var(--nb-sway,0deg)));
+  transition:transform .3s ease-out, box-shadow .3s;
+}
+html[data-ui="8"] .pcard3:nth-child(2n){transform:rotate(calc(0.8deg + var(--nb-sway,0deg)))}
+html[data-ui="8"] .pcard3:hover{box-shadow:0 14px 26px -14px rgba(58,55,51,.5);z-index:4}
+html[data-ui="8"] .pcard3::before{          /* 一枚图钉 */
+  content:'';
+  position:absolute; top:-6px; left:50%; margin-left:-6px;
+  width:12px; height:12px; border-radius:50%;
+  background:radial-gradient(circle at 34% 30%, #F2E2B4 0 20%, var(--nb-chalk) 24% 60%, #B79A2E 66% 100%);
+  box-shadow:0 2px 3px rgba(58,55,51,.36);
+  z-index:2;
+}
+html[data-ui="8"] .pcard3:nth-child(3n)::before{background:radial-gradient(circle at 34% 30%, #EFA79C 0 20%, var(--nb-marker) 24% 62%, #8E2A1F 68% 100%)}
+html[data-ui="8"] .pcard3__title{font-family:var(--nb-sans);font-weight:700}
+html[data-ui="8"] .pcard3__price{color:var(--nb-marker);font-family:var(--nb-mono)}
+html[data-ui="8"] .pcard3__type,
+html[data-ui="8"] .pcard3__meta{font-family:var(--nb-mono);color:var(--nb-pencil-3)}
+
+/* 拼车卡 */
+html[data-ui="8"] .ccard3{
+  background:var(--nb-paper); border:0; border-radius:2px;
+  box-shadow:0 6px 16px -10px rgba(58,55,51,.44);
+}
+html[data-ui="8"] .ccard3__title{font-family:var(--nb-sans);font-weight:700}
+html[data-ui="8"] .ccard3__count b{color:var(--nb-marker)}
+html[data-ui="8"] .ccard3__meta{color:var(--nb-pencil-3)}
+
+/* 编号清单 */
+html[data-ui="8"] .idx3{border-top:2px solid var(--nb-pencil)}
+html[data-ui="8"] .idx3 li{border-bottom:1px dashed var(--nb-rule-2)}
+html[data-ui="8"] .idx3__no{font-family:var(--nb-hand-b);color:var(--nb-marker);font-size:15px}
+html[data-ui="8"] .idx3__main b{font-family:var(--nb-sans);font-weight:700}
+html[data-ui="8"] .idx3 a::before{background:rgba(232,197,71,.22)}
+html[data-ui="8"] .idx3 a:hover .idx3__arrow{color:var(--nb-marker)}
+
+/* 海报轨 */
+html[data-ui="8"] .rail3__bar{background:var(--nb-rule-2)}
+html[data-ui="8"] .rail3__bar i{background:var(--nb-marker)}
+html[data-ui="8"] .rail3__nav button{
+  border:2px solid var(--nb-rule-2); background:var(--nb-paper);
+  color:var(--nb-pencil); border-radius:2px;
+}
+html[data-ui="8"] .rail3__nav button:hover{
+  background:var(--nb-chalk); border-color:var(--nb-chalk); color:var(--nb-pencil);
+}
+
+/* 跑马灯 */
+html[data-ui="8"] .marq3{border-top:2px dashed var(--nb-rule-2);border-bottom:2px dashed var(--nb-rule-2)}
+html[data-ui="8"] .marq3__t{font-family:var(--nb-sans);font-weight:700}
+html[data-ui="8"] .marq3__who{color:var(--nb-marker)}
+html[data-ui="8"] .marq3__s{color:var(--nb-pencil-3)}
+
+/* 便签块 = 一张真的便利贴（唯一用荧光黄的地方） */
+html[data-ui="8"] .chalk3{
+  background:var(--nb-chalk) !important;
+  border:0 !important;
+  border-radius:2px !important;
+  transform:rotate(var(--nb-note-rot,-1.8deg)) !important;
+  box-shadow:0 6px 14px -9px rgba(58,55,51,.44) !important;
+  padding:clamp(16px,2.4vw,26px) !important;
+}
+html[data-ui="8"] .chalk3__pin{display:none}
+html[data-ui="8"] .chalk3__k{color:var(--nb-marker);font-family:var(--nb-mono);letter-spacing:.2em}
+html[data-ui="8"] .chalk3__t{font-family:var(--nb-sans);font-weight:800;color:var(--nb-pencil)}
+html[data-ui="8"] .chalk3__b{color:var(--nb-pencil-2)}
+
+/* 店墙 */
+html[data-ui="8"] .shopwall3__item{
+  background:var(--nb-paper);
+  padding:clamp(14px,2vw,22px);
+  box-shadow:0 6px 14px -10px rgba(58,55,51,.4);
+}
+html[data-ui="8"] .shopwall3__intro{font-family:var(--nb-sans);font-weight:700}
+
+/* 流水表 */
+html[data-ui="8"] .sheet3{border-top:2px solid var(--nb-pencil);background:var(--nb-paper)}
+html[data-ui="8"] .sheet3__row{border-bottom:1px dashed var(--nb-rule)}
+html[data-ui="8"] .sheet3__t{font-family:var(--nb-sans);font-weight:700}
+html[data-ui="8"] .sheet3__m{font-family:var(--nb-mono);color:var(--nb-pencil-3)}
+
+/* 实时条 */
+html[data-ui="8"] .realstrip{
+  background:var(--nb-pencil); color:var(--nb-paper);
+  border-top:0; border-bottom:0;
+}
+html[data-ui="8"] .realstrip__v{font-family:var(--nb-mono);color:var(--nb-paper)}
+html[data-ui="8"] .realstrip__k{color:rgba(251,249,244,.62)}
+html[data-ui="8"] .realstrip__pick{color:var(--nb-chalk)}
+
+/* 底部数据带 */
+html[data-ui="8"] .ticker3{border-top:2px dashed var(--nb-rule-2);border-bottom:2px dashed var(--nb-rule-2)}
+html[data-ui="8"] .ticker3 > *{border-left:1px dashed var(--nb-rule)}
+html[data-ui="8"] .count3{color:var(--nb-marker)}
+
+/* 按钮 / 标签 */
+html[data-ui="8"] .b3{border-radius:2px !important;border-color:var(--nb-rule-2);color:var(--nb-pencil)}
+html[data-ui="8"] .b3:hover{border-color:var(--nb-pencil)}
+html[data-ui="8"] .b3--solid{background:var(--nb-pencil);border-color:var(--nb-pencil);color:var(--nb-paper)}
+html[data-ui="8"] .b3--accent{background:var(--nb-chalk);border-color:var(--nb-chalk);color:var(--nb-pencil)}
+html[data-ui="8"] .tag3{border-radius:2px !important;font-family:var(--nb-mono)}
+html[data-ui="8"] .tag3--accent{border-color:var(--nb-marker);color:var(--nb-marker)}
+html[data-ui="8"] .chip3,
+html[data-ui="8"] .chips3__lab{border-radius:2px !important}
+html[data-ui="8"] .chips3__lab{color:var(--nb-pencil-3)}
+
+/* 页头 / 空态 / 侧标题 */
+html[data-ui="8"] .v3head__t{font-family:var(--nb-sans);font-weight:800}
+html[data-ui="8"] .v3head__k{
+  color:var(--nb-pencil-2); background:var(--nb-tape);
+  display:inline-block; padding:4px 12px;
+  letter-spacing:.26em; font-family:var(--nb-mono);
+  transform:rotate(-.9deg);
+}
+html[data-ui="8"] .v3head__lead{color:var(--nb-pencil-2)}
+html[data-ui="8"] .sidehead3{font-family:var(--nb-hand-b);color:var(--nb-marker);font-size:18px}
+html[data-ui="8"] .empty3__t{font-family:var(--nb-sans);font-weight:700}
+html[data-ui="8"] .empty3__s{color:var(--nb-pencil-3)}
+
+/* 表单 */
+html[data-ui="8"] .sform3__in,
+html[data-ui="8"] input.input,
+html[data-ui="8"] .field input,
+html[data-ui="8"] .field select,
+html[data-ui="8"] .field textarea{
+  border-radius:2px !important;
+  background:var(--nb-paper) !important;
+  border:2px solid var(--nb-rule) !important;
+  color:var(--nb-pencil) !important;
+}
+html[data-ui="8"] .sform3__in:focus,
+html[data-ui="8"] .field input:focus,
+html[data-ui="8"] .field textarea:focus{
+  border-color:var(--nb-chalk) !important; box-shadow:none !important;
+}
+html[data-ui="8"] .sform3__btn{
+  border-radius:2px !important;
+  background:var(--nb-pencil); color:var(--nb-paper); border-color:var(--nb-pencil);
+}
+
+/* 评价卡 = 一张留言纸 */
+html[data-ui="8"] .rev3{
+  background:var(--nb-paper); border:0;
+  padding:clamp(14px,2vw,22px);
+  box-shadow:0 6px 14px -10px rgba(58,55,51,.4);
+}
+html[data-ui="8"] .rev3__t{font-family:var(--nb-sans);font-weight:700}
+html[data-ui="8"] .rev3__author{font-family:var(--nb-hand-b);font-size:17px;color:var(--nb-pencil-2)}
+
+/* 暗场抬头 → 板子上一条深色横幅 */
+html[data-ui="8"] .dsec--stage{background:var(--nb-pencil);border-top:0}
+html[data-ui="8"] .dsec__no{color:var(--nb-chalk);font-family:var(--nb-mono)}
+html[data-ui="8"] .dsec__title{font-family:var(--nb-sans);font-weight:800;color:var(--nb-paper)}
+html[data-ui="8"] .dsec__lead{color:rgba(251,249,244,.72)}
+
+html[data-ui="8"] .note3{background:var(--nb-paper);border-color:var(--nb-rule-2);color:var(--nb-pencil-2)}
+
+/* --------------------------------------------------------------------------
+   5. 动效：纸片随滚动速度微摆（--nb-sway 由 JS 按速度归一后写入）
+   -------------------------------------------------------------------------- */
+html[data-ui="8"] .pcard3,
+html[data-ui="8"] .v3hero__aside,
+html[data-ui="8"] .chalk3{
+  transition:transform .28s ease-out, box-shadow .3s;
+  will-change:transform;
+}
+
+/* 日期：JS 写 data-date 才显示，没写就不显示（避开 attr() 空值陷阱） */
+html[data-ui="8"] [data-date]:not([data-date=""])::after{
+  content:'今天 · ' attr(data-date);
+  display:inline-block;
+  font-family:var(--nb-mono); font-size:11px; letter-spacing:.18em;
+  color:var(--nb-pencil-3);
+  margin-left:10px;
+}
+
+/* --------------------------------------------------------------------------
+   6. 手机端：关掉摆动（窄屏里纸片晃动容易晃眼）
+   -------------------------------------------------------------------------- */
+@media (max-width:900px){
+  html[data-ui="8"] .nb-rail{display:none}
+  html[data-ui="8"] .v3hero{padding:clamp(40px,8vh,72px) 0 clamp(30px,6vw,54px)}
+  html[data-ui="8"] .v3hero__stats{gap:18px 30px}
+  html[data-ui="8"] .pcard3,
+  html[data-ui="8"] .pcard3:nth-child(2n),
+  html[data-ui="8"] .v3hero__aside,
+  html[data-ui="8"] .chalk3{transform:none !important;transition:none}
+  html[data-ui="8"] .board3__row{
+    grid-template-columns:auto 1fr;
+    grid-template-areas:'t n' 's s';
+    row-gap:8px;
+  }
+  html[data-ui="8"] .board3__t{grid-area:t}
+  html[data-ui="8"] .board3__n{grid-area:n}
+  html[data-ui="8"] .board3__s{grid-area:s;text-align:left}
+  html[data-ui="8"] .ticker3{display:grid;grid-template-columns:repeat(2,1fr)}
+  html[data-ui="8"] .ticker3 > div:nth-child(2){border-right:0}
+  html[data-ui="8"] .ticker3 > div:nth-child(-n+2){border-bottom:1px dashed var(--nb-rule)}
+}
+
+@media (prefers-reduced-motion:reduce){
+  html[data-ui="8"] *{animation-duration:.001ms !important;transition-duration:.001ms !important}
+  html[data-ui="8"] .pcard3,
+  html[data-ui="8"] .pcard3:nth-child(2n),
+  html[data-ui="8"] .v3hero__aside,
+  html[data-ui="8"] .chalk3{transform:none !important}
+}
+
+/* --------------------------------------------------------------------------
+   7. 收口 / 安全网
+   -------------------------------------------------------------------------- */
+html[data-ui="8"] .scrollbar3{background:var(--nb-marker)}
+html[data-ui="8"] .v3canvas,
+html[data-ui="8"] .v3shell{min-width:0;max-width:100%}
+html[data-ui="8"] .v3main{min-width:0;position:relative}
+html[data-ui="8"] .dsec,
+html[data-ui="8"] .band,
+html[data-ui="8"] .v3sec,
+html[data-ui="8"] .split3{min-width:0;max-width:100%;overflow-x:clip}

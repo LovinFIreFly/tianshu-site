@@ -10,7 +10,7 @@
 {% set _q_skin = request.args.get('skin') if request.args.get('skin') is defined else none %}
 {% set cur_skin = (_q_skin if (_q_skin in _skins)
                    else (settings.skin if settings.skin in _skins else 'playbill')) %}
-<html lang="zh-CN" {% if theme == 'dark' %}data-theme="dark"{% endif %}>
+<html lang="zh-CN" data-ui="{{ ui_ver }}" data-skin="{{ cur_skin }}" {% if theme == 'dark' %}data-theme="dark"{% endif %}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -23,7 +23,18 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/design2.css', v=2) }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/design3.css', v=static_v('css/design3.css')) }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/design-v3.css', v=static_v('css/design-v3.css')) }}">
-{% if cur_skin != 'playbill' %}
+{% if ui_ver == '4' %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-t4.css', v=static_v('css/design-t4.css')) }}">
+{% elif ui_ver == '5' %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-t5.css', v=static_v('css/design-t5.css')) }}">
+{% elif ui_ver == '6' %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-t6.css', v=static_v('css/design-t6.css')) }}">
+{% elif ui_ver == '7' %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-t7.css', v=static_v('css/design-t7.css')) }}">
+{% elif ui_ver == '8' %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-t8.css', v=static_v('css/design-t8.css')) }}">
+{% endif %}
+{% if not is_gen3 and cur_skin != 'playbill' %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/skin-' ~ cur_skin ~ '.css',
                                 v=static_v('css/skin-' ~ cur_skin ~ '.css')) }}">
 {% endif %}
@@ -158,5 +169,7 @@
     mask.addEventListener('click', function (e) { if (e.target === mask) mask.classList.remove('show'); });
   })();
 </script>
+{# 三代骨架动效层（登录页也有：开本逐字墨迹 / 剧幕幕布 等） #}
+<script src="{{ url_for('static', filename='js/gen3-fx.js', v=static_v('js/gen3-fx.js')) }}" defer></script>
 </body>
 </html>

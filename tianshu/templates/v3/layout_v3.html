@@ -20,7 +20,7 @@
                    else (_skin_for_device if _skin_for_device in _skins else 'playbill')) %}
 {% set _ep = request.endpoint or '' %}
 <!DOCTYPE html>
-<html lang="zh-CN" data-skin="{{ cur_skin }}" data-device="{{ _device }}" {% if theme == 'dark' %}data-theme="dark"{% endif %}>
+<html lang="zh-CN" data-ui="{{ ui_ver }}" data-skin="{{ cur_skin }}" data-device="{{ _device }}" {% if theme == 'dark' %}data-theme="dark"{% endif %}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -70,12 +70,25 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="甜薯">
   <title>{% block title %}{{ settings.shopName }}{% endblock %}</title>
-  {# 基础组件 → 二代令牌 → 三代骨架与默认观感 → 皮肤（最后加载，永远赢） #}
+  {# 基础组件 → 二代令牌 → 三代骨架与默认观感 → 皮肤（最后加载，永远赢）
+   三代家族（ui=3~8）都走这一套 layout，版式差异全在 design-t*.css 里按 data-ui 切开。
+   选了三代就不再叠皮肤（骨架自带完整观感），见 business.is_gen3()。 #}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=static_v('css/style.css')) }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/design2.css', v=2) }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/design3.css', v=static_v('css/design3.css')) }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/design-v3.css', v=static_v('css/design-v3.css')) }}">
-{% if cur_skin != 'playbill' %}
+{% if ui_ver == '4' %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-t4.css', v=static_v('css/design-t4.css')) }}">
+{% elif ui_ver == '5' %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-t5.css', v=static_v('css/design-t5.css')) }}">
+{% elif ui_ver == '6' %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-t6.css', v=static_v('css/design-t6.css')) }}">
+{% elif ui_ver == '7' %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-t7.css', v=static_v('css/design-t7.css')) }}">
+{% elif ui_ver == '8' %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-t8.css', v=static_v('css/design-t8.css')) }}">
+{% endif %}
+{% if not is_gen3 and cur_skin != 'playbill' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/skin-' ~ cur_skin ~ '.css',
                                 v=static_v('css/skin-' ~ cur_skin ~ '.css')) }}">
 {% endif %}
@@ -84,6 +97,12 @@
 <body>
 
 <div class="v3shell">
+
+  {# ===== 三代家族：各版式自己的"骨架零件"（不在 CSS 里是因为它们是 DOM 结构，不是样式）
+     分镜（t7）：整站上下两条齿孔带 —— 这是那套的招牌几何，必须有真实 DOM 节点
+     站牌（t8）：走廊扶手线（顶部一条细横线，暗示"这里是学校"） #}
+  {% if ui_ver == '7' %}<div class="fl-perf" aria-hidden="true"></div>{% endif %}
+  {% if ui_ver == '8' %}<div class="nb-rail" aria-hidden="true"></div>{% endif %}
 
   {# ================= 左：竖排导轨（桌面） ================= #}
   <aside class="v3rail" id="siteNav" aria-label="站内导航">
@@ -202,12 +221,17 @@
         {% if _admin and not in_app %}
         <div class="skin-bar">
           <span>版式预览：</span>
-          <a href="{{ request.path }}?ui=3" class="{{ 'on' if ui_ver == '3' }}">三代</a>
+          <a href="{{ request.path }}?ui=3" class="{{ 'on' if ui_ver == '3' }}">竖排导轨</a>
+          <a href="{{ request.path }}?ui=4" class="{{ 'on' if ui_ver == '4' }}">开本</a>
+          <a href="{{ request.path }}?ui=5" class="{{ 'on' if ui_ver == '5' }}">剧幕</a>
+          <a href="{{ request.path }}?ui=6" class="{{ 'on' if ui_ver == '6' }}">卷宗</a>
+          <a href="{{ request.path }}?ui=7" class="{{ 'on' if ui_ver == '7' }}">分镜</a>
+          <a href="{{ request.path }}?ui=8" class="{{ 'on' if ui_ver == '8' }}">站牌</a>
           <a href="{{ request.path }}?ui=2" class="{{ 'on' if ui_ver == '2' }}">二代</a>
           <a href="{{ request.path }}?ui=1" class="{{ 'on' if ui_ver == '1' }}">一代</a>
         </div>
         {% endif %}
-        {% if _admin and _skins and not in_app %}
+        {% if _admin and _skins and not in_app and not is_gen3 %}
         <div class="skin-bar">
           <span>款式预览：</span>
           <a href="{{ request.path }}" class="{{ 'on' if cur_skin == 'playbill' }}">默认</a>
@@ -220,6 +244,7 @@
     </footer>
     {% endif %}
   </div>
+  {% if ui_ver == '7' %}<div class="fl-perf fl-perf--b" aria-hidden="true"></div>{% endif %}
 </div>
 
 {# 手机底部标签栏：功能与二代同一批（.js-install 安装钩子保留） #}
@@ -251,8 +276,8 @@
 <script src="{{ url_for('static', filename='js/upload.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/tabs.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/emojisvg.js', v=static_v('js/emojisvg.js')) }}" defer></script>
-{# 皮肤动效层：自己按 <html data-skin> 路由（动能字体 / 生成艺术 / 流体重力） #}
-<script src="{{ url_for('static', filename='js/skin-fx.js', v=static_v('js/skin-fx.js')) }}" defer></script>
+{# 三代骨架动效层：自己按 <html data-ui> 路由（开本卷曲 / 剧幕幕布 / 卷宗红线 / 分镜走片 / 站牌飘纸） #}
+<script src="{{ url_for('static', filename='js/gen3-fx.js', v=static_v('js/gen3-fx.js')) }}" defer></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('/sw.js').catch(function(){});
