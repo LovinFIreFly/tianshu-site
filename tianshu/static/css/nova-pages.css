@@ -12,8 +12,35 @@
 
 /* ══════════════════════════ 首页 ══════════════════════════ */
 
+/* 区块序号当版式骨架：unseen 的「01 Index」、hubtown 的竖列编号都是这么用的 ——
+   一个描边大数字压在标题后面，它不是标签，是结构。
+   编号放在 section 的 data-n 上，用 ::before 画，省得每个模板都插一遍元素。 */
+.hp-sec { position: relative; }
+.hp-sec[data-n]::before {
+  content: attr(data-n);
+  position: absolute;
+  left: -.05em;
+  top: -.16em;
+  z-index: 0;
+  pointer-events: none;
+  font-family: var(--us-mono);
+  font-size: clamp(64px, 11.5vw, 172px);
+  line-height: .8;
+  letter-spacing: -.07em;
+  font-variant-numeric: tabular-nums slashed-zero;
+  color: transparent;
+  -webkit-text-stroke: 1px var(--us-line);
+  opacity: .9;
+}
+html[data-theme="dark"] .hp-sec[data-n]::before { -webkit-text-stroke-color: var(--us-line); }
+/* 内容压在序号上面，别让描边数字糊住字 */
+.hp-sec[data-n] > * { position: relative; z-index: 1; }
+@media (max-width: 860px) {
+  .hp-sec[data-n]::before { font-size: clamp(52px, 18vw, 96px); top: -.1em; }
+}
+
 /* 首屏：整屏、居中、背后是场景画布。
-   [data-sway] 里的东西跟着指针做视角晃动（JS 写 --swx/--swy/--swr）。 */
+   [data-sway] 的视角晃动由 nova.css 的指针总线统一算（读 --mx/--my），这里不再写死。 */
 .hp-hero {
   position: relative;
   min-height: min(100svh, 920px);
@@ -26,11 +53,6 @@
   position: relative;
   z-index: 2;
   text-align: center;
-  transform:
-    translate3d(var(--swx, 0px), var(--swy, 0px), 0)
-    rotate(var(--swr, 0deg));
-  transition: transform .9s var(--us-ease);
-  will-change: transform;
 }
 .hp-hero__k {
   font-size: 12px;
@@ -73,9 +95,6 @@
   top: 24%;
   width: clamp(120px, 15vw, 230px);
   aspect-ratio: 1;
-  transform: translate3d(var(--swx, 0px), var(--swy, 0px), 0);
-  transition: transform .9s var(--us-ease);
-  will-change: transform;
 }
 .hp-hero__orb {
   width: 100%;
@@ -249,7 +268,7 @@
 .lp-chips__line { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
 .lp-chips__line > .u-lab { margin-right: 6px; min-width: 3.4em; }
 .lp-grid { margin-top: var(--us-s5); }
-.lp-grid [data-anim] { transition: opacity .4s var(--us-ease); }
+.lp-grid [data-anim] { transition: opacity var(--us-t) var(--us-ease); }
 
 /* ══════════════════════════ 剧本详情 ══════════════════════════ */
 .dt-hero { padding: calc(var(--us-nav) + 26px) 0 var(--us-s4); }
@@ -263,7 +282,7 @@
   color: var(--us-ink-3);
   margin-bottom: var(--us-s4);
 }
-.dt-hero__bar a { display: inline-flex; align-items: center; gap: 7px; transition: color .3s, gap .3s var(--us-ease); }
+.dt-hero__bar a { display: inline-flex; align-items: center; gap: 7px; transition: color var(--us-t2), gap var(--us-t2) var(--us-ease); }
 .dt-hero__bar a:hover { color: var(--us-ink); gap: 11px; }
 .dt-title {
   font-size: clamp(38px, 7.6vw, 104px);
@@ -368,7 +387,7 @@
 }
 .dt-voice__x { font-size: 15px; line-height: 1.66; color: var(--us-ink-2); }
 .dt-voice__f { display: flex; gap: 12px; font-size: 12.5px; color: var(--us-ink-3); }
-.dt-voice__f button, .dt-voice__f a { color: inherit; transition: color .3s; }
+.dt-voice__f button, .dt-voice__f a { color: inherit; transition: color var(--us-t2); }
 .dt-voice__f button:hover, .dt-voice__f a:hover { color: var(--us-ink); }
 
 /* 车次（可约场次）：发丝线表 */
@@ -390,7 +409,7 @@
   padding: var(--us-s6) 0 var(--us-s5);
   border-top: var(--us-hair);
   background: color-mix(in srgb, var(--us-ink) 3%, transparent);
-  transition: background .6s var(--us-ease), color .5s var(--us-ease);
+  transition: background var(--us-t) var(--us-ease), color var(--us-t) var(--us-ease);
 }
 .dt-next:hover { background: var(--us-ink); color: var(--us-bg); }
 .dt-next__row {
@@ -399,7 +418,7 @@
   gap: var(--us-s4);
   align-items: end;
 }
-.dt-next__k { margin-bottom: var(--us-s3); transition: color .4s var(--us-ease); }
+.dt-next__k { margin-bottom: var(--us-s3); transition: color var(--us-t) var(--us-ease); }
 .dt-next:hover .dt-next__k { color: color-mix(in srgb, var(--us-bg) 58%, transparent); }
 .dt-next__t {
   font-size: clamp(38px, 8.6vw, 132px);
@@ -416,7 +435,7 @@
   letter-spacing: -.02em;
   margin-top: .14em;
 }
-.dt-next__d { margin-top: var(--us-s3); font-size: 14px; color: var(--us-ink-3); transition: color .4s var(--us-ease); }
+.dt-next__d { margin-top: var(--us-s3); font-size: 14px; color: var(--us-ink-3); transition: color var(--us-t) var(--us-ease); }
 .dt-next:hover .dt-next__d { color: color-mix(in srgb, var(--us-bg) 60%, transparent); }
 .dt-next__a {
   font-size: clamp(34px, 5vw, 66px);
@@ -442,7 +461,7 @@
   align-items: center;
   padding: 20px 0;
   border-bottom: var(--us-hair);
-  transition: padding .45s var(--us-ease), background .35s;
+  transition: padding var(--us-t) var(--us-ease), background var(--us-t);
 }
 .cr-row:hover { padding-left: 14px; background: color-mix(in srgb, var(--us-ink) 3%, transparent); }
 .cr-row__w {
@@ -466,7 +485,7 @@
   gap: 10px;
   padding: var(--us-s3) 0;
   border-bottom: var(--us-hair);
-  transition: padding .45s var(--us-ease), background .35s;
+  transition: padding var(--us-t) var(--us-ease), background var(--us-t);
 }
 .cm-thread:hover { padding-left: 14px; background: color-mix(in srgb, var(--us-ink) 3%, transparent); }
 .cm-thread__k { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--us-ink-3); }
@@ -477,7 +496,7 @@
 .cm-thread__t { font-size: clamp(17px, 2vw, 22px); letter-spacing: -.026em; }
 .cm-thread__x { font-size: 14.5px; line-height: 1.62; color: var(--us-ink-2); max-width: 68ch; }
 .cm-thread__f { display: flex; gap: 16px; font-size: 12.5px; color: var(--us-ink-3); }
-.cm-thread__f button, .cm-thread__f a { color: inherit; transition: color .3s; }
+.cm-thread__f button, .cm-thread__f a { color: inherit; transition: color var(--us-t2); }
 .cm-thread__f button:hover, .cm-thread__f a:hover { color: var(--us-ink); }
 
 /* ══════════════════════════ 问答 ══════════════════════════ */
@@ -491,17 +510,17 @@
   align-items: baseline;
   padding: 22px 0;
   text-align: left;
-  transition: padding .45s var(--us-ease);
+  transition: padding var(--us-t) var(--us-ease);
 }
 .qa-item__q:hover { padding-left: 12px; }
 .qa-item__no { font-family: var(--us-mono); font-size: 11px; color: var(--us-ink-3); }
 .qa-item__t { font-size: clamp(16px, 1.9vw, 21px); letter-spacing: -.024em; }
-.qa-item__i { color: var(--us-ink-3); transition: transform .5s var(--us-ease); font-size: 15px; }
+.qa-item__i { color: var(--us-ink-3); transition: transform var(--us-t) var(--us-ease); font-size: 15px; }
 .qa-item.is-on .qa-item__i { transform: rotate(45deg); }
 .qa-item__a {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows .6s var(--us-ease);
+  transition: grid-template-rows var(--us-t) var(--us-ease);
 }
 .qa-item.is-on .qa-item__a { grid-template-rows: 1fr; }
 .qa-item__a > div { overflow: hidden; }
@@ -551,7 +570,7 @@
   border-radius: var(--us-round);
   font-size: 13.5px;
   color: var(--us-ink-2);
-  transition: background .35s var(--us-ease), color .3s;
+  transition: background var(--us-t) var(--us-ease), color var(--us-t2);
 }
 .me-tabs button:hover { background: color-mix(in srgb, var(--us-ink) 6%, transparent); }
 /* tabs.js 打的是 .on，模板里同时给了 .is-on 让无 JS 时第一格也是亮的 —— 两个都认 */
@@ -591,7 +610,7 @@
   display: grid;
   grid-template-columns: 118px minmax(0, 1fr);
   border-bottom: var(--us-hair);
-  transition: background .35s;
+  transition: background var(--us-t);
 }
 .me-ticket:hover { background: color-mix(in srgb, var(--us-ink) 3%, transparent); }
 .me-ticket__d {
@@ -641,7 +660,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  transition: color .3s;
+  transition: color var(--us-t2);
 }
 .me-fold > summary::-webkit-details-marker { display: none; }
 .me-fold > summary::before {
@@ -650,7 +669,7 @@
   border-right: 1px solid currentColor;
   border-bottom: 1px solid currentColor;
   transform: rotate(-45deg);
-  transition: transform .35s var(--us-ease);
+  transition: transform var(--us-t) var(--us-ease);
 }
 .me-fold[open] > summary { color: var(--us-ink); }
 .me-fold[open] > summary::before { transform: rotate(45deg); }

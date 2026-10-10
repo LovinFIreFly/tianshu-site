@@ -57,14 +57,32 @@
   --us-s1: 8px;  --us-s2: 16px; --us-s3: 24px; --us-s4: 34px;
   --us-s5: 52px; --us-s6: 78px; --us-s7: 118px; --us-s8: 168px;
 
-  /* 缓动与时长的三档：快（反馈）／中（揭示）／慢（场景） */
+  /* ══════════════════════════ 运动系统 ══════════════════════════
+     这套站（hubtown / unseen / blueyard / cosmos）看着"灵动"，根因不是配色，
+     而是**节拍收敛**：全站只用 2~4 个时值和 3 条曲线，没有一处是随手写的数字。
+       · hubtown  —— 9 处过渡全是 1s + .2,0,0,1，一个时值用到底
+       · unseen   —— .34,1.56,.64,1 这条回弹曲线给收尾加"呼吸"
+     所以这里把时值定成"半拍 / 一拍 / 两拍"三档，别处一律引用，不写字面量。 */
+  --us-t2: .3s;      /* 半拍：光标、按下、悬停 —— 必须感觉"立刻" */
+  --us-t: .5s;       /* 一拍：默认。hover / 展开 / 变色都用它 */
+  --us-t4: 1s;       /* 两拍：入场、揭示、转场 —— 需要"有仪式感"的地方 */
+
+  /* 曲线分工：进场收得快；退场对称；收尾回弹一下（有生命感） */
   --us-ease: cubic-bezier(.22, 1, .36, 1);
   --us-ease-io: cubic-bezier(.65, .02, .28, 1);
+  --us-back: cubic-bezier(.34, 1.56, .64, 1);
+
+  /* 指针总线：JS 全站只写这两个（-1..1 归一化坐标），CSS 侧任何元素
+     想做视差/透视，只读它们即可，不必各自绑事件（cosmos 的 --start-x/--end-x 同理）。 */
+  --mx: 0;
+  --my: 0;
+
   --us-round: 999px;
 
-  --us-t-fast: .28s;
-  --us-t-mid: .55s;
-  --us-t-slow: .9s;
+  /* 旧名留别名：漏改的地方会落到同一档，不会悄悄回退成浏览器默认 */
+  --us-t-fast: var(--us-t2);
+  --us-t-mid: var(--us-t);
+  --us-t-slow: var(--us-t4);
 
   --us-hair: 1px solid var(--us-line);
 
@@ -116,6 +134,11 @@ body.u-body {
   letter-spacing: -.005em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* 别让浏览器"猜"字重：中文系统字体缺 300/500 时会伪合成一份假的，
+     一旦猜错，整套排版的字重梯度就塌了（这是"看起来很业余"的常见原因）。 */
+  font-synthesis-weight: none;
+  font-synthesis-style: none;
+  text-rendering: optimizeLegibility;
   overflow-x: hidden;
 }
 
@@ -206,7 +229,7 @@ html[data-theme="dark"] .u-grain { mix-blend-mode: screen; opacity: .16; }
   pointer-events: none;
   opacity: 0;
   background: var(--us-bg);
-  transition: opacity .42s var(--us-ease);
+  transition: opacity var(--us-t) var(--us-ease);
 }
 .u-veil.is-on { opacity: 1; }
 
@@ -217,7 +240,7 @@ html[data-theme="dark"] .u-grain { mix-blend-mode: screen; opacity: .16; }
   z-index: 9001;
   pointer-events: none;
   opacity: 0;
-  transition: opacity .5s var(--us-ease);
+  transition: opacity var(--us-t) var(--us-ease);
 }
 .u-dust.is-on { opacity: 1; }
 .u-dust canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -239,7 +262,7 @@ html[data-theme="dark"] .u-grain { mix-blend-mode: screen; opacity: .16; }
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity .56s var(--us-ease), visibility .56s;
+  transition: opacity var(--us-t) var(--us-ease), visibility var(--us-t);
 }
 html.u-boot .u-loader { opacity: 1; visibility: visible; pointer-events: auto; }
 /* 正在退场：先停住指针，再淡出 */
@@ -273,7 +296,7 @@ html.u-leaving .u-loader { opacity: 0; visibility: hidden; pointer-events: none;
   inset: 0 auto 0 0;
   width: 0;
   background: var(--us-ink);
-  transition: width .5s var(--us-ease);
+  transition: width var(--us-t) var(--us-ease);
 }
 .u-loader__pct {
   font-family: var(--us-mono);
@@ -295,7 +318,7 @@ html.u-leaving .u-loader { opacity: 0; visibility: hidden; pointer-events: none;
   z-index: 9500;
   pointer-events: none;
   opacity: 0;
-  transition: opacity .3s var(--us-ease);
+  transition: opacity var(--us-t2) var(--us-ease);
 }
 html.u-on .u-cur { opacity: 1; }
 .u-cur.is-gone { opacity: 0 !important; }
@@ -307,7 +330,7 @@ html.u-on .u-cur { opacity: 1; }
   margin: -3px 0 0 -3px;
   border-radius: 50%;
   background: var(--us-ink);
-  transition: opacity .3s var(--us-ease), background .3s;
+  transition: opacity var(--us-t2) var(--us-ease), background var(--us-t2);
 }
 /* 只有自定义光标真的建出来了，才把系统光标藏掉 —— 否则用户会没有光标可用 */
 html.u-curon,
@@ -327,7 +350,7 @@ html.u-curon textarea { cursor: none !important; }
   border-radius: 50%;
   border: 1px solid var(--us-ink-3);
   background: transparent;
-  transition: width .34s var(--us-ease), height .34s var(--us-ease),
+  transition: width var(--us-t) var(--us-ease), height var(--us-t) var(--us-ease),
               margin .34s var(--us-ease), background .34s var(--us-ease),
               border-color .34s, backdrop-filter .34s;
 }
@@ -341,7 +364,7 @@ html.u-curon textarea { cursor: none !important; }
   color: var(--us-ink);
   opacity: 0;
   white-space: nowrap;
-  transition: opacity .28s var(--us-ease), transform .28s var(--us-ease);
+  transition: opacity var(--us-t2) var(--us-ease), transform var(--us-t2) var(--us-ease);
 }
 
 /* —— 落位状态 —— */
@@ -434,13 +457,77 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
 .u-scrib path {
   stroke-dasharray: var(--len, 400);
   stroke-dashoffset: var(--len, 400);
-  animation: us-scrib .46s var(--us-ease) forwards;
+  animation: us-scrib var(--us-t) var(--us-ease) forwards;
 }
 @keyframes us-scrib {
   to { stroke-dashoffset: 0; }
 }
 
-/* ══════════════════════════ 3 · 壳层 ══════════════════════════ */
+/* ══════════════════════════ 指针总线 + 视差 ══════════════════════════
+   cosmos 用 --start-x / --end-x / --loader-spread 这类自定义属性承载运动参数：
+   **JS 只写目标值，曲线与时长归 CSS**。这套站"灵动"有一半秘密在这儿。
+   具体到 pointermove：全站只监听一次，把归一化坐标写进 :root 的 --mx/--my；
+   之后任何元素要视差或透视，只读这两个变量，不必各自绑事件 ——
+   于是所有东西永远在**同一套坐标**里动，不会各走各的、也不会失步。 */
+html.u-on [data-par] {
+  --pd: 1;                                  /* 深度：越大动得越明显 */
+  transform:
+    translate3d(calc(var(--mx) * var(--pd) * 15px),
+                calc(var(--my) * var(--pd) * 11px), 0);
+  transition: transform var(--us-t) var(--us-ease);
+  will-change: transform;
+}
+html.u-on [data-par="sm"] { --pd: .38; }
+html.u-on [data-par="lg"] { --pd: 2.1; }
+html.u-on [data-par="out"] { --pd: -1; }
+
+/* 视角晃动：位移与旋转**全部由 CSS 从 --mx/--my 算出来**，JS 不再逐元素写变量。
+   深度用 --sx/--sy/--sr 调：虹彩球动得多一点，正文标题几乎不动。
+   （以前这里是 JS 每帧给每个元素写 --swx/--swy/--swr，元素一多就是几十次样式写入。） */
+html.u-on [data-sway] {
+  --sx: 15; --sy: 11; --sr: .55;
+  transform:
+    translate3d(calc(var(--mx) * var(--sx) * 1px),
+                calc(var(--my) * var(--sy) * 1px), 0)
+    rotate(calc(var(--mx) * var(--sr) * 1deg));
+  transition: transform var(--us-t) var(--us-ease);
+  will-change: transform;
+}
+html.u-on [data-sway="lg"] { --sx: 27; --sy: 20; --sr: .9; }
+html.u-on [data-sway="sm"] { --sx: 7; --sy: 5; --sr: .28; }
+/* Z 轴深度：配合父级 .u-rig 的 perspective，卡片会真的"浮起来" */
+html.u-on [data-depth] {
+  transform: translateZ(calc(var(--pz, 0) * 1px));
+  transition: transform var(--us-t) var(--us-ease);
+}
+.u-rig { perspective: 1100px; }
+.u-rig > * { transform-style: preserve-3d; }
+
+/* ══════════════════════════ 骨架字（mono 提级）══════════════════════════
+   三家标杆都是 sans + 高对比衬线 + mono 三件套。mono 不是装饰，
+   而是**序号与数字的骨架**（cosmos 专门开了 slashed-zero / tabular-figure）。
+   这里把它从"零星用一下"提到结构位：凡是编号、价格、日期、计数，一律 mono。 */
+.u-num { font-variant-numeric: tabular-nums slashed-zero; }
+.u-ord {
+  font-family: var(--us-mono);
+  font-size: 11px;
+  letter-spacing: .18em;
+  color: var(--us-ink-3);
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+/* 描边大号序号：Unseen / Hubtown 那种把编号当版式骨架的做法。
+   不是标签，是结构 —— 一个数字就能撑住一整个区块。 */
+.u-ord--lg {
+  font-size: clamp(52px, 8.4vw, 122px);
+  line-height: .82;
+  letter-spacing: -.06em;
+  font-weight: 400;
+  color: transparent;
+  -webkit-text-stroke: 1px var(--us-line-2);
+}
+html[data-theme="dark"] .u-ord--lg { -webkit-text-stroke-color: var(--us-line); }
+
+/* ══════════════════════════ 壳层 ══════════════════════════ */
 
 /* 内容层：压在场景画布之上 */
 .u-shell { position: relative; z-index: 2; }
@@ -464,7 +551,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   align-items: center;
   gap: var(--us-s3);
   padding: 0 var(--us-gut);
-  transition: transform .5s var(--us-ease), background .4s, border-color .4s;
+  transition: transform var(--us-t) var(--us-ease), background var(--us-t), border-color var(--us-t);
   border-bottom: 1px solid transparent;
 }
 .u-top.is-stuck {
@@ -487,7 +574,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   width: 26px; height: 26px;
   display: grid;
   place-items: center;
-  transition: transform .6s var(--us-ease);
+  transition: transform var(--us-t) var(--us-ease);
 }
 .u-mark:hover .u-mark__g { transform: rotate(-24deg) scale(1.08); }
 .u-mark__c {
@@ -511,7 +598,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   font-size: 14.5px;
   letter-spacing: -.01em;
   color: var(--us-ink-2);
-  transition: color .3s var(--us-ease);
+  transition: color var(--us-t2) var(--us-ease);
 }
 .u-nav a:hover, .u-nav a.is-on { color: var(--us-ink); }
 
@@ -527,7 +614,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   background: var(--us-ink);
   opacity: 0;
   transform-origin: left center;
-  transition: transform .52s var(--us-ease), width .52s var(--us-ease), opacity .3s var(--us-ease);
+  transition: transform var(--us-t) var(--us-ease), width var(--us-t) var(--us-ease), opacity var(--us-t2) var(--us-ease);
   pointer-events: none;
 }
 .u-nav.is-ulah .u-nav__ul { opacity: 1; }
@@ -543,7 +630,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   place-items: center;
   gap: 3px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, .07), 0 0 0 1px rgba(0, 0, 0, .03);
-  transition: transform .5s var(--us-ease), box-shadow .4s;
+  transition: transform var(--us-t) var(--us-ease), box-shadow var(--us-t);
 }
 .u-orb:hover { transform: scale(1.08); box-shadow: 0 6px 22px rgba(0, 0, 0, .12); }
 .u-orb i {
@@ -551,7 +638,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   width: 4px; height: 4px;
   border-radius: 50%;
   background: currentColor;
-  transition: transform .4s var(--us-ease);
+  transition: transform var(--us-t) var(--us-ease);
 }
 .u-orb.is-open i:nth-child(1) { transform: translate(-3px, 3px); }
 .u-orb.is-open i:nth-child(2) { transform: translate(3px, 3px); }
@@ -566,7 +653,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   border-radius: 50%;
   font-size: 14px;
   color: var(--us-ink-2);
-  transition: background .3s var(--us-ease), color .3s;
+  transition: background var(--us-t2) var(--us-ease), color var(--us-t2);
 }
 .u-ic:hover { background: var(--us-bg-3); color: var(--us-ink); }
 .u-ic b {
@@ -592,7 +679,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   background: var(--us-bg-3);
   color: var(--us-ink);
   font-size: 14px;
-  transition: transform .4s var(--us-ease);
+  transition: transform var(--us-t) var(--us-ease);
 }
 .u-av:hover { transform: scale(1.08); }
 .u-av img { width: 100%; height: 100%; object-fit: cover; }
@@ -603,7 +690,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   border-radius: var(--us-round);
   background: var(--us-ink);
   color: var(--us-bg);
-  transition: transform .4s var(--us-ease), opacity .3s;
+  transition: transform var(--us-t) var(--us-ease), opacity var(--us-t2);
 }
 .u-enter:hover { transform: translateY(-1px); }
 
@@ -616,7 +703,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   backdrop-filter: blur(20px);
   opacity: 0;
   visibility: hidden;
-  transition: opacity .5s var(--us-ease), visibility .5s;
+  transition: opacity var(--us-t) var(--us-ease), visibility var(--us-t);
 }
 .u-menu.is-on { opacity: 1; visibility: visible; }
 .u-menu__in {
@@ -639,7 +726,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   letter-spacing: -.04em;
   font-weight: 500;
   transform: translateY(105%);
-  transition: transform .78s var(--us-ease), color .3s;
+  transition: transform var(--us-t4) var(--us-ease), color var(--us-t2);
 }
 .u-menu.is-on .u-menu__in a { transform: translateY(0); }
 .u-menu__in a:hover { color: var(--us-ink-3); }
@@ -689,7 +776,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   font-size: 14px;
   color: var(--us-ink-2);
   padding: 3px 0;
-  transition: color .3s var(--us-ease), transform .3s var(--us-ease);
+  transition: color var(--us-t2) var(--us-ease), transform var(--us-t2) var(--us-ease);
 }
 .u-foot a:hover { color: var(--us-ink); transform: translateX(4px); }
 .u-foot__slogan {
@@ -726,7 +813,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   padding: 4px 11px;
   border-radius: var(--us-round);
   border: var(--us-hair);
-  transition: background .3s var(--us-ease), color .3s;
+  transition: background var(--us-t2) var(--us-ease), color var(--us-t2);
 }
 .u-switchbar a:hover { background: var(--us-bg-3); }
 .u-switchbar a.is-on { background: var(--us-ink); color: var(--us-bg); border-color: var(--us-ink); }
@@ -734,6 +821,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
 /* ── 手机底栏 ── */
 .u-mobtab {
   position: fixed;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   left: 12px; right: 12px; bottom: 12px;
   z-index: 300;
   display: none;
@@ -752,7 +840,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   border-radius: 16px;
   font-size: 10.5px;
   color: var(--us-ink-3);
-  transition: background .3s var(--us-ease), color .3s;
+  transition: background var(--us-t2) var(--us-ease), color var(--us-t2);
 }
 .u-mobtab a i { font-style: normal; font-size: 14px; line-height: 1; }
 .u-mobtab a.is-on { background: var(--us-ink); color: var(--us-bg); }
@@ -776,7 +864,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   font-size: 13.5px;
   text-align: center;
   box-shadow: 0 12px 34px rgba(0, 0, 0, .18);
-  animation: us-flash .52s var(--us-ease) both;
+  animation: us-flash var(--us-t) var(--us-ease) both;
 }
 .u-flash.warn { background: var(--us-warn); color: #fff; }
 .u-flash.err, .u-flash.stop { background: var(--us-stop); color: #fff; }
@@ -802,11 +890,19 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   text-align: center;
   opacity: 0;
   pointer-events: none;
-  transition: opacity .34s var(--us-ease), transform .34s var(--us-ease);
+  transition: opacity var(--us-t) var(--us-ease), transform var(--us-t) var(--us-ease);
 }
 .share-toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 /* ══════════════════════════ 4 · 排版原语 ══════════════════════════ */
+
+/* 大字号排版的两个开关：巨字每行长度要均匀（balance），正文不要出现孤字（pretty）。
+   这两行是"大标题看起来很贵"里最不起眼但最有效的一环。 */
+.u-h1, .u-h2, .u-h3, .u-lead__t, .u-chap__t, .dt-title, .dt-next__t,
+.hp-hero__t, .hp-head__t, .hp-coda__q, .er__k, .wc__t, .au-card__t {
+  text-wrap: balance;
+}
+.u-p, .u-lede, .u-dim, .me-msg__x, .dt-voice__x { text-wrap: pretty; }
 
 /* 主标题：无衬线巨字，衬线斜体只落在强调词上 —— unseen 的招牌混排 */
 .u-h1 {
@@ -981,7 +1077,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   font-size: 15px;
   letter-spacing: -.01em;
   box-shadow: 0 1px 3px rgba(0, 0, 0, .07), 0 0 0 1px rgba(0, 0, 0, .04);
-  transition: transform .45s var(--us-ease), box-shadow .45s var(--us-ease), background .3s;
+  transition: transform var(--us-t) var(--us-ease), box-shadow var(--us-t) var(--us-ease), background var(--us-t2);
 }
 .u-pill:hover {
   transform: translateY(-2px);
@@ -992,7 +1088,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   display: inline-grid;
   place-items: center;
   width: 18px; height: 18px;
-  transition: transform .5s var(--us-ease);
+  transition: transform var(--us-t) var(--us-ease);
 }
 .u-pill:hover .u-pill__a { transform: translate(3px, 3px); }
 
@@ -1028,7 +1124,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   background: currentColor;
   transform: scaleX(0);
   transform-origin: left;
-  transition: transform .45s var(--us-ease);
+  transition: transform var(--us-t) var(--us-ease);
 }
 .u-tlink:hover::after { transform: scaleX(1); }
 
@@ -1051,7 +1147,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   background: transparent;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: background .35s var(--us-ease), color .3s, border-color .3s, transform .35s var(--us-ease);
+  transition: background var(--us-t) var(--us-ease), color var(--us-t2), border-color var(--us-t2), transform var(--us-t) var(--us-ease);
 }
 .u-chip s {
   text-decoration: none;
@@ -1064,6 +1160,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   background: var(--us-ink);
   color: var(--us-bg);
   border-color: var(--us-ink);
+  transition-duration: var(--us-t);
 }
 .u-chip.is-on s { color: color-mix(in srgb, var(--us-bg) 70%, transparent); }
 /* 当 chip 是个 label、里面藏着 checkbox/radio 时，勾上就该变墨底 */
@@ -1103,14 +1200,14 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   stroke-dasharray: 25 75;
   stroke-dashoffset: 0;
   opacity: 0;
-  transition: opacity .3s var(--us-ease);
+  transition: opacity var(--us-t2) var(--us-ease);
 }
 .u-search.is-focus .u-search__ring .g { opacity: 1; }
 .u-search.is-run .u-search__ring .g { animation: us-ring-run 1.6s linear infinite; }
 .u-search.is-run .u-search__ring .b { stroke: var(--us-line-2); }
 /* 提交：0.5s 转满一整圈 */
 .u-search.is-go .u-search__ring .g {
-  animation: us-ring-go .52s var(--us-ease-io) 1 both;
+  animation: us-ring-go var(--us-t) var(--us-ease-io) 1 both;
   stroke-dasharray: 100 100;
 }
 @keyframes us-ring-run { to { stroke-dashoffset: -100; } }
@@ -1138,7 +1235,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   display: grid;
   place-items: center;
   color: var(--us-ink-2);
-  transition: background .3s var(--us-ease), color .3s, transform .4s var(--us-ease);
+  transition: background var(--us-t2) var(--us-ease), color var(--us-t2), transform var(--us-t) var(--us-ease);
 }
 .u-search__go:hover { background: var(--us-ink); color: var(--us-bg); transform: rotate(-45deg); }
 /* 浮起的标签：聚焦或有值时升到上沿 */
@@ -1149,7 +1246,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   font-size: 15px;
   color: var(--us-ink-3);
   pointer-events: none;
-  transition: transform .4s var(--us-ease), opacity .3s, font-size .3s;
+  transition: transform var(--us-t) var(--us-ease), opacity var(--us-t2), font-size var(--us-t2);
 }
 .u-search.is-focus .u-search__hint,
 .u-search.has-val .u-search__hint {
@@ -1175,7 +1272,7 @@ body[data-cur="hide"] .u-cur__dot { opacity: 0; }
   border-radius: 10px;
   background: var(--us-paper);
   font-size: 15px;
-  transition: border-color .3s var(--us-ease), background .3s, box-shadow .3s;
+  transition: border-color var(--us-t2) var(--us-ease), background var(--us-t2), box-shadow var(--us-t2);
 }
 .u-in::placeholder, .u-area::placeholder { color: var(--us-ink-3); }
 .u-in:focus, .u-select:focus, .u-area:focus {
@@ -1236,7 +1333,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--us-ink); width
   color: var(--us-ink-3);
   padding: 11px 0;
 }
-.u-ledger__row { transition: background .35s var(--us-ease), padding .35s var(--us-ease); }
+.u-ledger__row { transition: background var(--us-t) var(--us-ease), padding var(--us-t) var(--us-ease); }
 .u-ledger__row:hover { background: color-mix(in srgb, var(--us-ink) 3%, transparent); padding-left: 10px; }
 
 /* ── 编号索引清单 ── */
@@ -1248,19 +1345,19 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--us-ink); width
   align-items: center;
   padding: 17px 0;
   border-bottom: var(--us-hair);
-  transition: padding .45s var(--us-ease), background .35s;
+  transition: padding var(--us-t) var(--us-ease), background var(--us-t);
 }
 .u-item:hover { padding-left: 16px; background: color-mix(in srgb, var(--us-ink) 3%, transparent); }
 .u-item__no {
   font-family: var(--us-mono);
   font-size: 11px;
   color: var(--us-ink-3);
-  transition: color .35s var(--us-ease);
+  transition: color var(--us-t) var(--us-ease);
 }
 .u-item:hover .u-item__no { color: var(--us-ink); }
 .u-item__t { font-size: 16px; letter-spacing: -.02em; }
 .u-item__x { font-size: 13px; color: var(--us-ink-3); }
-.u-item__a { transition: transform .45s var(--us-ease); color: var(--us-ink-3); }
+.u-item__a { transition: transform var(--us-t) var(--us-ease); color: var(--us-ink-3); }
 .u-item:hover .u-item__a { transform: translateX(7px); color: var(--us-ink); }
 
 /* ── 卡片 / 项目（unseen 的 Selected Projects） ── */
@@ -1274,16 +1371,34 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--us-ink); width
 
 .u-card { display: block; min-width: 0; }
 .u-card__fig {
+  /* ⚠️ 必须 block：.u-card 内部全是 <span>，inline 元素不吃 aspect-ratio ——
+     不写这一行，卡片会塌成 634×180 的扁条（16:10 直接失效），
+     标题和说明也会挤在同一行。这是最容易漏、又最影响观感的一类布局陷阱。 */
+  display: block;
   position: relative;
   overflow: hidden;
   border-radius: 5px;
   background: var(--us-bg-3);
   aspect-ratio: 16 / 10;
   transform: translateZ(0);
+  /* 遮罩揭示：入场时从下往上擦开，悬停时反向再擦一次。
+     这些标杆站几乎不用"图片放大 1.046"那种便宜做法 —— 它们**揭开**图片
+     （cosmos 用 mask-image、unseen 用 clip-path），那才是有重量的进出场。 */
+  clip-path: inset(0 0 0 0);
+  transition: clip-path var(--us-t4) var(--us-ease);
+}
+/* 只有 JS 接管了才闭合 —— 无 JS 时图片必须直接可见 */
+html.u-on .u-card__fig { clip-path: inset(100% 0 0 0); }
+html.u-on .u-card.is-in .u-card__fig,
+html.u-on .u-fold.is-in [data-fold-item] .u-card__fig,
+html.u-on .u-card:hover .u-card__fig { clip-path: inset(0 0 0 0); }
+/* 触屏没有 hover，揭不开就是白屏 —— 那就老老实实显示 */
+@media (hover: none) {
+  html.u-on .u-card__fig { clip-path: inset(0 0 0 0); }
 }
 .u-card__fig img, .u-card__fig .u-ph { width: 100%; height: 100%; object-fit: cover; }
 .u-card__fig img {
-  transition: transform 1.1s var(--us-ease), filter .5s;
+  transition: transform var(--us-t4) var(--us-ease), filter var(--us-t);
   will-change: transform;
 }
 .u-card:hover .u-card__fig img { transform: scale(1.046); }
@@ -1296,9 +1411,10 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--us-ink); width
   padding-top: 12px;
   border-top: var(--us-hair);
 }
-.u-card__t { font-size: 15.5px; letter-spacing: -.02em; }
-.u-card__k { font-size: 13px; color: var(--us-ink-3); margin-top: 2px; }
-.u-card__a { color: var(--us-ink-3); transition: transform .5s var(--us-ease); }
+.u-card__cap > span:first-child { display: block; min-width: 0; }
+.u-card__t { display: block; font-size: 15.5px; letter-spacing: -.02em; }
+.u-card__k { display: block; font-size: 13px; color: var(--us-ink-3); margin-top: 2px; }
+.u-card__a { flex: none; color: var(--us-ink-3); transition: transform var(--us-t) var(--us-ease); }
 .u-card:hover .u-card__a { transform: translate(5px, 5px); color: var(--us-ink); }
 
 /* 占位图：没有封面时的"印刷版"占位，不是灰块 */
@@ -1401,7 +1517,8 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--us-ink); width
     rotateY(var(--fy, 0deg))
     translateY(var(--fz, 0px))
     scale(var(--fs, 1));
-  transition: transform .78s var(--us-ease), opacity .6s var(--us-ease), filter .6s var(--us-ease);
+  /* 折叠就位用回弹曲线：微微过冲一下，像纸片被手放下时那点弹性（unseen 那条 .34,1.56,.64,1） */
+  transition: transform var(--us-t4) var(--us-back), opacity var(--us-t) var(--us-ease), filter var(--us-t) var(--us-ease);
   will-change: transform;
 }
 /* 组内让位：非当前项往后退 */
@@ -1537,7 +1654,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--us-ink); width
   backdrop-filter: blur(3px);
   opacity: 0;
   visibility: hidden;
-  transition: opacity .4s var(--us-ease), visibility .4s;
+  transition: opacity var(--us-t) var(--us-ease), visibility var(--us-t);
 }
 .u-scrim.is-on { opacity: 1; visibility: visible; }
 
@@ -1545,21 +1662,26 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--us-ink); width
 
 /* 所有带 [data-d] 的元素在滚动到视口时错峰上浮。
    JS 挂上 .u-on 之后才隐藏 —— 无 JS 时内容始终可见。 */
-html.u-on [data-d] {
+/* 折叠组里的项由 .u-fold--in 自己管入场（--fx/opacity），别再叠一层揭示 ——
+   两套规则都写 opacity 会互相覆盖，结果就是谁后算谁赢、动画被吃掉。
+   所以揭示层显式排除 [data-fold-item]，让它彻底交给折叠层。 */
+html.u-on [data-d]:not([data-fold-item]),
+html.u-on [data-anim]:not([data-fold-item]) {
   opacity: 0;
   transform: translateY(16px);
 }
-html.u-on [data-d].is-in {
+html.u-on [data-d]:not([data-fold-item]).is-in,
+html.u-on [data-anim]:not([data-fold-item]).is-in {
   opacity: 1;
   transform: none;
   transition:
-    opacity .78s var(--us-ease) var(--d, 0ms),
-    transform .78s var(--us-ease) var(--d, 0ms);
+    opacity var(--us-t4) var(--us-ease) var(--d, 0ms),
+    transform var(--us-t4) var(--us-ease) var(--d, 0ms);
 }
 
 /* 整页入场：JS 接管时给 main 的内容一个轻微的落位 */
 html.u-on .u-enter-page > * {
-  animation: us-drop .8s var(--us-ease) both;
+  animation: us-drop var(--us-t4) var(--us-ease) both;
 }
 @keyframes us-drop {
   from { opacity: 0; transform: translateY(18px); }

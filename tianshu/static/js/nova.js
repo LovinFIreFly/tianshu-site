@@ -77,6 +77,40 @@
     W.requestAnimationFrame(function () { W.requestAnimationFrame(fn); });
   }
 
+  /* ══════════════════════════ 指针总线 ══════════════════════════
+     全站只监听到这里一次，把归一化坐标写进 :root 的 --mx / --my。
+     之后所有视差、透视、倾斜都由 CSS 读这两个变量算出来（cosmos 的
+     --start-x/--end-x 就是这个思路），于是：
+       · 每个元素不必各自 addEventListener，也不会互相打架
+       · 降级只要一个开关（reduced-motion 时直接钉成 0）
+       · 换版式/换配色都不影响这层，因为它根本不关心 DOM
+     写入走统一 rAF，而不是跟着 pointermove 事件频率触发样式重算。 */
+  var Pointer = (function () {
+    var nx = 0, ny = 0, dirty = false;
+    function raw(e) {
+      nx = (e.clientX / Math.max(1, W.innerWidth)) * 2 - 1;
+      ny = (e.clientY / Math.max(1, W.innerHeight)) * 2 - 1;
+      dirty = true;
+    }
+    function flush() {
+      if (!dirty) return;
+      dirty = false;
+      doc.style.setProperty('--mx', nx.toFixed(3));
+      doc.style.setProperty('--my', ny.toFixed(3));
+    }
+    function init() {
+      on(D, 'pointermove', raw, { passive: true });
+      if (REDUCE) {                       /* 降级：把坐标钉死，视差整体不动 */
+        doc.style.setProperty('--mx', '0');
+        doc.style.setProperty('--my', '0');
+        return;
+      }
+      addTick(flush);
+      startLoop();
+    }
+    return { init: init, value: function () { return { x: nx, y: ny }; } };
+  })();
+
   /* ══════════════════════════ ① 波纹场 + 视角晃动 ══════════════════════════ */
   var Field = (function () {
     var cv = null, gl = null, prog = null, uni = {}, buf = null;
@@ -257,6 +291,8 @@
 
     var rv = null;
     var idleAt = 0;
+    var lastAct = 0;      /* 最近一次"有人动"的时刻（打涟漪或指针移动） */
+    var lastDraw = 0;
 
     function step(dt, tsec) {
       if (!alive || !gl) return;
@@ -286,6 +322,12 @@
       }
       if (live) gl.uniform3fv(uni.r, rv);
 
+      /* 性能：没有涟漪、指针也停了 2 秒 —— 柔光本身慢到看不出 30fps 和 60fps 的差别，
+         那就降到半帧。省下来的预算留给真正吃帧的地方（光标、折叠跟手、转场）。 */
+      var calm = !live && (tsec - lastAct) > 2;
+      if (calm && (tsec - lastDraw) < 1 / 30) return;
+      lastDraw = tsec;
+
       gl.uniform1f(uni.t, tsec);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
@@ -301,9 +343,13 @@
       }
       if (slot < 0) slot = 0;
       ripples[slot] = { x: x, y: y, a: 0 };
+      lastAct = performance.now() / 1000 - t0;
     }
 
-    function pointer(x, y) { tpx = x; tpy = y; }
+    function pointer(x, y) {
+      tpx = x; tpy = y;
+      lastAct = performance.now() / 1000 - t0;
+    }
 
     function repaint() {
       if (!alive || !gl) return;
@@ -323,40 +369,10 @@
     return { init: init, emit: emit, pointer: pointer, repaint: repaint, ok: function () { return alive; } };
   })();
 
-  /* 视角晃动：跟着指针做几像素的位移 + 零点几度的旋转，
-     再叠一条永远在跑的怠速漂移，让首屏"有呼吸"。 */
-  var Sway = (function () {
-    var els = [], tx = 0, ty = 0, cx = 0, cy = 0, tr = 0, cr = 0, started = false;
-
-    function init() {
-      els = $$('[data-sway]');
-      if (!els.length || REDUCE) return;
-      addTick(step);
-      startLoop();
-      started = true;
-    }
-    function pointer(nx, ny) {          // nx/ny ∈ -1..1
-      tx = nx; ty = ny;
-      tr = nx * 0.55;                   // 旋转幅度压得很小，多了就像坏掉
-    }
-    function step(dt, t) {
-      var k = 1 - Math.pow(0.06, dt);   // 慢跟随 ≈ 6% 每帧
-      cx = lerp(cx, tx, k);
-      cy = lerp(cy, ty, k);
-      cr = lerp(cr, tr, k);
-      var drift = Math.sin(t * 0.42) * 3.2;
-      var drift2 = Math.cos(t * 0.31) * 2.1;
-      var dx = (cx * 13 + drift).toFixed(2);
-      var dy = (cy * 10 + drift2).toFixed(2);
-      for (var i = 0; i < els.length; i++) {
-        els[i].style.setProperty('--swx', dx + 'px');
-        els[i].style.setProperty('--swy', dy + 'px');
-        els[i].style.setProperty('--swr', cr.toFixed(3) + 'deg');
-      }
-    }
-    function rebind() { els = $$('[data-sway]'); }
-    return { init: init, pointer: pointer, rebind: rebind, on: function () { return started; } };
-  })();
+  /* 视角晃动没有 JS 模块了 —— 整套位移/旋转由 CSS 直接读 Pointer 总线的
+     --mx/--my 用 calc() 算（见 nova.css 的 [data-sway] 规则）。
+     呼吸感来自 WebGL 场景层自身的缓慢漂移（着色器里的 sin(t*.13)），
+     DOM 这边不必再各自跑一条漂移动画。 */
 
   /* ══════════════════════════ ③ 鼠标落位（光标） ══════════════════════════ */
   var Cursor = (function () {
@@ -401,10 +417,6 @@
     function move(e) {
       mx = e.clientX; my = e.clientY;
       Field.pointer(e.clientX / Math.max(1, W.innerWidth), e.clientY / Math.max(1, W.innerHeight));
-      if (Sway.on()) {
-        Sway.pointer((e.clientX / Math.max(1, W.innerWidth)) * 2 - 1,
-                     (e.clientY / Math.max(1, W.innerHeight)) * 2 - 1);
-      }
     }
 
     function step(dt) {
@@ -617,7 +629,9 @@
     var io = null, countIo = null;
 
     function reveal(root) {
-      var els = $$('[data-d]', root);
+      /* data-d 是我们自己的揭示标记；data-anim 是剧本库网格里卡片自带的契约标记。
+         两者都要认：卡片图现在靠 .is-in 做遮罩擦开（见 nova.css .u-card__fig）。 */
+      var els = $$('[data-d]', root).concat($$('[data-anim]', root));
       if (!els.length) return;
       /* 延迟由 data-d 决定，但同一屏里超过 8 个就压住上限，否则最后几个等到天荒地老 */
       els.forEach(function (el, i) {
@@ -1192,7 +1206,7 @@
     doc.classList.add('u-on');
 
     Field.init();
-    Sway.init();
+    Pointer.init();
     Cursor.init();
     Smooth.init();
     setMenu = Base.menu();

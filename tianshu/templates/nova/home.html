@@ -10,9 +10,9 @@
 
 <!-- ═══════════ 首屏 ═══════════ -->
 <section class="hp-hero">
-  <div class="hp-hero__orbwrap" data-sway aria-hidden="true"><div class="hp-hero__orb"></div></div>
+  <div class="hp-hero__orbwrap" data-sway="lg" aria-hidden="true"><div class="hp-hero__orb"></div></div>
 
-  <div class="hp-hero__in" data-sway>
+  <div class="hp-hero__in" data-sway="sm">
     <p class="hp-hero__k">甜薯 · 藏在学校里的剧本杀小店</p>
     <h1 class="hp-hero__t">
       <span><em>把每一次</em></span>
@@ -40,7 +40,7 @@
 <div class="u-wrap">
 
   <!-- ═══════════ 01 · 今日排期 ═══════════ -->
-  <section class="hp-sec" id="today">
+  <section class="hp-sec" id="today" data-n="01">
     <div class="hp-head" data-d="0">
       <h2 class="hp-head__t">今天店里<br><em>在演什么</em></h2>
       <p class="hp-head__d">
@@ -81,7 +81,7 @@
 
   <!-- ═══════════ 02 · 本期在演（海报墙） ═══════════ -->
   {% if scripts %}
-  <section class="hp-sec" id="playing">
+  <section class="hp-sec" id="playing" data-n="02">
     <div class="hp-head" data-d="0">
       <h2 class="hp-head__t">本期<br><em>在演</em></h2>
       <p class="hp-head__d">老板这个月挑出来的几本。鼠标放上去，它会立起来 —— 像从书架抽出一本。</p>
@@ -130,7 +130,7 @@
 
   <!-- ═══════════ 03 · 老板推荐（7/5 破格） ═══════════ -->
   {% if boss_pick %}
-  <section class="hp-sec" id="pick">
+  <section class="hp-sec" id="pick" data-n="03">
     <div class="hp-head" data-d="0">
       <h2 class="hp-head__t">老板<br><em>押一本</em></h2>
       <p class="hp-head__d">如果只挑一本，今年就推它。</p>
@@ -163,7 +163,7 @@
 
   <!-- ═══════════ 04 · 剧友短评（杂志体） ═══════════ -->
   {% if reviews %}
-  <section class="hp-sec" id="voices">
+  <section class="hp-sec" id="voices" data-n="04">
     <div class="hp-head" data-d="0">
       <h2 class="hp-head__t">他们玩完<br><em>说了什么</em></h2>
       <p class="hp-head__d">不修图的评价，好的坏的都留着。</p>
@@ -201,7 +201,7 @@
 
   <!-- ═══════════ 05 · 拼车局 ═══════════ -->
   {% if cars %}
-  <section class="hp-sec" id="pool">
+  <section class="hp-sec" id="pool" data-n="05">
     <div class="hp-head" data-d="0">
       <h2 class="hp-head__t">差几个人<br><em>就能发车</em></h2>
       <p class="hp-head__d">下面这些是别人开好的车。人够了直接开演，不用你自己凑。</p>
@@ -232,7 +232,7 @@
 
   <!-- ═══════════ 06 · 新本首车（编号索引） ═══════════ -->
   {% if newScripts %}
-  <section class="hp-sec" id="fresh">
+  <section class="hp-sec" id="fresh" data-n="06">
     <div class="hp-head" data-d="0">
       <h2 class="hp-head__t">刚上架的<br><em>新本</em></h2>
       <p class="hp-head__d">新本往往最容易凑到人 —— 因为大家都还没玩过。</p>
