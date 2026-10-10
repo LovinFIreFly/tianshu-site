@@ -1,0 +1,397 @@
+/* ============================================================================
+   皮肤 · 流体重力 / 物理动效（liquid）
+   ----------------------------------------------------------------------------
+   出处：2026 自然视觉指南（用"物理"而非"时长"定义动画：spring stiffness/damping）、
+        Aurum Summit 获奖级实现拆解、Lenis 平滑滚动、SVG feDisplacementMap 波纹。
+   定向：不靠颜色靠**手感**。弹簧阻尼（ζ≈0.8，像水的黏度，沉静停住不弹跳）、
+        滚动带惯性、悬停用水位涟漪、图片有"隔着流水"的位移映射。
+   纪律：
+     · 别写 transition:300ms ease-in-out —— 改用弹簧参数（JS 侧）
+     · numOctaves 保持 1–2（多了变颗粒噪点，破坏流体感）
+     · Lenis 必须和 rAF 共用一个时钟，否则滚动联动会抖
+     · prefers-reduced-motion → 关掉平滑滚动与所有弹簧，回到瞬时
+   加载顺序最后。物理逻辑见 js/skin-liquid.js。
+   ============================================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+
+:root{
+  /* 一 · 色：冷雾底 + 深海蓝 + 极浅的光泽层次（不靠渐变球，靠层次） */
+  --paper:#F2F4F6;
+  --paper-2:#E8ECF0;
+  --paper-3:#FBFCFD;
+  --ink:#121A22;
+  --ink-2:#28343F;
+  --ink-3:#5A6773;
+  --ink-4:#8B98A4;
+
+  --stage:#0F1A24;
+  --stage-ink:#EEF3F7;
+  --stage-ink-2:rgba(238,243,247,.76);
+  --stage-hair:rgba(238,243,247,.16);
+
+  --rule:rgba(18,26,34,.16);
+  --rule-strong:rgba(18,26,34,.38);
+  --hair:rgba(18,26,34,.08);
+
+  --vermilion:#2563A8;        /* 深海蓝：克制、沉稳 */
+  --accent:#2563A8;
+  --accent-2:#1B4B80;
+  --accent-05:rgba(37,99,168,.10);
+  --gold:#9A7B2E;
+  --seal:#2563A8;
+
+  --ok:#2C6B4A;   --ok-bg:rgba(44,107,74,.10);
+  --bad:#A83A2E;  --bad-bg:rgba(168,58,46,.10);
+  --warn:#8A6716; --warn-bg:rgba(138,103,22,.12);
+  --info:#2563A8; --info-bg:rgba(37,99,168,.10);
+
+  /* 二 · 字：几何人文无衬线，圆润但不幼稚 */
+  --sans:"Manrope","Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --serif:"Manrope","Noto Sans SC",Georgia,serif;
+  --mono:"SF Mono","Roboto Mono",ui-monospace,monospace;
+  --hand:"Manrope",sans-serif;
+  --d-sans:var(--sans); --d-serif:var(--serif); --d-mono:var(--mono); --d-hand:var(--hand);
+
+  --fs-display:clamp(42px,8vw,96px); --lh-display:.98; --track-display:-.035em;
+  --fs-title:clamp(24px,3.4vw,38px);
+  --fs-h2:clamp(19px,2.3vw,26px);
+  --d-fs-display:var(--fs-display); --d-lh-display:var(--lh-display); --d-track-display:var(--track-display);
+  --d-fs-title:var(--fs-title); --d-fs-h2:var(--fs-h2);
+  --d-track-kicker:.24em;
+
+  /* 三 · 形状：大圆角 + 多层柔和阴影（"实体感"的来源） */
+  --r:14px; --r-lg:22px; --r-pill:999px;
+  --d-r:14px; --d-r-lg:22px; --d-pill:999px;
+  --sh-1:0 1px 2px rgba(18,26,34,.05), 0 2px 6px rgba(18,26,34,.04);
+  --sh-2:0 4px 12px rgba(18,26,34,.07), 0 12px 28px rgba(18,26,34,.07);
+  --sh-3:0 10px 26px rgba(18,26,34,.10), 0 26px 56px rgba(18,26,34,.12);
+  --sh-hard:none;
+  --d-sh1:var(--sh-1); --d-sh2:var(--sh-2); --d-sh3:var(--sh-3); --d-sh-hard:none;
+
+  --night-1:#1B2A38; --night-2:#14212C; --night-3:#0F1A24;
+  --d-night-1:var(--night-1); --d-night-2:var(--night-2); --d-night-3:var(--night-3);
+
+  /* 弹簧手感：JS 读这几条（别在 CSS 里写死时长） */
+  --lq-stiffness:210;
+  --lq-damping:26;          /* ζ≈0.8：水感，不弹跳 */
+  --lq-mass:1;
+  --lq-lerp:.10;            /* Lenis：越小越沉 */
+  --d-ease:cubic-bezier(.22,1,.36,1);
+  --d-pop:cubic-bezier(.16,1,.3,1);
+  --noise-opacity:.028;
+  --grain-blend:multiply;
+}
+
+html[data-theme="dark"]{
+  --paper:#101C26;
+  --paper-2:#16242F;
+  --paper-3:#1C2C39;
+  --ink:#EEF3F7;
+  --ink-2:#CBD6DF;
+  --ink-3:#94A3B0;
+  --ink-4:#6B7C89;
+
+  --stage:#080F16;
+  --stage-ink:#EEF3F7;
+  --stage-ink-2:rgba(238,243,247,.74);
+  --stage-hair:rgba(238,243,247,.14);
+
+  --rule:rgba(238,243,247,.14);
+  --rule-strong:rgba(238,243,247,.34);
+  --hair:rgba(238,243,247,.07);
+
+  --vermilion:#5FA3E8;
+  --accent:#5FA3E8;
+  --accent-2:#3E86CF;
+  --accent-05:rgba(95,163,232,.14);
+  --gold:#D0AC63;
+  --seal:#5FA3E8;
+
+  --ok:#6DBF92;   --ok-bg:rgba(109,191,146,.14);
+  --bad:#E8907F;  --bad-bg:rgba(232,144,127,.14);
+  --warn:#D8B45E; --warn-bg:rgba(216,180,94,.14);
+  --info:#5FA3E8; --info-bg:rgba(95,163,232,.14);
+
+  --sh-1:0 1px 2px rgba(0,0,0,.34);
+  --sh-2:0 4px 12px rgba(0,0,0,.40), 0 12px 28px rgba(0,0,0,.36);
+  --sh-3:0 10px 26px rgba(0,0,0,.46), 0 26px 56px rgba(0,0,0,.50);
+  --noise-opacity:.042;
+  --grain-blend:screen;
+}
+
+/* ============================================================================
+   一 · 首屏：水面板 —— 一层半透明的"水面"压在一张柔光底上
+   ========================================================================== */
+.hero,.dhero{
+  position:relative;overflow:hidden;
+  background:var(--stage)!important;
+  color:var(--stage-ink)!important;
+  padding:clamp(48px,8.4vw,112px) var(--d-pad) clamp(52px,8.8vw,118px)!important;
+  /* 水面：两层柔光 + 底部一道浅弧（暗示液面） */
+  background-image:
+    radial-gradient(90% 62% at 26% 14%, rgba(120,190,255,.14), transparent 64%),
+    radial-gradient(76% 58% at 78% 84%, rgba(90,140,220,.12), transparent 66%),
+    linear-gradient(180deg, transparent 62%, rgba(255,255,255,.035) 100%)!important;
+}
+/* 液面高光弧线 */
+.hero::after,.dhero::after{
+  content:"";position:absolute;left:-6%;right:-6%;bottom:-40px;height:120px;z-index:0;
+  border-radius:50% 50% 0 0;
+  background:linear-gradient(180deg, rgba(255,255,255,.07), transparent 62%);
+  pointer-events:none;
+}
+.hero > *,.dhero > *{position:relative;z-index:1}
+
+.hero h1,.dhero__title,.hero .dhero__title{
+  font-family:var(--sans)!important;font-weight:800!important;
+  font-size:var(--fs-display)!important;line-height:var(--lh-display)!important;
+  letter-spacing:var(--track-display)!important;color:var(--stage-ink)!important;
+}
+.hero .kicker,.dhero__kicker,.hero .dhero__kicker{
+  font-family:var(--sans);font-weight:700;
+  font-size:11px;letter-spacing:var(--d-track-kicker);text-transform:uppercase;
+  color:color-mix(in srgb,var(--stage-ink) 62%,var(--accent));
+}
+.hero .slogan,.dhero__sub,.dhero__lead{
+  color:var(--stage-ink-2)!important;
+  font-size:clamp(14.5px,1.5vw,17px);line-height:1.78;max-width:58ch;
+}
+.hero .stats,.dhero .stats{border-top:1px solid var(--stage-hair);padding-top:18px;margin-top:32px}
+.hero .stats b,.dhero .stats b{color:var(--stage-ink);font-weight:700}
+
+/* ============================================================================
+   二 · 卡片：圆角浮板 + 多层阴影；悬停时"吸水"上浮
+   位移交给 JS 弹簧驱动（--lq-y），CSS 只定义静止态与阴影层次。
+   ========================================================================== */
+.pcard3,.ccard3{
+  position:relative;
+  background:var(--paper-3);
+  border:1px solid var(--hair);
+  border-radius:var(--r-lg);
+  box-shadow:var(--sh-1);
+  overflow:hidden;
+  transform:translate3d(0, var(--lq-y,0px), 0);
+  will-change:transform;
+  /* 只对阴影做过渡；位移由 JS 弹簧接管 */
+  transition:box-shadow .34s var(--d-ease), border-color .3s var(--d-ease);
+}
+.pcard3:hover,.ccard3:hover{
+  box-shadow:var(--sh-3);
+  border-color:var(--accent-05);
+}
+.pcard3__cover{
+  border-radius:0;
+  background:linear-gradient(165deg,var(--paper-2),var(--paper-3) 78%);
+  overflow:hidden;
+}
+.pcard3:hover .pcard3__cover img{transform:scale(1.05)}
+.pcard3__cover img{transition:transform 1.1s var(--d-ease)}
+/* 封面上那层"水膜"：hover 时淡入一道斜的高光 */
+.pcard3__cover::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(115deg,transparent 38%,rgba(255,255,255,.42) 50%,transparent 62%);
+  opacity:0;transform:translateX(-30%);
+  transition:opacity .5s var(--d-ease),transform .9s var(--d-ease);
+}
+.pcard3:hover .pcard3__cover::after{opacity:.55;transform:translateX(30%)}
+
+.pcard3__type,.pcard3__tag{
+  background:var(--accent)!important;color:#fff!important;
+  border-radius:var(--r-pill);font-family:var(--sans);font-weight:700;
+  font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;padding:4px 11px;
+  margin:10px;
+}
+.pcard3__wm{color:var(--accent);opacity:.10;font-weight:800}
+.pcard3__body{padding:14px 16px 16px;gap:6px}
+.pcard3__title{
+  font-family:var(--sans)!important;font-weight:700!important;
+  font-size:17.5px!important;line-height:1.32!important;letter-spacing:-.015em!important;
+}
+.pcard3__meta,.ccard3__meta{font-family:var(--sans);font-size:11.5px;color:var(--ink-4);letter-spacing:.01em}
+.pcard3__foot,.ccard3__foot{border-top:1px solid var(--rule)}
+.pcard3__price{font-family:var(--sans);font-weight:800;font-size:15px}
+.pcard3__fav button{
+  background:color-mix(in srgb,var(--paper-3) 74%,transparent);
+  color:var(--ink-4);border:0;border-radius:50%;width:34px;height:34px;margin:8px;
+  backdrop-filter:blur(6px);
+  transition:color .24s,background .24s,transform .24s var(--d-pop);
+}
+.pcard3__fav button:hover{color:var(--accent);transform:scale(1.14)}
+.pcard3__fav button.on{color:var(--accent);background:var(--accent-05)}
+
+/* ============================================================================
+   三 · 按钮：按下时用弹簧回弹（JS 驱动 scale），CSS 只给形状
+   ========================================================================== */
+.btn,.b3{
+  border-radius:var(--r-pill);
+  background:var(--paper-3);border:1px solid var(--rule-strong);color:var(--ink);
+  font-family:var(--sans);font-weight:700;font-size:13px;
+  transition:background .24s var(--d-ease),color .24s var(--d-ease),
+             border-color .24s var(--d-ease),box-shadow .24s var(--d-ease);
+}
+.btn:hover,.b3:hover{box-shadow:var(--sh-2);border-color:var(--accent)}
+.btn-primary,.b3--accent,.b3--solid{
+  background:var(--accent)!important;border:1px solid var(--accent)!important;
+  color:#fff!important;box-shadow:var(--sh-2)!important;
+}
+.btn-primary:hover,.b3--accent:hover,.b3--solid:hover{
+  background:var(--accent-2)!important;border-color:var(--accent-2)!important;
+  box-shadow:var(--sh-3)!important;
+}
+.b3--solid::after,.b3--accent::after,.btn-primary::after,.btn-accent::after{display:none!important}
+
+/* ============================================================================
+   四 · 分区标题 / 编号
+   ========================================================================== */
+.sec-head,.dsec__head{border-bottom:1px solid var(--rule);padding-bottom:16px}
+.sec-head h2,.dsec__head h2,.dsec__title{
+  font-family:var(--sans)!important;font-weight:800!important;letter-spacing:-.035em!important;
+}
+.sec-no,.board3__n{
+  font-family:var(--sans);font-weight:800;
+  font-size:13px;letter-spacing:.08em;color:var(--accent);
+}
+.dsec--alt{background:var(--paper-2)!important}
+.dsec--stage{background:var(--stage)!important;color:var(--stage-ink)!important}
+
+/* ============================================================================
+   五 · 标签 / 表单
+   ========================================================================== */
+.kicker,.label,.tag3,.chip3,.badge,.pill,.chip,.chip-sm,.st{
+  border-radius:var(--r-pill);font-family:var(--sans);font-weight:700;
+  letter-spacing:.10em;text-transform:uppercase;font-size:9.5px;
+}
+.kicker,.label,.tag3,.chip3{
+  background:var(--accent-05);color:var(--accent-2);border:0;padding:4px 11px;
+}
+.kicker::before,.kicker::after{content:''!important}
+.tag3--accent,.badge--brand{background:var(--accent)!important;color:#fff!important;border:0!important}
+.badge,.pill,.chip,.chip-sm,.st{border:1px solid var(--rule-strong);background:transparent;color:var(--ink-3)}
+.badge.ok,.st.on{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.badge.new,.st.car{background:var(--accent-05);color:var(--accent-2);border-color:transparent}
+
+.field > input,.field > select,.field > textarea,.sform3__in,.nav-search{
+  background:var(--paper-3);border:1px solid var(--rule-strong);border-radius:var(--r);
+  color:var(--ink);font-family:var(--sans);min-height:48px;
+  transition:border-color .26s var(--d-ease),box-shadow .26s var(--d-ease);
+}
+.field > input:focus,.field > select:focus,.field > textarea:focus{
+  outline:0;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-05);
+}
+.field > label{
+  font-family:var(--sans);font-weight:700;letter-spacing:.10em;
+  text-transform:uppercase;font-size:10px;color:var(--ink-4);
+}
+
+/* ============================================================================
+   六 · 导航 / 页脚
+   ========================================================================== */
+.site-nav,.tnav,.tnav__bar{
+  background:color-mix(in srgb,var(--paper) 92%,transparent)!important;
+  border-bottom:1px solid var(--hair);box-shadow:var(--sh-1);
+  backdrop-filter:blur(12px);
+}
+.brand-name,.tnav__brand,.tnav__mark{
+  font-family:var(--sans)!important;font-weight:800!important;letter-spacing:-.03em;
+}
+.brand-sub,.tnav__meta{font-family:var(--sans);letter-spacing:.16em;text-transform:uppercase;font-size:9px}
+.nav-links a,.tnav__names a{font-family:var(--sans);font-weight:600;letter-spacing:.02em;font-size:12.5px}
+.nav-links a.on,.tnav__names a.on{color:var(--accent);border-bottom:2px solid var(--accent)}
+
+.v3rail{background:var(--paper)!important;border-right:1px solid var(--hair)}
+.v3bar{background:color-mix(in srgb,var(--paper) 94%,transparent)!important;
+  border-bottom:1px solid var(--hair);backdrop-filter:blur(12px)}
+.site-foot,.dfoot,.v3foot,.adm-foot{background:var(--paper-2);border-top:1px solid var(--hair)}
+.dfoot__note,.dfoot__bar{font-family:var(--sans);letter-spacing:.10em;
+  text-transform:uppercase;font-size:9.5px}
+
+/* ============================================================================
+   七 · 排版细节：行高更松（"呼吸"是流体感的一半）
+   ========================================================================== */
+p,li,.pcard3__meta,.ccard3__meta{line-height:1.78}
+.rev3__q,.rev3__t{line-height:1.8}
+
+/* ============================================================================
+   八 · 无障碍：少动效 → 撤掉水膜扫光、位移、平滑滚动（JS 侧同关）
+   ========================================================================== */
+@media (prefers-reduced-motion:reduce){
+  .pcard3,.ccard3,.btn,.b3,.pcard3__cover img,
+  .pcard3__cover::after,.pcard3__fav button{transition:none!important}
+  .pcard3,.ccard3{transform:none!important;will-change:auto}
+  .pcard3:hover,.ccard3:hover{transform:none!important}
+  .pcard3:hover .pcard3__cover img{transform:none!important}
+  .pcard3:hover .pcard3__cover::after{opacity:0!important;transform:translateX(-30%)!important}
+  .hero::after,.dhero::after{display:none}
+}
+
+/* ============================================================================
+   收尾 · 首屏表单"并入暗场"
+   ----------------------------------------------------------------------------
+   坑：design3.css 把 --d-stage-2 接到 var(--stage-ink-2)（浅色），并拿它当
+       .dhero .sform3__in::placeholder 的颜色；我们又把输入框刷成浅底纸色，
+       结果占位符浅字压浅底 = 隐形（-ui2 截图里那个白框就是这么来的）。
+   解：首屏内的表单永远跟随暗场（深底 / 浅字 / 浅占位），不做纸色卡片。
+   ========================================================================== */
+.hero .sform3,.dhero .sform3{
+  background:rgba(255,255,255,.06);
+  border:2px solid var(--stage-ink);
+  border-radius:14px;
+  box-shadow:none;
+}
+.hero .sform3:focus-within,.dhero .sform3:focus-within{
+  border-color:var(--accent);
+  box-shadow:3px 3px 0 0 var(--accent);
+}
+.hero .sform3__in,.dhero .sform3__in,
+.hero .nav-search,.dhero .nav-search{
+  background:transparent!important;
+  border:0!important;
+  color:var(--stage-ink)!important;
+}
+.hero .sform3__in::placeholder,.dhero .sform3__in::placeholder{
+  color:var(--stage-ink)!important;opacity:.62;
+}
+.hero .field > input,.dhero .field > input,
+.hero .field > select,.dhero .field > select,
+.hero .field > textarea,.dhero .field > textarea{
+  background:rgba(255,255,255,.06)!important;
+  border-color:var(--stage-ink)!important;
+  color:var(--stage-ink)!important;
+}
+.hero .sform3__btn,.dhero .sform3__btn{
+  background:var(--accent);color:#fff;border-color:var(--accent);border-radius:14px;font-weight:700;
+}
+
+/* ============================================================================
+   三代骨架首屏（v3hero__*）
+   ----------------------------------------------------------------------------
+   坑：三代用 templates/v3/home.html 的 .v3hero__t / __k / __row / __stats，
+       和二代 .dhero__title 完全是两套类名。只写 .dhero__* 的话，
+       三代首屏会退回 design-v3.css 的默认衬线字，8 款皮肤看起来一模一样。
+   另外 design-v3.css:271 有 max-width:12ch —— ch 是数字宽度，中文实际只装得下
+       6 个字左右，"今天开一本吧。"会被迫折行。这里必须放宽。
+   ========================================================================== */
+.v3hero__t{
+  font-family:var(--sans)!important;
+  font-weight:800!important;
+  font-size:clamp(42px,8.2vw,100px)!important;
+  line-height:.98!important;
+  letter-spacing:-.035em!important;
+  text-transform:none;
+  color:var(--ink)!important;
+  max-width:none!important;      /* 松开 12ch 的枷锁，5 个中文字一行装得下 */
+  overflow-wrap:break-word;
+  
+}
+.v3hero__t em{
+  font-style:normal!important;   /* 强调字：本款唯一的一次颜色事件 */
+  color:var(--accent)!important;
+}
+.v3hero__k{
+  font-family:var(--mono);font-weight:700;
+  font-size:11px;letter-spacing:var(--d-track-kicker);
+  text-transform:uppercase;color:var(--ink-3);
+}
+.v3hero__stats b,.v3hero__stats strong{
+  font-family:var(--display,var(--sans));font-weight:900;color:var(--ink);
+}

@@ -261,6 +261,9 @@
 <script src="{{ url_for('static', filename='js/upload.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/tabs.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/emojisvg.js', v=static_v('js/emojisvg.js')) }}" defer></script>
+{# 皮肤动效层：自己按 <html data-skin> 路由（动能字体 / 生成艺术 / 流体重力）。
+   其他款式下这个文件是空转 —— 进来读一下 data-skin 就退出。 #}
+<script src="{{ url_for('static', filename='js/skin-fx.js', v=static_v('js/skin-fx.js')) }}" defer></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     // 2026-10 修复：注册到站点根路径（/sw.js），SW 才能拿到全站 scope。

@@ -1,0 +1,485 @@
+/* ============================================================================
+   皮肤 · 构成主义 / 红线档案（construct）
+   ----------------------------------------------------------------------------
+   出处：Rodchenko 1924《Books》海报、El Lissitzky《用红楔子打白军》、
+        Stenberg 兄弟苏联电影海报；视觉规范里对"斜切 + 三色 + 蒙太奇"三规则的拆解。
+   定向：一切都在动 —— 30° 斜切轴线冲出画面，大色块当承重墙，巨字与副文
+        10 倍字号差；一根红线只出现一次（本子墙 → 详情）。
+   纪律：**只有三色油墨**（纸 / 墨 / 朱红），禁渐变、禁柔光阴影，平涂 + 硬投影。
+   坑：红黑正文会挂 WCAG —— 表单与支付页必须"躺平"（见文件末尾 .pay/.auth 段）。
+   加载顺序最后，覆盖 design3 / design-v3 默认令牌；只换设计语言，不动结构 / 功能。
+   ============================================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;900&family=Noto+Sans+SC:wght@400;500;700;900&display=swap');
+
+:root{
+  /* 一 · 色：三色油墨 + 纸。没有中间调 */
+  --paper:#F2EDE0;            /* 纸：暖米，不是纯白 */
+  --paper-2:#E7E0CE;          /* 次底 */
+  --paper-3:#FAF6EC;          /* 卡片：更亮的纸 */
+  --ink:#151312;              /* 墨：近黑 */
+  --ink-2:#2A2724;
+  --ink-3:#565049;
+  --ink-4:#857D71;
+
+  --stage:#151312;            /* 首屏暗场：就是墨色本身 */
+  --stage-ink:#F2EDE0;
+  --stage-ink-2:rgba(242,237,224,.76);
+  --stage-hair:rgba(242,237,224,.20);
+
+  --rule:rgba(21,19,18,.34);
+  --rule-strong:rgba(21,19,18,.72);
+  --hair:rgba(21,19,18,.16);
+
+  --vermilion:#C4161C;        /* 朱红：唯一强调色 */
+  --accent:#C4161C;
+  --accent-2:#960F14;
+  --accent-05:rgba(196,22,28,.12);
+  --gold:#B08A2E;             /* 只做极小的"编号"点缀 */
+  --seal:#C4161C;
+
+  --ok:#1F6B37;   --ok-bg:rgba(31,107,55,.12);
+  --bad:#C4161C;  --bad-bg:rgba(196,22,28,.12);
+  --warn:#8A5A00; --warn-bg:rgba(138,90,0,.14);
+  --info:#1D3E8A; --info-bg:rgba(29,62,138,.10);
+
+  /* 二 · 字：压缩体无衬线，字就是装饰元素 */
+  --sans:"Archivo","Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --serif:"Archivo","Noto Sans SC","PingFang SC",sans-serif;   /* 构成主义不用衬线 → 走同一族 */
+  --mono:"Archivo","SF Mono","Roboto Mono",ui-monospace,monospace;
+  --hand:"Archivo",sans-serif;
+  --d-sans:var(--sans); --d-serif:var(--serif); --d-mono:var(--mono); --d-hand:var(--hand);
+
+  /* 巨字：字号就是装饰 —— 别再加光晕 / 渐变 */
+  --fs-display:clamp(46px,10.5vw,124px); --lh-display:.86; --track-display:-.045em;
+  --fs-title:clamp(26px,4.6vw,44px);
+  --fs-h2:clamp(20px,2.7vw,28px);
+  --d-fs-display:var(--fs-display); --d-lh-display:var(--lh-display); --d-track-display:var(--track-display);
+  --d-fs-title:var(--fs-title); --d-fs-h2:var(--fs-h2);
+  --d-track-kicker:.30em;
+
+  /* 三 · 形状：全直角 + 硬投影（无模糊） */
+  --r:0px; --r-lg:0px; --r-pill:0px; --r-round:0px;
+  --d-r:0px; --d-r-lg:0px; --d-pill:0px;
+  --sh-1:0 0 0 1px rgba(21,19,18,.22);
+  --sh-2:5px 5px 0 0 rgba(21,19,18,.85);
+  --sh-3:9px 9px 0 0 rgba(21,19,18,.85);
+  --sh-hard:5px 5px 0 0 var(--ink);
+  --d-sh1:var(--sh-1); --d-sh2:var(--sh-2); --d-sh3:var(--sh-3); --d-sh-hard:var(--sh-hard);
+
+  --night-1:#1D1A18; --night-2:#181513; --night-3:#151312;
+  --d-night-1:var(--night-1); --d-night-2:var(--night-2); --d-night-3:var(--night-3);
+
+  --d-ease:cubic-bezier(.22,1,.36,1);
+  --d-pop:cubic-bezier(.16,1,.3,1);
+  --d-tap:.24s;
+  --noise-opacity:.06;
+  --grain-blend:multiply;
+
+  /* 自己的刻度 */
+  --c-rail:0;                 /* 斜切角度用 */
+  --c-slant:-1.6deg;
+}
+
+/* ============================================================================
+   暗色：墨色底 + 更亮的朱红（朱红在暗底上会变闷，提亮一档）
+   ========================================================================== */
+html[data-theme="dark"]{
+  --paper:#151312;
+  --paper-2:#1D1A18;
+  --paper-3:#221E1C;
+  --ink:#F2EDE0;
+  --ink-2:#DED6C6;
+  --ink-3:#A79E90;
+  --ink-4:#7C7468;
+
+  --stage:#0B0A09;
+  --stage-ink:#F2EDE0;
+  --stage-ink-2:rgba(242,237,224,.72);
+  --stage-hair:rgba(242,237,224,.18);
+
+  --rule:rgba(242,237,224,.30);
+  --rule-strong:rgba(242,237,224,.66);
+  --hair:rgba(242,237,224,.14);
+
+  --vermilion:#E8353B;
+  --accent:#E8353B;
+  --accent-2:#C4161C;
+  --accent-05:rgba(232,53,59,.18);
+  --gold:#D9AE4A;
+  --seal:#E8353B;
+
+  --ok:#5FBF7B;   --ok-bg:rgba(95,191,123,.16);
+  --bad:#F0666B;  --bad-bg:rgba(240,102,107,.16);
+  --warn:#E0A93D; --warn-bg:rgba(224,169,61,.16);
+  --info:#7FA6DC; --info-bg:rgba(127,166,220,.16);
+
+  --sh-1:0 0 0 1px rgba(242,237,224,.20);
+  --sh-2:5px 5px 0 0 rgba(0,0,0,.7);
+  --sh-3:9px 9px 0 0 rgba(0,0,0,.7);
+  --sh-hard:5px 5px 0 0 rgba(0,0,0,.7);
+  --noise-opacity:.075;
+  --grain-blend:screen;
+}
+
+/* ============================================================================
+   一 · 斜切轴线：整个页面的主导对角线
+   做法：一条 30° 的红棒横穿首屏；区块标题左侧挂一个斜红色块（"红楔子"）。
+   克制：只用在**首屏**和**区块分隔**，正文区不斜 —— 斜太多 = 眩晕。
+   ========================================================================== */
+
+/* 首屏：红色斜块 + 巨字压在上面（Rodchenko 那套） */
+.hero,.dhero{
+  position:relative;overflow:hidden;
+  background:var(--ink);color:var(--paper);
+  padding:clamp(40px,7vw,86px) var(--d-pad) clamp(46px,7.5vw,92px);
+  isolation:isolate;
+}
+/* 斜切红楔子：从右下角斜插上来 */
+.hero::before,.dhero::before{
+  content:"";position:absolute;z-index:0;pointer-events:none;
+  right:-14%;bottom:-32%;width:104%;height:86%;
+  background:var(--vermilion);
+  transform:rotate(-9deg);transform-origin:100% 100%;
+}
+/* 一根细黑的斜轴线：和红块**不平行**，制造张力 */
+.hero::after,.dhero::after{
+  content:"";position:absolute;z-index:0;pointer-events:none;
+  left:-10%;top:34%;width:130%;height:4px;
+  background:var(--paper);opacity:.9;
+  transform:rotate(-1.6deg);
+}
+.hero > *,.dhero > *{position:relative;z-index:1}
+
+.hero h1,.hero .dhero__title,.dhero h1,.dhero__title{
+  font-family:var(--sans)!important;
+  font-size:var(--fs-display)!important;
+  font-weight:900!important;
+  line-height:var(--lh-display)!important;
+  letter-spacing:var(--track-display)!important;
+  text-transform:uppercase;
+  color:var(--paper)!important;
+  text-shadow:none;
+  margin:0 0 .18em;
+  /* 巨字允许冲出右边（构成主义的招牌动作） */
+  overflow-wrap:anywhere;
+}
+.hero .kicker,.hero .dhero__kicker,.dhero .kicker{
+  display:inline-block;
+  background:var(--paper);color:var(--ink);
+  padding:5px 12px;margin-bottom:18px;
+  font-family:var(--mono);font-weight:700;
+  font-size:11px;letter-spacing:.28em;text-transform:uppercase;
+}
+.hero .slogan,.hero .dhero__sub,.hero .dhero__lead{
+  color:var(--paper);opacity:.92;
+  font-size:clamp(14px,1.5vw,17px);line-height:1.65;
+  max-width:56ch;
+}
+.hero .stats,.dhero .stats{border-top:2px solid var(--paper);margin-top:26px;padding-top:16px}
+.hero .stats b,.dhero .stats b{color:var(--vermilion);font-weight:900;
+  -webkit-text-stroke:.4px var(--paper)}   /* 红字压在红块上时描一圈纸色保读 */
+
+/* 区块：左侧竖排编号（构成主义爱把序号当建筑构件） */
+.sec-no,.board3__n{
+  font-family:var(--mono);font-weight:900;
+  font-size:clamp(30px,5vw,58px);
+  letter-spacing:-.02em;
+  color:var(--vermilion);
+  line-height:.85;
+}
+.sec-head,.dsec__head{border-bottom:3px solid var(--ink);padding-bottom:14px}
+.sec-head h2,.dsec__head h2,.dsec__title{
+  font-family:var(--sans)!important;font-weight:900!important;
+  text-transform:uppercase;letter-spacing:-.02em;
+}
+
+/* ============================================================================
+   二 · 卡片 = 卷宗：硬边 + 硬投影 + 左上角编号条
+   ========================================================================== */
+.pcard3,.ccard3,.panel,.card,.adm-panel,.poster3,.block3{
+  background:var(--paper-3);
+  border:2px solid var(--ink);
+  border-radius:0;
+  box-shadow:var(--sh-hard);
+  transition:transform .18s var(--d-ease),box-shadow .18s var(--d-ease);
+}
+.pcard3:hover,.ccard3:hover{
+  transform:translate(-3px,-3px);
+  box-shadow:9px 9px 0 0 var(--ink);
+  border-color:var(--ink);
+}
+/* 卡片封面斜纹底：换成"档案纸"的横纹（原来那套 135° 斜纹太柔） */
+.pcard3__cover{
+  background:repeating-linear-gradient(0deg,transparent 0 3px,var(--accent-05) 3px 4px),
+             linear-gradient(180deg,var(--paper-2),var(--paper-3));
+  border-bottom:2px solid var(--ink);
+}
+.pcard3:hover .pcard3__cover img{transform:scale(1.04)}
+.pcard3__type,.pcard3__tag{
+  background:var(--vermilion)!important;color:#fff!important;
+  border:0;border-radius:0;
+  font-family:var(--mono);font-weight:700;
+  font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;
+  padding:4px 9px;
+}
+/* 占位水印：改成超大的红色序号（不是 emoji） */
+.pcard3__wm{color:var(--vermilion);opacity:.14;font-weight:900}
+.pcard3__title,.ccard3__title{
+  font-family:var(--sans)!important;font-weight:900!important;
+  letter-spacing:-.015em;
+}
+.pcard3__meta,.ccard3__meta{
+  font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase;
+}
+.pcard3__foot,.ccard3__foot{border-top:2px solid var(--ink)}
+.pcard3__price{font-family:var(--mono);font-weight:900;font-size:14px}
+.pcard3__price s{color:var(--ink-4)}
+
+/* 收藏心：红十字方块（不是圆点） */
+.pcard3__fav button{
+  background:var(--paper-3);color:var(--ink);
+  border-left:2px solid var(--ink);border-bottom:2px solid var(--ink);
+  border-radius:0;width:32px;height:32px;
+}
+.pcard3__fav button:hover{background:var(--vermilion);color:#fff;transform:none}
+.pcard3__fav button.on{background:var(--vermilion);color:#fff}
+
+/* ============================================================================
+   三 · 按钮：粗黑边 + 大硬投影；按下真的"压进去"
+   ========================================================================== */
+.btn,.b3,.btn-primary,.b3--accent,.b3--solid{
+  font-family:var(--sans);font-weight:800;
+  letter-spacing:.06em;text-transform:uppercase;
+  border-radius:0;
+}
+.btn,.b3{border:2px solid var(--ink);background:var(--paper-3);color:var(--ink)}
+.btn-primary,.b3--accent,.b3--solid{
+  background:var(--vermilion)!important;border:2px solid var(--ink)!important;color:#fff!important;
+  box-shadow:var(--sh-hard);
+}
+.btn-primary:hover,.b3--accent:hover,.b3--solid:hover{
+  transform:translate(-3px,-3px);box-shadow:9px 9px 0 0 var(--ink);
+}
+/* 按下：元素真的右下沉，投影归零 —— 像把实体按键压到底 */
+.btn-primary:active,.b3--accent:active,.b3--solid:active,
+.btn:active,.b3:active{transform:translate(5px,5px);box-shadow:none}
+.btn-ghost:hover,.b3--ghost:hover{background:var(--ink);color:var(--paper)}
+/* 杀掉 design3 自带的柔光高光扫过（构成主义不用柔光） */
+.b3--solid::after,.b3--accent::after,.btn-primary::after,.btn-accent::after{display:none!important}
+
+/* ============================================================================
+   四 · 标签 / 徽章：色块（不是方括号）
+   ========================================================================== */
+.kicker,.label,.tag3,.chip3,.badge,.pill,.chip,.chip-sm,.st{
+  border-radius:0;font-family:var(--mono);font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;
+}
+.kicker,.label,.tag3,.chip3{
+  background:var(--ink);color:var(--paper);
+  padding:3px 9px;border:0;
+}
+.kicker::before,.kicker::after{content:''!important}
+.tag3--accent,.badge--brand{
+  background:var(--vermilion)!important;color:#fff!important;border:0!important;
+}
+.badge,.pill,.chip,.chip-sm,.st{border:2px solid var(--ink)}
+.badge.ok,.st.on{background:var(--vermilion);color:#fff}
+.badge.new,.st.car{background:var(--ink);color:var(--paper)}
+
+/* ============================================================================
+   五 · 表单元件：平整（这一档最要紧 —— 红黑在正文会挂 WCAG）
+   ========================================================================== */
+.field > input,.field > select,.field > textarea,
+.sform3__in,.nav-search{
+  background:var(--paper-3);
+  border:2px solid var(--ink);border-radius:0;
+  color:var(--ink);
+  min-height:46px;
+  font-family:var(--sans);
+}
+.field > input:focus,.field > select:focus,.field > textarea:focus{
+  outline:0;border-color:var(--vermilion);
+  box-shadow:3px 3px 0 0 var(--ink);   /* 硬投影做焦点环，不用发光 */
+}
+.field > label{font-family:var(--mono);font-weight:700;letter-spacing:.10em;text-transform:uppercase;
+  font-size:11px;color:var(--ink-3)}
+
+/* ============================================================================
+   六 · 导航与页脚（二代顶栏 / 三代竖排导轨都吃）
+   二代：顶栏做成"报头"—— 纸底 + 底部 3px 重线 + 斜切的红角
+   三代：竖排导轨同样走纸底 + 右侧重线
+   ========================================================================== */
+.site-nav,.tnav,.tnav__bar{
+  background:var(--paper)!important;
+  border-bottom:3px solid var(--ink);
+  backdrop-filter:none;
+}
+.brand-name,.tnav__brand,.tnav__mark{
+  font-family:var(--sans)!important;font-weight:900!important;
+  letter-spacing:-.03em;text-transform:uppercase;
+}
+.brand-sub,.tnav__meta{font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;font-size:10px}
+.nav-links a,.tnav__names a{
+  font-family:var(--sans);font-weight:700;letter-spacing:.02em;
+  text-transform:uppercase;font-size:12.5px;
+}
+.nav-links a.on,.tnav__names a.on{
+  color:var(--vermilion);
+  border-bottom:3px solid var(--vermilion);
+}
+.tnav__strip,.rail3{background:var(--paper-2);border-color:var(--ink)}
+
+/* 三代竖排导轨 */
+.v3rail{background:var(--paper)!important;border-right:3px solid var(--ink)}
+.v3rail a,.v3rail__link{font-family:var(--sans);font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.v3bar{background:var(--paper)!important;border-bottom:3px solid var(--ink)}
+
+/* 页脚：版权页式 —— 顶部 3px 重线 + 等宽小字 */
+.site-foot,.dfoot,.v3foot,.adm-foot{
+  background:var(--paper);border-top:3px solid var(--ink);
+}
+.dfoot__brand,.dfoot__slogan{font-family:var(--sans);font-weight:900;text-transform:uppercase}
+.dfoot__note,.dfoot__bar{font-family:var(--mono);letter-spacing:.10em;text-transform:uppercase;font-size:10.5px}
+
+/* ============================================================================
+   七 · 红线：全局只出现一次 —— 本子墙 → 详情 的关联
+   做法：卡片 hover 时，从卡片右侧拉出一条 1px 红线；不常驻，避免"糊一脸"。
+   ========================================================================== */
+.pcard3::after{
+  content:"";position:absolute;z-index:5;pointer-events:none;
+  right:-2px;top:52%;width:0;height:2px;
+  background:var(--vermilion);
+  transition:width .3s var(--d-ease);
+}
+.pcard3:hover::after{width:clamp(14px,2vw,30px)}
+
+/* 表格 / 排期：等宽数字，行像账目 */
+.sheet3__row{border-bottom:2px solid var(--ink)}
+.sheet3__row::before{background:var(--vermilion);width:3px}
+.sheet3__row:hover{background:var(--accent-05)}
+
+/* 图片：一律硬边（构成主义爱裁切，不羽化） */
+img{border-radius:0}
+.avatar-circle,.car-mem-av,.rev3__avatar{border-radius:0;border:2px solid var(--ink)}
+
+/* 滚动条：给出构成主义的"结构感" */
+::-webkit-scrollbar{width:12px;height:12px}
+::-webkit-scrollbar-track{background:var(--paper-2);border-left:2px solid var(--ink)}
+::-webkit-scrollbar-thumb{background:var(--ink);border:0}
+::-webkit-scrollbar-thumb:hover{background:var(--vermilion)}
+
+/* ============================================================================
+   八 · 躺平区：表单 / 登录 / 支付 —— 这里绝不允许斜切与撞色
+   规范文档明确：红黑高饱和在正文区是"必挂 WCAG"的组合，只留给装饰块。
+   ========================================================================== */
+.auth-stage,.auth-card,.v3auth,.v3auth__card,.pay-wrap,.pay-card{
+  background:var(--paper-3)!important;
+  border:2px solid var(--ink)!important;
+  box-shadow:none!important;   /* 支付页不投射，冷静 */
+}
+.auth-stage::before,.auth-stage::after,
+.v3auth::before,.v3auth::after{display:none!important}   /* 干掉斜切装饰 */
+.auth-card h2,.v3auth__card h2{
+  font-family:var(--sans);font-weight:900;text-transform:none;letter-spacing:-.01em;
+}
+.auth-card,.v3auth__card{color:var(--ink)}   /* 正文回到墨色，不碰红 */
+
+/* 表单区里的按钮：不跳色，保持纸底墨字 */
+.auth-card .btn-primary,.v3auth__card .btn-primary{
+  background:var(--ink)!important;color:var(--paper)!important;
+  box-shadow:none!important;
+}
+.auth-card .btn-primary:hover,.v3auth__card .btn-primary:hover{transform:none;background:var(--ink-2)!important}
+
+/* ============================================================================
+   九 · 无障碍：少动效偏好下，撤掉所有位移与过渡
+   ========================================================================== */
+@media (prefers-reduced-motion:reduce){
+  .pcard3,.ccard3,.btn,.b3,.btn-primary,.b3--accent,.b3--solid{transition:none!important}
+  .pcard3:hover,.ccard3:hover{transform:none!important}
+  .pcard3:hover::after{width:0!important}
+  .pcard3:hover .pcard3__cover img{transform:none!important}
+  .btn-primary:active,.b3--accent:active,.b3--solid:active,.btn:active,.b3:active{transform:none!important}
+}
+
+/* 小屏：斜切幅度收一半，否则手机上会像"页面歪了" */
+@media (max-width:640px){
+  .hero::before,.dhero::before{right:-24%;bottom:-38%;width:132%;height:74%;transform:rotate(-7deg)}
+  .hero::after,.dhero::after{top:28%;transform:rotate(-1deg)}
+  .hero h1,.hero .dhero__title,.dhero__title{font-size:clamp(38px,13vw,64px)!important}
+}
+
+/* ============================================================================
+   收尾 · 首屏表单"并入暗场"（2026-10 修：白底白字看不见）
+   ----------------------------------------------------------------------------
+   坑：design3.css 把 --d-stage-2 接到 var(--stage-ink-2)（浅奶油），
+       并拿它当 .dhero .sform3__in::placeholder 的颜色。我们又把输入框刷成
+       近白的 --paper-3 —— 结果占位符浅字压浅底，等于隐形。
+   解：首屏内的表单**永远跟随暗场**（深底 / 浅字 / 浅占位），不做纸色卡片。
+       这条对所有皮肤通用：暗场是 .hero/.dhero 自己声明的，不依赖令牌。
+   ========================================================================== */
+.hero .sform3,.dhero .sform3{
+  background:rgba(255,255,255,.06);
+  border:2px solid var(--stage-ink);
+  border-radius:0;
+  box-shadow:none;
+}
+.hero .sform3:focus-within,.dhero .sform3:focus-within{
+  border-color:var(--vermilion);
+  box-shadow:3px 3px 0 0 var(--vermilion);
+}
+.hero .sform3__in,.dhero .sform3__in,
+.hero .nav-search,.dhero .nav-search{
+  background:transparent!important;
+  border:0!important;
+  color:var(--stage-ink)!important;
+  font-family:var(--sans);
+}
+.hero .sform3__in::placeholder,.dhero .sform3__in::placeholder{
+  color:var(--stage-ink)!important;opacity:.62;
+}
+.hero .field > input,.dhero .field > input,
+.hero .field > select,.dhero .field > select,
+.hero .field > textarea,.dhero .field > textarea{
+  background:rgba(255,255,255,.06)!important;
+  border-color:var(--stage-ink)!important;
+  color:var(--stage-ink)!important;
+}
+.hero .sform3__btn,.dhero .sform3__btn{
+  background:var(--vermilion);color:#fff;border-color:var(--vermilion);
+  border-radius:0;font-weight:700;
+}
+
+/* ============================================================================
+   三代骨架首屏（v3hero__*）
+   ----------------------------------------------------------------------------
+   坑：三代用 templates/v3/home.html 的 .v3hero__t / __k / __row / __stats，
+       和二代 .dhero__title 完全是两套类名。只写 .dhero__* 的话，
+       三代首屏会退回 design-v3.css 的默认衬线字，8 款皮肤看起来一模一样。
+   另外 design-v3.css:271 有 max-width:12ch —— ch 是数字宽度，中文实际只装得下
+       6 个字左右，"今天开一本吧。"会被迫折行。这里必须放宽。
+   ========================================================================== */
+.v3hero__t{
+  font-family:var(--sans)!important;
+  font-weight:900!important;
+  font-size:clamp(46px,11vw,148px)!important;
+  line-height:.86!important;
+  letter-spacing:-.045em!important;
+  text-transform:uppercase;
+  color:var(--ink)!important;   /* 三代首屏是纸底（.v3hero 无背景）→ 必须墨字 */
+  max-width:none!important;      /* 松开 12ch 的枷锁，5 个中文字一行装得下 */
+  overflow-wrap:break-word;
+  
+}
+.v3hero__t em{
+  font-style:normal!important;   /* 强调字：本款唯一的一次颜色事件 */
+  color:var(--vermilion)!important;
+}
+.v3hero__k{
+  font-family:var(--mono);font-weight:700;
+  font-size:11px;letter-spacing:var(--d-track-kicker);
+  text-transform:uppercase;color:var(--ink-3);
+}
+.v3hero__stats b,.v3hero__stats strong{
+  font-family:var(--display,var(--sans));font-weight:900;color:var(--ink);
+}

@@ -1,0 +1,412 @@
+/* ============================================================================
+   皮肤 · 戏票 / 凸版剧场（playbill2）
+   ----------------------------------------------------------------------------
+   出处：剧场票根六大款式（Vintage Stub / Movie Night / VIP Pass）、1890s 蜡封票证、
+       凸版印刷（letterpress）。区别于默认款 playbill —— 那款是"铅字报头"，
+       这款是**真票根实体**：主券 + 打孔虚线 + 副券 + 打码编号 + 蜡封。
+   定向：像从抽屉里翻出一张 1980 年的票。副券能撕，编号是打码机敲的。
+   纪律：装饰多，必须靠**结构**而不是靠花边 —— 每张卡片内部自带 4 个视觉层次。
+   坑：打孔虚线用 background 渐变，不用 border（否则响应式下会崩）。
+   加载顺序最后，覆盖 design3 / design-v3 默认令牌。
+   ============================================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=Courier+Prime:wght@400;700&family=Noto+Serif+SC:wght@500;700;900&display=swap');
+
+:root{
+  /* 一 · 色：米黄纸 + 深红丝绒 + 香槟金 */
+  --paper:#F4EBD8;            /* 票纸：米黄，比纯白更像纸 */
+  --paper-2:#E9DCC2;          /* 副券：略深一档 */
+  --paper-3:#FBF5E6;          /* 卡片面 */
+  --ink:#2B2119;              /* 铁胆墨 */
+  --ink-2:#423526;
+  --ink-3:#6E5D48;
+  --ink-4:#9C8A70;
+
+  --stage:#2A1418;            /* 首屏：深红丝绒幕布 */
+  --stage-ink:#F4EBD8;
+  --stage-ink-2:rgba(244,235,216,.78);
+  --stage-hair:rgba(244,235,216,.20);
+
+  --rule:rgba(43,33,25,.30);
+  --rule-strong:rgba(43,33,25,.62);
+  --hair:rgba(43,33,25,.13);
+
+  --vermilion:#8E1D24;        /* 丝绒深红 */
+  --accent:#8E1D24;
+  --accent-2:#6B1419;
+  --accent-05:rgba(142,29,36,.09);
+  --gold:#B0894A;             /* 香槟金 */
+  --seal:#8E1D24;
+
+  --ok:#2F6B3A;   --ok-bg:rgba(47,107,58,.11);
+  --bad:#8E1D24;  --bad-bg:rgba(142,29,36,.11);
+  --warn:#8A6512; --warn-bg:rgba(138,101,18,.13);
+  --info:#28456E; --info-bg:rgba(40,69,110,.10);
+
+  /* 二 · 字：高对比衬线标题 + 打字机副文 + 等宽元信息 */
+  --serif:"Playfair Display","Noto Serif SC","Songti SC","STSong",Georgia,serif;
+  --sans:"Courier Prime","Noto Serif SC","PingFang SC","Microsoft YaHei",monospace;
+  --mono:"Courier Prime","SF Mono","Roboto Mono",ui-monospace,monospace;
+  --hand:"Playfair Display",Georgia,serif;
+  --d-serif:var(--serif); --d-sans:var(--sans); --d-mono:var(--mono); --d-hand:var(--hand);
+
+  --fs-display:clamp(42px,8.6vw,96px); --lh-display:.94; --track-display:-.02em;
+  --fs-title:clamp(25px,4vw,38px);
+  --fs-h2:clamp(19px,2.5vw,26px);
+  --d-fs-display:var(--fs-display); --d-lh-display:var(--lh-display); --d-track-display:var(--track-display);
+  --d-fs-title:var(--fs-title); --d-fs-h2:var(--fs-h2);
+  --d-track-kicker:.26em;
+
+  /* 三 · 形状：极小的圆角（票是裁出来的，不是切出来的）+ 极细双线框 */
+  --r:3px; --r-lg:4px; --r-pill:3px;
+  --d-r:3px; --d-r-lg:4px; --d-pill:3px;
+  --sh-1:0 1px 2px rgba(43,33,25,.10);
+  --sh-2:0 5px 16px rgba(43,33,25,.14);
+  --sh-3:0 14px 34px rgba(43,33,25,.20);
+  --sh-hard:2px 2px 0 0 var(--ink);
+  --d-sh1:var(--sh-1); --d-sh2:var(--sh-2); --d-sh3:var(--sh-3); --d-sh-hard:var(--sh-hard);
+
+  --night-1:#3A1D22; --night-2:#2A1418; --night-3:#1F0F12;
+  --d-night-1:var(--night-1); --d-night-2:var(--night-2); --d-night-3:var(--night-3);
+
+  --d-ease:cubic-bezier(.22,1,.36,1);
+  --noise-opacity:.055;
+  --grain-blend:multiply;
+}
+
+html[data-theme="dark"]{
+  --paper:#241A17;
+  --paper-2:#2E221D;
+  --paper-3:#332621;
+  --ink:#F1E5CE;
+  --ink-2:#DBCBB0;
+  --ink-3:#A8977C;
+  --ink-4:#7D6E58;
+
+  --stage:#150B0D;
+  --stage-ink:#F4EBD8;
+  --stage-ink-2:rgba(244,235,216,.74);
+  --stage-hair:rgba(244,235,216,.18);
+
+  --rule:rgba(241,229,206,.26);
+  --rule-strong:rgba(241,229,206,.56);
+  --hair:rgba(241,229,206,.12);
+
+  --vermilion:#C9434B;
+  --accent:#C9434B;
+  --accent-2:#A32E36;
+  --accent-05:rgba(201,67,75,.16);
+  --gold:#D9B26A;
+  --seal:#C9434B;
+
+  --ok:#6FBF86;   --ok-bg:rgba(111,191,134,.16);
+  --bad:#E17A80;  --bad-bg:rgba(225,122,128,.16);
+  --warn:#D9AE5A; --warn-bg:rgba(217,174,90,.16);
+  --info:#8AAAD8; --info-bg:rgba(138,170,216,.16);
+
+  --sh-1:0 1px 2px rgba(0,0,0,.40);
+  --sh-2:0 5px 16px rgba(0,0,0,.46);
+  --sh-3:0 14px 34px rgba(0,0,0,.55);
+  --noise-opacity:.07;
+  --grain-blend:screen;
+}
+
+/* ============================================================================
+   一 · 首屏：深红丝绒幕布 + 香槟金细双线（剧场天头）
+   ========================================================================== */
+.hero,.dhero{
+  background:var(--stage)!important;
+  color:var(--stage-ink)!important;
+  position:relative;
+  /* 幕布褶皱：竖向的柔和明暗，用多层渐变叠出来（不加图片） */
+  background-image:
+    repeating-linear-gradient(90deg,
+      rgba(0,0,0,.20) 0 22px, rgba(255,255,255,.045) 22px 44px),
+    radial-gradient(120% 90% at 50% 0%, rgba(255,220,170,.10), transparent 62%)!important;
+  padding:clamp(42px,7.4vw,92px) var(--d-pad) clamp(48px,8vw,98px)!important;
+  overflow:hidden;
+}
+/* 天头：香槟金细双线 */
+.hero::before,.dhero::before{
+  content:"";position:absolute;left:var(--d-pad);right:var(--d-pad);top:clamp(18px,2.6vw,30px);
+  height:0;border-top:1px solid var(--gold);
+  box-shadow:0 4px 0 -1px var(--gold);
+  opacity:.75;pointer-events:none;
+}
+.hero > *,.dhero > *{position:relative;z-index:1}
+
+.hero h1,.dhero__title,.hero .dhero__title{
+  font-family:var(--serif)!important;font-weight:700!important;
+  font-size:var(--fs-display)!important;
+  line-height:var(--lh-display)!important;
+  letter-spacing:var(--track-display)!important;
+  color:var(--stage-ink)!important;
+  font-style:italic;
+}
+.hero .kicker,.dhero__kicker,.hero .dhero__kicker{
+  font-family:var(--mono);font-weight:700;
+  font-size:11px;letter-spacing:.30em;text-transform:uppercase;
+  color:var(--gold);
+}
+.hero .slogan,.dhero__sub,.dhero__lead{color:var(--stage-ink-2)!important;font-family:var(--serif);
+  font-size:clamp(14px,1.5vw,17px);line-height:1.7;max-width:58ch}
+.hero .stats,.dhero .stats{border-top:1px solid var(--gold);padding-top:16px;margin-top:26px}
+.hero .stats b,.dhero .stats b{color:var(--gold);font-family:var(--mono)}
+
+/* ============================================================================
+   二 · 卡片 = 真票根：主券 + 打孔虚线 + 副券 + 打码编号
+   结构：卡片左侧是主券（封面 + 标题 + 价格），右侧一条**打孔虚线**，
+        虚线右边是竖排的副券（"ADMIT ONE" + 编号）。
+   ========================================================================== */
+.pcard3,.ccard3{
+  position:relative;
+  background:var(--paper-3);
+  border:1px solid var(--ink);
+  border-radius:var(--r);
+  /* 内嵌一圈细线，做出"票面双框"的层次 */
+  box-shadow:inset 0 0 0 1px rgba(43,33,25,.10), var(--sh-1);
+  transition:transform .26s var(--d-ease),box-shadow .26s var(--d-ease);
+  overflow:visible;   /* 让打孔圆缺能出血 */
+}
+.pcard3:hover,.ccard3:hover{
+  transform:translateY(-3px);
+  box-shadow:inset 0 0 0 1px rgba(43,33,25,.10), var(--sh-2);
+  border-color:var(--ink);
+}
+
+/* 打孔虚线：竖着切在卡片右侧 62px 处。
+   用 background 渐变画（不是 border）—— 这样手机窄屏也不会崩。
+   同时用两个**圆缺**做撕口，模仿真票的半圆打孔。 */
+.pcard3::before,.ccard3::before{
+  content:"";position:absolute;z-index:4;pointer-events:none;
+  right:62px;top:9px;bottom:9px;width:0;
+  border-left:1px dashed rgba(43,33,25,.42);
+}
+/* 上下两个半圆缺口 */
+.pcard3::after,.ccard3::after{
+  content:"";position:absolute;z-index:5;pointer-events:none;
+  right:54px;top:-9px;width:18px;height:18px;border-radius:50%;
+  background:var(--paper);
+  box-shadow:0 0 0 1px var(--ink);
+  /* 下缺口用第二层遮罩叠出来 */
+  clip-path:polygon(0 0,100% 0,100% 100%,0 100%);
+}
+/* 只在小屏以上显示副券结构；手机上卡片太窄，副券会挤 —— 改为隐藏 */
+@media (max-width:720px){
+  .pcard3::before,.ccard3::before,
+  .pcard3::after,.ccard3::after{display:none}
+}
+
+.pcard3__cover{
+  border-bottom:1px solid var(--ink);
+  background:repeating-linear-gradient(135deg,transparent 0 10px,var(--accent-05) 10px 20px),
+             linear-gradient(165deg,var(--paper-2),var(--paper-3) 74%);
+}
+.pcard3:hover .pcard3__cover img{transform:scale(1.045)}
+.pcard3__type,.pcard3__tag{
+  background:var(--vermilion)!important;color:var(--paper-3)!important;
+  font-family:var(--mono);font-weight:700;
+  font-size:9px;letter-spacing:.22em;text-transform:uppercase;
+  padding:4px 9px;border-radius:0;
+}
+.pcard3__wm{color:var(--vermilion);opacity:.13;font-family:var(--serif);font-style:italic}
+.pcard3__title,.ccard3__title{
+  font-family:var(--serif)!important;font-weight:700!important;letter-spacing:0;
+}
+.pcard3__meta,.ccard3__meta{font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;font-size:10px}
+.pcard3__foot,.ccard3__foot{border-top:1px dashed rgba(43,33,25,.38)}
+.pcard3__price{font-family:var(--mono);font-weight:700;font-size:14px;color:var(--vermilion)}
+
+/* 收藏心：像贴上去的票根小戳 */
+.pcard3__fav button{
+  background:var(--paper-3);color:var(--ink-3);
+  border:1px solid var(--ink);border-radius:50%;
+  width:28px;height:28px;margin:5px;
+}
+.pcard3__fav button:hover{color:var(--vermilion);border-color:var(--vermilion);transform:rotate(-8deg) scale(1.06)}
+.pcard3__fav button.on{color:var(--vermilion);border-color:var(--vermilion)}
+
+/* ============================================================================
+   三 · 侧边栏 / 分区的"票根边"：虚线 + 半圆打孔条
+   用在 section 之间的分隔，替代普通横线
+   ========================================================================== */
+.dsec,.sec-head{border-top:1px dashed rgba(43,33,25,.36)}
+.sec-no,.board3__n{
+  font-family:var(--mono);font-weight:700;
+  font-size:clamp(22px,3.2vw,34px);
+  color:var(--vermilion);letter-spacing:.02em;
+}
+.sec-head h2,.dsec__head h2,.dsec__title{
+  font-family:var(--serif)!important;font-weight:700!important;
+  font-style:italic;letter-spacing:-.01em;
+}
+
+/* ============================================================================
+   四 · 按钮：像打在票面上的胶章 —— 描边 + 极小圆角
+   ========================================================================== */
+.btn,.b3{border:1px solid var(--ink);border-radius:var(--r);background:var(--paper-3);
+  color:var(--ink);font-family:var(--sans);font-weight:700;letter-spacing:.10em;text-transform:uppercase}
+.btn-primary,.b3--accent,.b3--solid{
+  background:var(--vermilion)!important;border:1px solid var(--ink)!important;
+  color:var(--paper-3)!important;box-shadow:var(--sh-1);
+}
+.btn-primary:hover,.b3--accent:hover,.b3--solid:hover{background:var(--accent-2)!important;box-shadow:var(--sh-2)}
+.btn-primary:active,.b3--accent:active,.b3--solid:active{transform:translateY(1px);box-shadow:none}
+.btn-ghost:hover,.b3--ghost:hover{background:var(--ink);color:var(--paper-3)}
+/* 去掉柔光高光扫过（凸版印刷靠压痕，不靠光） */
+.b3--solid::after,.b3--accent::after,.btn-primary::after,.btn-accent::after{display:none!important}
+
+/* ============================================================================
+   五 · 标签：烫金小字（票面上的座位/场次标注）
+   ========================================================================== */
+.kicker,.label,.tag3,.chip3,.badge,.pill,.chip,.chip-sm,.st{
+  border-radius:2px;font-family:var(--mono);font-weight:700;
+  letter-spacing:.16em;text-transform:uppercase;font-size:10px;
+}
+.kicker,.label,.tag3,.chip3{background:transparent;color:var(--vermilion);border:1px solid var(--vermilion);padding:3px 9px}
+.kicker::before,.kicker::after{content:''!important}
+.tag3--accent,.badge--brand{background:var(--gold)!important;color:var(--ink)!important;border:0!important}
+.badge,.pill,.chip,.chip-sm,.st{border:1px solid var(--ink)}
+.badge.ok,.st.on{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.badge.new,.st.car{background:var(--vermilion);color:var(--paper-3);border-color:var(--vermilion)}
+
+/* ============================================================================
+   六 · 表单：票面填空的感觉 —— 细框 + 打字机字
+   ========================================================================== */
+.field > input,.field > select,.field > textarea,.sform3__in,.nav-search{
+  background:var(--paper-3);border:1px solid var(--ink);
+  border-radius:var(--r);color:var(--ink);
+  font-family:var(--mono);min-height:46px;
+}
+.field > input:focus,.field > select:focus,.field > textarea:focus{
+  outline:0;border-color:var(--vermilion);
+  box-shadow:0 0 0 3px var(--accent-05);
+}
+.field > label{font-family:var(--mono);font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;font-size:10.5px;color:var(--ink-3)}
+
+/* ============================================================================
+   七 · 导航 / 页脚：剧场天头牌
+   ========================================================================== */
+.site-nav,.tnav,.tnav__bar{
+  background:var(--paper)!important;
+  border-bottom:1px solid var(--ink);
+  box-shadow:0 3px 0 -2px var(--gold);   /* 香槟金细双线 */
+}
+.brand-name,.tnav__brand,.tnav__mark{
+  font-family:var(--serif)!important;font-weight:700!important;font-style:italic;letter-spacing:0;
+}
+.brand-sub,.tnav__meta{font-family:var(--mono);letter-spacing:.18em;text-transform:uppercase;font-size:9.5px;color:var(--gold)}
+.nav-links a,.tnav__names a{font-family:var(--sans);font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;font-size:12px}
+.nav-links a.on,.tnav__names a.on{color:var(--vermilion);border-bottom:1px solid var(--vermilion)}
+
+.v3rail{background:var(--paper)!important;border-right:1px solid var(--ink)}
+.v3rail a,.v3rail__link{font-family:var(--sans);font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.v3bar{background:var(--paper)!important;border-bottom:1px solid var(--ink)}
+
+.site-foot,.dfoot,.v3foot,.adm-foot{
+  background:var(--paper-2);border-top:1px solid var(--ink);
+  box-shadow:0 -3px 0 -2px var(--gold);
+}
+.dfoot__brand,.dfoot__slogan{font-family:var(--serif);font-weight:700;font-style:italic}
+.dfoot__note,.dfoot__bar{font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;font-size:10px}
+/* 页脚做成一联存根：顶部一排打孔 */
+.site-foot::before,.v3foot::before,.dfoot::before{
+  content:"";display:block;height:0;margin:0 var(--d-pad) 18px;
+  border-top:1px dashed rgba(43,33,25,.34);
+}
+
+/* ============================================================================
+   八 · 排期 / 账目：等宽数字 + 虚线行（像票本的存根册）
+   ========================================================================== */
+.sheet3__row{border-bottom:1px dashed rgba(43,33,25,.34)}
+.sheet3__row:hover{background:var(--accent-05)}
+.sheet3__row::before{background:var(--vermilion)}
+
+/* 头像：方形裁切 + 细框（像贴上去的小照片） */
+.avatar-circle,.car-mem-av,.rev3__avatar{border:1px solid var(--ink);border-radius:2px}
+
+/* 引用块：像节目单上的一段引言 */
+.rev3__q,.rev3__t{font-family:var(--serif);font-style:italic}
+
+/* ============================================================================
+   九 · 无障碍
+   ========================================================================== */
+@media (prefers-reduced-motion:reduce){
+  .pcard3,.ccard3{transition:none!important}
+  .pcard3:hover,.ccard3:hover{transform:none!important}
+  .pcard3:hover .pcard3__cover img{transform:none!important}
+  .pcard3__fav button:hover{transform:none!important}
+}
+
+/* ============================================================================
+   收尾 · 首屏表单"并入暗场"
+   ----------------------------------------------------------------------------
+   坑：design3.css 把 --d-stage-2 接到 var(--stage-ink-2)（浅色），并拿它当
+       .dhero .sform3__in::placeholder 的颜色；我们又把输入框刷成浅底纸色，
+       结果占位符浅字压浅底 = 隐形（-ui2 截图里那个白框就是这么来的）。
+   解：首屏内的表单永远跟随暗场（深底 / 浅字 / 浅占位），不做纸色卡片。
+   ========================================================================== */
+.hero .sform3,.dhero .sform3{
+  background:rgba(255,255,255,.06);
+  border:2px solid var(--stage-ink);
+  border-radius:3px;
+  box-shadow:none;
+}
+.hero .sform3:focus-within,.dhero .sform3:focus-within{
+  border-color:var(--accent);
+  box-shadow:3px 3px 0 0 var(--accent);
+}
+.hero .sform3__in,.dhero .sform3__in,
+.hero .nav-search,.dhero .nav-search{
+  background:transparent!important;
+  border:0!important;
+  color:var(--stage-ink)!important;
+}
+.hero .sform3__in::placeholder,.dhero .sform3__in::placeholder{
+  color:var(--stage-ink)!important;opacity:.62;
+}
+.hero .field > input,.dhero .field > input,
+.hero .field > select,.dhero .field > select,
+.hero .field > textarea,.dhero .field > textarea{
+  background:rgba(255,255,255,.06)!important;
+  border-color:var(--stage-ink)!important;
+  color:var(--stage-ink)!important;
+}
+.hero .sform3__btn,.dhero .sform3__btn{
+  background:var(--accent);color:#fff;border-color:var(--accent);border-radius:3px;font-weight:700;
+}
+
+/* ============================================================================
+   三代骨架首屏（v3hero__*）
+   ----------------------------------------------------------------------------
+   坑：三代用 templates/v3/home.html 的 .v3hero__t / __k / __row / __stats，
+       和二代 .dhero__title 完全是两套类名。只写 .dhero__* 的话，
+       三代首屏会退回 design-v3.css 的默认衬线字，8 款皮肤看起来一模一样。
+   另外 design-v3.css:271 有 max-width:12ch —— ch 是数字宽度，中文实际只装得下
+       6 个字左右，"今天开一本吧。"会被迫折行。这里必须放宽。
+   ========================================================================== */
+.v3hero__t{
+  font-family:var(--serif)!important;
+  font-weight:900!important;
+  font-size:clamp(42px,8.6vw,104px)!important;
+  line-height:.96!important;
+  letter-spacing:-.02em!important;
+  text-transform:none;
+  color:var(--ink)!important;   /* 三代首屏是纸底 → 墨字，不能用舞台浅色 */
+  max-width:none!important;      /* 松开 12ch 的枷锁，5 个中文字一行装得下 */
+  overflow-wrap:break-word;
+  font-style:italic;
+}
+.v3hero__t em{
+  font-style:normal!important;   /* 强调字：本款唯一的一次颜色事件 */
+  color:var(--gold)!important;
+}
+.v3hero__k{
+  font-family:var(--mono);font-weight:700;
+  font-size:11px;letter-spacing:var(--d-track-kicker);
+  text-transform:uppercase;color:var(--ink-3);
+}
+.v3hero__stats b,.v3hero__stats strong{
+  font-family:var(--display,var(--sans));font-weight:900;color:var(--ink);
+}
