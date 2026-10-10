@@ -51,3 +51,13 @@ mp_secret.txt
 # 三代版式截图/临时输出（本地验证用，不入库）
 _shots_gen3/
 _smoke*.txt
+
+# 本地验收脚本 + 生成的数据/截图（nova 等版式验证用，不入库）
+_调试工具/
+_调式工具/
+_shots_nova/
+_nv*.log
+
+# 工作区/助手数据 + 小程序私有配置（含 AppID 等本机信息，不入库）
+.workbuddy/
+miniprogram/project.private.config.json

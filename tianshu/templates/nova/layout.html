@@ -1,0 +1,230 @@
+{# ============================================================================
+   NOVA · 独立整站骨架（2026-10）
+   ----------------------------------------------------------------------------
+   与二代 / 三代**零共享 DOM**：不套任何导轨、不共 base.html / layout_v3.html。
+   这一套是"内容优先"的编辑式布局（参考 NOWNESS 的 content-first 与
+   Unseen 的编号索引），结构上就是另一个网站：
+
+     顶部 —— 极细进度条 + 大字号文字导航（左标记 / 右栏目）+ 全屏抽屉菜单
+     正文 —— 全幅内容流：满幅首屏 → 窄栏长文 → 非对称网格 → 横向轨道
+     底部 —— 大号联络页脚 + 网址重复的巨型字标
+
+   只有两件事必须保住（否则后台/表单会坏）：
+     ① csrf.js / upload.js / tabs.js / emojisvg.js 照挂
+     ② .mobtab 手机底栏、.js-install 安装钩子、flash 提示、主题三态
+   ============================================================================ #}
+{% set _admin = my_admin if my_admin is defined else False %}
+{% set _is_mobile = is_mobile if is_mobile is defined else False %}
+{% set _ep = request.endpoint or '' %}
+{% set _ua = request.headers.get('User-Agent') or '' %}
+{% set _in_app = ('TianshuApp' in _ua) or ('TianshuDesktop' in _ua) or in_shell %}
+{% set _nova_nav = [
+     ('public.home',    '大厅',   '/'),
+     ('public.scripts', '本本墙', '/scripts'),
+     ('public.car',     '拼车局', '/car'),
+     ('public.comm',    '唠嗑区', '/comm'),
+] %}
+<!DOCTYPE html>
+<html lang="zh-CN" data-ui="nova" data-device="{{ 'mobile' if _is_mobile else 'desktop' }}" {% if theme == 'dark' %}data-theme="dark"{% endif %}>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  {# 主题三态：仍在 <head> 最前定好 data-theme，避免闪白 #}
+  <script>
+  (function(){
+    function gc(n){var m=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return m?decodeURIComponent(m.pop()):'';}
+    var t=gc('theme')||'auto', el=document.documentElement;
+    function dark(){
+      if(t==='dark') return true;
+      if(t==='light') return false;
+      return !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+    el.setAttribute('data-theme', dark()?'dark':'light');
+    if(window.matchMedia){
+      var mq=matchMedia('(prefers-color-scheme: dark)');
+      var loop=function(){ if(t==='auto') el.setAttribute('data-theme', dark()?'dark':'light'); };
+      if(mq.addEventListener) mq.addEventListener('change', loop); else if(mq.addListener) mq.addListener(loop);
+    }
+  })();
+  </script>
+  <meta name="theme-color" content="#F5F3EE">
+  <meta name="description" content="{{ settings.shopName }}：藏在学校里的剧本杀小店。挑本、拼车、到店开演，定金锁位玩完退回。">
+  <meta property="og:site_name" content="{{ settings.shopName }}">
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}{{ settings.shopName }}{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}{{ settings.shopName }}：藏在学校里的剧本杀小店。挑本、拼车、到店开演，定金锁位玩完退回。{% endblock %}">
+  <meta property="og:image" content="{% block og_image %}{{ url_for('static', filename='icon.svg', _external=True) }}{% endblock %}">
+  {# 埋点 beacon：与二代同一接口，不阻塞渲染 #}
+  <script>
+  window.addEventListener('load', function(){
+    setTimeout(function(){
+      try{
+        var path=location.pathname+location.search;
+        if(navigator.sendBeacon){
+          navigator.sendBeacon('/api/track', new Blob([JSON.stringify({path:path})], {type:'application/json'}));
+        }
+      }catch(e){}
+    }, 1500);
+  });
+  </script>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" href="{{ url_for('static', filename='icon.svg') }}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="甜薯">
+  <title>{% block title %}{{ settings.shopName }}{% endblock %}</title>
+  {# nova 只加载自己的样式表 —— 不引 style.css / design2 / design3，
+     彻底断掉二代令牌与观感的继承链（连变量都换一套 --nv-*）。 #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/nova.css', v=static_v('css/nova.css')) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/nova-pages.css', v=static_v('css/nova-pages.css')) }}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="nv-body">
+
+{# 顶部极细阅读进度条（纯装饰，不劫持滚动） #}
+<div class="nv-progress" id="nvProgress" aria-hidden="true"><i></i></div>
+{# 颗粒纹理覆盖层：一点点纸感，压掉数码渐变味 #}
+<div class="nv-grain" aria-hidden="true"></div>
+
+<header class="nv-top" id="nvTop">
+  <a class="nv-mark" href="{{ url_for('public.home') }}" aria-label="{{ settings.shopName }} 首页">
+    <span class="nv-mark__glyph" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
+        <path d="M3 12.5c-1-3 1-6.5 4-7.2 1.6-.4 3 .1 4 .9 3.4-1 6.6.6 6.9 3.6.2 2.4-1.4 4.6-3.9 5.2-1 .3-2 .1-2.8-.3-.6 1.1-2 1.8-3.4 1.4-2-.6-3.8-1.7-4.8-3.6Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+        <circle cx="7.4" cy="8.6" r="1" fill="currentColor"/>
+        <circle cx="12" cy="7.6" r="1" fill="currentColor"/>
+      </svg>
+    </span>
+    <span class="nv-mark__name">{{ settings.shopName }}</span>
+  </a>
+
+  <nav class="nv-nav" aria-label="主导航">
+    {% for _e, _lab, _href in _nova_nav %}
+    <a href="{{ url_for(_e) }}" class="{{ 'on' if (_ep == _e or (_e == 'public.scripts' and _ep.startswith('public.script'))) else '' }}">
+      <span class="nv-nav__no">0{{ loop.index }}</span>{{ _lab }}
+    </a>
+    {% endfor %}
+    <a href="{% if my_dm %}{{ url_for('dm.index') }}{% else %}{{ url_for('user.me') }}{% endif %}"
+       class="{{ 'on' if (_ep == 'user.me' or _ep.startswith('dm.')) else '' }}">
+      <span class="nv-nav__no">05</span>{% if my_dm %}工作台{% else %}我的{% endif %}
+    </a>
+  </nav>
+
+  <div class="nv-top__act">
+    <a class="nv-ic" href="{{ url_for('public.toggle_theme') }}" title="切换深浅色" aria-label="切换深浅色">
+      {% if theme == 'dark' %}日{% else %}夜{% endif %}</a>
+    {% if me %}
+    <a class="nv-ic {{ 'has' if unread }}" href="{{ url_for('user.notice_center') }}" title="消息" aria-label="消息">✉{% if unread %}<i>{{ unread }}</i>{% endif %}</a>
+    <a class="nv-who" href="{{ url_for('user.me') }}" title="{{ me.profile.nick or me.username }}">
+      {% set _av = me.profile.avatar or '' %}
+      {% if _av.startswith('/img/') %}<img src="{{ _av }}" alt="">{% else %}{{ (_av or (me.profile.nick or me.username)[0]) }}{% endif %}
+    </a>
+    {% else %}
+    <a class="nv-login" href="{{ url_for('user.login') }}">上车登记</a>
+    {% endif %}
+    <button class="nv-burger" type="button" id="nvBurger" aria-label="打开菜单" aria-expanded="false"><i></i><i></i></button>
+  </div>
+</header>
+
+{# 全屏抽屉菜单：大字号、编号、舞台感 #}
+<div class="nv-drawer" id="nvDrawer" aria-hidden="true">
+  <div class="nv-drawer__in">
+    <ul>
+      {% for _e, _lab, _href in _nova_nav %}
+      <li><a href="{{ url_for(_e) }}"><span>0{{ loop.index }}</span>{{ _lab }}</a></li>
+      {% endfor %}
+      <li><a href="{% if my_dm %}{{ url_for('dm.index') }}{% else %}{{ url_for('user.me') }}{% endif %}"><span>05</span>{% if my_dm %}工作台{% else %}我的主页{% endif %}</a></li>
+      <li><a href="/faq"><span>06</span>常见问题</a></li>
+      {% if my_admin %}<li><a href="{{ url_for('admin.dashboard') }}"><span>07</span>管理后台</a></li>{% endif %}
+    </ul>
+    <div class="nv-drawer__foot">
+      <span>© {{ year }} {{ settings.shopName }}</span>
+      <span>好本子只演一次</span>
+    </div>
+  </div>
+</div>
+
+{% with msgs = get_flashed_messages(with_categories=true) %}
+  {% if msgs %}<div class="nv-flash-wrap">{% for cat, m in msgs %}<div class="nv-flash {{ cat }}">{{ m }}</div>{% endfor %}</div>{% endif %}
+{% endwith %}
+
+<main class="nv-main">{% block body %}{% endblock %}</main>
+
+{% if not (_ep.startswith('admin.') or _ep.startswith('dm.')) %}
+<footer class="nv-foot">
+  <div class="nv-wrap nv-foot__grid">
+    <div class="nv-foot__col nv-foot__brand">
+      <p class="nv-foot__brandname">{{ settings.shopName }}</p>
+      <p>藏在学校的小店，<br>陪你把每一场演完。</p>
+    </div>
+    <div class="nv-foot__col">
+      <p class="nv-foot__head">目录</p>
+      <a href="{{ url_for('public.home') }}">大厅</a>
+      <a href="{{ url_for('public.scripts') }}">本本墙</a>
+      <a href="{{ url_for('public.car') }}">拼车局</a>
+      <a href="{{ url_for('public.comm') }}">唠嗑区</a>
+      <a href="/faq">常见问题</a>
+    </div>
+    <div class="nv-foot__col">
+      <p class="nv-foot__head">我的</p>
+      {% if me %}
+      <a href="{{ url_for('user.me') }}">打本生涯</a>
+      <a href="{{ url_for('user.me') }}?tab=orders">订单 / 定金</a>
+      <a href="{{ url_for('user.me') }}?tab=notices">消息与留言</a>
+      <a href="{{ url_for('user.me') }}?tab=coupons">券 / 心愿单</a>
+      {% else %}
+      <a href="{{ url_for('user.login') }}">上车登记</a>
+      <a href="{{ url_for('user.register') }}">注册</a>
+      <a href="{{ url_for('user.forgot') }}">忘密码了？</a>
+      {% endif %}
+      {% if my_dm %}<a href="{{ url_for('dm.index') }}">DM 工作台</a>{% endif %}
+      {% if my_admin %}<a href="{{ url_for('admin.dashboard') }}">管理后台</a>{% endif %}
+    </div>
+    <div class="nv-foot__col">
+      <p class="nv-foot__head">门店</p>
+      <span>© {{ year }} {{ settings.shopName }}</span>
+      <span>熬夜改本中 · 好本子只演一次</span>
+      {% if not _in_app %}
+      <a href="{{ url_for('static', filename='app/tianshu-desktop.exe', v=static_v('app/tianshu-desktop.exe')) }}"
+         download="甜薯剧本杀-电脑版.exe">电脑端更爽 ↓</a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="nv-wrap nv-foot__bar">
+    <a class="nv-foot__logo" href="{{ url_for('public.home') }}" aria-label="{{ settings.shopName }}">{{ settings.shopName }}</a>
+    {# 版式预览：管理员在电脑浏览器里能一键对比 nova / 二代 / 一代 #}
+    {% if _admin and not _in_app %}
+    <div class="nv-switchbar">
+      <span>版式：</span>
+      <a href="{{ request.path }}?ui=nova" class="on">NOVA（新）</a>
+      <a href="{{ request.path }}?ui=2">二代</a>
+      <a href="{{ request.path }}?ui=1">一代</a>
+    </div>
+    {% endif %}
+  </div>
+</footer>
+{% endif %}
+
+{# 手机底部标签栏：与二代/三代同一批功能钩子（.js-install 安装入口保留） #}
+<nav class="nv-mobtab" aria-label="主要导航">
+  <a href="{{ url_for('public.home') }}" class="{{ 'on' if _ep == 'public.home' }}"><span class="ico" aria-hidden="true">01</span><span>大厅</span></a>
+  <a href="{{ url_for('public.scripts') }}" class="{{ 'on' if _ep.startswith('public.script') }}"><span class="ico" aria-hidden="true">02</span><span>本本墙</span></a>
+  <a href="{{ url_for('public.car') }}" class="{{ 'on' if _ep == 'public.car' }}"><span class="ico" aria-hidden="true">03</span><span>拼车局</span></a>
+  <a href="{{ url_for('public.comm') }}" class="{{ 'on' if _ep == 'public.comm' }}"><span class="ico" aria-hidden="true">04</span><span>唠嗑区</span></a>
+  <a href="{{ url_for('user.me') }}" class="{{ 'on' if _ep == 'user.me' }}"><span class="ico" aria-hidden="true">05</span><span>我的</span></a>
+  {% if not _in_app %}<a id="install-btn" class="js-install" href="{{ url_for('static', filename='app/tianshu.apk', v=static_v('app/tianshu.apk')) }}" download="甜薯剧本杀.apk" aria-label="下载手机端 App"><span class="ico" aria-hidden="true">06</span><span>揣兜里</span></a>{% endif %}
+</nav>
+
+<script src="{{ url_for('static', filename='js/csrf.js') }}"></script>
+<script src="{{ url_for('static', filename='js/upload.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/tabs.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/emojisvg.js', v=static_v('js/emojisvg.js')) }}" defer></script>
+<script src="{{ url_for('static', filename='js/nova.js', v=static_v('js/nova.js')) }}" defer></script>
+<script>
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('/sw.js').catch(function(){});
+  }
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

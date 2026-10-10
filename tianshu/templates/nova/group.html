@@ -1,0 +1,45 @@
+{% extends 'layout.html' %}
+{% block title %}组局 · {{ settings.shopName }}{% endblock %}
+{# NOVA 组局：今日在开本一览 + 两个入口。#}
+{% block body %}
+
+<section class="nv-head">
+  <div class="nv-wrap nv-head__grid">
+    <div>
+      <p class="nv-kick nv-head__k rv">组局 · Host Your Table</p>
+      <h1 class="nv-h1 rv" data-d="60" style="font-size:clamp(38px,7vw,96px)">组个局</h1>
+      <p class="nv-head__lead rv" data-d="120">看今天谁在开本，挑个顺眼的局直接上车；或直接挑本自己开一桌，定金锁位就成。</p>
+      <div style="margin-top:var(--nv-s4);display:flex;gap:12px;flex-wrap:wrap" class="rv" data-d="160">
+        <a class="nv-btn nv-btn--solid" href="{{ url_for('public.scripts') }}">去挑本自己开一桌</a>
+        <a class="nv-btn" href="{{ url_for('public.car') }}">去拼车大厅</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="nv-wrap">
+  <div class="nv-toolbar">
+    <span class="nv-mono" style="color:var(--nv-ink-3)">今天在开的局 · {{ sessions|length }}</span>
+  </div>
+
+  {% if sessions %}
+  <div class="nv-sheet rv" style="margin-top:var(--nv-s3)">
+    {% for s in sessions[:8] %}
+    <div class="nv-sheet__row">
+      <span class="nv-sheet__t">{{ s.time }}</span>
+      <span class="nv-sheet__m"><b>{{ s.title }}</b><span>{{ s.roomId or '房间待定' }} · DM {{ s.dmName or '待安排' }}</span></span>
+      <span class="nv-sheet__cap">已报 {{ s.joined }}/{{ s.cap or '—' }} 人</span>
+      <span class="nv-sheet__act"><a class="nv-btn nv-btn--sm" href="{{ url_for('public.script_detail', sid=s.sid) }}">去看看</a></span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="nv-empty rv" style="margin-top:var(--nv-s4)">
+    <p class="nv-empty__k">No Tables</p>
+    <h3>今天还没人开桌</h3>
+    <p>挑个本、选好时间，定金锁位就开一桌。</p>
+    <a class="nv-btn nv-btn--solid" href="{{ url_for('public.scripts') }}">去挑本开一桌</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

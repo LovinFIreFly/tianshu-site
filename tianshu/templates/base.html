@@ -10,8 +10,12 @@
 {% set _skin_for_device = (settings.skin_mobile if _is_mobile else settings.skin_desktop) or settings.skin %}
 {% set cur_skin = (_q_skin if (_admin and _q_skin in _skins)
                    else (_skin_for_device if _skin_for_device in _skins else 'playbill')) %}
+{# 后台 / DM 工作台永远走二代骨架（新整套版式只换客人界面，店里干活的地方不动）。
+   nova 模式下 ui_ver == 'nova'，但这份模板仍是二代壳 —— 如实标成 '2'，
+   免得 gen3-fx.js / 皮肤选择器等按 data-ui 路由的脚本读到不存在的代次。 #}
+{% set _shell_ui = '2' if ui_ver == 'nova' else ui_ver %}
 <!DOCTYPE html>
-<html lang="zh-CN" data-ui="{{ ui_ver }}" data-skin="{{ cur_skin }}" data-device="{{ _device }}" {% if theme == 'dark' %}data-theme="dark"{% endif %}>
+<html lang="zh-CN" data-ui="{{ _shell_ui }}" data-skin="{{ cur_skin }}" data-device="{{ _device }}" {% if theme == 'dark' %}data-theme="dark"{% endif %}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">

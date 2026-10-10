@@ -1,0 +1,37 @@
+{# 剧本库网格片段（NOVA）：前端点标签用 fetch 拉这段原地替换，整页不跳。
+   钩子与二代一致：data-spa-grid / data-count / data-anim / data-ajax-fav #}
+{% if scripts %}
+<div class="nv-grid" data-spa-grid data-count="{{ scripts|length }}">
+  {% for s in scripts %}
+  <article class="nv-card" data-anim>
+    <a class="nv-card__cover" href="{{ url_for('public.script_detail', sid=s.id) }}">
+      {% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}" loading="lazy">
+      {% else %}{% include '_script_ph.html' %}{% endif %}
+      <span class="nv-card__type">{{ s.type or '剧本' }}</span>
+    </a>
+    <div class="nv-card__body">
+      <h3 class="nv-card__title"><a href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.title }}</a></h3>
+      <p class="nv-card__meta">{{ s.players or '—' }} · {{ s.dur or '—' }} · 难度 {{ s.diff or 3 }}/5</p>
+      <div class="nv-card__foot">
+        <span class="nv-card__price">¥{{ s.price|int }}<small>/人</small></span>
+        {% if rating.get(s.id|string) %}<span class="nv-tag">★ {{ rating[s.id|string] }}</span>
+        {% elif s.diff and s.diff <= 2 %}<span class="nv-tag nv-tag--accent">新手友好</span>
+        {% elif s.isNew %}<span class="nv-tag nv-tag--accent">上新</span>
+        {% else %}<span class="nv-tag">{{ s.type or '可玩' }}</span>{% endif %}
+      </div>
+    </div>
+    <form class="nv-card__fav" method="post" action="{{ url_for('public.fav', sid=s.id) }}" data-ajax-fav>
+      <button class="fav-btn {{ 'on' if s.id|string in favs }}" type="submit" aria-label="想玩">
+        {{ '❤' if s.id|string in favs else '♡' }}
+      </button>
+    </form>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="nv-empty" data-anim data-count="0">
+  <p class="nv-empty__k">No Match</p>
+  <h3>没找着想冲的本</h3>
+  <p>换个词，或者去掉几个类型再试试。类型选得越少，结果越宽。</p>
+</div>
+{% endif %}

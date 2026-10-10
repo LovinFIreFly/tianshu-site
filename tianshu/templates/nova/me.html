@@ -1,0 +1,491 @@
+{% extends 'layout.html' %}
+{% block title %}我的打本生涯 · {{ settings.shopName }}{% endblock %}
+{# 「我的打本生涯」（nova）：版式为「sticky 身份栏 + 横向分段导航 + 单页签面板」，
+   与二代/三代的竖排导轨、左栏目录完全不同的骨架。
+   面板切换逻辑沿用 data-tabs="me" + .tabpane[data-tab] + .mi[data-tab]，由 tabs.js 接管。 #}
+{% block body %}
+{% set av = me.profile.avatar or '' %}
+
+{# ── 页头：左标题，右侧一串账号凭据 ── #}
+<section class="nv-pagehd">
+  <div class="nv-wrap">
+    <p class="nv-kicker">我的 · Account</p>
+    <h1 class="nv-h1 nv-h1--mid">我的打本生涯</h1>
+    <p class="nv-lead">预约、订单、券、消息、资料，都在这一页。</p>
+  </div>
+</section>
+
+<div class="nv-wrap nv-mewrap">
+
+  {# ── 身份栏：一整条横贯，左侧身份、右侧信用三数 ── #}
+  <header class="nv-idbar">
+    <div class="nv-idbar__who">
+      <span class="nv-av">
+        {% if av.startswith('/img/') or av.startswith('http') %}<img src="{{ av }}" alt="">
+        {% else %}{{ (me.profile.nick or me.username)[0] }}{% endif %}
+      </span>
+      <span class="nv-idbar__txt">
+        <b>{{ me.profile.nick or me.username }}</b>
+        <em>{{ me.phone[:3] }}****{{ me.phone[-4:] }}{% if me.invite %} · 邀请码 {{ me.invite }}{% endif %}</em>
+      </span>
+    </div>
+    <dl class="nv-idbar__stats">
+      <div><dt>信用分</dt><dd><b class="count">{{ me.credit or 100 }}</b></dd></div>
+      <div><dt>可用券</dt><dd><b class="count">{{ coupons|selectattr('used','equalto',false)|list|length }}</b></dd></div>
+      <div><dt>已付定金</dt><dd><b>¥<span class="count">{{ spent }}</span></b></dd></div>
+    </dl>
+  </header>
+
+  {# ── 分段导航：横排编号标签，区别于二代的纵向目录 ── #}
+  <nav class="nv-seg" data-tabs="me" role="tablist">
+    <button type="button" class="mi on" data-tab="bookings"><i>01</i>预约<b>{{ bookings|length }}</b></button>
+    <button type="button" class="mi" data-tab="orders"><i>02</i>订单<b>{{ orders|length }}</b></button>
+    <button type="button" class="mi" data-tab="coupons"><i>03</i>券<span>/</span>心愿单<b>{{ coupons|length }}</b></button>
+    <button type="button" class="mi" data-tab="notices"><i>04</i>消息<b>{{ unread }}</b></button>
+    <button type="button" class="mi" data-tab="profile"><i>05</i>资料</button>
+  </nav>
+
+  {# ════════════════════════ 01 预约 ════════════════════════ #}
+  <div class="tabpane on" data-tab="bookings">
+    {% for b in bookings %}
+    {% set o = order_of.get(b.id) %}
+    <article class="nv-ticket">
+      <div class="nv-ticket__hd">
+        <div class="nv-ticket__ttl">
+          <h3>{{ b.emoji or '🎭' }} {{ b.title }}</h3>
+          <div class="nv-tags">
+            <span class="nv-tag">{{ b.mode or '拼车' }}</span>
+            {% if b.role %}<span class="nv-tag">{{ b.role }}</span>{% endif %}
+            {% if b.status == 'cancelled' %}<span class="nv-tag">已取消</span>
+            {% elif b.status == 'arrived' %}<span class="nv-tag nv-tag--acc">已到店</span>
+            {% else %}<span class="nv-tag nv-tag--acc">已锁定</span>{% endif %}
+          </div>
+        </div>
+        <span class="nv-when">{{ b.day }}<br>{{ b.time }}</span>
+      </div>
+
+      <p class="nv-ticket__meta">
+        {{ b.players }} 人 · 游玩费 ¥{{ b.amount or 0 }} · 定金 ¥{{ b.deposit or 0 }}
+        <em>（一人 ¥{{ settings.carDeposit }}，玩完退回）</em>
+        {% if o %} · {{ '定金不退（未到 / 中途跳车）' if o.forfeitAt else '定金：' + {'unpaid':'待付定金','claimed':'待小客服确认','paid':'已付定金','refunded':'已退款','closed':'已关闭'}.get(o.status, o.status) }}{% endif %}
+      </p>
+
+      {% if b.status != 'cancelled' %}
+        {% if not o or o.status == 'paid' %}
+        <div class="nv-code">
+          <span class="nv-code__lb">到店报这个码</span>
+          <span class="nv-code__v">{{ b.verifyCode or '—' }}</span>
+        </div>
+        {% elif o.status == 'claimed' %}
+        <p class="nv-note">钱到账、小客服点确认之后，核销码才会显示在这儿。</p>
+        {% else %}
+        <p class="nv-note">付完定金、小客服确认到账后才会显示核销码（在那之前只有店里管理员和 DM 看得到）。</p>
+        {% endif %}
+      {% endif %}
+
+      {% if b.status == 'booked' %}
+      <details class="nv-fold">
+        <summary>改时间（定金留着）</summary>
+        <form class="nv-inline" method="post" action="{{ url_for('user.reschedule', bid=b.id) }}">
+          <label class="nv-field nv-field--grow">
+            <span>新日期</span>
+            <select name="ts">{% for d in days %}<option value="{{ d.ts }}">{{ d.label }}</option>{% endfor %}</select>
+          </label>
+          <label class="nv-field nv-field--grow">
+            <span>时间</span>
+            <input name="time" type="time" value="{{ b.time }}" required>
+          </label>
+          <button class="nv-btn nv-btn--sm" type="submit">改期</button>
+        </form>
+      </details>
+      {% endif %}
+
+      {# 点评：玩过且游玩费已确认到账才解锁 #}
+      {% if b.status in ('arrived', 'done') and b.id not in reviewed and o and o.balStatus == 'paid' %}
+      <form id="rev-{{ b.id }}" class="nv-review" method="post" action="{{ url_for('user.review', bid=b.id) }}">
+        <div class="nv-review__rate">
+          <span class="nv-lb">打几分</span>
+          <div class="stars">
+            {% for i in range(5, 0, -1) %}
+            <input type="radio" name="rating" value="{{ i }}" id="st{{ b.id }}-{{ i }}" {{ 'checked' if i == 5 }}>
+            <label for="st{{ b.id }}-{{ i }}" title="{{ i }} 星">★</label>
+            {% endfor %}
+          </div>
+        </div>
+        <label class="nv-field nv-field--grow">
+          <span>说两句（可空）</span>
+          <input name="text" placeholder="剧情 / DM / 房间 都可以聊">
+        </label>
+        <div class="nv-review__dims">
+          <label class="nv-field nv-field--tiny"><span>剧情</span>
+            <select name="plot"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></label>
+          <label class="nv-field nv-field--tiny"><span>DM</span>
+            <select name="dm"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></label>
+          <label class="nv-field nv-field--tiny"><span>氛围</span>
+            <select name="vibe"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></label>
+          <label class="nv-field nv-field--tiny"><span>房间</span>
+            <select name="room"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></label>
+        </div>
+        <label class="nv-check"><input type="checkbox" name="anonymous" value="1"><span></span>匿名</label>
+        <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">提交评价</button>
+      </form>
+      {% endif %}
+
+      <div class="nv-acts">
+        {% if o and o.status == 'unpaid' %}
+        <a class="nv-btn nv-btn--sm nv-btn--acc" href="{{ url_for('user.pay_deposit', oid=o.id) }}">支付定金 ¥{{ o.payable if o.payable is not none else o.deposit }}</a>
+        {% elif o and o.status == 'claimed' %}
+        <a class="nv-btn nv-btn--sm" href="{{ url_for('user.pay_deposit', oid=o.id) }}">再看支付方式</a>
+        {% endif %}
+        {% if b.status in ('arrived', 'done') %}
+          {% set _bal = (o.amount or 0) if o else 0 %}
+          {% if o and o.balStatus == 'paid' %}
+            {% if b.id in reviewed %}<span class="nv-tag nv-tag--ok">已评价 ✓</span>{% endif %}
+            <span class="nv-tag">游玩费已结清</span>
+            {% if o.depositBack %}<span class="nv-tag nv-tag--ok">定金 ¥{{ o.deposit }} 已退回</span>{% endif %}
+          {% elif o and o.balStatus == 'claimed' %}
+            <span class="nv-tag">游玩费待小客服确认</span>
+            <a class="nv-btn nv-btn--sm" href="{{ url_for('user.pay_deposit', oid=o.id) }}">再看支付方式</a>
+          {% elif o and _bal > 0 %}
+            <a class="nv-btn nv-btn--sm nv-btn--acc" href="{{ url_for('user.pay_deposit', oid=o.id) }}">支付游玩费 ¥{{ _bal }}</a>
+          {% endif %}
+        {% elif b.status != 'cancelled' %}
+          {% set _hrs = ((b.ts or 0) - tsnow) / 3600000 %}
+          {% if o and o.status in ('unpaid','paid') and _hrs >= 24 %}
+          <form method="post" action="{{ url_for('user.order_act', oid=o.id, action='refund') }}">
+            <button class="nv-btn nv-btn--sm" type="submit">临时跳车 / 退定金</button></form>
+          {% elif o and o.status in ('unpaid','paid') %}
+          <span class="nv-tag" title="开场前 24 小时内取消，定金不退">距开场不足 24 小时 · 定金不退</span>
+          <form method="post" action="{{ url_for('user.cancel_booking', bid=b.id) }}"
+                onsubmit="return confirm('开场前 24 小时内取消，定金不退。确定不玩了？')">
+            <button class="nv-btn nv-btn--sm" type="submit">不玩了</button></form>
+          {% else %}
+          <form method="post" action="{{ url_for('user.cancel_booking', bid=b.id) }}">
+            <button class="nv-btn nv-btn--sm" type="submit">不玩了</button></form>
+          {% endif %}
+        {% endif %}
+        <a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('public.script_detail', sid=b.sid) }}">再看一眼本本</a>
+      </div>
+
+      {% set rv = (my_reviews or {}).get(b.id|string) %}
+      {% if rv %}
+      <div class="nv-myrev">
+        <div class="nv-myrev__hd">
+          <span class="nv-myrev__stars">{% for i in range(5) %}<i class="{{ 'on' if i < (rv.rating or 0) }}">★</i>{% endfor %}</span>
+          <em>我的评价 · {{ day_label(rv.createdAt) }}{% if rv.anonymous %} · 匿名{% endif %}</em>
+        </div>
+        {% if rv.text %}<p class="nv-myrev__t">{{ rv.text }}</p>{% endif %}
+        {% if rv.dims %}
+        <div class="nv-tags">
+          {% for k, v in rv.dims.items() %}<span class="nv-tag">{{ k }} {{ v }}/5</span>{% endfor %}
+        </div>
+        {% endif %}
+        {% if rv.reply %}<p class="nv-myrev__r">店长回复：{{ rv.reply }}</p>{% endif %}
+      </div>
+      {% endif %}
+    </article>
+    {% else %}
+    <div class="nv-empty">
+      <p class="nv-empty__k">No Bookings</p>
+      <h3>还没上车记录</h3>
+      <p>去本本墙挑本、选好时间，定金锁位后就在这。</p>
+      <a class="nv-btn nv-btn--solid" href="{{ url_for('public.scripts') }}">去挑个本子</a>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ════════════════════════ 02 订单 ════════════════════════ #}
+  <div class="tabpane" data-tab="orders">
+    {% if orders %}
+    <div class="nv-tablewrap">
+      <table class="nv-table">
+        <thead>
+          <tr><th>剧本</th><th>场次</th><th>人数</th><th>总价</th><th>定金</th><th>状态</th><th>下单时间</th></tr>
+        </thead>
+        <tbody>
+          {% for o in orders %}
+          <tr>
+            <td><b>{{ o.title }}</b></td>
+            <td>{{ o.day }} {{ o.time }}</td>
+            <td>{{ o.players }}</td>
+            <td>¥{{ o.amount or 0 }}</td>
+            <td class="nv-mono">¥{{ o.deposit or 0 }}</td>
+            <td>
+              {% set bo = booking_of.get(o.bid) %}
+              {% if o.status == 'paid' and bo and bo.status in ('arrived', 'done') %}
+                {% if o.balStatus == 'paid' %}
+                  <span class="nv-tag nv-tag--ok">游玩费已结清</span>
+                  {% if o.depositBack %}<span class="nv-tag nv-tag--ok">定金 ¥{{ o.deposit }} 已退回</span>{% endif %}
+                  {% if bo.id in reviewed %}<span class="nv-tag nv-tag--ok">已评价 ✓</span>
+                  {% else %}<a class="nv-tag nv-tag--acc" href="{{ url_for('user.me') }}?tab=bookings">去评价 ›</a>{% endif %}
+                {% elif o.balStatus == 'claimed' %}
+                  <span class="nv-tag">游玩费待小客服确认</span>
+                  <a class="nv-tag" href="{{ url_for('user.pay_deposit', oid=o.id) }}">再看支付方式 ›</a>
+                {% elif (o.amount or 0) > 0 %}
+                  <a class="nv-tag nv-tag--acc" href="{{ url_for('user.pay_deposit', oid=o.id) }}">支付游玩费 ¥{{ o.amount }} ›</a>
+                {% else %}
+                  <span class="nv-tag nv-tag--acc">已付定金</span>
+                {% endif %}
+              {% elif o.status == 'paid' %}
+                <span class="nv-tag nv-tag--acc">已付定金</span>
+                {% if bo and bo.verifyCode %}<span class="nv-mono">码 {{ bo.verifyCode }}</span>{% endif %}
+              {% elif o.status == 'claimed' %}
+                <a class="nv-tag" href="{{ url_for('user.pay_deposit', oid=o.id) }}" title="点开再看支付方式">待小客服确认 ›</a>
+              {% elif o.status == 'unpaid' %}
+                <a class="nv-tag nv-tag--acc" href="{{ url_for('user.pay_deposit', oid=o.id) }}" title="点开去付定金">待付定金 · 去支付 ›</a>
+              {% elif o.status == 'refunded' %}<span class="nv-tag">已退款</span>
+              {% else %}<span class="nv-tag">已关闭</span>{% endif %}
+            </td>
+            <td class="nv-cap">{{ day_label(o.createdAt) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="nv-empty">
+      <p class="nv-empty__k">No Orders</p>
+      <h3>还没有订单</h3>
+      <p>下单、付定金、退款都会在这里留一条记录。</p>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ════════════════════════ 03 券 / 心愿单 ════════════════════════ #}
+  <div class="tabpane" data-tab="coupons">
+    <div class="nv-two">
+      <section>
+        <h2 class="nv-h3">券 <em>{{ coupons|length }}</em></h2>
+        {% for c in coupons %}
+        <div class="nv-coupon">
+          <div>
+            <b class="nv-coupon__amt">¥{{ c.amount }}</b>
+            <span class="nv-coupon__lb">抵扣券</span>
+            <em>{{ c.from or '门店活动' }}{% if c.minAmount %} · 满 {{ c.minAmount }} 可用{% endif %}</em>
+          </div>
+          <span class="nv-tag {{ 'nv-tag--ok' if not c.used }}">{{ '已用' if c.used else '可用' }}</span>
+        </div>
+        {% else %}
+        <div class="nv-empty nv-empty--sm">
+          <p class="nv-empty__k">No Coupons</p>
+          <h3>还没有券</h3>
+          <p>店里偶尔会发，邀请朋友注册也送 —— 你俩各得一张。</p>
+        </div>
+        {% endfor %}
+      </section>
+
+      <section>
+        <h2 class="nv-h3">心愿单</h2>
+        {% set _fg = favGroups or {} %}
+        {% set _groups = [('want', '想玩'), ('done', '已玩'), ('avoid', '避雷')] %}
+        {% for gkey, glabel in _groups %}
+        <h3 class="nv-h4">{{ glabel }}</h3>
+        <div class="nv-list">
+          {% for s in (_fg.get(gkey) or []) %}
+          <div class="nv-list__row">
+            <a class="nv-lnk" href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.emoji or '' }} {{ s.title }}</a>
+            <span class="nv-list__r">
+              <em>¥{{ (s.get('price') or 0)|int }}</em>
+              <form method="post" action="{{ url_for('public.fav', sid=s.id) }}" class="nv-inline-form">
+                <input type="hidden" name="group" value="{{ gkey }}">
+                <button class="nv-btn nv-btn--sm nv-btn--ghost" type="submit">取消</button>
+              </form>
+            </span>
+          </div>
+          {% else %}
+          <p class="nv-muted">{{ glabel }}还空着。在剧本页点心，选这一组放进去。</p>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </section>
+    </div>
+  </div>
+
+  {# ════════════════════════ 04 消息 ════════════════════════ #}
+  <div class="tabpane" data-tab="notices">
+    <div class="nv-two">
+      <section>
+        <div class="nv-hdrow">
+          <h2 class="nv-h3">消息 <em>{{ unread }} 未读</em></h2>
+          {% if unread %}
+          <form method="post" action="{{ url_for('user.notice_read') }}">
+            <button class="nv-btn nv-btn--sm nv-btn--ghost" type="submit">全部标为已读</button></form>
+          {% endif %}
+        </div>
+        {% for n in notices %}
+        <div class="nv-msg">
+          <div class="nv-msg__hd"><b>{{ n.title }}</b><em>{{ day_label(n.at) }}</em></div>
+          <p>{{ n.text }}</p>
+        </div>
+        {% else %}
+        <div class="nv-empty nv-empty--sm">
+          <p class="nv-empty__k">No Notices</p>
+          <h3>还没有消息</h3>
+          <p>预约、退款、门店回复、信用分变动都会发到这儿。</p>
+        </div>
+        {% endfor %}
+      </section>
+
+      <section>
+        <h2 class="nv-h3">给店家留言</h2>
+        <form class="nv-form" method="post" action="{{ url_for('user.msg_create') }}">
+          <label class="nv-field">
+            <span>想说点什么</span>
+            <textarea name="text" rows="3" placeholder="想改时间 / 问价 / 对 DM 有要求…"></textarea>
+          </label>
+          <div class="nv-inline">
+            <label class="nv-field nv-field--mid">
+              <span>类型</span>
+              <select name="cat"><option>建议</option><option>改时间</option><option>问价</option><option>找人</option><option>投诉</option></select>
+            </label>
+            <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">发出去</button>
+          </div>
+        </form>
+
+        {% for m in msgs %}
+        <div class="nv-msg">
+          <div class="nv-msg__hd">
+            <em>{{ m.cat }} · {{ day_label(m.createdAt) }}</em>
+            <span class="nv-tag {{ 'nv-tag--ok' if m.reply }}">{{ '店家已回' if m.reply else '等回复' }}</span>
+          </div>
+          <p>{{ m.text }}</p>
+          {% if m.reply %}<p class="nv-msg__r">店家：{{ m.reply }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </section>
+    </div>
+  </div>
+
+  {# ════════════════════════ 05 资料 ════════════════════════ #}
+  <div class="tabpane" data-tab="profile">
+    <div class="nv-two">
+      <section>
+        <h2 class="nv-h3">我的资料</h2>
+        <form class="nv-form" method="post" action="{{ url_for('user.profile_save') }}" enctype="multipart/form-data">
+          <label class="nv-field">
+            <span>昵称</span>
+            <input name="nick" maxlength="16" value="{{ me.profile.nick or '' }}">
+          </label>
+          <div class="nv-form__grid">
+            <label class="nv-field">
+              <span>性别（拼车时别人能看到）</span>
+              <select name="gender">
+                <option value="">保密</option>
+                <option value="男" {{ 'selected' if me.profile.gender == '男' }}>男</option>
+                <option value="女" {{ 'selected' if me.profile.gender == '女' }}>女</option>
+              </select>
+            </label>
+            <label class="nv-field nv-field--tiny">
+              <span>年龄</span>
+              <input name="age" type="number" min="0" max="99" value="{{ me.profile.age or '' }}">
+            </label>
+          </div>
+          <label class="nv-field">
+            <span>头像（png/jpg/webp，≤700KB）</span>
+            <input type="file" name="avatar" accept="image/png,image/jpeg,image/webp">
+          </label>
+          <div class="nv-field">
+            <span>打本风格标签（最多 3 个）</span>
+            {% set _mytags = myTags or me.profile.tags or [] %}
+            <div class="nv-chips">
+              {% for t in (PLAYER_TAGS or ['菠萝头', '水龙头', '推理机', '戏精', '全类型']) %}
+              <label class="nv-chip">
+                <input type="checkbox" name="tags" value="{{ t }}" {{ 'checked' if t in _mytags }}><span>{{ t }}</span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+          <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">保存资料</button>
+        </form>
+
+        <h2 class="nv-h3">账号信息</h2>
+        <dl class="nv-kv">
+          <div><dt>登录手机号</dt><dd>{{ me.phone[:3] }}****{{ me.phone[-4:] }}</dd></div>
+          <div><dt>注册时间</dt><dd>{{ day_label(me.first) }}</dd></div>
+          <div><dt>我的邀请码</dt><dd class="nv-mono">{{ me.invite or '—' }}</dd></div>
+        </dl>
+        <p class="nv-muted">朋友填你的邀请码注册，你俩各得一张 ¥{{ settings.inviteCoupon }} 抵扣券（付游玩费时直接抵掉，90 天内有效）。</p>
+
+        <h2 class="nv-h3">联系店里</h2>
+        {% if serviceWechat %}
+        <div class="nv-kv nv-kv--act">
+          <div><dt>小客服微信</dt><dd class="nv-mono" id="svc-wechat">{{ serviceWechat }}</dd></div>
+          <button class="nv-btn nv-btn--sm nv-btn--ghost" type="button" id="svc-copy-btn" data-copy="{{ serviceWechat }}">复制</button>
+        </div>
+        {% else %}
+        <p class="nv-muted">客服微信还没配，先留言给店里。</p>
+        {% endif %}
+        <div class="nv-acts">
+          <a class="nv-btn nv-btn--sm" href="{{ faqUrl or '/faq' }}">常见问题</a>
+          <a class="nv-btn nv-btn--sm" href="{{ url_for('user.me') }}?tab=notices">给店家留言</a>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="nv-h3">账号安全</h2>
+        <form class="nv-form" method="post" action="{{ url_for('user.account_pwd') }}">
+          <label class="nv-field"><span>现在的密码</span>
+            <input name="old" type="password" autocomplete="current-password"></label>
+          <label class="nv-field"><span>新密码（至少 6 位）</span>
+            <input name="password" type="password" autocomplete="new-password"></label>
+          <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">改密码</button>
+        </form>
+
+        <details class="nv-fold nv-fold--danger">
+          <summary>危险区：注销账号</summary>
+          <form method="post" action="{{ url_for('user.account_delete') }}"
+                onsubmit="return confirm('注销后账号和名下数据都会删除，确定？')">
+            <p class="nv-muted">注销 = 账号和名下的预约、券、积分全部删除，<b>不可恢复</b>。
+              输入完整手机号确认（当前账号 {{ me.phone[:3] }}****{{ me.phone[-4:] }}）：</p>
+            <div class="nv-inline">
+              <input name="confirm" placeholder="输入完整手机号" class="nv-input">
+              <button class="nv-btn nv-btn--sm" type="submit">确认注销</button>
+            </div>
+          </form>
+        </details>
+      </section>
+    </div>
+  </div>
+
+</div>
+
+{# 打分星星：JS 接管（触屏 :hover 粘滞会让纯 CSS 方案卡住） #}
+<script>
+(function(){
+  Array.prototype.forEach.call(document.querySelectorAll('.stars'), function(s){
+    var ins = s.querySelectorAll('input'), lbs = s.querySelectorAll('label');
+    function sync(){
+      var at = -1, k;
+      for (k = 0; k < ins.length; k++) if (ins[k].checked) { at = k; break; }
+      for (k = 0; k < lbs.length; k++) lbs[k].classList.toggle('on', at >= 0 && k >= at);
+    }
+    s.addEventListener('click', function(e){
+      var l = e.target && e.target.closest ? e.target.closest('label') : null;
+      if (!l) return;
+      var inp = document.getElementById(l.getAttribute('for'));
+      if (inp) { inp.checked = true; sync(); }
+    });
+    s.addEventListener('change', sync);
+    sync();
+  });
+})();
+</script>
+<script>
+(function(){
+  var btn=document.getElementById('svc-copy-btn');
+  if(!btn) return;
+  function toast(msg){
+    var t=document.getElementById('share-toast');
+    if(!t){ t=document.createElement('div'); t.id='share-toast'; t.className='share-toast'; document.body.appendChild(t); }
+    t.textContent=msg; t.classList.add('show');
+    clearTimeout(t._tm); t._tm=setTimeout(function(){ t.classList.remove('show'); }, 1800);
+  }
+  btn.addEventListener('click', function(){
+    var v=btn.getAttribute('data-copy')||'';
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(v).then(function(){toast('客服微信已复制');}, function(){toast('复制失败，手动选中');});
+    } else { toast('请手动选中复制'); }
+  });
+})();
+</script>
+{% endblock %}

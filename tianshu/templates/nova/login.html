@@ -1,0 +1,42 @@
+{% extends 'auth_base.html' %}
+{% block title %}上车登记 · {{ settings.shopName }}{% endblock %}
+{% block side_kick %}{{ settings.shopName }} · 入场{% endblock %}
+{% block side_title %}挑一本，<br>今晚就开演。{% endblock %}
+{% block card %}
+<div class="nv-authcard">
+  <h2 class="nv-authcard__title">上车登记</h2>
+  <p class="nv-authcard__sub">使用手机号或用户名登录</p>
+
+  <form method="post">
+    <div class="nv-field">
+      <label>手机号 / 用户名</label>
+      <input name="account" placeholder="手机号 或 用户名" aria-label="账号" autocomplete="username"
+             enterkeyhint="next" required autofocus value="{{ request.form.get('account','') }}">
+    </div>
+    <div class="nv-field">
+      <label>密码</label>
+      <input name="password" type="password" placeholder="密码" aria-label="密码"
+             autocomplete="current-password" enterkeyhint="go" required>
+    </div>
+
+    {# 「记住我」：勾着 = 这台设备 {{ settings.loginDays or 180 }} 天不用再登（默认勾，最省事）；
+       hidden 那个 0 是为了"取消勾选"也能被后端读出来。 #}
+    <input type="hidden" name="remember" value="0">
+    <label style="display:inline-flex;align-items:center;gap:8px;font-size:13.5px;color:var(--nv-ink-2);cursor:pointer">
+      <input type="checkbox" name="remember" value="1" checked>
+      <span>记住我（这台设备半年内不用再登）</span>
+    </label>
+
+    <p style="text-align:right;margin:12px 0 0;font-size:13px">
+      <a href="{{ url_for('user.forgot') }}" style="color:var(--nv-accent)">忘密码了？</a></p>
+
+    <button class="nv-btn nv-btn--accent nv-btn--block" type="submit" style="margin-top:var(--nv-s3)">上车登记</button>
+  </form>
+
+  <div class="nv-authcard__links">
+    <span style="font-size:13.5px;color:var(--nv-ink-3)">还没账号？</span>
+    <a href="{{ url_for('user.register') }}">去注册 →</a>
+    <a href="{{ url_for('public.home', browse=1) }}">先瞅瞅有啥本</a>
+  </div>
+</div>
+{% endblock %}

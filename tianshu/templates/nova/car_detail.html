@@ -1,0 +1,166 @@
+{% extends 'layout.html' %}
+{% block title %}{{ car.title }} · 车队{% endblock %}
+{# 车队详情（nova）：整幅深色抬头（与站内其他页的纸白形成切换节奏）+ 两栏。
+   左：成员名单与上下车；右：唠嗑流与车主设置。所有 action / 字段名 / 分享脚本保留。 #}
+{% block body %}
+
+<section class="nv-stagehd">
+  <div class="nv-wrap">
+    <div class="nv-stagehd__grid">
+      <div>
+        <p class="nv-kicker nv-kicker--stage">车队 · CAR</p>
+        <h1 class="nv-h1 nv-h1--stage">{{ car.emoji }} {{ car.title }}</h1>
+        <div class="nv-tags nv-tags--stage">
+          <span class="nv-tag">{{ car.day }} {{ car.time }}</span>
+          <span class="nv-tag">车主 {{ car.owner }}</span>
+          <span class="nv-tag">{{ car.joined }}/{{ car.cap }} 人</span>
+          {% if car.closed %}<span class="nv-tag">已截止</span>
+          {% elif car.filled %}<span class="nv-tag nv-tag--ok">补满发车</span>
+          {% elif car.need %}<span class="nv-tag nv-tag--acc">还差 {{ car.need }} 人</span>
+          {% else %}<span class="nv-tag nv-tag--ok">已成局</span>{% endif %}
+          {% for t in car.tags %}<span class="nv-tag">{{ t }}</span>{% endfor %}
+          {% if car.reserved %}<span class="nv-tag">熟人位 {{ car.reserved }}</span>{% endif %}
+        </div>
+        {% if not car.closed and not car.filled and car.deadlineIn and car.deadlineIn > 0 %}
+        <p class="nv-deadline">剩 <b>{{ (car.deadlineIn / 3600000)|round(method='ceil')|int }}</b> 小时{% if car.need %} · 还差 {{ car.need }} 人{% endif %}</p>
+        {% endif %}
+      </div>
+      <div class="nv-stagehd__side">
+        <a class="nv-btn nv-btn--sm nv-btn--stage" href="{{ url_for('public.car') }}">← 回拼车局</a>
+        <button class="nv-btn nv-btn--sm nv-btn--stage-ghost" type="button" id="car-share-btn"
+                data-share-text="甜薯剧本杀｜《{{ car.title }}》{{ car.day }} {{ car.time }} 还差 {{ car.need or 0 }} 人，一起？">分享这车</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="nv-wrap nv-split">
+
+  {# —— 左：成员 + 上下车 —— #}
+  <div>
+    <h2 class="nv-sechead"><i>01</i>车上的成员<span class="nv-sechead__n">{{ car.members|length }}</span></h2>
+    <div class="nv-roster">
+      {% for m in car.members %}
+      <div class="nv-roster__row">
+        <span class="nv-av nv-av--sm" aria-hidden="true">
+          {% if m.avatar and m.avatar.startswith('/img/') %}<img src="{{ m.avatar }}" alt="">
+          {% else %}{{ (m.nick or '玩')[0] }}{% endif %}
+        </span>
+        <span class="nv-roster__who">
+          <b>{% if m.nick in user_names %}<a class="nv-lnk" href="{{ url_for('public.user_profile', username=(m.nick or '')) }}">{{ m.nick }}</a>{% else %}{{ m.nick }}{% endif %}{% if m.owner %} <i class="nv-tag nv-tag--acc">车主</i>{% endif %}</b>
+          <em>{{ m.players }} 人{% if m.gender %} · {{ m.gender }}{% endif %}{% if m.ageBucket %} · {{ m.ageBucket }}{% endif %}</em>
+          {% if m.tags %}<span class="nv-tags">{% for t in m.tags %}<span class="nv-tag">{{ t }}</span>{% endfor %}</span>{% endif %}
+        </span>
+        <span class="nv-roster__st">{{ '组队中' if m.owner else '已上车' }}</span>
+      </div>
+      {% else %}
+      <p class="nv-muted">车上还只有车主一个人，喊朋友来凑一车吧。</p>
+      {% endfor %}
+    </div>
+
+    <div class="nv-actbig">
+      {% if not car.mine and not car.full %}
+      <form method="post" action="{{ url_for('user.car_act', cid=car.id, action='join') }}">
+        <button class="nv-btn nv-btn--acc nv-btn--wide" type="submit">我要上车</button></form>
+      {% elif car.mine %}
+      <form method="post" action="{{ url_for('user.car_act', cid=car.id, action='quit') }}">
+        <button class="nv-btn nv-btn--wide" type="submit">临时跳车</button></form>
+      {% else %}
+      <form method="post" action="{{ url_for('user.car_act', cid=car.id, action='wait') }}">
+        <button class="nv-btn nv-btn--wide" type="submit">蹲个候补</button></form>
+      {% endif %}
+    </div>
+
+    <p class="nv-note">车上只显示昵称、性别、年龄段和人数 —— 电话这类信息车上看不到，保护隐私。</p>
+  </div>
+
+  {# —— 右：唠嗑 + 车主设置 —— #}
+  <div>
+    <h2 class="nv-sechead"><i>02</i>车队唠嗑</h2>
+    <div class="nv-chat">
+      {% for m in msgs %}
+      <div class="nv-chat__row">
+        <div class="nv-chat__hd"><b>{{ m.by }}{% if m.mine %}（我）{% endif %}</b><em>{{ day_label(m.at) }}</em></div>
+        <p>{{ m.text }}</p>
+      </div>
+      {% else %}
+      <p class="nv-muted">还没人说话，打个招呼吧。</p>
+      {% endfor %}
+    </div>
+
+    {% if me %}
+    <form class="nv-inline nv-inline--top" method="post" action="{{ url_for('user.car_act', cid=car.id, action='msg') }}">
+      <input class="nv-input nv-input--grow" name="text" placeholder="唠两句…" aria-label="车队消息">
+      <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">发</button>
+    </form>
+    {% else %}
+    <a class="nv-btn nv-btn--wide nv-inline--top" href="{{ url_for('user.login', next=request.path) }}">上车登记后说话</a>
+    {% endif %}
+
+    {% if is_owner %}
+    <div class="nv-ownerbox">
+      <b class="nv-ownerbox__t">我是车主 · 车队设置</b>
+      <form method="post" action="{{ url_for('user.car_act', cid=car.id, action='tags') }}">
+        <div class="nv-field">
+          <span>车队标签（一眼看懂这车啥风格）</span>
+          <div class="nv-chips">
+            {% for t in tags %}
+            <label class="nv-chip"><input type="checkbox" name="tags" value="{{ t }}" {{ 'checked' if t in car.tags }}><span>{{ t }}</span></label>
+            {% endfor %}
+          </div>
+        </div>
+        <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">存标签</button>
+      </form>
+
+      <form class="nv-inline nv-inline--sep" method="post" action="{{ url_for('user.car_act', cid=car.id, action='reserved') }}">
+        <label class="nv-field nv-field--tiny"><span>熟人留位</span>
+          <input name="n" type="number" min="0" max="3" value="{{ car.reserved or 0 }}"></label>
+        <button class="nv-btn nv-btn--sm" type="submit">保存</button>
+      </form>
+    </div>
+    {% endif %}
+
+    {% if (is_owner or my_admin) and not car.closed and not car.filled %}
+    <div class="nv-ownerbox">
+      <b class="nv-ownerbox__t">车队操作</b>
+      <div class="nv-acts nv-inline--top">
+        {% if not car.closed %}
+        <form method="post" action="{{ url_for('user.car_act', cid=car.id, action='close') }}"
+              onsubmit="return confirm('提前截止这车？车上的人会收到通知。')">
+          <button class="nv-btn nv-btn--sm nv-btn--ghost" type="submit">提前截止</button></form>
+        {% endif %}
+        {% if not car.filled %}
+        <form method="post" action="{{ url_for('user.car_act', cid=car.id, action='fill') }}"
+              onsubmit="return confirm('标记这车已补满、准备发车？')">
+          <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">标记补满</button></form>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var btn=document.getElementById('car-share-btn');
+  if(!btn) return;
+  function toast(msg){
+    var t=document.getElementById('share-toast');
+    if(!t){ t=document.createElement('div'); t.id='share-toast'; t.className='share-toast'; document.body.appendChild(t); }
+    t.textContent=msg; t.classList.add('show');
+    clearTimeout(t._tm); t._tm=setTimeout(function(){ t.classList.remove('show'); }, 1800);
+  }
+  btn.addEventListener('click', function(){
+    var data={ title: document.title, text: btn.getAttribute('data-share-text') || document.title, url: location.href };
+    if(navigator.share){ navigator.share(data).catch(function(){}); }
+    else {
+      var text=data.text+' '+data.url;
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(function(){toast('链接已复制，去喊朋友上车');}, function(){toast('复制失败，手动复制地址栏');});
+      } else { toast('请手动复制地址栏链接'); }
+    }
+  });
+})();
+</script>
+{% endblock %}

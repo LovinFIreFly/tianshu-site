@@ -1,0 +1,83 @@
+{% extends 'layout.html' %}
+{% block title %}{{ who.username }} 的主页{% endblock %}
+{# 玩家公开主页（nova）：巨型身份首屏（左头像巨字、右关注动作）+ 评价流水。
+   DM 额外列出可开本。 #}
+{% block body %}
+
+<section class="nv-profhd">
+  <div class="nv-wrap">
+    <p class="nv-kicker">玩家主页 · Profile</p>
+    <div class="nv-profhd__grid">
+      <div class="nv-profhd__id">
+        <span class="nv-av nv-av--lg">
+          {% set av = who.profile.avatar or '' %}
+          {% if av.startswith('/img/') %}<img src="{{ av }}" alt="">
+          {% else %}{{ av or (who.profile.nick or who.username)[0] }}{% endif %}
+        </span>
+        <h1 class="nv-h1 nv-h1--prof">{{ who.profile.nick or who.username }}</h1>
+      </div>
+      <div class="nv-profhd__meta">
+        <div class="nv-tags">
+          {% if role_name == 'dm' %}<span class="nv-tag nv-tag--acc">🗡 DM</span>
+          {% elif role_name == 'user' %}<span class="nv-tag">🎭 玩家</span>
+          {% else %}<span class="nv-tag nv-tag--solid">门店</span>{% endif %}
+          <span class="nv-tag">{{ followers }} 人关注</span>
+          {% if who.profile.gender %}<span class="nv-tag">{{ who.profile.gender }}</span>{% endif %}
+          {% if who.profile.age %}<span class="nv-tag">{{ who.profile.age }} 岁</span>{% endif %}
+        </div>
+        {% if me and me.username != who.username %}
+        <form method="post" action="{{ url_for('public.user_follow', username=who.username) }}">
+          <button class="nv-btn nv-btn--sm {{ 'nv-btn--acc' if not following else '' }}" type="submit">{{ '已关注 ✓' if following else '+ 关注' }}</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="nv-wrap">
+
+  {% if role_name == 'dm' %}
+  <section class="nv-profable">
+    <h2 class="nv-sechead"><i>01</i>可开本</h2>
+    <div class="nv-tags">
+      {% for s in scripts %}{% if who.username in (s.dms or []) %}<span class="nv-tag">{{ s.title }}</span>{% endif %}
+      {% else %}<span class="nv-muted">还没登记可开的本</span>{% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="nv-profrevs">
+    <h2 class="nv-sechead"><i>{{ '02' if role_name == 'dm' else '01' }}</i>TA 写过的评价<span class="nv-sechead__n">{{ reviews|length }}</span></h2>
+
+    {% for r in reviews %}
+    <article class="nv-rev rv" style="--i:{{ loop.index0 }}">
+      <div class="nv-rev__hd">
+        <span class="nv-rev__author">
+          <span class="nv-av nv-av--sm">
+            {% if r.avatar and r.avatar.startswith('/img/') %}<img src="{{ r.avatar }}" alt="">
+            {% else %}{{ r.avatar or (r.nick or r.username or '玩家')[0] }}{% endif %}
+          </span>
+          <b>{{ r.nick or r.username or '玩家' }}</b>
+        </span>
+        <span class="nv-rev__meta">
+          <a class="nv-lnk" href="{{ url_for('public.script_detail', sid=r.sid) }}">{{ r.title or '剧本评价' }}</a>
+          <em>{{ r.rating }}/5 · {{ day_label(r.createdAt) }}</em>
+        </span>
+      </div>
+      <p class="nv-rev__t">{{ r.text or '（只打了分）' }}</p>
+      {% if r.followUps %}{% for f in r.followUps %}
+      <p class="nv-rev__q">追评：{{ f.text }}</p>
+      {% endfor %}{% endif %}
+    </article>
+    {% else %}
+    <div class="nv-empty">
+      <p class="nv-empty__k">Empty</p>
+      <h3>还没写过评价</h3>
+      <p>玩完一场、核销到店之后就能给这本打分写两句。</p>
+    </div>
+    {% endfor %}
+  </section>
+
+</div>
+{% endblock %}

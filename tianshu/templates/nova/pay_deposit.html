@@ -1,0 +1,91 @@
+{% extends 'layout.html' %}
+{% block title %}支付{{ o.dueKind }} · {{ settings.shopName }}{% endblock %}
+{# NOVA 支付页：金额当主角，客服微信 + 群二维码，流程写在下面。 #}
+{% block body %}
+
+<section style="padding:clamp(40px,8vh,110px) 0">
+  <div class="nv-wrap" style="max-width:600px">
+
+    <p class="nv-kick">支付{{ o.dueKind }} · Payment</p>
+    <h1 class="nv-h1" id="due-display" style="font-size:clamp(52px,12vw,132px);color:var(--nv-accent);margin:var(--nv-s3) 0 0"
+        data-amount="{{ o.due }}">¥{{ o.due }}</h1>
+    <p class="nv-lead" style="margin-top:var(--nv-s4)">《{{ o.title }}》{{ o.day }} {{ o.time }} · {{ o.players }} 人</p>
+
+    {% if o.dueKind == '定金' %}
+    <p class="nv-mute" style="margin-top:10px">定金 ¥{{ settings.carDeposit }} / 人 —— 押个位子。<b>玩完由小客服退回</b>；没到场或中途跳车的不退。</p>
+    {% else %}
+    <p class="nv-mute" style="margin-top:10px">玩完这一场再付游玩费（总价 ¥{{ o.amount }}）。定金会另外退回。</p>
+    {% endif %}
+
+    {% if o.dueKind == '游玩费' %}
+      {% if o.couponId %}
+      <p class="nv-mute" style="margin-top:var(--nv-s4)">已使用优惠券抵扣，应付 ¥{{ o.due }}</p>
+      {% elif coupons %}
+      <div class="nv-book__row" style="margin-top:var(--nv-s4)">
+        <label>用优惠券抵扣游玩费</label>
+        <select name="couponId" id="coupon-select" form="pay-form">
+          <option value="0" data-amount="0">不使用优惠券</option>
+          {% for c in coupons %}
+          <option value="{{ c.id }}" data-amount="{{ c.amount }}">减 ¥{{ c.amount }}{% if c.minAmount %}（满 {{ c.minAmount }} 可用）{% endif %} · {{ c.from or '优惠券' }}</option>
+          {% endfor %}
+        </select>
+        <p class="nv-code-tip" id="coupon-hint" style="display:none"></p>
+      </div>
+      {% endif %}
+    {% endif %}
+
+    <div class="nv-card" style="margin-top:var(--nv-s5);padding:var(--nv-s3);border-left:3px solid var(--nv-ink)">
+      <span style="font-size:24px;line-height:1">💬</span>
+      <b class="nv-mono" style="font-size:15px;letter-spacing:.04em;margin-left:10px">{{ settings.serviceWechat }}</b>
+    </div>
+
+    {% if settings.groupQr %}
+    <div class="nv-card" style="margin-top:var(--nv-s4);padding:var(--nv-s3);display:flex;gap:16px;align-items:flex-start">
+      <img src="{{ settings.groupQr }}" alt="{{ settings.shopName }} 顾客群二维码" style="width:148px;flex:none;border:var(--nv-hair)">
+      <div>
+        <b>{{ settings.shopName }} · 顾客群</b>
+        <p class="nv-mute" style="margin-top:6px">扫码进群：约本、拼车、问进度都在群里。加不上小客服微信的时候，群里也能找到人。</p>
+      </div>
+    </div>
+    {% endif %}
+
+    <form id="pay-form" style="margin-top:var(--nv-s5)" method="post" action="{{ url_for('user.order_act', oid=o.id, action=o.dueAct) }}">
+      <button class="nv-btn nv-btn--accent nv-btn--block" type="submit" style="min-height:52px">我已完成支付</button>
+    </form>
+
+    <p class="nv-mute" style="margin-top:14px">
+      {% if o.dueKind == '定金' %}点完这一单会显示「待小客服确认」。小客服确认到账后，核销码才会出现在「我的预约」里。
+      {% else %}点完这一单会显示「待小客服确认」。小客服确认到账后，就能去「我的预约」给剧本和 DM 打分了。{% endif %}
+    </p>
+
+    <div style="display:flex;gap:8px;margin-top:var(--nv-s5);flex-wrap:wrap">
+      <a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('user.me') }}">← 回我的</a>
+      {% if o.dueKind == '定金' %}
+      <form method="post" action="{{ url_for('user.order_act', oid=o.id, action='refund') }}">
+        <button class="nv-btn nv-btn--sm" type="submit">取消这一单</button></form>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{% if o.dueKind == '游玩费' and coupons %}
+<script>
+(function(){
+  var display = document.getElementById('due-display');
+  var select = document.getElementById('coupon-select');
+  var hint = document.getElementById('coupon-hint');
+  var base = parseInt(display.dataset.amount || '0', 10) || 0;
+  function update(){
+    var opt = select.options[select.selectedIndex];
+    var amt = parseInt(opt.dataset.amount || '0', 10) || 0;
+    var due = Math.max(0, base - amt);
+    display.textContent = '¥' + due;
+    if (amt > 0){ hint.textContent = '原价 ¥' + base + '，用券抵扣 ¥' + amt + '，应付 ¥' + due; hint.style.display = 'block'; }
+    else { hint.style.display = 'none'; }
+  }
+  select.addEventListener('change', update);
+  update();
+})();
+</script>
+{% endif %}
+{% endblock %}

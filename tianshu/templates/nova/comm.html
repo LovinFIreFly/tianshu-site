@@ -1,0 +1,157 @@
+{% extends 'layout.html' %}
+{% block title %}唠嗑区 · {{ settings.shopName }}{% endblock %}
+{# NOVA 社区：左帖流（细线分隔）/ 右发帖框 + 规矩。
+   服务端 GET 筛（ftype/ftopic）+ 页内 chips 筛（data-filter="type"）全部保留。 #}
+{% block body %}
+{% set TYPE_NAME = {'chat': '动态', 'diary': '日记', 'guide': '攻略', 'ask': '组队'} %}
+
+<section class="nv-head">
+  <div class="nv-wrap nv-head__grid">
+    <div>
+      <p class="nv-kick nv-head__k rv">唠嗑区 · Community</p>
+      <h1 class="nv-h1 rv" data-d="60" style="font-size:clamp(38px,7vw,96px)">唠嗑区</h1>
+      <p class="nv-head__lead rv" data-d="120">动态、日记、攻略、组队。剧透记得标，被举报就删。</p>
+    </div>
+  </div>
+</section>
+
+<div class="nv-wrap">
+  <form class="rv" method="get" action="{{ url_for('public.comm') }}"
+        style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:var(--nv-s4) 0;border-bottom:var(--nv-hair)">
+    <select name="type" aria-label="帖子类型" style="padding:10px 12px;border:1px solid var(--nv-line-2);background:var(--nv-paper);color:var(--nv-ink);border-radius:0;outline:none">
+      <option value="">全部帖子</option>
+      <option value="chat" {{ 'selected' if (ftype or '') == 'chat' }}>普通动态</option>
+      <option value="recruit" {{ 'selected' if (ftype or '') == 'recruit' }}>缺位招募</option>
+    </select>
+    <select name="topic" aria-label="话题" style="padding:10px 12px;border:1px solid var(--nv-line-2);background:var(--nv-paper);color:var(--nv-ink);border-radius:0;outline:none">
+      <option value="">全部话题</option>
+      {% for tp in ['情感','硬核','恐怖','欢乐'] %}<option value="{{ tp }}" {{ 'selected' if (ftopic or '') == tp }}>{{ tp }}</option>{% endfor %}
+    </select>
+    <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">筛选</button>
+    {% if ftype or ftopic %}<a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('public.comm') }}">重置</a>{% endif %}
+  </form>
+
+  <div class="nv-toolbar">
+    <div class="nv-chips" data-filter="type">
+      <span class="nv-chips__lab">类型</span>
+      <button type="button" class="nv-chip {{ 'on' if not t }}" data-show="all">全部</button>
+      {% for k, n in TYPE_NAME.items() %}
+      <button type="button" class="nv-chip {{ 'on' if t == k }}" data-show="{{ k }}">{{ n }}（{{ counts.get(k, 0) }}）</button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="nv-split" style="padding:var(--nv-s4) 0 clamp(48px,7vw,90px)">
+
+    {# —— 左：帖子流 —— #}
+    <div>
+      {% for p in posts %}
+      <article class="nv-post rv" data-type="{{ p.type or 'chat' }}" style="margin-bottom:var(--nv-s3)">
+        <div class="nv-post__who">
+          <span class="av" style="display:grid;place-items:center;width:32px;height:32px;background:var(--nv-paper-3);overflow:hidden">
+            {% if p.avatar and p.avatar.startswith('/img/') %}<img src="{{ p.avatar }}" alt="" style="width:100%;height:100%;object-fit:cover">
+            {% else %}{{ p.avatar or (p.nick or p.username or '玩家')[0] }}{% endif %}</span>
+          <b>{{ p.nick or p.username or '玩家' }}</b>
+          <span>{{ day_label(p.at) }}</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          {% if p.title %}<span class="nv-tag" style="color:var(--nv-ink);border-color:var(--nv-ink)">{{ p.title }}</span>{% endif %}
+          <span class="nv-tag">{{ TYPE_NAME.get(p.type, '动态') }}</span>
+          {% if p.postType == 'recruit' %}
+          <span class="nv-tag nv-tag--accent">缺 {{ p.recruitNeed or '?' }} 人{% if p.topic %} · {{ p.topic }}{% endif %}{% if p.recruitRole %} · {{ p.recruitRole }}{% endif %}</span>
+          {% endif %}
+          {% if p.topic and p.postType != 'recruit' %}<span class="nv-tag">{{ p.topic }}</span>{% endif %}
+        </div>
+        <p class="nv-post__x">{{ p.text }}</p>
+        <div class="nv-post__foot">
+          <form method="post" action="{{ url_for('public.post_like', pid=p.id) }}">
+            <button class="nv-likes" type="submit">{{ '❤' if p.liked else '♡' }} {{ p.likeCount }}</button>
+          </form>
+          <form method="post" action="{{ url_for('public.post_report', pid=p.id) }}"
+                onsubmit="var r=prompt('举报原因（如：广告 / 剧透不标注 / 人身攻击）'); if(!r){return false;} this.reason.value=r; return true;">
+            <input type="hidden" name="reason" value="">
+            <button class="nv-btn nv-btn--sm nv-btn--ghost" type="submit">举报</button>
+          </form>
+          {% if my_admin %}
+          <form method="post" action="{{ url_for('admin.post_del', pid=p.id) }}" onsubmit="return confirm('删掉这条帖子？')">
+            <button class="nv-btn nv-btn--sm" type="submit">删除</button>
+          </form>
+          {% endif %}
+        </div>
+      </article>
+      {% else %}
+      <div class="nv-empty">
+        <p class="nv-empty__k">No Posts</p>
+        <h3>还没人唠嗑</h3>
+        <p>你可以第一个来：想拼的本、上局战报、新手攻略都行。</p>
+      </div>
+      {% endfor %}
+      <div class="no-hit" hidden style="padding:var(--nv-s5) 0">
+        <p class="nv-mute">这个类型下还没有帖子。点「全部」看看其它的。</p>
+      </div>
+    </div>
+
+    {# —— 右：发帖 + 规矩 —— #}
+    <div>
+      <div class="nv-split__side">
+        {% if me %}
+        <p class="nv-sidehead">来吐槽 / 安利</p>
+        <form method="post" action="{{ url_for('public.post_create') }}">
+          <div class="nv-book__row">
+            <label>发到哪一类</label>
+            <select name="type">
+              <option value="chat">动态（随便唠）</option>
+              <option value="diary">日记（这局战报）</option>
+              <option value="guide">攻略（带说明）</option>
+              <option value="ask">组队（找人拼车）</option>
+            </select>
+          </div>
+          <div class="nv-book__row">
+            <label>话题</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              {% for tp in ['情感','硬核','恐怖','欢乐'] %}
+              <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;border:1px solid var(--nv-line-2);padding:5px 9px">
+                <input type="radio" name="topic" value="{{ tp }}"><span>{{ tp }}</span></label>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="nv-book__row"><label>标题（可填可不填）</label><input name="title" placeholder="一句话"></div>
+          <div class="nv-book__row"><label>内容</label><textarea name="text" rows="5" placeholder="说点什么... 求拼车写清本子和时间"
+            style="width:100%;padding:10px 12px;border:1px solid var(--nv-line-2);background:var(--nv-paper);color:var(--nv-ink);border-radius:0;outline:none;resize:vertical"></textarea></div>
+          <div class="nv-book__row">
+            <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;letter-spacing:0;font-family:var(--nv-sans);font-size:13.5px;color:var(--nv-ink-2)">
+              <input type="checkbox" id="recruit-toggle"> 我要缺位招募（车上缺人）</label>
+          </div>
+          <div id="recruit-fields" style="display:none;border-top:1px dashed var(--nv-line-2);padding-top:12px">
+            <div class="nv-book__row"><label>缺几人（数字）</label><input name="recruitNeed" type="number" min="1" max="10" placeholder="例：2"></div>
+            <div class="nv-book__row"><label>缺什么位</label><input name="recruitRole" placeholder="例：推理位"></div>
+            <div class="nv-book__row"><label>哪本本（剧本名）</label><input name="recruitScript" placeholder="例：云使"></div>
+          </div>
+          <button class="nv-btn nv-btn--solid nv-btn--block" type="submit">发送</button>
+        </form>
+        <script>
+        (function(){
+          var t=document.getElementById('recruit-toggle'), b=document.getElementById('recruit-fields');
+          if(!t||!b) return;
+          t.addEventListener('change', function(){ b.style.display = t.checked ? '' : 'none'; });
+        })();
+        </script>
+        {% else %}
+        <div class="nv-card" style="padding:var(--nv-s3);background:var(--nv-paper-2)">
+          <p style="margin:0"><b>上车登记后才能发帖、点赞</b></p>
+          <p class="nv-mute" style="margin:8px 0 12px">发帖、点赞、举报都要先登录。</p>
+          <a class="nv-btn nv-btn--sm nv-btn--solid" href="{{ url_for('user.login', next='/comm') }}">去登记</a>
+        </div>
+        {% endif %}
+
+        <div class="nv-card" style="padding:var(--nv-s3);background:var(--nv-paper-2);margin-top:var(--nv-s4)">
+          <p class="nv-kick">唠嗑规矩</p>
+          <p style="margin:8px 0 0;font-size:13.5px;line-height:1.7;color:var(--nv-ink-2)">
+            ① 剧透要标；② 别骂人、别广告；③ 拼车写清本子和时间。举报核实就删。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

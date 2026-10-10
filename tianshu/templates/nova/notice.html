@@ -1,0 +1,46 @@
+{% extends 'layout.html' %}
+{% block title %}消息中心 · {{ settings.shopName }}{% endblock %}
+{# NOVA 消息中心：编号流水式列表，未读用左侧强调色短线标出。 #}
+{% block body %}
+
+<section class="nv-head">
+  <div class="nv-wrap nv-head__grid">
+    <div>
+      <p class="nv-kick nv-head__k rv">消息中心 · Notices</p>
+      <h1 class="nv-h1 rv" data-d="60" style="font-size:clamp(34px,6vw,80px)">消息中心</h1>
+      <p class="nv-mono rv" data-d="120" style="color:var(--nv-ink-3);margin-top:var(--nv-s3)">共 {{ rows|length }} 条{% if unread %} · <span style="color:var(--nv-accent)">未读 {{ unread }}</span>{% endif %}</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      {% if unread %}
+      <form method="post" action="{{ url_for('user.notice_read') }}">
+        <button class="nv-btn nv-btn--sm nv-btn--ghost" type="submit">全部标为已读</button>
+      </form>
+      {% endif %}
+      <a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('user.me') }}">← 回我的</a>
+    </div>
+  </div>
+</section>
+
+<div class="nv-wrap">
+  <div style="padding:var(--nv-s4) 0 clamp(48px,7vw,90px)">
+    {% for n in rows %}
+    {% set is_new = (me.phone|string) not in (n.readBy or []) %}
+    <article class="nv-post rv" style="margin-bottom:var(--nv-s2){% if is_new %};border-left:3px solid var(--nv-accent){% endif %}">
+      <div class="nv-post__who" style="align-items:baseline">
+        <b style="font-family:var(--nv-serif);font-size:17px">{{ n.title }}</b>
+        {% if n.kind %}<span class="nv-tag">{{ n.kind }}</span>{% endif %}
+        {% if is_new %}<span class="nv-tag nv-tag--accent">未读</span>{% endif %}
+        <span>{{ day_label(n.at) }}</span>
+      </div>
+      <p class="nv-post__x">{{ n.text }}</p>
+    </article>
+    {% else %}
+    <div class="nv-empty">
+      <p class="nv-empty__k">Empty</p>
+      <h3>还没有消息</h3>
+      <p>预约成功、退款、门店回复、信用分变动都会发到这里。</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

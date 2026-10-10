@@ -1,0 +1,16 @@
+{% extends 'layout.html' %}
+{% block title %}{{ code }} · {{ settings.shopName }}{% endblock %}
+{# NOVA 错误页：巨型编号 + 一句人话 + 出口。 #}
+{% block body %}
+<section style="min-height:78vh;display:grid;place-items:center;text-align:center;padding:var(--nv-s6) clamp(20px,4vw,56px)">
+  <div>
+    <p class="nv-mono" style="color:var(--nv-accent);letter-spacing:.2em">{{ code }}</p>
+    <h1 class="nv-h1" style="font-size:clamp(72px,20vw,240px);line-height:.9;margin:var(--nv-s3) 0">{{ code }}</h1>
+    <p class="nv-lead" style="max-width:44ch;margin:0 auto var(--nv-s5)">{{ msg }}</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <a class="nv-btn nv-btn--solid" href="{{ url_for('public.home') }}">回大厅</a>
+      <a class="nv-btn" href="{{ url_for('public.scripts') }}">去挑本</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

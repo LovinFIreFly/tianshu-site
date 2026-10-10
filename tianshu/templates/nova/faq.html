@@ -1,0 +1,79 @@
+{% extends 'layout.html' %}
+{% block title %}常见问题 · {{ settings.shopName }}{% endblock %}
+{% block og_title %}常见问题 · {{ settings.shopName }}{% endblock %}
+{% block body %}
+
+<section class="nv-head">
+  <div class="nv-wrap nv-head__grid">
+    <div>
+      <p class="nv-kick nv-head__k rv">FAQ · 开演前你可能想问</p>
+      <h1 class="nv-h1 rv" data-d="60" style="font-size:clamp(34px,6vw,80px)">常见问题</h1>
+      <p class="nv-head__lead rv" data-d="120">定金、迟到、拼车、核销码、改期 —— 开到店之前最常问的六件事，都在这儿。</p>
+      <div style="margin-top:var(--nv-s4)" class="rv" data-d="160"><a class="nv-btn nv-btn--sm" href="{{ url_for('public.home') }}">← 回首页</a></div>
+    </div>
+  </div>
+</section>
+
+<div class="nv-wrap">
+  {% set faqs = [
+    ('定金能退吗？', '开场前 24 小时以上取消全额退（临期按规则扣信用分）；到店开演后，定金原路退回或直接抵尾款。'),
+    ('能迟到吗？', '建议提前 10 分钟到。迟到会拖累整车开本，实在赶不及，请提前在「我的预约」里联系店家。'),
+    ('几个人才能开？', '每个本都有最低人数，拼车页会显示「还差 X 人」。人不够时，车主可以提前截止，也可以补满发车。'),
+    ('怎么拼车？', '大厅看车 → 点「上车」交押位定金 → 小客服确认后出核销码；你也可以自己开一辆车，等人来凑。'),
+    ('核销码哪来？', '定金确认到账后，「我的预约」里会显示 6 位核销码，到店报码即可开本。'),
+    ('改期规则？', '开场前可在「我的预约」申请改期，一次一改；改期后原定金跟着单子走，不用重交。')
+  ] %}
+  <ol style="list-style:none;margin:0;padding:var(--nv-s4) 0 0;border-top:1px solid var(--nv-ink);margin-top:var(--nv-s5)">
+    {% for q, a in faqs %}
+    <li class="rv" style="display:grid;grid-template-columns:70px 1fr;gap:var(--nv-s4);padding:var(--nv-s4) 0;border-bottom:var(--nv-hair);align-items:baseline">
+      <span class="nv-mono" style="color:var(--nv-accent);font-size:13px">{{ '%02d'|format(loop.index) }}</span>
+      <div>
+        <h3 class="nv-h3" style="margin:0 0 8px;font-size:clamp(18px,2.2vw,24px)">{{ q }}</h3>
+        <p style="margin:0;color:var(--nv-ink-2);line-height:1.75;max-width:64ch">{{ a }}</p>
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+
+  <div class="nv-split" style="margin-top:var(--nv-s6)">
+    <div>
+      <p class="nv-sidehead">还没解决？找小客服</p>
+      <div class="nv-card" style="padding:var(--nv-s3);display:flex;align-items:center;justify-content:space-between;gap:12px">
+        {% if serviceWechat %}
+        <b class="nv-mono" id="svc-wechat" style="font-size:15px">{{ serviceWechat }}</b>
+        <button class="nv-btn nv-btn--sm nv-btn--ghost" type="button" id="svc-copy-btn" data-copy="{{ serviceWechat }}">复制</button>
+        {% else %}<span class="nv-mute">店里还没配微信，先留言。</span>{% endif %}
+      </div>
+    </div>
+    <div>
+      <p class="nv-sidehead">直接留言</p>
+      <p class="nv-lead">改时间、问价、对 DM 有要求，都能在「我的」里给店家留个言。</p>
+      <div style="display:flex;gap:10px;margin-top:var(--nv-s3);flex-wrap:wrap">
+        {% if me %}<a class="nv-btn nv-btn--accent" href="{{ url_for('user.me') }}?tab=notices">去留言</a>
+        {% else %}<a class="nv-btn nv-btn--accent" href="{{ url_for('user.login', next='/faq') }}">上车登记后留言</a>{% endif %}
+        <a class="nv-btn" href="{{ url_for('public.car') }}">去拼车大厅</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var btn=document.getElementById('svc-copy-btn');
+  if(!btn) return;
+  function toast(msg){
+    var t=document.getElementById('nv-share-toast');
+    if(!t){ t=document.createElement('div'); t.id='nv-share-toast';
+      t.style.cssText='position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:var(--nv-ink);color:var(--nv-paper);padding:12px 20px;z-index:2000;font-size:14px;';
+      document.body.appendChild(t); }
+    t.textContent=msg; clearTimeout(t._tm); t._tm=setTimeout(function(){ t.remove(); }, 1800);
+  }
+  btn.addEventListener('click', function(){
+    var v=btn.getAttribute('data-copy')||'';
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(v).then(function(){toast('客服微信已复制');}, function(){toast('复制失败，手动选中');});
+    } else { toast('请手动选中复制'); }
+  });
+})();
+</script>
+{% endblock %}

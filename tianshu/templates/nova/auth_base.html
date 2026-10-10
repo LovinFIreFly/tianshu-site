@@ -1,0 +1,148 @@
+{# ============================================================================
+   NOVA · 登录/注册/找回 的独立布局（2026-10）
+   ----------------------------------------------------------------------------
+   结构：左半幅 —— 巨字宣言 + 编号清单；右半幅 —— 表单卡（窄栏，居中偏上）。
+   手机上退化成单栏，宣言缩成一行小字。与整站零共享 DOM，只共 nova.css。
+   ============================================================================ #}
+{% set _ua = request.headers.get('User-Agent') or '' %}
+{% set _in_app = ('TianshuApp' in _ua) or ('TianshuDesktop' in _ua) or in_shell %}
+<!DOCTYPE html>
+<html lang="zh-CN" data-ui="nova" data-device="{{ 'mobile' if is_mobile else 'desktop' }}" {% if theme == 'dark' %}data-theme="dark"{% endif %}>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <script>
+  (function(){
+    function gc(n){var m=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return m?decodeURIComponent(m.pop()):'';}
+    var t=gc('theme')||'auto', el=document.documentElement;
+    function dark(){
+      if(t==='dark') return true;
+      if(t==='light') return false;
+      return !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+    el.setAttribute('data-theme', dark()?'dark':'light');
+  })();
+  </script>
+  <meta name="theme-color" content="#F5F3EE">
+  <title>{% block title %}{{ settings.shopName }}{% endblock %}</title>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" href="{{ url_for('static', filename='icon.svg') }}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/nova.css', v=static_v('css/nova.css')) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/nova-pages.css', v=static_v('css/nova-pages.css')) }}">
+</head>
+<body class="nv-body nv-body--auth">
+<div class="nv-grain" aria-hidden="true"></div>
+
+<div class="nv-auth">
+  <aside class="nv-auth__side">
+    <a class="nv-auth__back" href="{{ url_for('public.home', browse=1) }}">‹ 回大厅</a>
+    <div class="nv-auth__pitch">
+      <p class="nv-kick">{% block side_kick %}{{ settings.shopName }} · 上车登记{% endblock %}</p>
+      <h1 class="nv-auth__big">{% block side_title %}挑一本，<br>今晚就开演。{% endblock %}</h1>
+      <p class="nv-auth__lead">{% block side_lead %}定金锁位，玩完退回。<br>拼车满员即开，退位有人喊你。{% endblock %}</p>
+    </div>
+    <ul class="nv-auth__list">
+      <li><span>01</span>本本墙按类型 / 人数 / 难度挑</li>
+      <li><span>02</span>拼车大厅找搭子，满员就开</li>
+      <li><span>03</span>到店开演，演完写两句</li>
+    </ul>
+    <a class="nv-auth__theme" href="{{ url_for('public.toggle_theme') }}" title="切换深浅色" aria-label="切换深浅色">
+      {% if theme == 'dark' %}切到日间{% else %}切到夜间{% endif %}
+    </a>
+  </aside>
+
+  <section class="nv-auth__main">
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% if msgs %}<div class="nv-flash-wrap">{% for cat, m in msgs %}<div class="nv-flash {{ cat }}">{{ m }}</div>{% endfor %}</div>{% endif %}
+    {% endwith %}
+    {% block card %}{% endblock %}
+    <p class="nv-auth__foot">© {{ year }} {{ settings.shopName }}・熬夜改本中
+      {% if not _in_app %}
+      <a href="{{ url_for('static', filename='app/tianshu-desktop.exe', v=static_v('app/tianshu-desktop.exe')) }}" download="甜薯剧本杀-电脑版.exe">电脑端</a>
+      <a class="js-install" href="{{ url_for('static', filename='app/tianshu.apk', v=static_v('app/tianshu.apk')) }}" download="甜薯剧本杀.apk">手机端</a>
+      {% endif %}</p>
+  </section>
+</div>
+
+<div class="nv-mask" id="install-mask">
+  <div class="nv-modal">
+    <div class="nv-modal__head">
+      <h2>装到桌面</h2>
+      <button class="nv-modal__close" type="button" id="install-close" aria-label="关闭">✕</button>
+    </div>
+    <p id="install-steps">…</p>
+    <p class="nv-modal__hint">装完桌面就有甜薯图标，打开是全屏独立窗口，和 App 一样。</p>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/csrf.js') }}"></script>
+{# 获取验证码：与二代同一套 data-code-btn 协议，仅取回 JSON 提示、不刷页面 #}
+<script>
+(function () {
+  var btn = document.querySelector('[data-code-btn]');
+  if (!btn || !window.fetch) return;
+  var form = btn.form, tip = document.querySelector('[data-code-tip]');
+  var timer = null, left = 0;
+  function say(text, bad) {
+    if (!tip) return;
+    tip.textContent = text;
+    tip.className = 'nv-code-tip' + (bad ? ' bad' : '');
+    tip.hidden = false;
+  }
+  function tick() {
+    left -= 1;
+    if (left <= 0) { clearInterval(timer); timer = null; btn.disabled = false; btn.textContent = '获取验证码'; return; }
+    btn.textContent = left + ' 秒后可重发';
+  }
+  btn.addEventListener('click', function () {
+    var box = form.querySelector('[name=email]');
+    var email = ((box || {}).value || '').trim();
+    if (!email) { if (box) box.focus(); say('先填邮箱 —— 验证码是发到邮箱的', true); return; }
+    btn.disabled = true;
+    say('正在发送…', false);
+    var fd = new FormData();
+    fd.append('email', email);
+    fd.append('purpose', btn.getAttribute('data-purpose') || 'reset');
+    fetch(btn.getAttribute('data-url'), {method: 'POST', body: fd,
+          headers: {'X-Requested-With': 'fetch', 'Accept': 'application/json'}})
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        say(d.msg || (d.ok ? '已发送' : '没发出去'), !d.ok);
+        if (d.ok) { left = 60; btn.textContent = left + ' 秒后可重发'; timer = setInterval(tick, 1000); }
+        else { btn.disabled = false; }
+      })
+      .catch(function () { say('网络不通，稍后再点一次', true); btn.disabled = false; });
+  });
+})();
+</script>
+<script>
+  (function () {
+    var btn = document.getElementById('install-btn');
+    var mask = document.getElementById('install-mask');
+    var steps = document.getElementById('install-steps');
+    if (!btn || !mask || !steps) return;
+    var evt = null;
+    window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); evt = e; });
+    function guide() {
+      var ua = navigator.userAgent;
+      if (/iPhone|iPad|iPod/i.test(ua)) {
+        steps.textContent = 'iPhone：用 Safari 打开本站 → 底部中间「分享」→ 选「添加到主屏幕」。';
+      } else if (/Chrome|SamsungBrowser/i.test(ua)) {
+        steps.textContent = '安卓 Chrome：右上角菜单 →「安装应用 / 添加到主屏幕」。';
+      } else {
+        steps.textContent = '通用做法：浏览器「菜单」→「添加到桌面 / 添加到主屏幕」。';
+      }
+      mask.classList.add('show');
+    }
+    btn.addEventListener('click', function () {
+      if (evt) { evt.prompt(); evt = null; return; }
+      guide();
+    });
+    document.getElementById('install-close').addEventListener('click', function () { mask.classList.remove('show'); });
+    mask.addEventListener('click', function (e) { if (e.target === mask) mask.classList.remove('show'); });
+  })();
+</script>
+<script src="{{ url_for('static', filename='js/nova.js', v=static_v('js/nova.js')) }}" defer></script>
+</body>
+</html>

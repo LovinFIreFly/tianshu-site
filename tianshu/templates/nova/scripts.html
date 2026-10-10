@@ -1,0 +1,65 @@
+{% extends 'layout.html' %}
+{% block title %}本本墙 · {{ settings.shopName }}{% endblock %}
+{# NOVA 剧本库：编辑式页头 + 工具条 + 类型筛片 + 网格。
+   筛选走前端 fetch 换 #scriptGrid（window.TS_LIB 与 library.js 钩子原样保留）。 #}
+{% block body %}
+
+<section class="nv-head">
+  <div class="nv-wrap nv-head__grid">
+    <div>
+      <p class="nv-kick nv-head__k rv">本本墙 · Wall</p>
+      <h1 class="nv-h1 rv" data-d="60" style="font-size:clamp(38px,7vw,96px)">本本清单</h1>
+      <p class="nv-head__lead rv" data-d="120">类型可以多选：选几个就摆几类。挑好了分享给搭子，网址里带条件。</p>
+    </div>
+    <span class="nv-head__seal rv" data-d="160">选本</span>
+  </div>
+</section>
+
+<div class="nv-wrap">
+
+  <div class="nv-toolbar">
+    <form class="nv-search spa-search" method="get" action="{{ url_for('public.scripts') }}" role="search" style="flex:1;max-width:440px">
+      <input name="q" value="{{ q }}" placeholder="找找你想冲的本" aria-label="搜剧本">
+      <button type="submit">搜 ↗</button>
+    </form>
+    <div class="nv-toolbar__end">
+      <span class="nv-mono" id="hitCount" style="color:var(--nv-ink-3)">{{ scripts|length }} 本</span>
+      <button type="button" class="nv-btn nv-btn--sm nv-btn--ghost" id="clearAll">清空条件</button>
+    </div>
+  </div>
+
+  <div class="nv-toolbar" style="border-bottom:0">
+    <div class="nv-chips spa-filters" id="filters">
+      <span class="nv-chips__lab">类型</span>
+      {% for t in tags %}
+      <button type="button" class="nv-chip {{ 'on' if (t in sel_tags) or tag == t }}"
+              data-tag="{{ t }}" aria-pressed="{{ 'true' if (t in sel_tags) or tag == t else 'false' }}">{{ t }}</button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="nv-toolbar" style="border-top:0;padding-top:0">
+    <div class="nv-chips">
+      <span class="nv-chips__lab">其他</span>
+      <button type="button" class="nv-chip {{ 'on' if diff == '1' }}" data-flag="diff"
+              aria-pressed="{{ 'true' if diff == '1' else 'false' }}">新手友好</button>
+      <button type="button" class="nv-chip {{ 'on' if only_fav }}" data-flag="fav"
+              aria-pressed="{{ 'true' if only_fav else 'false' }}">想玩清单</button>
+    </div>
+  </div>
+
+  <div id="scriptGrid" style="padding:clamp(20px,3vw,34px) 0 clamp(48px,7vw,90px)">
+    {% include '_scripts_grid.html' %}
+  </div>
+</div>
+
+<script>
+  window.TS_LIB = {
+    q: {{ q|tojson }},
+    tags: {{ sel_tags|tojson }},
+    diff: {{ ('1' if diff == '1' else '')|tojson }},
+    fav: {{ ('1' if only_fav else '')|tojson }}
+  };
+</script>
+<script src="{{ url_for('static', filename='js/library.js', v=static_v('js/library.js')) }}" defer></script>
+{% endblock %}
