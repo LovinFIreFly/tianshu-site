@@ -27,12 +27,30 @@
     input.files = dt.files;
   }
 
+  /* 2026-10 修复：form.submit() 属于"程序化提交"，**不会触发 submit 事件**，
+     而 csrf.js 正是在 submit 事件里补 _csrf 令牌的 —— 于是所有走压缩分支的上传
+     （>600KB 的封面/角色图）一律被 CSRF 拦成 403，而小图直接原生提交反而正常，
+     表现成"时好时坏"。这里优先用 requestSubmit()（会触发事件），
+     老浏览器退化为手动补一个隐藏 _csrf 再提交。 */
+  function submitForm(form) {
+    if (!form) return;
+    if (typeof form.requestSubmit === 'function') { form.requestSubmit(); return; }
+    var m = document.cookie.match(/(?:^|;\s*)csrf=([^;]+)/);
+    var token = m ? decodeURIComponent(m[1]) : '';
+    if (token && !form.querySelector('input[name="_csrf"]')) {
+      var h = document.createElement('input');
+      h.type = 'hidden'; h.name = '_csrf'; h.value = token;
+      form.appendChild(h);
+    }
+    form.submit();
+  }
+
   /* 给"选完文件就自动提交"的输入框用（角色头像那格） */
   window.tianshuSmartSubmit = function (input) {
     var f = input.files && input.files[0];
     if (!f) return;
-    if (f.size <= MAX || !/^image\//.test(f.type)) { input.form.submit(); return; }
-    compress(f, function (blob) { swap(input, blob); input.form.submit(); });
+    if (f.size <= MAX || !/^image\//.test(f.type)) { submitForm(input.form); return; }
+    compress(f, function (blob) { swap(input, blob); submitForm(input.form); });
   };
 
   /* 给"点按钮才提交"的表单用（换封面那格）：onsubmit 里 return 它的返回值 */
@@ -40,7 +58,7 @@
     var f = input.files && input.files[0];
     if (!f) return false;                                   // 没选文件就别提交了
     if (f.size <= MAX || !/^image\//.test(f.type)) return true;
-    compress(f, function (blob) { swap(input, blob); input.form.submit(); });
+    compress(f, function (blob) { swap(input, blob); submitForm(input.form); });
     return false;                                           // 先别提交，压完自动交
   };
 
@@ -67,7 +85,7 @@
     function next() {
       if (i >= toCompress.length) {
         if (status) status.textContent = '压缩完成，正在上传…';
-        form.submit();
+        submitForm(form);
         return;
       }
       var item = toCompress[i++];

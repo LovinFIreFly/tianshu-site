@@ -34,8 +34,19 @@
     if (!window.fetch) { pane.removeAttribute('data-loading'); return; }
     var url = location.pathname + '?partial=1&tab=' + encodeURIComponent(key);
     fetch(url, { headers: { 'X-Requested-With': 'fetch' } })
-      .then(function (r) { return r.text(); })
+      .then(function (r) {
+        // 2026-10 修复：以前不校验响应。会话过期时后端 302 到登录页，
+        // fetch 会自动跟随，拿回来的是**整页登录 HTML** —— 直接塞进面板就变成
+        // "面板里套了一个完整网站"，用户以为系统坏了，还不会重试。
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.text();
+      })
       .then(function (html) {
+        if (/name="password"/.test(html) && /登录/.test(html)) {
+          pane.innerHTML = '<p class="empty">登录状态过期了 —— 刷新一下页面重新登录就好</p>';
+          pane.removeAttribute('data-loading');
+          return;
+        }
         pane.innerHTML = html;
         pane.removeAttribute('data-loading');
         // innerHTML 塞进来的 <script> 浏览器是**不会执行**的（HTML 规范）——

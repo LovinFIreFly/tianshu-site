@@ -664,25 +664,39 @@ def dm_settlement(month=None):
     month = month or time.strftime('%Y-%m')
     ses_map = {s.get('id'): s for s in db.rows('sessions')}
     settles = db.rows('settles')
+    # 2026-10 修复：以前把所有"未取消"的预约都算成营业额 —— 没付钱的、还没开演的
+    # 甚至未来的预约都进了结算表，等于 DM 能分到店里**还没收到**的钱。
+    # 只有游玩费已确认到账（balStatus=paid）的订单才参与结算。
+    paid_bids = {str(o.get('bid')) for o in db.rows('pays') if o.get('balStatus') == 'paid'}
     acc = {}
+
+    def _bucket(p):
+        return acc.setdefault(p, {'dmPhone': p, 'sessions': set(), 'players': 0,
+                                  'income': 0, 'share': 0.0, 'fee': 0, 'count_tmp': 0})
+
     for b in db.rows('bookings'):
         if b.get('status') == 'cancelled':
             continue
         if time.strftime('%Y-%m', time.localtime((b.get('ts') or 0) / 1000)) != month:
             continue
-        ses = ses_map.get(b.get('sessionId'))
-        dm_phone = str((ses or {}).get('dm') or b.get('dmPhone') or '')
-        if not dm_phone:
+        if str(b.get('id')) not in paid_bids:    # 钱没收到就不结算
             continue
-        a = acc.setdefault(dm_phone, {'dmPhone': dm_phone, 'sessions': set(), 'players': 0,
-                                      'income': 0, 'share': 0.0, 'fee': 0, 'count_tmp': 0})
-        if (b.get('sessionId') or ('b%s' % b.get('id'))) not in a['sessions']:
-            a['count_tmp'] += 1                  # 一个场次算一场（同一场多人不重复计场）
-        a['sessions'].add(b.get('sessionId') or ('b%s' % b.get('id')))
-        a['players'] += int(b.get('players') or 0)
-        a['income'] += int(b.get('amount') or 0)
-        if b.get('dmPhone'):                     # 客人点名要的 DM，加价归他
-            a['fee'] += int(st['dmFee']) * int(b.get('players') or 0)
+        ses = ses_map.get(b.get('sessionId'))
+        dm_phone = str((ses or {}).get('dm') or '')       # 实际带场的排班 DM
+        named = str(b.get('dmPhone') or '')               # 客人点名要的 DM
+        if not dm_phone and not named:
+            continue
+        if dm_phone:                             # 基础营业额归实际带场的人
+            a = _bucket(dm_phone)
+            if (b.get('sessionId') or ('b%s' % b.get('id'))) not in a['sessions']:
+                a['count_tmp'] += 1              # 一个场次算一场（同一场多人不重复计场）
+            a['sessions'].add(b.get('sessionId') or ('b%s' % b.get('id')))
+            a['players'] += int(b.get('players') or 0)
+            a['income'] += int(b.get('amount') or 0)
+        # 2026-10 修复：点名加价以前记在**排班 DM** 头上；客人点的是 A、实际带场是 B 时，
+        # 这笔加价就进了 B 的口袋。现在单独归被点名的那个 DM。
+        if named:
+            _bucket(named)['fee'] += int(st['dmFee']) * int(b.get('players') or 0)
     users = {str(u.get('phone')): u for u in db.rows('users')}
     mode = st.get('dmPayMode') or 'rate'
     rows = []

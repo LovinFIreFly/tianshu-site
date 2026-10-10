@@ -1288,7 +1288,18 @@ def user_detail(phone):
         return redirect(url_for('admin.dashboard') + '#users')
     mine = [b for b in db.rows('bookings') if str(b.get('phone')) == str(phone)]
     msgs = [m for m in db.rows('messages') if str(m.get('phone')) == str(phone)]
-    rvs = [r for r in db.rows('reviews') if str(r.get('phone')) == str(phone)]
+    # 2026-10 修复：reviews 记录里**根本没有 phone 字段**（只有 username），
+    # 按手机号匹配永远得到空列表 —— 客户档案的"写过的评价"区块一直空白。
+    # 改成按用户名匹配，并顺手补上模板要读的剧本名 title（评价里只存了 sid）。
+    uname = str(u.get('username') or '')
+    rvs = []
+    for r in db.rows('reviews'):
+        if str(r.get('username') or '') != uname:
+            continue
+        r = dict(r)
+        sc = next((s for s in db.rows('scripts') if str(s.get('id')) == str(r.get('sid'))), {})
+        r['title'] = sc.get('title') or '剧本'
+        rvs.append(r)
     return render_template('admin/user_detail.html', u=u,
                            bookings=sorted(mine, key=lambda x: -(x.get('id') or 0)),
                            spent=sum(int(b.get('amount') or 0) for b in mine if b.get('status') != 'cancelled'),

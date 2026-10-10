@@ -79,7 +79,9 @@
   }
   function esc(s) {
     return String(s == null ? '' : s)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+      // 2026-10：顺手转义单引号 —— 一旦有人把数据拼进单引号包裹的属性里就会 XSS
+      .replace(/'/g, '&#39;');
   }
   function toast(msg) {
     var t = $('#toast') || (function () {
@@ -364,7 +366,9 @@
           }).join('');
       }
       // 演绎视频
-      if (d.videoUrl) {
+      // 2026-10 修复：esc() 只转义 & < > "，拦不住 javascript: 这类伪协议，
+      // 只要 videoUrl 被写成 javascript:... 点一下就触发 XSS。先做协议白名单。
+      if (d.videoUrl && /^(https?:)?\/\//i.test(String(d.videoUrl).trim())) {
         html += '<a class="btn btn-ink btn-block" style="margin-top:var(--s4)" href="' + esc(d.videoUrl) +
           '" target="_blank" rel="noopener">观看演绎视频 ↗</a>';
       }
@@ -1113,7 +1117,9 @@
     var need = el.getAttribute('data-need') || '?';
     var id = el.getAttribute('data-id');
     var text = '甜薯剧本杀｜《' + script + '》' + day + ' ' + time + ' 还差 ' + need + ' 人，一起？';
-    var url = location.origin + '/m/car/' + id;
+    // 2026-10 修复：/m/car/<id> 后端根本没有这个路由，分享出去点开是 404。
+    // 改成分享手机站首页（剧本/时间/缺几人都写在文案里），保证链接一定能打开。
+    var url = location.origin + '/m/';
     shareText(url, text);
   }
   function doShareScript(el) {
@@ -1295,6 +1301,9 @@
     fd.append('remember', remember ? '1' : '0');
     post('/login?next=/m/', fd)
       .then(function (r) {
+        // 2026-10：429 是"试太多次被限流"，原来一律提示"密码不对"，
+        // 客人会一直重试，越试越被锁。分开提示。
+        if (r.status === 429) { say('试的次数太多了，10 分钟后再来'); return null; }
         if (r.status === 403) { say('页面放太久了，刷新一下再登录'); return null; }
         return ensureData(true);
       })
