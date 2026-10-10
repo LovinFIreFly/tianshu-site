@@ -17,6 +17,13 @@ DATA_DIR = os.path.abspath(os.environ.get('TS_DATA_DIR') or os.path.join(BASE_DI
 IMG_DIR = os.path.join(DATA_DIR, 'img')
 
 PORT = 8000                    # 被占用会自动往后试 8001、8002…
+# 端口被占时要不要"自动往后找"？
+#   本地自己玩：要（否则开着一个窗口就没法再起一个）
+#   线上（systemd + caddy 反代）：**绝对不要** —— caddy 写死转发到 127.0.0.1:$PORT，
+#     服务悄悄挪到 8001 的话反代就 502，而且 systemd 还显示"running"，极难排查（踩过）。
+#     线上把 TS_STRICT_PORT=1 写进 systemd 的 Environment=，让端口被占时**直接起不来**，
+#     错误留在 journal 里一眼可见。
+STRICT_PORT = os.environ.get('TS_STRICT_PORT') == '1'
 OPEN_BROWSER = True            # 启动后自动开浏览器
 LAN_MODE = False               # 手机访问开关：要测手机端再开（同一 WiFi 下的设备都能进）
 SESSION_DAYS = 180             # 登录保持多少天（半年）—— 客人最烦的就是"又要登一次"，

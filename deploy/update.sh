@@ -70,6 +70,37 @@ else
 fi
 
 echo "④ 重启服务…"
+# 老装机（跑 install.sh 那次）的 unit 里没有 TS_STRICT_PORT —— 这里顺手补上，
+# 否则端口被占时服务会悄悄挪到 8001，反代 502 却查不出原因。
+if systemctl cat tianshu >/dev/null 2>&1 && ! systemctl cat tianshu | grep -q 'TS_STRICT_PORT'; then
+  echo "   给 unit 补 TS_STRICT_PORT=1（端口被占时直接报错，不再悄悄挪端口）"
+  mkdir -p /etc/systemd/system/tianshu.service.d
+  cat > /etc/systemd/system/tianshu.service.d/strict-port.conf <<'EOF'
+[Service]
+Environment=TS_STRICT_PORT=1
+EOF
+  systemctl daemon-reload
+fi
+
+# 重启之前先看一眼：$PORT 上是不是蹲着**不属于 systemd** 的旧进程？
+# 有的话 app.py 的 pick_port() 会静默换到 8001，看起来"重启成功了"其实端口错了。
+# 这里把它点出来（不自动杀：万一是你自己开着的调试进程，杀了会莫名）。
+if command -v ss >/dev/null 2>&1; then
+  _holder="$(ss -ltnp 2>/dev/null | grep ":$PORT " | grep -oE 'pid=[0-9]+' | grep -oE '[0-9]+' | head -1 || true)"
+elif command -v netstat >/dev/null 2>&1; then
+  _holder="$(netstat -ltnp 2>/dev/null | grep ":$PORT " | grep -oE '[0-9]+/' | grep -oE '[0-9]+' | head -1 || true)"
+else
+  _holder=""
+fi
+if [ -n "$_holder" ]; then
+  echo "   ！$PORT 已被 PID $_holder 占用，先把它收掉再重启"
+  ps -p "$_holder" -o pid=,args= 2>/dev/null | sed 's/^/      /' || true
+  kill "$_holder" 2>/dev/null || true
+  sleep 1
+  kill -9 "$_holder" 2>/dev/null || true
+  echo "   已收掉 PID $_holder"
+fi
+
 systemctl restart tianshu
 sleep 3
 if ! systemctl is-active --quiet tianshu; then
@@ -82,14 +113,74 @@ fi
 echo "   服务在跑 [OK]"
 
 echo "⑤ 本机自测…"
-curl -s -o /dev/null -w "   http://127.0.0.1:$PORT/         → HTTP %{http_code}\n" "http://127.0.0.1:$PORT/" || true
-curl -s -o /dev/null -w "   http://127.0.0.1:$PORT/scripts  → HTTP %{http_code}\n" "http://127.0.0.1:$PORT/scripts" || true
-curl -s -o /dev/null -w "   http://127.0.0.1:$PORT/health   → HTTP %{http_code}\n" "http://127.0.0.1:$PORT/health" || true
-# 新版才有的文件：确认这次拉的代码里带着它（404 = 代码还是旧的）
-if [ "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$PORT/static/css/design3.css")" = "200" ]; then
-  echo "   新骨架（design3.css）在 [OK]"
+# ─────────────────────────────────────────────────────────────────────────────
+# 为什么不能直接 curl 固定的 8000：
+#   app.py 的 pick_port() 在端口被占时会**静默往后找**（8001、8002…）。
+#   服务被 systemd 拉起、而 8000 上还蹲着一个旧进程时，真正监听的是 8001，
+#   此时 curl 8000 → 连不上 → HTTP 000（不是 404、也不是 500）。
+#   所以这里先**问出真实端口**，再拿它自测；问不到才退回 $PORT。
+#
+#   探测用「真发一个请求看谁答话」而不是「解析 ss/netstat 输出」——
+#   后者在不同发行版上格式差异大，管道很容易静默返回空（踩过）。
+# ─────────────────────────────────────────────────────────────────────────────
+_ok() {  # $1=端口 → 是本站就返回 0
+  # /health 是本站特有的端点，用它认人最准（返回 200 且不含 HTML 壳）
+  code="$(curl -s -o /dev/null -m 4 -w '%{http_code}' "http://127.0.0.1:$1/health" 2>/dev/null || true)"
+  [ "$code" = "200" ]
+}
+
+REAL_PORT=""
+# ① 最可靠：从 systemd 读实际命令行里的 --port
+_cand="$(systemctl show -p ExecStart --value tianshu 2>/dev/null \
+  | grep -oE '\-\-port[= ][0-9]+' | grep -oE '[0-9]+' | head -1 || true)"
+if [ -n "$_cand" ] && _ok "$_cand"; then REAL_PORT="$_cand"; fi
+# ② 从进程表找
+if [ -z "$REAL_PORT" ]; then
+  _cand="$(ps -eo args= 2>/dev/null \
+    | grep -E 'app\.py' | grep -v grep \
+    | grep -oE '\-\-port[= ][0-9]+' | grep -oE '[0-9]+' | head -1 || true)"
+  if [ -n "$_cand" ] && _ok "$_cand"; then REAL_PORT="$_cand"; fi
+fi
+# ③ 最后：把 $PORT .. $PORT+9 挨个问一遍（与 pick_port 的搜索范围一致）
+if [ -z "$REAL_PORT" ]; then
+  for _p in $(seq "$PORT" $((PORT + 9))); do
+    if _ok "$_p"; then REAL_PORT="$_p"; break; fi
+  done
+fi
+
+if [ -n "$REAL_PORT" ] && [ "$REAL_PORT" != "$PORT" ]; then
+  echo "   ！服务实际监听 $REAL_PORT（不是 $PORT）"
+  echo "     说明 $PORT 上还蹲着别的进程；想让它回到 $PORT：先杀掉它再 systemctl restart tianshu"
+fi
+CHECK_PORT="${REAL_PORT:-$PORT}"
+BASE="http://127.0.0.1:$CHECK_PORT"
+echo "   自测目标：$BASE"
+
+# curl 失败时返回 000，这里统一用 OK/FAIL 说人话，别让人猜 000 是什么
+_probe() {  # $1=路径 → 打印状态码
+  curl -s -o /dev/null -m 8 -w '%{http_code}' "$BASE$1" 2>/dev/null || echo "000"
+}
+_show() {   # $1=标签 $2=路径
+  code="$(_probe "$2")"
+  if [ "$code" = "200" ]; then
+    printf '   %-20s %s → HTTP %s  [OK]\n' "$1" "$2" "$code"
+  elif [ "$code" = "000" ]; then
+    printf '   %-20s %s → 连不上  [FAIL]\n' "$1" "$2"
+  else
+    printf '   %-20s %s → HTTP %s  [!!]\n' "$1" "$2" "$code"
+  fi
+}
+_show "首页"     "/"
+_show "剧本库"   "/scripts"
+_show "健康检查" "/health"
+
+# 新版才有的文件：确认这次拉的代码里带着它。
+# 用 nova.css（当前 nova 模式真正加载的）而不是 design3.css —— 后者只在二代/三代用得上，
+# 拿它当"代码更新成功"的判据会在 nova 模式下误报。
+if [ "$(_probe '/static/css/nova.css')" = "200" ]; then
+  echo "   新版资产（nova.css）在 [OK]"
 else
-  echo "   ！design3.css 还是 404 —— 代码可能没更新成功，检查 git 那边"
+  echo "   ！nova.css 拿不到 —— 代码可能没更新成功，检查 git 那边"
 fi
 
 echo

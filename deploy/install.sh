@@ -195,6 +195,9 @@ After=network.target
 
 [Service]
 WorkingDirectory=$DIR
+# TS_STRICT_PORT=1：线上端口被占就**直接起不来**，不要悄悄挪到 8001。
+# 因为下面的 caddy 把 $PORT 写死反代了，服务挪端口 = 反代 502 而 systemd 还报 running。
+Environment=TS_STRICT_PORT=1
 ExecStart=$DIR/.venv/bin/python $DIR/app.py --no-browser --port $PORT
 Restart=always
 RestartSec=3

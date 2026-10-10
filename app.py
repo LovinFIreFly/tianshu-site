@@ -105,9 +105,27 @@ def lan_ip():
         s.close()
 
 
+def port_in_use(host, port):
+    """这个 (host, port) 已经被占了吗？"""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind((host, port))
+            return False
+        except OSError:
+            return True
+
+
 def pick_port(host, start):
     """端口被占就往后找。注意别加 SO_REUSEADDR —— Windows 上它会"抢到"别人的端口，
-    看着像空闲其实不是（踩过）"""
+    看着像空闲其实不是（踩过）
+
+    config.STRICT_PORT=1 时**不往后找**：线上端口被占就直接抛错退出。
+    理由见 config.py 里 STRICT_PORT 那段 —— 悄悄挪端口会让 caddy 反代 502，
+    而 systemd 还报 running，是最难查的一类故障。"""
+    if config.STRICT_PORT and port_in_use(host, start):
+        raise RuntimeError(
+            '端口 %d 已被占用，且当前是 STRICT_PORT 模式（线上）。'
+            '请先找出占用进程再重启：ss -ltnp | grep :%d' % (start, start))
     for p in range(start, start + 10):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             try:
@@ -155,7 +173,13 @@ def main():
         return
 
     host = '0.0.0.0' if config.LAN_MODE else '127.0.0.1'
-    port = pick_port(host, config.PORT)
+    try:
+        port = pick_port(host, config.PORT)
+    except RuntimeError as e:
+        # STRICT_PORT（线上）端口被占：**必须非 0 退出**，
+        # 否则 systemd 会当成正常结束、按 Restart=always 反复重启，日志刷屏还看不出原因。
+        print('[X] %s' % e, file=sys.stderr)
+        sys.exit(1)
     if port != config.PORT:
         print('提示：%d 被占用了（可能已经开着一个窗口），这次用 %d' % (config.PORT, port))
     lan = lan_ip() if config.LAN_MODE else ''
@@ -172,7 +196,11 @@ def main():
 if __name__ == '__main__':
     try:
         main()
+    except SystemExit:
+        raise
     except Exception as e:
         print('启动出错：%s' % e)
         if sys.stdin and sys.stdin.isatty():
             input('\n按回车关闭窗口…')
+        else:
+            sys.exit(1)
