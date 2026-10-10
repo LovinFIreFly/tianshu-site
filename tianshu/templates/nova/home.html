@@ -8,23 +8,27 @@
 
 {% block body %}
 
-<!-- ═══════════ 首屏 ═══════════ -->
+<!-- ═══════════ 首屏：左巨字，右票根 ═══════════ -->
 <section class="hp-hero">
-  <div class="hp-hero__orbwrap" data-sway="lg" aria-hidden="true"><div class="hp-hero__orb"></div></div>
-
   <div class="hp-hero__in" data-sway="sm">
-    <p class="hp-hero__k" data-par="0.05">甜薯 · 藏在学校里的剧本杀小店</p>
-    <h1 class="hp-hero__t">
-      <span><em>把每一次</em></span>
-      <span class="mid">意外</span>
-      <span><em>演出来</em></span>
-    </h1>
-    <div class="hp-hero__act">
-      <a class="u-pill" href="{{ url_for('public.scripts') }}" data-magnet="8">
-        看看有哪些本 <span class="u-pill__a" aria-hidden="true">↘</span>
-      </a>
-      <a class="u-pill u-pill--ghost" href="{{ url_for('public.car') }}">直接上车拼一局</a>
+    <div>
+      <p class="hp-hero__k" data-par="0.05">甜薯 · 藏在学校里的剧本杀小店</p>
+      <h1 class="hp-hero__t">
+        <span>把每一次</span>
+        <span><em>意外</em>都演出来</span>
+      </h1>
+      <p class="hp-hero__d">
+        挑本、拼车、到店开演，定金锁位，玩完由小客服原路退回。
+        今天店里 {{ sessions|length if sessions else 0 }} 场演出、{{ dm_duty|length }} 位 DM 在店 —— 位子先到先得。
+      </p>
+      <div class="hp-hero__act">
+        <a class="u-pill" href="{{ url_for('public.scripts') }}" data-magnet="8">
+          看看有哪些本 <span class="u-pill__a" aria-hidden="true">↘</span>
+        </a>
+        <a class="u-pill u-pill--ghost" href="{{ url_for('public.car') }}">直接上车拼一局</a>
+      </div>
     </div>
+    {% include '_tickets.html' %}
   </div>
 
   <div class="hp-hero__foot">
@@ -36,6 +40,14 @@
     </span>
   </div>
 </section>
+
+<!-- ═══════════ 跑马灯带（cosmos 招牌：横滚 + 随滚动变速） ═══════════ -->
+<div class="u-marq" data-marq aria-hidden="true">
+  <div class="u-marq__track">
+    <span>本格推理<span class="u-marq__dot"></span>情感本<span class="u-marq__dot"></span>欢乐本<span class="u-marq__dot"></span>硬核还原<span class="u-marq__dot"></span>新手友好<span class="u-marq__dot"></span>定金锁位<span class="u-marq__dot"></span>玩完原路退<span class="u-marq__dot"></span></span>
+    <span>本格推理<span class="u-marq__dot"></span>情感本<span class="u-marq__dot"></span>欢乐本<span class="u-marq__dot"></span>硬核还原<span class="u-marq__dot"></span>新手友好<span class="u-marq__dot"></span>定金锁位<span class="u-marq__dot"></span>玩完原路退<span class="u-marq__dot"></span></span>
+  </div>
+</div>
 
 <div class="u-wrap">
 

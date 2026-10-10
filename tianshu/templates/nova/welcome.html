@@ -1,25 +1,46 @@
 {% extends 'layout.html' %}
-{# 欢迎页：没登录的人进站第一眼。和首页同一套封面语言，但只留一个动作。 #}
+{# 欢迎页：没登录的人进站第一眼。与首页同一套编辑式构图 —— 左边巨字，右边漂浮票根，
+   只留一个动作：登记。 #}
 {% block title %}{{ settings.shopName }} · 进门先登记{% endblock %}
 {% block body %}
-<section class="wc">
-  <p class="wc__k u-kick">Tianshu · 藏在学校里的剧本杀小店</p>
-  <h1 class="wc__t">今晚<br><em>演哪一出</em></h1>
-  <p class="wc__d">
-    挑本、拼车、到店开演。定金锁位，玩完由小客服原路退回 ——
-    先登记一下，位子才归你。
-  </p>
-  <div class="wc__act">
-    <a class="u-pill u-pill--ink" href="{{ url_for('user.login') }}" data-magnet="8">
-      上车登记 <span class="u-pill__a" aria-hidden="true">↘</span>
-    </a>
-    <a class="u-pill" href="{{ url_for('user.register') }}">还没有账号</a>
-    <a class="u-pill u-pill--ghost" href="/?browse=1">先随便逛逛</a>
+<section class="hp-hero">
+  <div class="hp-hero__in" data-sway="sm">
+    <div>
+      <p class="hp-hero__k" data-par="0.05">Tianshu · 藏在学校里的剧本杀小店</p>
+      <h1 class="hp-hero__t">
+        <span>今晚</span>
+        <span><em>演</em>哪一出</span>
+      </h1>
+      <p class="hp-hero__d">
+        挑本、拼车、到店开演。定金锁位，玩完由小客服原路退回 ——
+        先登记一下，位子才归你。
+      </p>
+      <div class="hp-hero__act">
+        <a class="u-pill u-pill--ink" href="{{ url_for('user.login') }}" data-magnet="8">
+          上车登记 <span class="u-pill__a" aria-hidden="true">↘</span>
+        </a>
+        <a class="u-pill" href="{{ url_for('user.register') }}">还没有账号</a>
+        <a class="u-pill u-pill--ghost" href="/?browse=1">先随便逛逛</a>
+      </div>
+    </div>
+    {% include '_tickets.html' %}
   </div>
-  <div class="wc-figs u-figs" style="border:0">
-    <div class="u-fig"><b>{{ meta.scripts if meta else 0 }}</b><s>在架本</s></div>
-    <div class="u-fig"><b>{{ meta.today if meta else 0 }}</b><s>今天场次</s></div>
-    <div class="u-fig"><b>¥{{ settings.carDeposit or 50 }}</b><s>一人定金</s></div>
+
+  <div class="hp-hero__foot">
+    <span class="hp-hero__scroll"><i aria-hidden="true"></i> 往下翻</span>
+    <span class="hp-hero__nums">
+      <span><b>{{ meta.scripts if meta else 0 }}</b> 在架本</span>
+      <span><b>{{ meta.today if meta else 0 }}</b> 今天场次</span>
+      <span><b>¥{{ settings.carDeposit or 50 }}</b> 一人定金</span>
+    </span>
   </div>
 </section>
+
+<!-- ═══════════ 跑马灯带（cosmos 招牌：横滚 + 随滚动变速） ═══════════ -->
+<div class="u-marq" data-marq aria-hidden="true">
+  <div class="u-marq__track">
+    <span>本格推理<span class="u-marq__dot"></span>情感本<span class="u-marq__dot"></span>欢乐本<span class="u-marq__dot"></span>硬核还原<span class="u-marq__dot"></span>新手友好<span class="u-marq__dot"></span>定金锁位<span class="u-marq__dot"></span>玩完原路退<span class="u-marq__dot"></span></span>
+    <span>本格推理<span class="u-marq__dot"></span>情感本<span class="u-marq__dot"></span>欢乐本<span class="u-marq__dot"></span>硬核还原<span class="u-marq__dot"></span>新手友好<span class="u-marq__dot"></span>定金锁位<span class="u-marq__dot"></span>玩完原路退<span class="u-marq__dot"></span></span>
+  </div>
+</div>
 {% endblock %}

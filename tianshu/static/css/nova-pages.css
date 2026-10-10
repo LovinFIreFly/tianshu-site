@@ -39,88 +39,86 @@ html[data-theme="dark"] .hp-sec[data-n]::before { -webkit-text-stroke-color: var
   .hp-sec[data-n]::before { font-size: clamp(52px, 18vw, 96px); top: -.1em; }
 }
 
-/* 首屏：整屏、居中、背后是场景画布。
-   [data-sway] 的视角晃动由 nova.css 的指针总线统一算（读 --mx/--my），这里不再写死。 */
+/* 首屏：非对称编辑式 —— 左边巨字，右边漂浮票根。
+   不再"居中对称海报"：七个参照站（cosmos/poly/unseen）的英雄区全是
+   敢压边的构图 + 一个签名物件，而不是渐变底上摆三个胶囊。
+   [data-sway] 的视角晃动由 nova.css 的指针总线统一算（读 --mx/--my）。 */
 .hp-hero {
   position: relative;
-  min-height: min(100svh, 920px);
-  display: grid;
-  place-items: center;
-  padding: calc(var(--us-nav) + 40px) var(--us-gut) 64px;
+  min-height: min(100svh, 960px);
+  display: flex;
+  align-items: center;
+  padding: calc(var(--us-nav) + 44px) var(--us-gut) 130px;
   overflow: hidden;
 }
 .hp-hero__in {
   position: relative;
   z-index: 2;
-  text-align: center;
+  width: 100%;
+  max-width: var(--us-wrap);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 7.2fr) minmax(0, 4.8fr);
+  gap: clamp(24px, 5vw, 72px);
+  align-items: center;
+  text-align: left;
 }
 .hp-hero__k {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--us-mono);
   font-size: 12px;
-  letter-spacing: .26em;
+  letter-spacing: .22em;
   text-transform: uppercase;
   color: var(--us-ink-2);
-  margin-bottom: clamp(18px, 3vw, 34px);
+  margin-bottom: clamp(18px, 3vw, 30px);
+}
+/* 眉题前的朱砂小方：全站唯一的颜色，出现在"现在时"上 */
+.hp-hero__k::before {
+  content: "";
+  width: 9px; height: 9px;
+  background: var(--us-accent);
+  rotate: 45deg;
+  flex: none;
 }
 .hp-hero__t {
-  font-size: clamp(46px, 11.4vw, 178px);
-  line-height: .84;
-  letter-spacing: -.052em;
-  font-weight: 500;
+  font-size: clamp(46px, 9vw, 138px);
+  line-height: 1.04;
+  letter-spacing: -.012em;
+  font-weight: 800;
 }
 .hp-hero__t span { display: block; }
 .hp-hero__t em {
   font-family: var(--us-serif);
-  font-style: italic;
-  font-weight: 400;
-  letter-spacing: -.028em;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: .01em;
 }
-/* 中间那行是"重音"：比上下两行更实、更紧，形成 unseen 那种交错咬合 */
-.hp-hero__t .mid {
-  font-size: 1.06em;
-  letter-spacing: -.06em;
-  margin: .02em 0 .06em;
+.hp-hero__d {
+  margin-top: clamp(18px, 2.6vw, 30px);
+  max-width: 30em;
+  font-size: 15.5px;
+  line-height: 1.85;
+  color: var(--us-ink-2);
 }
 .hp-hero__act {
-  margin-top: clamp(26px, 4vw, 48px);
+  margin-top: clamp(26px, 3.6vw, 44px);
   display: flex;
-  justify-content: center;
   gap: 12px;
   flex-wrap: wrap;
 }
-/* 悬在字间的柔光球（参考图里的虹彩球）：外层跟着指针晃，内层自己慢慢呼吸 */
-.hp-hero__orbwrap {
-  position: absolute;
-  z-index: 1;
-  right: 12%;
-  top: 24%;
-  width: clamp(120px, 15vw, 230px);
-  aspect-ratio: 1;
-}
-.hp-hero__orb {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 34% 30%, rgba(255, 255, 255, .95), transparent 52%),
-    conic-gradient(from 200deg, #F3D9E6, #DCE6F5, #F6E6D2, #E4D8F0, #F3D9E6);
-  filter: blur(.4px) saturate(1.06);
-  opacity: .78;
-  animation: hp-float 11s ease-in-out infinite;
-}
-@keyframes hp-float {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50%      { transform: translateY(-22px) scale(1.045); }
-}
-/* 底部一行：左边滚动提示，右边几个数字 */
+/* 底部一行：左边滚动提示，右边几个数字（发丝线压顶） */
 .hp-hero__foot {
   position: absolute;
-  left: 0; right: 0; bottom: 30px;
+  left: var(--us-gut); right: var(--us-gut); bottom: 34px;
   z-index: 3;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--us-s3);
-  padding: 0 var(--us-gut);
+  padding-top: 18px;
+  border-top: var(--us-hair);
   font-size: 12px;
   letter-spacing: .1em;
   text-transform: uppercase;
@@ -145,7 +143,38 @@ html[data-theme="dark"] .hp-sec[data-n]::before { -webkit-text-stroke-color: var
   100% { transform: scaleY(1) translateY(14px); opacity: 0; }
 }
 .hp-hero__nums { display: flex; gap: var(--us-s4); text-transform: none; letter-spacing: 0; }
-.hp-hero__nums b { font-size: 17px; color: var(--us-ink); letter-spacing: -.02em; }
+.hp-hero__nums b { font-size: 17px; color: var(--us-ink); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+/* 移动端：字压满宽度，票根退到正文下面排成一排小票（静态流，绝不盖字） */
+@media (max-width: 860px) {
+  .hp-hero { padding-bottom: 110px; }
+  .hp-hero__in { grid-template-columns: 1fr; gap: 0; }
+  .u-tickets {
+    position: relative;
+    inset: auto;
+    height: auto;
+    display: flex;
+    gap: 10px;
+    margin-top: 26px;
+    opacity: 1;
+  }
+  .u-tick {
+    position: relative;
+    inset: auto;
+    width: 31%;
+    aspect-ratio: 3 / 4.5;
+    padding: 10px 9px;
+    border-radius: 9px;
+  }
+  .u-tick--a { rotate: -3deg; }
+  .u-tick--b { rotate: 2deg; translate: 0 8px; }
+  .u-tick--c { rotate: -1deg; translate: 0 -4px; }
+  .u-tick__no { font-size: 8px; }
+  .u-tick__w { font-size: 19px; margin-top: 8px; }
+  .u-tick__row { font-size: 7.5px; padding-top: 6px; }
+  .u-tick__seal { width: 20px; height: 20px; font-size: 11px; border-radius: 5px; }
+  .hp-hero__t { font-size: clamp(40px, 13.5vw, 72px); }
+  .hp-hero__foot { bottom: 20px; }
+}
 
 /* 区块通用节奏 */
 .hp-sec { padding: var(--us-s7) 0 var(--us-s6); }
@@ -168,7 +197,7 @@ html[data-theme="dark"] .hp-sec[data-n]::before { -webkit-text-stroke-color: var
   letter-spacing: -.042em;
   font-weight: 500;
 }
-.hp-head__t em { font-family: var(--us-serif); font-style: italic; font-weight: 400; }
+.hp-head__t em { font-family: var(--us-serif); font-style: normal; font-weight: 400; }
 .hp-head__d { font-size: 14px; line-height: 1.6; color: var(--us-ink-3); }
 
 /* 焦点位（今日推荐）：12 栏里 7/5 破格，图文不对称 */
@@ -245,7 +274,7 @@ html[data-theme="dark"] .hp-sec[data-n]::before { -webkit-text-stroke-color: var
   letter-spacing: -.046em;
   font-weight: 500;
 }
-.hp-coda__q em { font-family: var(--us-serif); font-style: italic; font-weight: 400; }
+.hp-coda__q em { font-family: var(--us-serif); font-style: normal; font-weight: 400; }
 .hp-coda__act { margin-top: var(--us-s4); display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
 
 /* ══════════════════════════ 清单页（剧本库） ══════════════════════════ */
@@ -290,7 +319,7 @@ html[data-theme="dark"] .hp-sec[data-n]::before { -webkit-text-stroke-color: var
   letter-spacing: -.05em;
   font-weight: 500;
 }
-.dt-title em { font-family: var(--us-serif); font-style: italic; font-weight: 400; }
+.dt-title em { font-family: var(--us-serif); font-style: normal; font-weight: 400; }
 
 /* 五个事实并排：价格是唯一被强调的数字 */
 .dt-facts {
@@ -429,7 +458,7 @@ html[data-theme="dark"] .hp-sec[data-n]::before { -webkit-text-stroke-color: var
 .dt-next__t em {
   display: block;
   font-family: var(--us-serif);
-  font-style: italic;
+  font-style: normal;
   font-weight: 400;
   font-size: .46em;
   letter-spacing: -.02em;
@@ -791,7 +820,7 @@ html[data-theme="dark"] .hp-sec[data-n]::before { -webkit-text-stroke-color: var
   letter-spacing: -.044em;
   font-weight: 500;
 }
-.au__q em { font-family: var(--us-serif); font-style: italic; font-weight: 400; }
+.au__q em { font-family: var(--us-serif); font-style: normal; font-weight: 400; }
 .au-figs { display: flex; flex-wrap: wrap; gap: var(--us-s5); }
 .au-card { width: 100%; max-width: 400px; display: grid; gap: var(--us-s3); }
 .au-card__t { font-size: clamp(24px, 3vw, 34px); letter-spacing: -.036em; font-weight: 500; }
@@ -824,7 +853,7 @@ html[data-theme="dark"] .hp-sec[data-n]::before { -webkit-text-stroke-color: var
   color: var(--us-ink);
   opacity: .12;
 }
-.er__k { font-family: var(--us-serif); font-style: italic; font-size: clamp(24px, 3.6vw, 44px); letter-spacing: -.03em; }
+.er__k { font-family: var(--us-serif); font-style: normal; font-size: clamp(24px, 3.6vw, 44px); letter-spacing: -.03em; }
 .er__d { font-size: 15px; color: var(--us-ink-3); max-width: 44ch; }
 .er__act { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: var(--us-s2); }
 
@@ -844,7 +873,7 @@ html[data-theme="dark"] .hp-sec[data-n]::before { -webkit-text-stroke-color: var
   letter-spacing: -.05em;
   font-weight: 500;
 }
-.wc__t em { font-family: var(--us-serif); font-style: italic; font-weight: 400; }
+.wc__t em { font-family: var(--us-serif); font-style: normal; font-weight: 400; }
 .wc__d { font-size: 15px; color: var(--us-ink-2); max-width: 40ch; }
 .wc__act { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: var(--us-s2); }
 .wc-figs { display: flex; gap: var(--us-s5); margin-top: var(--us-s3); }

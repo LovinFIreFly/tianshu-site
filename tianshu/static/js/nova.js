@@ -173,22 +173,17 @@
       '',
       '  vec2 q = uv + ripple;',
       '',
-      '  /* 三团柔光，各自缓慢漂移 */',
-      '  float c1 = blob(q, vec2(0.20 + 0.05*sin(t*0.13), 0.20 + 0.04*cos(t*0.11)), 0.62);',
-      '  float c2 = blob(q, vec2(0.82 + 0.04*cos(t*0.09), 0.26 + 0.05*sin(t*0.15)), 0.55);',
-      '  float c3 = blob(q, vec2(0.66 + 0.05*sin(t*0.07), 0.88 + 0.04*cos(t*0.12)), 0.66);',
-      '  float c4 = blob(q, vec2(0.08 + 0.04*cos(t*0.10), 0.80 + 0.04*sin(t*0.08)), 0.52);',
-      '',
+      '  /* 纸面：一整块平色。涟漪处墨轻轻沉下去（夜幕则浮起来）——',
+      '     这是"墨滴入水"，不是"彩色洗底"。七个参照站全是一屏一色。 */',
       '  vec3 col = uG[3];',
-      '  col = mix(col, uG[0], c1 * 0.95);',
-      '  col = mix(col, uG[1], c2 * 0.78);',
-      '  col = mix(col, uG[2], c3 * 0.86);',
-      '  col = mix(col, uG[1], c4 * 0.50);',
+      '  float ink = clamp(length(ripple) * 26.0, 0.0, 1.0);',
+      '  col = mix(col, uG[0], ink * (uDark > 0.5 ? 0.10 : 0.15));',
       '',
-      '  /* 涟漪处提亮一点点，像光在水面聚起来 */',
-      '  col += vec3(length(ripple) * 3.4) * (1.0 - uDark);',
+      '  /* 指针周围一丝朱砂"点水"：全站唯一的颜色，只跟着手走 */',
+      '  float pdA = exp(-pdist * 6.5) * 0.055;',
+      '  col = mix(col, uG[1], pdA);',
       '',
-      '  /* 颗粒：动态噪点，压掉渐变的塑料感 */',
+      '  /* 颗粒：动态噪点，压掉数码的塑料感 */',
       '  float g = noise(gl_FragCoord.xy * 0.85 + vec2(t*13.0, t*7.0));',
       '  col += (g - 0.5) * (uDark > 0.5 ? 0.030 : 0.020);',
       '',
@@ -251,10 +246,10 @@
 
       var dark = doc.getAttribute('data-theme') === 'dark';
       var cols = [
-        hex2rgb(css('--us-glow-1', '#E3D3EC')),
-        hex2rgb(css('--us-glow-2', '#F7DBE1')),
-        hex2rgb(css('--us-glow-3', '#FCF0E2')),
-        hex2rgb(css('--us-bg', '#F1F0EC'))
+        hex2rgb(css('--us-ink', '#16130E')),      // uG[0] 墨：涟漪沉下去的颜色
+        hex2rgb(css('--us-accent', '#C2470E')),   // uG[1] 朱砂：指针点水
+        hex2rgb(css('--us-accent-2', '#A63B0C')), // uG[2] 备用
+        hex2rgb(css('--us-bg', '#F3F0E9'))        // uG[3] 纸面
       ];
       var flat = [];
       for (var i = 0; i < 4; i++) flat.push(cols[i][0], cols[i][1], cols[i][2]);
@@ -355,10 +350,10 @@
       if (!alive || !gl) return;
       var dark = doc.getAttribute('data-theme') === 'dark';
       var cols = [
-        hex2rgb(css('--us-glow-1', '#E3D3EC')),
-        hex2rgb(css('--us-glow-2', '#F7DBE1')),
-        hex2rgb(css('--us-glow-3', '#FCF0E2')),
-        hex2rgb(css('--us-bg', '#F1F0EC'))
+        hex2rgb(css('--us-ink', '#16130E')),      // uG[0] 墨：涟漪沉下去的颜色
+        hex2rgb(css('--us-accent', '#C2470E')),   // uG[1] 朱砂：指针点水
+        hex2rgb(css('--us-accent-2', '#A63B0C')), // uG[2] 备用
+        hex2rgb(css('--us-bg', '#F3F0E9'))        // uG[3] 纸面
       ];
       var flat = [];
       for (var i = 0; i < 4; i++) flat.push(cols[i][0], cols[i][1], cols[i][2]);
@@ -628,7 +623,8 @@
     }
 
     function step(dt) {
-      cur = lerp(cur, target, 1 - Math.pow(0.0006, dt));
+      /* 帧率无关 lerp，等效每帧 ~0.08 —— 比原来的 0.11 绵一档，贴近 Lenis 的丝滑手感 */
+      cur = lerp(cur, target, 1 - Math.pow(1 - 0.08, dt * 60));
       if (Math.abs(target - cur) < 0.35) { cur = target; active = false; }
       W.scrollTo(0, Math.round(cur));
       doc.style.setProperty('--sy', cur.toFixed(1));
@@ -670,6 +666,48 @@
         });
       });
     }
+    return { init: init };
+  })();
+
+  /* ══════════════════════════ ⑤½ 跑马灯（cosmos 招牌：速度感应横向无限滚动） ══════════════════════════ */
+  var Marq = (function () {
+    var rails = [];
+
+    function init(root) {
+      if (REDUCE) return;
+      $$('[data-marq]', root || D).forEach(function (el) {
+        if (el.getAttribute('data-marq') === '1') return;
+        el.setAttribute('data-marq', '1');
+        var track = $('.u-marq__track', el);
+        if (!track) return;
+        /* 模板里已经放了两份一样的 span，确保内容宽度 > 视口，才能无缝回卷。
+           若只有一份，复制一份补齐。 */
+        if ($$('span', track).length < 2) {
+          var copy = track.cloneNode(true);
+          while (track.firstChild) track.appendChild(track.firstChild.cloneNode(true));
+        }
+        var spans = $$('span', track);
+        rails.push({ el: el, track: track, x: 0, half: 0 });
+      });
+      if (rails.length) { addTick(step); startLoop(); }
+    }
+
+    function step(dt) {
+      /* 滚动速度：拿平滑滚动写进 --sy 的总量做差分（cosmos 的 marquee 就是被页面滚动"拖着走"） */
+      var sy = parseFloat(doc.style.getPropertyValue('--sy')) || 0;
+      var dv = Math.abs(sy - (step._sy || 0));
+      step._sy = sy;
+      var boost = clamp(dv * 0.6, 0, 60);          // 滚动越快，带子被拖得越快
+      for (var i = 0; i < rails.length; i++) {
+        var r = rails[i];
+        if (!r.half) r.half = r.track.scrollWidth / 2;
+        var speed = (28 + boost);                   // 平时 28px/s，滚动时最多 +60
+        r.x -= speed * dt;
+        if (r.half && -r.x >= r.half) r.x += r.half; // 越过半宽回卷，无缝
+        r.track.style.transform = 'translate3d(' + r.x.toFixed(2) + 'px,0,0)';
+      }
+    }
+
     return { init: init };
   })();
 
@@ -1251,6 +1289,7 @@
     Base.panes(root);
     Search.init(root);
     Fold.init(root);
+    Marq.init(root);
     /* tabs.js 只在首屏 DOMContentLoaded 绑一次，转场换进来的新标签条没人管 ——
        叫它重跑一遍（它自己带幂等守卫，只会处理新增的节点）。 */
     if (W.TS_TABS && W.TS_TABS.boot) { try { W.TS_TABS.boot(); } catch (e) {} }
