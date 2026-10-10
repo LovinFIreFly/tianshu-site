@@ -6,8 +6,11 @@
    Unseen 的编号索引），结构上就是另一个网站：
 
      顶部 —— 极细进度条 + 大字号文字导航（左标记 / 右栏目）+ 全屏抽屉菜单
-     正文 —— 全幅内容流：满幅首屏 → 窄栏长文 → 非对称网格 → 横向轨道
+     正文 —— 全幅内容流：满幅首屏 → 窄栏长文 → 非对称网格（**纯纵向、无横向滚动**）
      底部 —— 大号联络页脚 + 网址重复的巨型字标
+
+   动效层（nova.js + nova.css）：自定义光标、遮罩揭示、数字滚动、色幕转场、
+   hover/点击/加载/空态反馈 —— 全站统一，绝不劫持滚动。
 
    只有两件事必须保住（否则后台/表单会坏）：
      ① csrf.js / upload.js / tabs.js / emojisvg.js 照挂
@@ -48,6 +51,19 @@
   })();
   </script>
   <meta name="theme-color" content="#F5F3EE">
+  {# 页面淡入：先打 nv-boot，首帧后加 nv-ready 滑入；无 JS 时不会隐藏内容 #}
+  <script>
+  (function(){
+    var el=document.documentElement;
+    if(!el) return;
+    try{ if(matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return; }catch(e){ return; }
+    el.classList.add('nv-boot');
+    function ready(){ el.classList.add('nv-ready'); }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', ready);
+    else ready();
+    setTimeout(ready, 900);   // 兜底：无论走哪条路，900ms 后一定可见
+  })();
+  </script>
   <meta name="description" content="{{ settings.shopName }}：藏在学校里的剧本杀小店。挑本、拼车、到店开演，定金锁位玩完退回。">
   <meta property="og:site_name" content="{{ settings.shopName }}">
   <meta property="og:type" content="{% block og_type %}website{% endblock %}">

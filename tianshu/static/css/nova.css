@@ -483,3 +483,214 @@ html[data-theme="dark"] .nv-grain { mix-blend-mode: screen; opacity: .34; }
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
   html { scroll-behavior: auto; }
 }
+
+/* ============================================================================
+   动效层（全站统一）
+   ----------------------------------------------------------------------------
+   以下组件是"进入 2026 该有的手感"，横向站撤掉后全部**去横滚化**落到这里。
+   ============================================================================ */
+
+/* ---- 逐行遮罩揭示 ----
+   <span class="mask"><span>一行</span></span>
+   外层 inline-block + overflow:hidden，内层被推下去 —— 只有 transform 在动。 */
+.mask { display: inline-block; overflow: hidden; vertical-align: bottom; line-height: 1.02; }
+.mask > span { display: inline-block; will-change: transform; }
+@media (prefers-reduced-motion: no-preference) {
+  .mask > span { transform: translateY(110%); }
+  .mask > span.mask-on { transform: translateY(0); transition: transform 1s var(--nv-ease); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mask > span { transform: none; }
+}
+
+/* ---- 自定义光标 ----
+   仅在 JS 判定"细指针 + 允许动效"时才被注入 DOM。
+   圆点 = 即时跟随；外环 = lerp 追赶 + 状态变形。 */
+.nv-cursor-dot, .nv-cursor-ring {
+  position: fixed; top: 0; left: 0; z-index: 10000; pointer-events: none;
+  border-radius: 999px; opacity: 0;
+  transition: opacity .3s var(--nv-ease), width .3s var(--nv-ease),
+              height .3s var(--nv-ease), background .3s var(--nv-ease),
+              border-color .3s var(--nv-ease), margin .3s var(--nv-ease);
+}
+.nv-cursor-dot {
+  width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px;
+  background: var(--nv-accent);
+}
+.nv-cursor-ring {
+  width: 34px; height: 34px; margin: -17px 0 0 -17px;
+  border: 1px solid color-mix(in srgb, var(--nv-ink) 42%, transparent);
+  display: grid; place-items: center;
+}
+body.nv-cursor-on .nv-cursor-dot,
+body.nv-cursor-on .nv-cursor-ring { opacity: 1; }
+/* 悬停可交互元素：环扩大、点变小 */
+.nv-cursor-ring.is-hot {
+  width: 54px; height: 54px; margin: -27px 0 0 -27px;
+  border-color: var(--nv-accent);
+  background: color-mix(in srgb, var(--nv-accent) 10%, transparent);
+}
+body.nv-cursor-down .nv-cursor-ring { width: 26px; height: 26px; margin: -13px 0 0 -13px; }
+/* 状态标签（view / open / drag） */
+.nv-cursor-ring[data-label]::after {
+  content: attr(data-label);
+  font-family: var(--nv-mono); font-size: 8.5px; letter-spacing: .08em;
+  color: var(--nv-accent); text-transform: uppercase; white-space: nowrap;
+}
+.nv-cursor-ring[data-c="hide"] { width: 0; height: 0; margin: 0; border-color: transparent; }
+.nv-cursor-ring[data-c="view"] { width: 74px; height: 74px; margin: -37px 0 0 -37px;
+  background: color-mix(in srgb, var(--nv-accent) 14%, transparent); }
+.nv-cursor-ring[data-c="drag"] { width: 66px; height: 66px; margin: -33px 0 0 -33px; border-style: dashed; }
+/* 光标启用时，隐藏系统光标（只在桌面细指针下） */
+@media (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  html.nv-has-cursor body,
+  html.nv-has-cursor body a,
+  html.nv-has-cursor body button,
+  html.nv-has-cursor body input,
+  html.nv-has-cursor body select,
+  html.nv-has-cursor body textarea,
+  html.nv-has-cursor body label,
+  html.nv-has-cursor body [role="button"] { cursor: none; }
+  /* 输入类保留文本光标，避免无法定位插入点 */
+  html.nv-has-cursor body input[type="text"],
+  html.nv-has-cursor body input[type="search"],
+  html.nv-has-cursor body input[type="email"],
+  html.nv-has-cursor body input[type="password"],
+  html.nv-has-cursor body input[type="tel"],
+  html.nv-has-cursor body input[type="number"],
+  html.nv-has-cursor body textarea { cursor: text; }
+}
+
+/* ---- 色幕转场 ---- */
+.nv-curtain {
+  position: fixed; inset: 0; z-index: 10001; pointer-events: none;
+  background: var(--nv-ink);
+  clip-path: circle(0px at var(--cx, 50%) var(--cy, 50%));
+  transition: clip-path .62s var(--nv-ease), opacity .4s var(--nv-ease);
+  opacity: 0;
+}
+.nv-curtain--open {
+  clip-path: circle(150% at var(--cx, 50%) var(--cy, 50%));
+  opacity: 1;
+}
+.nv-curtain--in { opacity: .14; }
+/* 离场时页面本身轻推一下，避免"硬切" */
+html.nv-leaving body { opacity: .92; transition: opacity .3s var(--nv-ease); }
+@media (prefers-reduced-motion: reduce) {
+  .nv-curtain { display: none !important; }
+}
+
+/* ---- 载入骨架屏（无需 JS 也能读） ---- */
+.nv-skel {
+  position: relative; overflow: hidden; background: var(--nv-paper-3);
+  color: transparent !important; border-radius: 0;
+}
+.nv-skel::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--nv-paper) 70%, transparent), transparent);
+  transform: translateX(-100%);
+  animation: nvSweep 1.4s var(--nv-ease) infinite;
+}
+@keyframes nvSweep { to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .nv-skel::after { animation: none; } }
+
+/* ---- 按钮的加载态 / 禁用态 ---- */
+.nv-btn.is-loading, .nv-btn[aria-busy="true"] { pointer-events: none; opacity: .78; }
+.nv-btn.is-loading::after {
+  content: ""; width: 13px; height: 13px; margin-left: 2px; flex: none;
+  border: 1.6px solid currentColor; border-top-color: transparent; border-radius: 999px;
+  animation: nvSpin .7s linear infinite;
+}
+@keyframes nvSpin { to { transform: rotate(360deg); } }
+.nv-btn:disabled, .nv-btn[disabled] { opacity: .42; cursor: not-allowed; pointer-events: none; }
+.nv-btn:active { transform: translateY(1px); }
+
+/* ---- 表单校验反馈 ---- */
+.nv-field.bad > label { color: var(--nv-seal); }
+.nv-field.bad input, .nv-field.bad select, .nv-field.bad textarea { border-bottom-color: var(--nv-seal); }
+.nv-field.bad.nv-field--box input, .nv-field.bad.nv-field--box select, .nv-field.bad.nv-field--box textarea { border-color: var(--nv-seal); }
+.nv-field.ok input, .nv-field.ok select, .nv-field.ok textarea { border-bottom-color: var(--nv-accent); }
+.nv-field__err { font-size: 12.5px; color: var(--nv-seal); margin: 4px 0 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .nv-field.bad { animation: nvShake .32s var(--nv-ease); }
+  @keyframes nvShake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    50% { transform: translateX(4px); }
+    75% { transform: translateX(-2px); }
+  }
+}
+
+/* ---- 通用状态点（在线 / 满员 / 空） ---- */
+.nv-dot { display: inline-block; width: 6px; height: 6px; border-radius: 999px; background: var(--nv-ink-3); vertical-align: middle; }
+.nv-dot--live { background: var(--nv-seal); box-shadow: 0 0 0 0 color-mix(in srgb, var(--nv-seal) 55%, transparent);
+  animation: nvPulse 2.2s var(--nv-ease) infinite; }
+.nv-dot--ok { background: var(--nv-accent); }
+@keyframes nvPulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--nv-seal) 50%, transparent); }
+  70% { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) { .nv-dot--live { animation: none; } }
+
+/* ---- 下划线扫过（链接 hover 的高级感） ---- */
+.nv-ul { position: relative; display: inline-block; }
+.nv-ul::after {
+  content: ""; position: absolute; left: 0; bottom: -2px; width: 100%; height: 1px;
+  background: currentColor; transform: scaleX(0); transform-origin: right;
+  transition: transform .34s var(--nv-ease);
+}
+.nv-ul:hover::after { transform: scaleX(1); transform-origin: left; }
+
+/* ---- 卡片：可聚焦 + 点击态 ---- */
+.nv-card { cursor: pointer; }
+.nv-card:active { transform: translateY(-1px); }
+.nv-card:focus-visible { outline: 2px solid var(--nv-accent); outline-offset: 3px; }
+/* 卡片底部"阅读"提示：hover 时从下浮出 */
+.nv-card__hint {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 9px 12px;
+  background: color-mix(in srgb, var(--nv-ink) 88%, transparent); color: var(--nv-paper);
+  font-family: var(--nv-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+  transform: translateY(101%); transition: transform .4s var(--nv-ease);
+}
+.nv-card:hover .nv-card__hint { transform: translateY(0); }
+@media (pointer: coarse) { .nv-card__hint { display: none; } }
+
+/* ---- 媒体载体：占位色 + 比例锁 + 遮罩淡出 ---- */
+.nv-media { position: relative; overflow: hidden; background: var(--nv-paper-3); }
+.nv-media > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.nv-media--3x4 { aspect-ratio: 3 / 4; }
+.nv-media--4x3 { aspect-ratio: 4 / 3; }
+.nv-media--16x9 { aspect-ratio: 16 / 9; }
+.nv-media--1x1 { aspect-ratio: 1 / 1; }
+
+/* ---- 首次进入的页面淡入（JS 加 .nv-in 才生效，无 JS 不隐藏） ---- */
+@media (prefers-reduced-motion: no-preference) {
+  html.nv-boot .nv-main { opacity: 0; transform: translateY(6px); }
+  html.nv-boot.nv-ready .nv-main { opacity: 1; transform: none;
+    transition: opacity .5s var(--nv-ease), transform .5s var(--nv-ease); }
+}
+
+/* ---- 强化的 hover 反馈（全站统一口径） ---- */
+.nv-ic:active { transform: scale(.94); }
+.nv-tag { transition: border-color var(--nv-t-fast), color var(--nv-t-fast); }
+.nv-tag:hover { border-color: var(--nv-ink-2); color: var(--nv-ink-2); }
+.nv-nav a::after { transition: transform .3s var(--nv-ease); }
+.nv-drawer li a:active { padding-left: 24px; }
+
+/* ---- 分隔节奏：编辑版物式的细线 + 编号 ---- */
+.nv-hr { border: 0; border-top: var(--nv-hair); margin: var(--nv-s5) 0; }
+.nv-hr--ink { border-top-color: var(--nv-ink); }
+
+/* ---- 统计数字块（去装饰、靠字号与字距） ---- */
+.nv-stats { display: flex; flex-wrap: wrap; gap: var(--nv-s5); }
+.nv-stat__n { font-family: var(--nv-serif); font-weight: 700; font-size: clamp(30px, 4.4vw, 54px);
+  line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.nv-stat__l { font-family: var(--nv-mono); font-size: 11px; letter-spacing: .16em;
+  color: var(--nv-ink-3); margin: 8px 0 0; text-transform: uppercase; }
+
+/* ---- 触控目标兜底：移动端所有小控件至少 44px ---- */
+@media (pointer: coarse) {
+  .nv-btn--sm { min-height: 44px; padding-top: 12px; padding-bottom: 12px; }
+  .nv-ic, .nf-btn, .fav-btn { min-width: 44px; min-height: 44px; }
+}

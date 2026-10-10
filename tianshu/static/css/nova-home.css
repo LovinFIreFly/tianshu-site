@@ -1,0 +1,205 @@
+/* ============================================================================
+   NOVA · 首页专用排版（2026-10 纵向版）
+   ----------------------------------------------------------------------------
+   只放"首页独有"的版式；通用件（按钮/卡片/网格/状态反馈/动效）全在 nova.css。
+   设计约束：纯纵向、无横向推轨；用 8px 网格与编辑版物式的细线分隔建立节奏。
+   ============================================================================ */
+
+/* =========================== 开屏 =========================== */
+.hm-hero {
+  position: relative;
+  padding: clamp(56px, 11vh, 132px) 0 var(--nv-s7);
+  border-bottom: 1px solid var(--nv-ink);
+  overflow: hidden;
+}
+/* 背景：极淡的等距细线 + 一道藤黄晕，制造"纸面"而非"渐变墙" */
+.hm-hero::before {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 1px, color-mix(in srgb, var(--nv-line) 62%, transparent) 1px 92px),
+    radial-gradient(64% 58% at 78% 8%, color-mix(in srgb, var(--nv-accent) 13%, transparent), transparent 70%);
+  opacity: .8;
+}
+.hm-hero__in { position: relative; z-index: 1; }
+
+.hm-hero__meta {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: var(--nv-s3); flex-wrap: wrap;
+  padding-bottom: var(--nv-s4);
+}
+.hm-hero__nums { color: var(--nv-ink-3); }
+
+.hm-hero__title {
+  margin: clamp(28px, 5vh, 60px) 0 0;
+  max-width: 20ch;
+}
+.hm-hero__title .mask { display: block; }
+.hm-hero__title .nv-em { background-position: 0 62%; }
+
+.hm-hero__foot {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--nv-s5); align-items: end;
+  margin-top: clamp(28px, 5vh, 56px);
+  padding-top: var(--nv-s4); border-top: var(--nv-hair);
+}
+.hm-hero__lead { max-width: 46ch; }
+.hm-hero__cta { display: flex; gap: 12px; flex-wrap: wrap; }
+
+.hm-hero__stats {
+  margin-top: var(--nv-s6);
+  padding-top: var(--nv-s4); border-top: 1px solid var(--nv-ink);
+  justify-content: space-between;
+}
+.hm-hero__stats > div { min-width: 92px; }
+
+/* 往下滚提示：一条会呼吸的短竖线 */
+.hm-cue {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 1;
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--nv-mono); font-size: 10px; letter-spacing: .2em;
+  color: var(--nv-ink-3); text-transform: uppercase;
+}
+.hm-cue i {
+  display: block; width: 1px; height: 22px; background: var(--nv-ink-3);
+  transform-origin: top; animation: hmCue 2s var(--nv-ease) infinite;
+}
+@keyframes hmCue {
+  0%, 100% { transform: scaleY(.32); opacity: .4; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .hm-cue i { animation: none; } }
+
+/* =========================== 分节通用 =========================== */
+.hm-sec { padding-top: var(--nv-s6); }
+.hm-sec .nv-sechead { padding-top: 0; }
+.hm-more { margin-top: var(--nv-s5); }
+
+/* =========================== 01 今夜清单 =========================== */
+.hm-board { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--nv-ink); }
+.hm-board__row {
+  display: grid; grid-template-columns: 92px minmax(0, 1fr) minmax(150px, 220px);
+  gap: var(--nv-s3); align-items: center;
+  padding: 16px 0; border-bottom: var(--nv-hair);
+  transition: padding-left var(--nv-t-fast) var(--nv-ease), background var(--nv-t-fast);
+}
+.hm-board__row:first-child { border-top: 0; }
+.hm-board__row:hover { padding-left: 14px; background: color-mix(in srgb, var(--nv-paper-2) 60%, transparent); }
+.hm-board__t { color: var(--nv-accent); font-size: 13px; letter-spacing: .04em; }
+.hm-board__n { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.hm-board__n b { font-family: var(--nv-serif); font-size: 19px; font-weight: 700; letter-spacing: -.01em; line-height: 1.25; }
+.hm-board__n small { font-size: 12.5px; color: var(--nv-ink-3); }
+.hm-board__s { display: flex; flex-direction: column; gap: 7px; font-size: 13px; color: var(--nv-ink-2); text-align: right; }
+.hm-board__s b { color: var(--nv-ink); font-variant-numeric: tabular-nums; }
+.hm-board__bar { display: block; height: 2px; }
+
+/* =========================== 02 本子墙 =========================== */
+.hm-shelf { margin-top: var(--nv-s2); }
+.nv-card__type--new { background: var(--nv-accent); color: #fff; }
+
+/* 第一张卡跨两行两列：破除均质网格（编辑版物的破格） */
+@media (min-width: 1101px) {
+  .hm-shelf > .nv-card:first-child { grid-column: span 2; grid-row: span 2; }
+  .hm-shelf > .nv-card:first-child .nv-card__cover { aspect-ratio: auto; height: 100%; min-height: 300px; }
+  .hm-shelf > .nv-card:first-child .nv-card__title { font-size: 27px; }
+}
+
+/* =========================== 03 口碑 =========================== */
+.hm-quote {
+  position: relative; margin: 0;
+  padding: clamp(28px, 4vw, 52px) 0 clamp(24px, 3vw, 40px);
+  border-top: 1px solid var(--nv-ink); border-bottom: var(--nv-hair);
+}
+.hm-quote__mark {
+  position: absolute; top: clamp(10px, 1.6vw, 22px); right: 0;
+  font-family: var(--nv-serif); font-weight: 700;
+  font-size: clamp(96px, 15vw, 210px); line-height: .7;
+  color: color-mix(in srgb, var(--nv-accent) 22%, transparent);
+  pointer-events: none; user-select: none;
+}
+.hm-quote__t {
+  position: relative; margin: 0; max-width: 30ch;
+  font-family: var(--nv-serif); font-weight: 700;
+  font-size: clamp(24px, 3.5vw, 46px); line-height: 1.28; letter-spacing: -.02em;
+}
+.hm-quote__who { display: flex; align-items: center; gap: var(--nv-s3); flex-wrap: wrap; margin-top: var(--nv-s4); }
+.hm-quote__nick { font-weight: 600; font-size: 15px; }
+
+.hm-stars { color: var(--nv-accent); font-size: 13px; letter-spacing: .12em; }
+
+.hm-quotes {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--nv-s4); margin-top: var(--nv-s5);
+}
+.hm-mini {
+  margin: 0; padding-top: var(--nv-s3); border-top: var(--nv-hair);
+  display: flex; flex-direction: column; gap: var(--nv-s3); justify-content: space-between;
+  transition: transform var(--nv-t-fast) var(--nv-ease);
+}
+.hm-mini:hover { transform: translateY(-3px); }
+.hm-mini p { margin: 0; font-size: 14.5px; line-height: 1.75; color: var(--nv-ink-2); }
+.hm-mini figcaption { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+
+/* =========================== 04 拼车 =========================== */
+.hm-cars {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--nv-s4);
+}
+.hm-car {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: var(--nv-s4); background: var(--nv-paper-2); border: var(--nv-hair);
+  transition: transform var(--nv-t-fast) var(--nv-ease), border-color var(--nv-t-fast), box-shadow var(--nv-t-fast);
+}
+.hm-car:hover { transform: translateY(-3px); border-color: var(--nv-line-2); box-shadow: 0 16px 40px -26px rgba(0,0,0,.5); }
+.hm-car__top { display: flex; justify-content: space-between; align-items: center; gap: var(--nv-s2); }
+.hm-car__top .nv-mono { color: var(--nv-accent); font-size: 12px; }
+.hm-car__t { font-family: var(--nv-serif); font-weight: 700; font-size: 21px; letter-spacing: -.012em; margin: 2px 0 0; line-height: 1.25; }
+.hm-car__m { font-size: 13px; color: var(--nv-ink-3); margin: 0; }
+.hm-car__m b { color: var(--nv-ink); }
+.hm-car__bar { display: block; }
+.hm-car__go { margin-top: auto; align-self: flex-start; }
+
+/* =========================== 05 进站 =========================== */
+.hm-enter { padding-bottom: var(--nv-s6); }
+.hm-enter__grid { border-top: 1px solid var(--nv-ink); }
+.hm-link {
+  display: grid; grid-template-columns: 62px minmax(140px, 220px) minmax(0, 1fr) auto;
+  gap: var(--nv-s3); align-items: center;
+  padding: clamp(20px, 3vw, 32px) 0;
+  border-bottom: var(--nv-hair);
+  transition: padding-left var(--nv-t-fast) var(--nv-ease), color var(--nv-t-fast);
+}
+.hm-link::after {
+  content: "→"; font-size: 20px; color: var(--nv-ink-3);
+  transition: transform var(--nv-t-fast) var(--nv-ease), color var(--nv-t-fast);
+}
+.hm-link:hover { padding-left: 16px; color: var(--nv-ink); }
+.hm-link:hover::after { transform: translateX(6px); color: var(--nv-accent); }
+.hm-link__n { color: var(--nv-ink-3); font-size: 12px; letter-spacing: .16em; }
+.hm-link:hover .hm-link__n { color: var(--nv-accent); }
+.hm-link__l { font-family: var(--nv-serif); font-weight: 700; font-size: clamp(22px, 3vw, 36px); letter-spacing: -.02em; line-height: 1.15; }
+.hm-link__d { font-size: 14px; color: var(--nv-ink-3); }
+
+/* =========================== 响应式 =========================== */
+@media (max-width: 900px) {
+  .hm-hero__foot { grid-template-columns: 1fr; gap: var(--nv-s4); align-items: start; }
+  .hm-hero__stats { gap: var(--nv-s4); }
+  .hm-board__row { grid-template-columns: 74px minmax(0, 1fr); row-gap: 10px; }
+  .hm-board__s { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 10px; text-align: left; }
+  .hm-board__bar { flex: 1; max-width: 140px; }
+  .hm-link { grid-template-columns: 40px minmax(0, 1fr) auto; row-gap: 6px; }
+  .hm-link__d { grid-column: 2 / 3; }
+}
+@media (max-width: 680px) {
+  .hm-hero { padding-top: 40px; padding-bottom: var(--nv-s6); }
+  .hm-hero__title { max-width: none; }
+  .hm-quote__mark { font-size: 120px; }
+  .hm-quotes, .hm-cars { grid-template-columns: 1fr; }
+  .hm-quote__t { max-width: none; }
+}
+
+/* =========================== 欢迎页 =========================== */
+.wc-hero { border-bottom: 0; }
+.wc-hero__title { font-size: clamp(38px, 8.6vw, 122px); max-width: 18ch; }
+.wc-hero__note { color: var(--nv-ink-3); margin-top: var(--nv-s5); }
+.wc-hero__note a { color: var(--nv-ink-2); text-decoration: underline; text-underline-offset: 4px; }
+.wc-hero__note a:hover { color: var(--nv-accent); }

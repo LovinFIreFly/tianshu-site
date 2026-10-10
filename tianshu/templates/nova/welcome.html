@@ -1,20 +1,46 @@
 {% extends 'layout.html' %}
 {% block title %}{{ settings.shopName }} · 藏在学校里的剧本杀小店{% endblock %}
-{# NOVA 欢迎页：进站第一屏。巨字店名 + 两个动作。 #}
+{# ============================================================================
+   NOVA 欢迎页：进站第一屏（2026-10 纵向版）
+   巨字店名（逐行遮罩揭示）+ 两个动作 + 一栏事实。不用横滚，不用弹窗。
+   ============================================================================ #}
 {% block body %}
-<section style="min-height:84vh;display:flex;align-items:flex-end;padding:clamp(60px,12vh,140px) 0 clamp(40px,7vh,80px)">
-  <div class="nv-wrap">
-    <p class="nv-kick rv">{{ settings.shopName }} · 下班过来开一本</p>
-    <h1 class="nv-h1 rv" data-d="60" style="font-size:min(clamp(52px,13vw,168px),17vw);margin-top:var(--nv-s3)">{{ settings.shopName }}</h1>
-    <p class="nv-lead rv" data-d="120" style="margin-top:var(--nv-s4);max-width:44ch">推门进来，挑个本，坐下就开始。</p>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:var(--nv-s5)" class="rv" data-d="160">
-      <a class="nv-btn nv-btn--accent" href="{{ url_for('user.login') }}">上车登记</a>
-      <a class="nv-btn" href="{{ url_for('user.register') }}">去登记</a>
-      <a class="nv-btn" href="{{ url_for('public.home', browse=1) }}">先瞅瞅有啥本 →</a>
+<section class="hm-hero wc-hero">
+  <div class="nv-wrap hm-hero__in">
+    <div class="hm-hero__meta">
+      <p class="nv-kick">{{ settings.shopName }} · Est. 藏在学校里</p>
+      <p class="nv-kick">欢迎进来 · 随便看看也行</p>
     </div>
-    <p class="nv-mono rv" data-d="200" style="color:var(--nv-ink-3);margin-top:var(--nv-s5)">
-      目前有 {{ meta.scripts }} 个本，{% if meta.today %}今天有 {{ meta.today }} 场开本{% else %}今天还没开场{% endif %} · 可拼可包，随意选
+
+    <h1 class="nv-h1 hm-hero__title wc-hero__title">
+      <span class="mask"><span>推门进来，</span></span>
+      <span class="mask"><span>挑个本，坐下就开始。</span></span>
+    </h1>
+
+    <div class="hm-hero__foot">
+      <p class="nv-lead hm-hero__lead">
+        情感、硬核、恐怖、欢乐都在这儿。<br>
+        一个人来也行，拼车区喊一声就有搭子。
+      </p>
+      <div class="hm-hero__cta">
+        <a class="nv-btn nv-btn--accent" href="{{ url_for('user.login') }}" data-magnet data-cursor="view" data-cursor-label="进站">上车登记</a>
+        <a class="nv-btn nv-btn--ghost" href="{{ url_for('public.home', browse=1) }}" data-curtain data-magnet>先随便逛逛 →</a>
+      </div>
+    </div>
+
+    <div class="nv-stats hm-hero__stats">
+      <div><p class="nv-stat__n"><span class="count" data-to="{{ meta.scripts or 0 }}">0</span></p><p class="nv-stat__l">在架剧本</p></div>
+      <div><p class="nv-stat__n"><span class="count" data-to="{{ meta.today or 0 }}">0</span></p><p class="nv-stat__l">今日开场</p></div>
+      <div><p class="nv-stat__n">可拼可包</p><p class="nv-stat__l">随你挑</p></div>
+    </div>
+
+    <p class="nv-mono wc-hero__note">
+      还没登记？<a class="nv-ul" href="{{ url_for('user.register') }}">去登记一个</a>
     </p>
   </div>
 </section>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/nova-home.css', v=static_v('css/nova-home.css')) }}">
 {% endblock %}

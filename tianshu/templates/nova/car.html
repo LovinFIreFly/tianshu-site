@@ -68,7 +68,7 @@
         <div class="nv-bar"><i style="width:{{ (c.joined * 100 / (c.cap or 8))|round|int }}%"></i></div>
 
         <div class="nv-car__foot">
-          <a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('public.car_detail', cid=c.id) }}">进车队 →</a>
+          <a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('public.car_detail', cid=c.id) }}" data-curtain data-cursor="view" data-cursor-label="上车">进车队 →</a>
           {% if not me %}
             <a class="nv-btn nv-btn--sm nv-btn--solid" href="{{ url_for('user.login', next=request.path) }}">上车登记后上车</a>
           {% elif c.mine %}
@@ -105,8 +105,8 @@
     <h3>还没人发车</h3>
     <p>还没人发车，不如你来开个头？去本本墙挑本，玩法选<b>拼车</b>就发车。</p>
     <div style="display:flex;gap:12px;flex-wrap:wrap">
-      <a class="nv-btn nv-btn--solid" href="{{ url_for('public.scripts') }}">去挑个本子</a>
-      <a class="nv-btn" href="{{ url_for('public.comm') }}">去唠嗑区问问</a>
+      <a class="nv-btn nv-btn--solid" href="{{ url_for('public.scripts') }}" data-curtain data-magnet>去挑个本子</a>
+      <a class="nv-btn" href="{{ url_for('public.comm') }}" data-curtain data-magnet>去唠嗑区问问</a>
     </div>
   </div>
   {% endif %}

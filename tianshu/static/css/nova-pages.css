@@ -622,3 +622,104 @@ html[data-theme="dark"] .nv-tag--ok { border-color: #7FB08A; color: #7FB08A; }
 
 /* 详情页的封面块：占位要撑起高度，否则会塌成一条 */
 .nv-detail__cover { aspect-ratio: 4/3; background: var(--nv-paper-3); }
+
+/* ============================================================================
+   NOVA · 全站增强层（2026-10 纵向改版）
+   ----------------------------------------------------------------------------
+   目的：把"能用"提到"精致"。只做三件事 ——
+     ① 统一状态反馈：hover / active / focus / loading / 空态 / 禁用，口径一致
+     ② 复用首页亮点：卡片提示条、下划线扫过、磁性、遮罩揭示、光标状态
+     ③ 提升排版层级：留白梯度、字阶、分区节奏、卡片区分度
+   约束：只动 transform / opacity / color / border，不碰布局属性，不劫持滚动。
+   ============================================================================ */
+
+/* ---------- ① 卡片：统一 hover / 提示条 / 焦点环 ---------- */
+.nv-card__cover { position: relative; display: block; }
+.nv-card__hint {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+  padding: 9px 12px; background: color-mix(in srgb, var(--nv-ink) 88%, transparent);
+  color: var(--nv-paper); font-family: var(--nv-mono); font-size: 10px;
+  letter-spacing: .14em; text-transform: uppercase;
+  transform: translateY(101%); transition: transform .4s var(--nv-ease);
+}
+.nv-card:hover .nv-card__hint, .nv-card:focus-within .nv-card__hint { transform: translateY(0); }
+@media (pointer: coarse) { .nv-card__hint { display: none; } }
+
+/* 卡片标题在 hover 时用下划线扫过 —— 与全站链接口径一致 */
+.nv-card__title a { position: relative; }
+.nv-card__title a::after {
+  content: ""; position: absolute; left: 0; bottom: -3px; width: 100%; height: 1px;
+  background: var(--nv-accent); transform: scaleX(0); transform-origin: right;
+  transition: transform .34s var(--nv-ease);
+}
+.nv-card:hover .nv-card__title a::after { transform: scaleX(1); transform-origin: left; }
+.nv-card:focus-within { outline: 2px solid var(--nv-accent); outline-offset: 3px; }
+
+/* 卡片入场（前端 fetch 换网格后用 [data-anim]，只淡入不上抛，避免跳动） */
+@media (prefers-reduced-motion: no-preference) {
+  [data-spa-grid] .nv-card { animation: nvCardIn .5s var(--nv-ease) both; }
+  [data-spa-grid] .nv-card:nth-child(2) { animation-delay: .04s; }
+  [data-spa-grid] .nv-card:nth-child(3) { animation-delay: .08s; }
+  [data-spa-grid] .nv-card:nth-child(4) { animation-delay: .12s; }
+  [data-spa-grid] .nv-card:nth-child(5) { animation-delay: .16s; }
+  [data-spa-grid] .nv-card:nth-child(n+6) { animation-delay: .2s; }
+}
+@keyframes nvCardIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+/* ---------- ② 工具条 / 筛选片：完整的按下与选中反馈 ---------- */
+.nv-toolbar { display: flex; align-items: center; gap: var(--nv-s3);
+  justify-content: space-between; flex-wrap: wrap;
+  padding: 14px 0; border-bottom: var(--nv-hair); }
+.nv-toolbar__end { display: flex; align-items: center; gap: var(--nv-s3); }
+
+.nv-chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.nv-chips__lab { font-family: var(--nv-mono); font-size: 11px; letter-spacing: .14em;
+  color: var(--nv-ink-3); text-transform: uppercase; margin-right: 4px; }
+.nv-chip {
+  padding: 6px 13px; border: var(--nv-hair); background: none; cursor: pointer;
+  font-size: 13px; color: var(--nv-ink-2); white-space: nowrap;
+  transition: color var(--nv-t-fast), border-color var(--nv-t-fast),
+              background var(--nv-t-fast), transform var(--nv-t-fast);
+}
+.nv-chip:hover { color: var(--nv-ink); border-color: var(--nv-ink-2); transform: translateY(-1px); }
+.nv-chip:active { transform: translateY(0) scale(.97); }
+.nv-chip.on { background: var(--nv-ink); border-color: var(--nv-ink); color: var(--nv-paper); }
+.nv-chip:focus-visible { outline: 2px solid var(--nv-accent); outline-offset: 2px; }
+
+/* ---------- ③ 搜索框：聚焦时的整体反馈 ---------- */
+.nv-search { transition: border-color var(--nv-t-fast); }
+.nv-search:focus-within { border-bottom-color: var(--nv-accent); }
+.nv-search input::placeholder { transition: color var(--nv-t-fast); }
+.nv-search:focus-within input::placeholder { color: transparent; }
+
+/* ---------- ④ 空态：给所有空态补齐"下一步"的视觉重量 ---------- */
+.nv-empty { text-align: left; }
+.nv-empty .nv-btn { margin-top: var(--nv-s2); }
+
+/* ---------- ⑤ 详情页 / 分段导航：状态与节奏 ---------- */
+.nv-seg { border-bottom: 1px solid var(--nv-ink); }
+.nv-seg .mi { transition: color var(--nv-t-fast), border-color var(--nv-t-fast); }
+.nv-seg .mi:hover { color: var(--nv-ink); }
+
+/* ---------- ⑥ 列表行通用：hover 左移 + 底线呼应 ---------- */
+.nv-row { transition: padding-left var(--nv-t-fast) var(--nv-ease),
+                      background var(--nv-t-fast) var(--nv-ease); }
+.nv-row:hover { padding-left: 12px; background: color-mix(in srgb, var(--nv-paper-2) 60%, transparent); }
+
+/* ---------- ⑦ 标签页切换的入场 ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .tabpane.on { animation: nvPaneIn .42s var(--nv-ease) both; }
+}
+@keyframes nvPaneIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* ---------- ⑧ 收藏按钮：明确的按下反馈 ---------- */
+.fav-btn:active { transform: scale(.9); }
+.fav-btn.on { animation: nvFavPop .42s var(--nv-ease); }
+@keyframes nvFavPop { 0% { transform: scale(1); } 40% { transform: scale(1.28); } 100% { transform: scale(1); } }
+
+/* ---------- ⑨ 画面级：统一分区的纵向留白梯度 ---------- */
+.nv-sec { padding-top: clamp(48px, 8vh, 96px); }
+.nv-sec:first-child { padding-top: clamp(28px, 5vh, 56px); }
+
+/* ---------- ⑩ 表单提交按钮的统一 loading（无 JS 也能看出的禁用态） ---------- */
+.nv-btn[aria-busy="true"], .nv-btn.is-loading { opacity: .75; }

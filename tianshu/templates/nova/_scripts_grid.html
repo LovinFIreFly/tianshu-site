@@ -4,10 +4,12 @@
 <div class="nv-grid" data-spa-grid data-count="{{ scripts|length }}">
   {% for s in scripts %}
   <article class="nv-card" data-anim>
-    <a class="nv-card__cover" href="{{ url_for('public.script_detail', sid=s.id) }}">
+    <a class="nv-card__cover" href="{{ url_for('public.script_detail', sid=s.id) }}"
+       data-curtain data-cursor="view" data-cursor-label="看本">
       {% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}" loading="lazy">
       {% else %}{% include '_script_ph.html' %}{% endif %}
       <span class="nv-card__type">{{ s.type or '剧本' }}</span>
+      <span class="nv-card__hint">打开剧本 →</span>
     </a>
     <div class="nv-card__body">
       <h3 class="nv-card__title"><a href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.title }}</a></h3>

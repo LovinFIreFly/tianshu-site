@@ -96,7 +96,7 @@
       <div class="nv-split__side">
         {% if me %}
         <p class="nv-sidehead">来吐槽 / 安利</p>
-        <form method="post" action="{{ url_for('public.post_create') }}">
+        <form method="post" action="{{ url_for('public.post_create') }}" data-busy>
           <div class="nv-book__row">
             <label>发到哪一类</label>
             <select name="type">
@@ -140,7 +140,7 @@
         <div class="nv-card" style="padding:var(--nv-s3);background:var(--nv-paper-2)">
           <p style="margin:0"><b>上车登记后才能发帖、点赞</b></p>
           <p class="nv-mute" style="margin:8px 0 12px">发帖、点赞、举报都要先登录。</p>
-          <a class="nv-btn nv-btn--sm nv-btn--solid" href="{{ url_for('user.login', next='/comm') }}">去登记</a>
+          <a class="nv-btn nv-btn--sm nv-btn--solid" href="{{ url_for('user.login', next='/comm') }}" data-curtain data-magnet>去登记</a>
         </div>
         {% endif %}
 
