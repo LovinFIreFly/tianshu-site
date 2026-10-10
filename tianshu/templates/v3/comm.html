@@ -1,0 +1,177 @@
+{% extends 'layout_v3.html' %}
+{% block title %}唠嗑区 · {{ settings.shopName }}{% endblock %}
+{# 社区（三代）：竖排导轨骨架。左 = 帖子流（细线分隔），右 = 发帖框 + 规矩。
+   服务端 GET 筛（ftype/ftopic）+ 页内 chips 筛（data-filter="type"）全部保留。 #}
+{% block body %}
+{% set TYPE_NAME = {'chat': '动态', 'diary': '日记', 'guide': '攻略', 'ask': '组队'} %}
+
+<section class="v3head">
+  <div class="v3wrap v3head__grid">
+    <p class="v3head__k">唠嗑区 · Community</p>
+    <div>
+      <h1 class="v3head__t">唠嗑区</h1>
+      <p class="v3head__lead">动态、日记、攻略、组队。剧透记得标，被举报就删。</p>
+    </div>
+  </div>
+</section>
+
+<div class="v3wrap">
+  {# 服务端筛选条：type 全部/普通/缺位招募；topic 全部/情感/硬核/恐怖/欢乐 #}
+  <form class="filterbar3 rv" method="get" action="{{ url_for('public.comm') }}" style="margin-top:clamp(16px,2.4vw,26px)">
+    <select name="type" aria-label="帖子类型">
+      <option value="">全部帖子</option>
+      <option value="chat" {{ 'selected' if (ftype or '') == 'chat' }}>普通动态</option>
+      <option value="recruit" {{ 'selected' if (ftype or '') == 'recruit' }}>缺位招募</option>
+    </select>
+    <select name="topic" aria-label="话题">
+      <option value="">全部话题</option>
+      {% for tp in ['情感','硬核','恐怖','欢乐'] %}
+      <option value="{{ tp }}" {{ 'selected' if (ftopic or '') == tp }}>{{ tp }}</option>
+      {% endfor %}
+    </select>
+    <button class="b3 b3--sm b3--solid" type="submit">筛选</button>
+    {% if ftype or ftopic %}<a class="b3 b3--sm b3--ghost" href="{{ url_for('public.comm') }}">重置</a>{% endif %}
+  </form>
+
+  {# 类型是**页内筛**（tabs.js 管）：点一下立刻藏/显，不刷新、不换网址。 #}
+  <div class="toolbar3">
+    <div class="chips3" data-filter="type">
+      <span class="chips3__lab">类型</span>
+      <button type="button" class="chip3 {{ 'on' if not t }}" data-show="all">全部</button>
+      {% for k, n in TYPE_NAME.items() %}
+      <button type="button" class="chip3 {{ 'on' if t == k }}" data-show="{{ k }}">{{ n }}（{{ counts.get(k, 0) }}）</button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="split3" style="padding:clamp(20px,2.8vw,34px) 0 clamp(44px,6vw,84px)">
+
+    {# —— 左：帖子流 —— #}
+    <div>
+      {% for p in posts %}
+      <article class="rev3 rv{% if loop.first %} unfold{% endif %}" data-type="{{ p.type or 'chat' }}" style="--i:{{ loop.index0 }}">
+        <div class="rev3__h rev3__h--author">
+          <div class="rev3__author">
+            <div class="rev3__avatar">
+              {% if p.avatar and p.avatar.startswith('/img/') %}
+              <img src="{{ p.avatar }}" alt="">
+              {% else %}
+              <span>{{ p.avatar or (p.nick or p.username or '玩家')[0] }}</span>
+              {% endif %}
+            </div>
+            <span class="rev3__name">{{ p.nick or p.username or '玩家' }}</span>
+          </div>
+          <span class="caption">{{ day_label(p.at) }}</span>
+        </div>
+        <div class="rev3__title-row">
+          {% if p.title %}<span class="rev3__w">{{ p.title }}</span>{% endif %}
+          <span class="tag3">{{ TYPE_NAME.get(p.type, '动态') }}</span>
+          {% if p.postType == 'recruit' %}
+          <span class="tag3 tag3--accent">缺 {{ p.recruitNeed or '?' }} 人{% if p.topic %} · {{ p.topic }}{% endif %}{% if p.recruitRole %} · {{ p.recruitRole }}{% endif %}</span>
+          {% endif %}
+          {% if p.topic and p.postType != 'recruit' %}<span class="tag3">{{ p.topic }}</span>{% endif %}
+        </div>
+        <p class="rev3__t" style="white-space:pre-wrap">{{ p.text }}</p>
+        <div class="rev3__a">
+          <form method="post" action="{{ url_for('public.post_like', pid=p.id) }}">
+            <button class="b3 b3--sm b3--ghost" type="submit">{{ '❤' if p.liked else '♡' }} {{ p.likeCount }}</button>
+          </form>
+          <form method="post" action="{{ url_for('public.post_report', pid=p.id) }}"
+                onsubmit="var r=prompt('举报原因（如：广告 / 剧透不标注 / 人身攻击）'); if(!r){return false;} this.reason.value=r; return true;">
+            <input type="hidden" name="reason" value="">
+            <button class="b3 b3--sm b3--ghost" type="submit">举报</button>
+          </form>
+          {% if my_admin %}
+          <form method="post" action="{{ url_for('admin.post_del', pid=p.id) }}" onsubmit="return confirm('删掉这条帖子？')">
+            <button class="b3 b3--sm" type="submit">删除</button>
+          </form>
+          {% endif %}
+        </div>
+      </article>
+      {% else %}
+      <div class="empty3">
+        <p class="empty3__k">No Posts</p>
+        <h3 class="empty3__t">还没人唠嗑</h3>
+        <p class="empty3__p">你可以第一个来：想拼的本、上局战报、新手攻略都行。</p>
+      </div>
+      {% endfor %}
+      {# 页内筛选：某一类里一条都没有时，别给一片空白 #}
+      <div class="no-hit" hidden style="padding:clamp(20px,3vw,34px) 0">
+        <p class="body-secondary" style="margin:0">这个类型下还没有帖子。点「全部」看看其它的。</p>
+      </div>
+    </div>
+
+    {# —— 右：发帖 + 规矩 —— #}
+    <div>
+      <div class="sticky3">
+        {% if me %}
+        <p class="sidehead3">来吐槽 / 安利<span class="line"></span></p>
+        <form method="post" action="{{ url_for('public.post_create') }}" class="form-stack">
+          <div class="field">
+            <label>发到哪一类</label>
+            <select name="type">
+              <option value="chat">动态（随便唠）</option>
+              <option value="diary">日记（这局战报）</option>
+              <option value="guide">攻略（带说明）</option>
+              <option value="ask">组队（找人拼车）</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>话题</label>
+            <div class="chips3">
+              {% for tp in ['情感','硬核','恐怖','欢乐'] %}
+              <label class="chip-check"><input type="radio" name="topic" value="{{ tp }}"><span>{{ tp }}</span></label>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="field">
+            <label>标题（可填可不填）</label>
+            <input name="title" placeholder="一句话">
+          </div>
+          <div class="field">
+            <label>内容</label>
+            <textarea name="text" rows="5" placeholder="说点什么... 求拼车写清本子和时间"></textarea>
+          </div>
+          {# 缺位招募开关：勾选才展开缺人/职位/剧本三个输入 #}
+          <div class="field">
+            <label class="chip-check" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="recruit-toggle"> <span>我要缺位招募（车上缺人）</span>
+            </label>
+          </div>
+          <div id="recruit-fields" style="display:none;border-top:1px dashed var(--d-rule);padding-top:12px">
+            <div class="field"><label>缺几人（数字）</label>
+              <input name="recruitNeed" type="number" min="1" max="10" placeholder="例：2"></div>
+            <div class="field"><label>缺什么位（例：推理位 / 情感位 / 机制位）</label>
+              <input name="recruitRole" placeholder="例：推理位"></div>
+            <div class="field"><label>哪本本（剧本名）</label>
+              <input name="recruitScript" placeholder="例：云使"></div>
+          </div>
+          <button class="b3 b3--solid b3--wide" type="submit">发送</button>
+        </form>
+        <script>
+        (function(){
+          var t=document.getElementById('recruit-toggle'), b=document.getElementById('recruit-fields');
+          if(!t||!b) return;
+          t.addEventListener('change', function(){ b.style.display = t.checked ? '' : 'none'; });
+        })();
+        </script>
+        {% else %}
+        <div class="note3">
+          <b>上车登记后才能发帖、点赞</b><br>
+          发帖、点赞、举报都要先登录。
+          <div style="margin-top:12px">
+            <a class="b3 b3--sm b3--solid" href="{{ url_for('user.login', next='/comm') }}">去登记</a>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="note3" style="margin-top:var(--d-s5)">
+          <b>唠嗑规矩</b><br>
+          ① 剧透要标；② 别骂人、别广告；③ 拼车写清本子和时间。举报核实就删。
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

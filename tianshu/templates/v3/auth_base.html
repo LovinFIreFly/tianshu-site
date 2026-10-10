@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+{# ============================================================================
+   三代 · 独立登录/注册布局（不套整站导轨）
+   ----------------------------------------------------------------------------
+   全屏居中一张票据卡 + 返回/深浅色入口。加载链与整站一致：
+   style → design2 → design3 → design-v3 → 皮肤（皮肤最后，永远赢）。
+   验证码脚本（data-code-btn）与装到桌面引导（install-mask）与二代同一套。
+   ============================================================================ #}
+{% set _skins = skins if skins is defined else {} %}
+{% set _q_skin = request.args.get('skin') if request.args.get('skin') is defined else none %}
+{% set cur_skin = (_q_skin if (_q_skin in _skins)
+                   else (settings.skin if settings.skin in _skins else 'playbill')) %}
+<html lang="zh-CN" {% if theme == 'dark' %}data-theme="dark"{% endif %}>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#F6F3EA">
+  <title>{% block title %}{{ settings.shopName }}{% endblock %}</title>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" href="{{ url_for('static', filename='icon.svg') }}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=static_v('css/style.css')) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design2.css', v=2) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design3.css', v=static_v('css/design3.css')) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-v3.css', v=static_v('css/design-v3.css')) }}">
+{% if cur_skin != 'playbill' %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/skin-' ~ cur_skin ~ '.css',
+                                v=static_v('css/skin-' ~ cur_skin ~ '.css')) }}">
+{% endif %}
+</head>
+<body>
+<div class="v3auth">
+
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% if msgs %}
+    <div class="flash-wrap">
+      {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="v3auth__inner">
+
+    {% block top %}
+    <div class="v3auth__top">
+      <a class="v3auth__home" href="{{ url_for('public.home', browse=1) }}">‹ 回大厅</a>
+      <a class="v3auth__theme" href="{{ url_for('public.toggle_theme') }}" title="切换深浅色" aria-label="切换深浅色">
+        {% if theme == 'light' %}🌙{% else %}☀️{% endif %}</a>
+    </div>
+    {% endblock %}
+
+    {% block card %}{% endblock %}
+
+    {% set _ua = request.headers.get('User-Agent') or '' %}
+    {% set _in_app = ('TianshuApp' in _ua) or ('TianshuDesktop' in _ua) or in_shell %}
+    <p class="v3auth__foot">© {{ year }} {{ settings.shopName }}・熬夜改本中
+      {% if not _in_app %}
+      <a class="v3auth__dl" href="{{ url_for('static', filename='app/tianshu-desktop.exe',
+                                      v=static_v('app/tianshu-desktop.exe')) }}"
+         download="甜薯剧本杀-电脑版.exe">💻 电脑端更爽</a>
+      <a class="v3auth__dl js-install" href="{{ url_for('static', filename='app/tianshu.apk',
+                                                v=static_v('app/tianshu.apk')) }}"
+         download="甜薯剧本杀.apk">📱 揣兜里随时约本</a>
+      <button class="v3auth__dl v3auth__dl-btn" type="button" id="install-btn">☰ 装到桌面</button>
+      {% endif %}</p>
+  </div>
+
+  {# 装到桌面的引导：Chrome/Edge 直接弹系统安装框；国产浏览器与 iPhone 给对应菜单步骤 #}
+  <div class="mask" id="install-mask">
+    <div class="modal small">
+      <div class="m-head">
+        <div><h2 style="font-size:20px;margin:0">📱 装到桌面</h2></div>
+        <button class="m-close" type="button" id="install-close" aria-label="关闭">✕</button>
+      </div>
+      <div class="m-body">
+        <p id="install-steps" style="margin:0;line-height:1.8">…</p>
+        <p class="sub" style="margin-top:var(--sp-3)">装完桌面就有甜薯图标，打开是全屏独立窗口，
+          和 App 一样；网站更新了它也自动是新版。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/csrf.js') }}"></script>
+
+{# 「获取验证码」：用 fetch 只把邮箱发给 /code/send，回一行提示，**不刷页面**。
+   为什么不能用 type=submit + formaction：浏览器提交前会先跑整表校验，
+   那时验证码/用户名/密码还空着 —— 直接弹"请填写此字段"，请求根本没发出去。 #}
+<script>
+(function () {
+  var btn = document.querySelector('[data-code-btn]');
+  if (!btn || !window.fetch) return;
+  var form = btn.form, tip = document.querySelector('[data-code-tip]');
+  var timer = null, left = 0;
+  function say(text, bad) {
+    if (!tip) return;
+    tip.textContent = text;
+    tip.className = 'code-tip' + (bad ? ' bad' : '');
+    tip.hidden = false;
+  }
+  function tick() {
+    left -= 1;
+    if (left <= 0) { clearInterval(timer); timer = null; btn.disabled = false; btn.textContent = '获取验证码'; return; }
+    btn.textContent = left + ' 秒后可重发';
+  }
+  btn.addEventListener('click', function () {
+    var box = form.querySelector('[name=email]');
+    var email = ((box || {}).value || '').trim();
+    if (!email) { if (box) box.focus(); say('先填邮箱 —— 验证码是发到邮箱的', true); return; }
+    btn.disabled = true;
+    say('正在发送…', false);
+    var fd = new FormData();
+    fd.append('email', email);
+    fd.append('purpose', btn.getAttribute('data-purpose') || 'reset');
+    fetch(btn.getAttribute('data-url'), {method: 'POST', body: fd,
+          headers: {'X-Requested-With': 'fetch', 'Accept': 'application/json'}})
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        say(d.msg || (d.ok ? '已发送' : '没发出去'), !d.ok);
+        if (d.ok) {            // 服务端 60 秒限一次，前端倒计时跟它对齐，别让人白点
+          left = 60; btn.textContent = left + ' 秒后可重发'; timer = setInterval(tick, 1000);
+        } else { btn.disabled = false; }
+      })
+      .catch(function () { say('网络不通，稍后再点一次', true); btn.disabled = false; });
+  });
+})();
+</script>
+<script>
+  (function () {
+    var btn = document.getElementById('install-btn');
+    var mask = document.getElementById('install-mask');
+    var steps = document.getElementById('install-steps');
+    if (!btn || !mask || !steps) return;
+    var evt = null;
+    window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); evt = e; });
+    function guide() {
+      var ua = navigator.userAgent;
+      if (/iPhone|iPad|iPod/i.test(ua)) {
+        steps.textContent = 'iPhone：用 Safari 打开本站 → 底部中间「分享」→ 选「添加到主屏幕」。（其它浏览器在各自菜单里找）';
+      } else if (/Via/i.test(ua)) {
+        steps.textContent = 'Via 浏览器：点右下角「⋯ 菜单」→「添加到桌面」（有的版本叫「创建快捷方式」）→ 桌面出现甜薯图标。（Via 不支持网页自己弹安装框，走它自己的菜单就行）';
+      } else if (/Quark|UCBrowser|MiuiBrowser|VivoBrowser|HeyTapBrowser|MQQBrowser|Baidu|OppoBrowser/i.test(ua)) {
+        steps.textContent = '你用的是国产浏览器：点底部中间「☰ 菜单」→ 找「添加到桌面」（有的叫「收藏到桌面」）→ 桌面出现甜薯图标。';
+      } else if (/Edg\//i.test(ua)) {
+        steps.textContent = '电脑 Edge：地址栏右侧「安装」小图标点一下；手机 Edge：底部菜单 →「添加到主屏幕」。';
+      } else if (/Chrome|SamsungBrowser/i.test(ua)) {
+        steps.textContent = '安卓 Chrome：右上角菜单 →「安装应用 / 添加到主屏幕」。电脑 Chrome：地址栏右侧「安装」图标。';
+      } else {
+        steps.textContent = '通用做法：浏览器「菜单」→「添加到桌面 / 添加到主屏幕」，装完桌面就有甜薯图标。';
+      }
+      mask.classList.add('show');
+    }
+    btn.addEventListener('click', function () {
+      if (evt) { evt.prompt(); evt = null; return; }
+      guide();
+    });
+    document.getElementById('install-close').addEventListener('click', function () { mask.classList.remove('show'); });
+    mask.addEventListener('click', function (e) { if (e.target === mask) mask.classList.remove('show'); });
+  })();
+</script>
+</body>
+</html>

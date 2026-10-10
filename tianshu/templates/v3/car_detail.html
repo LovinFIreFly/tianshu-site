@@ -1,0 +1,188 @@
+{% extends 'layout_v3.html' %}
+{% block title %}{{ car.title }} · 车队{% endblock %}
+{# 车队详情（三代）：暗场抬头 + 两栏（左：成员与上下车；右：聊天与车主设置）。
+   全部表单 action / 字段名 / 分享脚本保留。 #}
+{% block body %}
+
+<section class="dsec--stage on-stage" style="border-bottom:0;
+  padding:clamp(34px,6vh,72px) 0 clamp(24px,3.6vw,42px)">
+  <div class="glow3" aria-hidden="true"></div>
+  <div class="v3wrap">
+    <div class="row" style="justify-content:space-between;align-items:flex-start;gap:var(--d-s5)">
+      <div style="min-width:0">
+        <p class="copy-mono" style="margin:0;color:var(--d-stage-2);letter-spacing:.28em;font-size:12px">车队详情 · CAR</p>
+        <h1 style="margin:10px 0 0;font-family:var(--d-serif);font-weight:900;
+            font-size:min(clamp(36px,7.6vw,88px),14vw);line-height:1.08;letter-spacing:-.01em;color:var(--d-stage-ink)">
+          {{ car.emoji }} {{ car.title }}
+        </h1>
+        <div class="row" style="margin-top:16px;gap:10px;flex-wrap:wrap">
+          <span class="tag3">{{ car.day }} {{ car.time }}</span>
+          <span class="tag3">车主 {{ car.owner }}</span>
+          <span class="tag3">{{ car.joined }}/{{ car.cap }} 人</span>
+          {% if car.closed %}<span class="tag3">已截止</span>
+          {% elif car.filled %}<span class="tag3 tag3--ok">补满发车</span>
+          {% elif car.need %}<span class="tag3 tag3--accent">还差 {{ car.need }} 人</span>
+          {% else %}<span class="tag3 tag3--ok">已成局</span>{% endif %}
+          {% for t in car.tags %}<span class="tag3">{{ t }}</span>{% endfor %}
+          {% if car.reserved %}<span class="tag3">熟人位 {{ car.reserved }}</span>{% endif %}
+        </div>
+        {% if not car.closed and not car.filled and car.deadlineIn and car.deadlineIn > 0 %}
+        <p class="copy-mono" style="margin:12px 0 0;color:var(--d-accent)">
+          剩 {{ (car.deadlineIn / 3600000)|round(method='ceil')|int }} 小时{% if car.need %} · 还差 {{ car.need }} 人{% endif %}
+        </p>
+        {% endif %}
+      </div>
+      <div class="row" style="gap:8px">
+        <a class="b3 b3--sm" href="{{ url_for('public.car') }}">← 回拼车局</a>
+        <button class="b3 b3--sm b3--ghost" type="button" id="car-share-btn"
+                data-share-text="甜薯剧本杀｜《{{ car.title }}》{{ car.day }} {{ car.time }} 还差 {{ car.need or 0 }} 人，一起？">分享这车</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="v3wrap">
+  <div class="split3" style="padding:clamp(22px,3vw,40px) 0 clamp(44px,6vw,84px)">
+
+    {# —— 左：成员 + 上下车 —— #}
+    <div>
+      <p class="sidehead3">车上的成员（{{ car.members|length }}）<span class="line"></span></p>
+      <div class="sheet3">
+        {% for m in car.members %}
+        <div class="sheet3__row" style="grid-template-columns:1fr auto">
+          <span class="sheet3__m">
+            <span class="car-mem-av" aria-hidden="true">{% if m.avatar and m.avatar.startswith('/img/') %}<img src="{{ m.avatar }}" alt="">{% else %}{{ (m.nick or '玩')[0] }}{% endif %}</span>
+            <b>{% if m.nick in user_names %}<a class="lnk" href="{{ url_for('public.user_profile', username=(m.nick or '')) }}">{{ m.nick }}</a>{% else %}{{ m.nick }}{% endif %}{% if m.owner %} 车主{% endif %}</b>
+            <span>{{ m.players }} 人{% if m.gender %} · {{ m.gender }}{% endif %}{% if m.ageBucket %} · {{ m.ageBucket }}{% endif %}</span>
+            {% if m.tags %}<span class="chips3" style="margin-top:6px">{% for t in m.tags %}<i class="tag3" style="margin:0 4px 0 0">{{ t }}</i>{% endfor %}</span>{% endif %}
+          </span>
+          <span class="sheet3__cap">{% if m.owner %}组队中{% else %}已上车{% endif %}</span>
+        </div>
+        {% else %}
+        <p class="body-secondary" style="padding:14px 0">车上还只有车主一个人，喊朋友来凑一车吧。</p>
+        {% endfor %}
+      </div>
+
+      <div style="margin-top:var(--d-s5)">
+        {% if not car.mine and not car.full %}
+        <form method="post" action="{{ url_for('user.car_act', cid=car.id, action='join') }}">
+          <button class="b3 b3--accent b3--wide" type="submit">我要上车</button>
+        </form>
+        {% elif car.mine %}
+        <form method="post" action="{{ url_for('user.car_act', cid=car.id, action='quit') }}">
+          <button class="b3 b3--wide" type="submit">临时跳车</button>
+        </form>
+        {% else %}
+        <form method="post" action="{{ url_for('user.car_act', cid=car.id, action='wait') }}">
+          <button class="b3 b3--wide" type="submit">蹲个候补</button>
+        </form>
+        {% endif %}
+      </div>
+
+      <div class="note3" style="margin-top:var(--d-s5)">
+        车上只显示昵称、性别、年龄段和人数 —— 电话这类信息车上看不到，保护隐私。
+      </div>
+    </div>
+
+    {# —— 右：聊天 + 车主设置 —— #}
+    <div>
+      <p class="sidehead3">车队唠嗑<span class="line"></span></p>
+      <div style="max-height:340px;overflow-y:auto;border-top:1px solid var(--d-rule)">
+        {% for m in msgs %}
+        <div style="padding:12px 0;border-bottom:1px solid var(--d-rule)">
+          <div class="row" style="justify-content:space-between;gap:8px">
+            <b style="font-family:var(--d-serif)">{{ m.by }}{% if m.mine %}（我）{% endif %}</b>
+            <span class="caption">{{ day_label(m.at) }}</span>
+          </div>
+          <p class="rev3__t" style="margin-top:6px">{{ m.text }}</p>
+        </div>
+        {% else %}
+        <p class="sub" style="padding:14px 0">还没人说话，打个招呼吧。</p>
+        {% endfor %}
+      </div>
+
+      {% if me %}
+      <form class="row" style="margin-top:12px;gap:8px" method="post" action="{{ url_for('user.car_act', cid=car.id, action='msg') }}">
+        <input class="input" name="text" placeholder="唠两句…" aria-label="车队消息" style="flex:1;min-width:140px">
+        <button class="b3 b3--sm b3--solid" type="submit">发</button>
+      </form>
+      {% else %}
+      <a class="b3 b3--wide" style="margin-top:12px" href="{{ url_for('user.login', next=request.path) }}">上车登记后说话</a>
+      {% endif %}
+
+      {% if is_owner %}
+      <div class="note3" style="margin-top:var(--d-s6);border-left-color:var(--d-ink)">
+        <b>我是车主：车队设置</b>
+        <form style="margin-top:14px" method="post" action="{{ url_for('user.car_act', cid=car.id, action='tags') }}">
+          <div class="field">
+            <label>车队标签（一眼看懂这车啥风格）</label>
+            <div class="chips3">
+              {% for t in tags %}
+              <label class="chip-check">
+                <input type="checkbox" name="tags" value="{{ t }}" {{ 'checked' if t in car.tags }}><span>{{ t }}</span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+          <button class="b3 b3--sm b3--solid" style="margin-top:12px" type="submit">存标签</button>
+        </form>
+
+        <form class="row" style="margin-top:16px;gap:8px;align-items:flex-end;
+              border-top:1px solid var(--d-rule);padding-top:14px"
+              method="post" action="{{ url_for('user.car_act', cid=car.id, action='reserved') }}">
+          <div class="field" style="max-width:130px">
+            <label>熟人留位</label>
+            <input name="n" type="number" min="0" max="3" value="{{ car.reserved or 0 }}">
+          </div>
+          <button class="b3 b3--sm" type="submit">保存</button>
+        </form>
+      </div>
+      {% endif %}
+
+      {% if (is_owner or my_admin) and not car.closed and not car.filled %}
+      <div class="note3" style="margin-top:var(--d-s4)">
+        <b>车队操作</b>
+        <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">
+          {% if not car.closed %}
+          <form method="post" action="{{ url_for('user.car_act', cid=car.id, action='close') }}"
+                onsubmit="return confirm('提前截止这车？车上的人会收到通知。')">
+            <button class="b3 b3--sm b3--ghost" type="submit">提前截止</button>
+          </form>
+          {% endif %}
+          {% if not car.filled %}
+          <form method="post" action="{{ url_for('user.car_act', cid=car.id, action='fill') }}"
+                onsubmit="return confirm('标记这车已补满、准备发车？')">
+            <button class="b3 b3--sm b3--solid" type="submit">标记补满</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  var btn=document.getElementById('car-share-btn');
+  if(!btn) return;
+  function toast(msg){
+    var t=document.getElementById('share-toast');
+    if(!t){ t=document.createElement('div'); t.id='share-toast'; t.className='share-toast'; document.body.appendChild(t); }
+    t.textContent=msg; t.classList.add('show');
+    clearTimeout(t._tm); t._tm=setTimeout(function(){ t.classList.remove('show'); }, 1800);
+  }
+  btn.addEventListener('click', function(){
+    var data={ title: document.title, text: btn.getAttribute('data-share-text') || document.title, url: location.href };
+    if(navigator.share){ navigator.share(data).catch(function(){}); }
+    else {
+      var text=data.text+' '+data.url;
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(function(){toast('链接已复制，去喊朋友上车');}, function(){toast('复制失败，手动复制地址栏');});
+      } else { toast('请手动复制地址栏链接'); }
+    }
+  });
+})();
+</script>
+{% endblock %}

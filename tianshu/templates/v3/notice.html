@@ -1,0 +1,51 @@
+{% extends 'layout_v3.html' %}
+{% block title %}消息中心 · {{ settings.shopName }}{% endblock %}
+{# 消息中心（三代）：竖排导轨骨架。编号流水式列表，未读用左侧强调色短线标出。 #}
+{% block body %}
+
+<section class="v3head">
+  <div class="v3wrap v3head__grid">
+    <p class="v3head__k">消息中心 · Notices</p>
+    <div>
+      <h1 class="v3head__t">消息中心</h1>
+      <div class="v3head__meta">
+        <span class="copy-mono">共 {{ rows|length }} 条{% if unread %} · <span style="color:var(--d-accent)">未读 {{ unread }}</span>{% endif %}</span>
+        <span class="row" style="gap:8px">
+          {% if unread %}
+          <form method="post" action="{{ url_for('user.notice_read') }}">
+            <button class="b3 b3--sm b3--ghost" type="submit">全部标为已读</button>
+          </form>
+          {% endif %}
+          <a class="b3 b3--sm b3--ghost" href="{{ url_for('user.me') }}">← 回我的</a>
+        </span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="v3wrap">
+  <div style="padding:clamp(18px,2.6vw,30px) 0 clamp(44px,6vw,84px)">
+    {% for n in rows %}
+    {% set is_new = (me.phone|string) not in (n.readBy or []) %}
+    <article class="rev3 rv" style="--i:{{ loop.index0 }}{% if is_new %};border-left:2px solid var(--d-accent);padding-left:var(--d-s5){% endif %}">
+      <div class="rev3__h">
+        <span class="row" style="gap:8px">
+          <span class="rev3__w">{{ n.title }}</span>
+          {% if n.kind %}<span class="tag3">{{ n.kind }}</span>{% endif %}
+          {% if is_new %}<span class="tag3 tag3--accent">未读</span>{% endif %}
+        </span>
+        <span class="caption">{{ day_label(n.at) }}</span>
+      </div>
+      <p class="rev3__t">{{ n.text }}</p>
+    </article>
+    {% else %}
+    <div class="empty3">
+      <p class="empty3__k">Empty</p>
+      <h3 class="empty3__t">还没有消息</h3>
+      <p class="empty3__p">预约成功、退款、门店回复、信用分变动都会发到这里。</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}

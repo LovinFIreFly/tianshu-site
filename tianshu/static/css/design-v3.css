@@ -1,0 +1,443 @@
+/* ============================================================================
+   甜薯 · design-v3 —— 三代「竖排导轨」骨架与默认观感（2026-10）
+   ----------------------------------------------------------------------------
+   定位：换的是骨架，不是零件。
+     · 骨架：左侧竖排导轨 + 内容画布 + 编辑式页头（竖排 kicker / 巨字衬线标题）
+             + 编号分节 + 版权页页脚。手机端导轨收成顶部迷你条 + 底部标签栏。
+     · 零件：按钮 / 卡片 / 表格 / 表单沿用 design3 的组件类与 token 契约，
+             所以九套外观款式（skin-*.css）在这里原样可用 —— 皮肤最后加载，
+             永远有最终决定权；本文件只改"默认这张皮"。
+   反 AI 味的几条纪律：
+     · 单强调色（苔绿），朱砂只做米粒大的"印"级细节；
+     · 衬线大标题（Noto Serif SC），版面靠字号与留白分层，不靠渐变和投影；
+     · 手作纸纹颗粒压在最上层（4% 透明度），细看有、粗看无；
+     · 动效只做职责内反馈，prefers-reduced-motion 一律关停。
+   ============================================================================ */
+
+/* ---------------------------------------------------------------- 默认观感
+   只动"原料层"变量（--paper / --ink / --vermilion…），--d-* 由 design3 的
+   var() 链自动跟进；皮肤设置的同类变量因加载顺序在本文件之后，天然覆盖这里。 */
+:root{
+  --paper:   #F6F3EA;          /* 暖燕麦纸 */
+  --paper-2: #ECE7D9;
+  --paper-3: #FBF9F2;
+  --ink:     #18211B;          /* 墨绿黑 */
+  --ink-2:   #242F28;
+  --ink-3:   #49564D;
+  --ink-4:   #718076;
+  --stage:   #141D17;          /* 松夜（暗场面板） */
+  --stage-ink:   #F1EEE3;
+  --stage-hair:  rgba(241,238,227,.16);
+  --stage-ink-2: rgba(241,238,227,.72);
+  --rule:        rgba(24,33,27,.24);
+  --rule-strong: rgba(24,33,27,.5);
+  --vermilion:   #2F5E48;      /* 强调：苔绿（印泥绿） */
+  --vermilion-600:#244A39;
+  --vermilion-050:rgba(47,94,72,.08);
+  --gold:   #A8802A;
+  --seal:   #B5402C;           /* 朱砂：只做印章级小点 */
+  --serif:  'Noto Serif SC','Songti SC','STSong','SimSun',serif;
+  --r:      2px; --r-lg: 3px; --r-pill: 2px;
+}
+html[data-theme="dark"]{
+  --paper:   #131A15;
+  --paper-2: #1A241D;
+  --paper-3: #0E140F;
+  --ink:     #E8E5D8;
+  --ink-2:   #D5D2C4;
+  --ink-3:   #A8ADA0;
+  --ink-4:   #7E8578;
+  --stage:   #0D130E;
+  --rule:        rgba(232,229,216,.2);
+  --rule-strong: rgba(232,229,216,.44);
+  --vermilion:   #7FB79A;
+  --vermilion-600:#95C7AD;
+  --vermilion-050:rgba(127,183,154,.1);
+  --seal:   #D06A50;
+}
+
+/* ---------------------------------------------------------------- 纸纹颗粒 */
+body::after{
+  content:""; position:fixed; inset:0; z-index:2147483000; pointer-events:none;
+  opacity:.05; mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+html[data-theme="dark"] body::after{ opacity:.08; mix-blend-mode:screen; }
+
+::selection{ background:var(--d-accent); color:var(--d-stage-ink); }
+:focus-visible{ outline:2px solid var(--d-accent); outline-offset:2px; }
+
+/* ================================================================
+   一、骨架：竖排导轨 + 内容画布
+   ================================================================ */
+.v3shell{ min-height:100vh; }
+
+.v3rail{
+  position:fixed; top:0; left:0; bottom:0; width:92px; z-index:80;
+  display:flex; flex-direction:column; align-items:center;
+  padding:18px 0 16px; gap:14px;
+  background:var(--d-paper-3);
+  border-right:1px solid var(--d-rule);
+}
+.v3rail__mark{
+  color:var(--d-accent); display:grid; place-items:center;
+  width:44px; height:44px; border:1px solid var(--d-accent);
+  border-radius:var(--d-round); flex:none;
+}
+.v3rail__brand{
+  writing-mode:vertical-rl; text-orientation:mixed;
+  font-family:var(--d-serif); font-weight:900; font-size:21px;
+  letter-spacing:.34em; color:var(--d-ink); text-decoration:none;
+  padding-top:2px;
+}
+.v3rail__nav{
+  flex:1; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:20px; min-height:0;
+}
+.v3rail__nav a{
+  writing-mode:vertical-rl; text-orientation:mixed;
+  font-size:13.5px; letter-spacing:.32em; text-decoration:none;
+  color:var(--d-ink-3); position:relative; padding:4px 0;
+  transition:color var(--d-tap) var(--d-ease);
+}
+.v3rail__nav a:hover{ color:var(--d-ink); }
+.v3rail__nav a.on{ color:var(--d-accent); font-weight:600; }
+.v3rail__nav a.on::after{
+  content:""; position:absolute; top:-7px; left:50%; transform:translateX(-50%);
+  width:5px; height:5px; background:var(--d-accent);
+}
+.v3rail__foot{
+  display:flex; flex-direction:column; align-items:center; gap:10px; flex:none;
+}
+.v3rail__date{
+  writing-mode:vertical-rl; font-family:var(--d-mono);
+  font-size:10.5px; letter-spacing:.22em; color:var(--d-ink-4);
+}
+.v3rail__ic{
+  width:30px; height:30px; display:grid; place-items:center;
+  border:1px solid var(--d-rule); border-radius:var(--d-round);
+  font-size:13px; color:var(--d-ink-3); text-decoration:none; position:relative;
+  transition:border-color var(--d-tap) var(--d-ease), color var(--d-tap) var(--d-ease);
+}
+.v3rail__ic:hover{ border-color:var(--d-rule-strong); color:var(--d-ink); }
+.v3rail__ic i{
+  position:absolute; top:-5px; right:-5px; min-width:15px; height:15px;
+  padding:0 3px; display:grid; place-items:center;
+  background:var(--d-accent); color:var(--d-stage-ink);
+  font-style:normal; font-size:9.5px; font-family:var(--d-mono);
+  border-radius:var(--d-round);
+}
+.v3rail__who{
+  width:30px; height:30px; display:grid; place-items:center; overflow:hidden;
+  border:1px solid var(--d-rule-strong); border-radius:var(--d-round);
+  background:var(--d-accent-05); color:var(--d-accent);
+  font-size:13px; text-decoration:none;
+}
+.v3rail__who img{ width:100%; height:100%; object-fit:cover; }
+
+.v3canvas{
+  margin-left:92px; min-height:100vh; display:flex; flex-direction:column;
+}
+.v3main{ flex:1; }
+.v3wrap{
+  width:100%;                    /* 明确占满内容栏，别被 shrink-to-fit 收窄 */
+  max-width:1180px; margin:0 auto;
+  padding-left:clamp(20px,4.5vw,56px);
+  padding-right:clamp(20px,4.5vw,56px);
+}
+
+/* 手机顶部迷你条：桌面隐藏，≤900px 显示 */
+.v3bar{
+  display:none; position:sticky; top:0; z-index:70;
+  height:54px; align-items:center; justify-content:space-between;
+  padding:0 16px; border-bottom:1px solid var(--d-rule);
+  background:color-mix(in srgb, var(--d-paper-3) 86%, transparent);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+}
+.v3bar__brand{
+  display:flex; align-items:center; gap:8px; text-decoration:none;
+  color:var(--d-ink); font-family:var(--d-serif); font-weight:900; font-size:16px;
+  letter-spacing:.06em;
+}
+.v3bar__brand svg{ color:var(--d-accent); }
+.v3bar__acts{ display:flex; align-items:center; gap:14px; }
+.v3bar__acts a{
+  color:var(--d-ink-3); text-decoration:none; font-size:14px; position:relative;
+}
+.v3bar__acts a i{
+  position:absolute; top:-7px; right:-10px; min-width:14px; height:14px;
+  padding:0 3px; display:grid; place-items:center; background:var(--d-accent);
+  color:var(--d-stage-ink); font-style:normal; font-size:9px;
+  border-radius:var(--d-round);
+}
+
+/* 手机底部标签栏：桌面隐藏（design3 只给了手机样式，这里补桌面规则） */
+@media (min-width:901px){ .mobtab{ display:none !important; } }
+
+/* ================================================================
+   二、编辑式页头（竖排 kicker + 巨字衬线标题）
+   ================================================================ */
+.v3head{
+  padding:clamp(44px,7.5vh,88px) 0 clamp(26px,3.6vw,44px);
+  border-bottom:1px solid var(--d-rule);
+  position:relative;
+}
+.v3head::after{                       /* 双细线收边：印书的口 */
+  content:""; display:block; position:absolute; left:0; right:0; bottom:-4px;
+  border-bottom:1px solid var(--d-rule);
+}
+.v3head__grid{
+  display:grid; grid-template-columns:auto 1fr; gap:clamp(16px,2.6vw,30px);
+  align-items:stretch;
+}
+.v3head__k{
+  writing-mode:vertical-rl; text-orientation:mixed;
+  font-family:var(--d-mono); font-size:12px; letter-spacing:.3em;
+  color:var(--d-accent); border-left:1px solid var(--d-accent);
+  padding-left:10px; margin:0; max-height:220px;
+}
+.v3head__t{
+  margin:0; font-family:var(--d-serif); font-weight:900;
+  font-size:clamp(34px,6.2vw,72px); line-height:1.1; letter-spacing:-.01em;
+  color:var(--d-ink);
+}
+.v3head__t a{ color:inherit; text-decoration:none; }
+.v3head__lead{
+  margin:clamp(12px,1.8vw,18px) 0 0; color:var(--d-ink-3);
+  font-size:clamp(15px,1.6vw,17px); max-width:58ch; line-height:1.75;
+}
+.v3head__meta{
+  margin-top:clamp(14px,2vw,22px); display:flex; flex-wrap:wrap; gap:8px;
+  align-items:center;
+}
+/* 页头右侧的"印章"（米粒级朱砂，去 AI 味的点睛） */
+.v3head__seal{
+  position:absolute; right:0; top:clamp(44px,7.5vh,88px);
+  width:44px; height:44px; display:grid; place-items:center;
+  border:1.5px solid var(--seal); color:var(--seal);
+  font-family:var(--d-serif); font-weight:900; font-size:17px;
+  transform:rotate(4deg); opacity:.85; border-radius:4px;
+  writing-mode:vertical-rl; letter-spacing:.1em;
+}
+
+/* ================================================================
+   三、分节：编号在左栏，细线分章
+   ================================================================ */
+.v3sec{
+  border-top:1px solid var(--d-rule);
+  padding:clamp(34px,5vw,64px) 0 clamp(40px,6vw,80px);
+  /* 显式 stretch：否则继承来的 justify-items:center 会让网格项收缩成 max-content，
+     内容栏会被压成一小条（ticker / chalk 这类"整条"组件尤其明显）。 */
+  justify-items:stretch;
+}
+@media (min-width:1100px){
+  .v3sec{ display:grid; grid-template-columns:88px 1fr; gap:clamp(18px,2.6vw,34px); }
+  .v3sec > .v3sec__no{
+    grid-column:1; font-family:var(--d-mono); font-size:13px;
+    letter-spacing:.18em; color:var(--d-accent); padding-top:6px;
+    writing-mode:vertical-rl; justify-self:start;
+  }
+  /* 关键：不管这一节有没有编号，内容永远落进第 2 栏。
+     （之前写成 ".v3sec__no + *"，没编号的节就会掉进 88px 那栏里被压扁） */
+  .v3sec > *:not(.v3sec__no){ grid-column:2; }
+}
+.v3sec__no{ display:none; }
+@media (min-width:1100px){ .v3sec__no{ display:block; } }
+.v3sec__title{
+  margin:0 0 clamp(16px,2.4vw,26px); font-family:var(--d-serif); font-weight:900;
+  font-size:clamp(21px,2.8vw,30px); color:var(--d-ink);
+  display:flex; align-items:baseline; gap:14px;
+}
+.v3sec__title small{
+  font-family:var(--d-mono); font-weight:400; font-size:12px;
+  letter-spacing:.22em; color:var(--d-ink-4);
+}
+
+/* ================================================================
+   四、首屏（首页专用）：非对称排版
+   ================================================================ */
+.v3hero{
+  padding:clamp(48px,9vh,110px) 0 clamp(40px,6vw,72px);
+  border-bottom:1px solid var(--d-rule);
+  position:relative; overflow:hidden;
+}
+.v3hero__k{
+  font-family:var(--d-mono); font-size:12px; letter-spacing:.3em;
+  color:var(--d-accent); margin:0 0 clamp(14px,2vw,22px);
+}
+.v3hero__t{
+  margin:0; font-family:var(--d-serif); font-weight:900;
+  font-size:clamp(46px,9.4vw,124px); line-height:1.04; letter-spacing:-.015em;
+  color:var(--d-ink); max-width:12ch;
+}
+.v3hero__t em{ font-style:normal; color:var(--d-accent); }
+.v3hero__row{
+  margin-top:clamp(24px,3.6vw,40px);
+  display:flex; flex-wrap:wrap; gap:12px; align-items:center;
+}
+.v3hero__row .sform3{ flex:1 1 340px; max-width:520px; }
+.v3hero__stats{
+  margin-top:clamp(28px,4vw,48px); display:flex; flex-wrap:wrap; gap:clamp(18px,3vw,42px);
+}
+.v3hero__stats > div{ display:flex; flex-direction:column; gap:2px; }
+.v3hero__stats b{
+  font-family:var(--d-serif); font-weight:900; font-size:clamp(24px,3vw,34px);
+  color:var(--d-ink); line-height:1.1;
+}
+.v3hero__stats span{
+  font-family:var(--d-mono); font-size:11px; letter-spacing:.2em; color:var(--d-ink-4);
+}
+/* 右侧悬浮的「今夜场次」小牌：桌面挂在首屏右缘 */
+.v3hero__aside{ position:static; }
+@media (min-width:1100px){
+  .v3hero--split{ display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:clamp(28px,4vw,56px); align-items:start; }
+  .v3hero__aside{ margin-top:clamp(40px,6vh,84px); }
+}
+
+/* ================================================================
+   五、版权页页脚
+   ================================================================ */
+.v3foot{
+  border-top:1px solid var(--d-rule-strong);
+  background:var(--d-paper-2);
+  margin-top:clamp(40px,6vw,72px);
+}
+.v3foot__grid{
+  display:grid; grid-template-columns:1.4fr 1fr 1fr 1.2fr;
+  gap:clamp(20px,3vw,44px); padding-top:clamp(28px,4vw,48px);
+  padding-bottom:clamp(22px,3vw,36px);
+}
+.v3foot__brand{
+  margin:0 0 10px; font-family:var(--d-serif); font-weight:900;
+  font-size:20px; color:var(--d-ink);
+}
+.v3foot__line{ margin:0; color:var(--d-ink-3); font-size:13.5px; line-height:1.8; }
+.v3foot__head{
+  margin:0 0 10px; font-family:var(--d-mono); font-size:11px;
+  letter-spacing:.24em; color:var(--d-ink-4);
+}
+.v3foot__col{ display:flex; flex-direction:column; gap:7px; }
+.v3foot__col a{ color:var(--d-ink-3); text-decoration:none; font-size:13.5px; }
+.v3foot__col a:hover{ color:var(--d-accent); }
+.v3foot__meta span{ color:var(--d-ink-4); font-size:12.5px; }
+.v3foot__bar{
+  display:flex; flex-wrap:wrap; gap:10px 26px; align-items:center;
+  border-top:1px solid var(--d-rule);
+  padding-top:14px; padding-bottom:18px;
+}
+
+/* ================================================================
+   六、独立登录/注册（票据卡）
+   ================================================================ */
+.v3auth{
+  min-height:100vh; display:grid; place-items:center;
+  padding:clamp(20px,4vw,48px); position:relative;
+}
+.v3auth__card{
+  width:100%; max-width:420px; background:var(--d-paper-3);
+  border:1px solid var(--d-rule-strong); border-radius:var(--d-r-lg);
+  padding:clamp(26px,4vw,40px); position:relative;
+  box-shadow:6px 6px 0 0 var(--d-accent-05);
+}
+.v3auth__card::before{                /* 票据打孔线 */
+  content:""; position:absolute; left:14px; right:14px; top:64px;
+  border-top:1px dashed var(--d-rule);
+}
+.v3auth__brand{
+  display:flex; align-items:center; gap:10px; padding-bottom:18px;
+  font-family:var(--d-serif); font-weight:900; color:var(--d-ink);
+}
+.v3auth__brand .logo{
+  width:34px; height:34px; display:grid; place-items:center;
+  border:1px solid var(--d-accent); color:var(--d-accent); border-radius:var(--d-round);
+  font-size:16px;
+}
+.v3auth__foot{
+  text-align:center; margin-top:18px; color:var(--d-ink-4); font-size:12.5px;
+}
+/* 票据卡外的两个小件：顶部（回大厅 / 深浅色）与底部（下载 / 装桌面） */
+.v3auth__inner{ width:100%; max-width:420px; }
+.v3auth__top{
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:14px;
+}
+.v3auth__home, .v3auth__theme{
+  color:var(--d-ink-3); text-decoration:none; font-size:13px;
+  border:1px solid var(--d-rule); border-radius:var(--d-round);
+  padding:5px 11px; background:var(--d-paper-3);
+  transition:border-color var(--d-tap) var(--d-ease), color var(--d-tap) var(--d-ease);
+}
+.v3auth__home:hover, .v3auth__theme:hover{ border-color:var(--d-rule-strong); color:var(--d-ink); }
+.v3auth__dl{
+  color:var(--d-ink-4); text-decoration:none; font-size:12.5px; margin-left:8px;
+}
+.v3auth__dl:hover{ color:var(--d-accent); }
+.v3auth__dl-btn{
+  border:0; background:none; cursor:pointer; font-family:inherit; padding:0;
+}
+/* 卡片内的表单：票据卡较窄，字段间距略收 */
+.v3auth__card .field{ margin-bottom:14px; }
+.v3auth__card h2{
+  margin:0; font-family:var(--d-serif); font-weight:900;
+  font-size:clamp(22px,3vw,28px); color:var(--d-ink);
+}
+.v3auth__card .sub{ margin:8px 0 20px; color:var(--d-ink-3); font-size:13.5px; }
+
+/* ================================================================
+   七、细节修正：让 shared 组件在三代版面里坐得端正
+   ================================================================ */
+/* 分栏（design3 的 .split3 是两栏 grid）：三代里间距略收 */
+.v3main .split3{ gap:clamp(24px,4vw,56px); }
+/* 卡片在纸面上的投影更轻（编辑感，不泡在阴影里） */
+.v3main .pcard3, .v3main .ccard3, .v3main .block3{
+  box-shadow:none;
+}
+/* 表格 / 流水的行距放宽一点 */
+.v3main .sheet3__row{ padding-top:14px; padding-bottom:14px; }
+
+/* 大屏下正文两侧的呼吸（三代不居中窄栏，靠 v3wrap 管宽度） */
+.v3main .wrap3{ max-width:1180px; }
+
+/* 页面标题下的工具条（本本墙/拼车页沿用 .toolbar3，这里只调间距） */
+.v3main .toolbar3{ margin-top:clamp(16px,2.4vw,26px); }
+
+/* flash 位置：画布顶部、跟随滚动条宽度 */
+.v3canvas .flash-wrap{ padding:12px clamp(20px,4.5vw,56px) 0; }
+.v3canvas .flash{ max-width:1180px; margin:0 auto; }
+
+/* 阅读进度条（ui3.js 注入 .scrollbar3）：染成强调色 */
+.scrollbar3{ background:var(--d-accent); height:2px; }
+
+/* 剧本封面占位（.pcard3__ph）在纸底上重算对比 */
+.v3main .pcard3__ph{
+  background:var(--d-paper-2);
+  color:var(--d-ink-3);
+}
+
+/* ---------------------------------------------------------------
+   响应式：≤900px 导轨收起 → 顶条 + 底部标签栏
+   --------------------------------------------------------------- */
+@media (max-width:900px){
+  .v3rail{ display:none; }
+  .v3canvas{ margin-left:0; }
+  .v3bar{ display:flex; }
+  .v3head{ padding-top:26px; }
+  .v3head__seal{ display:none; }
+  .v3head__grid{ grid-template-columns:1fr; }
+  .v3head__k{ writing-mode:horizontal-tb; border-left:0; padding-left:0;
+              border-bottom:1px solid var(--d-accent); padding-bottom:8px;
+              max-height:none; }
+  .v3foot__grid{ grid-template-columns:1fr 1fr; }
+  body{ padding-bottom:calc(64px + env(safe-area-inset-bottom)); }
+}
+@media (max-width:560px){
+  .v3foot__grid{ grid-template-columns:1fr; }
+}
+
+/* ---------------------------------------------------------------
+   动效降级
+   --------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce){
+  .v3rail, .v3rail *{ transition:none !important; }
+  body::after{ display:none; }
+}

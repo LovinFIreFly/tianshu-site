@@ -1,0 +1,65 @@
+{% extends 'layout_v3.html' %}
+{% block title %}本本墙 · {{ settings.shopName }}{% endblock %}
+{# 剧本库（三代）：编辑式页头 + 工具条 + 多选类型 chips + 网格。
+   筛选全走前端（fetch 换 #scriptGrid），window.TS_LIB 与 library.js 钩子原样保留。 #}
+{% block body %}
+
+<section class="v3head">
+  <div class="v3wrap v3head__grid" style="position:relative">
+    <p class="v3head__k">本本墙 · Wall</p>
+    <div>
+      <h1 class="v3head__t">本本清单</h1>
+      <p class="v3head__lead">类型可以多选：选几个就摆几类。挑好了分享给搭子，网址里带条件。</p>
+    </div>
+    <span class="v3head__seal" aria-hidden="true">选本</span>
+  </div>
+</section>
+
+<div class="v3wrap">
+
+  <div class="toolbar3">
+    <form class="sform3 sform3--wide spa-search" method="get" action="{{ url_for('public.scripts') }}" role="search">
+      <input class="sform3__in" name="q" value="{{ q }}" placeholder="找找你想冲的本" aria-label="搜剧本">
+      <button class="sform3__btn" type="submit">搜 ↗</button>
+    </form>
+    <div class="toolbar3__end">
+      <span class="copy-mono" id="hitCount">{{ scripts|length }} 本</span>
+      <button type="button" class="b3 b3--sm b3--ghost" id="clearAll">清空条件</button>
+    </div>
+  </div>
+
+  <div class="toolbar3" style="border-bottom:0">
+    <div class="chips3 spa-filters" id="filters">
+      <span class="chips3__lab">类型</span>
+      {% for t in tags %}
+      <button type="button" class="chip3 {{ 'on' if (t in sel_tags) or tag == t }}"
+              data-tag="{{ t }}" aria-pressed="{{ 'true' if (t in sel_tags) or tag == t else 'false' }}">{{ t }}</button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="toolbar3" style="border-top:0;padding-top:0">
+    <div class="chips3">
+      <span class="chips3__lab">其他</span>
+      <button type="button" class="chip3 {{ 'on' if diff == '1' }}" data-flag="diff"
+              aria-pressed="{{ 'true' if diff == '1' else 'false' }}">新手友好</button>
+      <button type="button" class="chip3 {{ 'on' if only_fav }}" data-flag="fav"
+              aria-pressed="{{ 'true' if only_fav else 'false' }}">想玩清单</button>
+    </div>
+  </div>
+
+  <div id="scriptGrid" style="padding:clamp(18px,2.6vw,30px) 0 clamp(44px,6vw,84px)">
+    {% include '_scripts_grid.html' %}
+  </div>
+</div>
+
+<script>
+  window.TS_LIB = {
+    q: {{ q|tojson }},
+    tags: {{ sel_tags|tojson }},
+    diff: {{ ('1' if diff == '1' else '')|tojson }},
+    fav: {{ ('1' if only_fav else '')|tojson }}
+  };
+</script>
+<script src="{{ url_for('static', filename='js/library.js', v=static_v('js/library.js')) }}" defer></script>
+{% endblock %}

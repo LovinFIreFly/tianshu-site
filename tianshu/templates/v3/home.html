@@ -1,0 +1,444 @@
+{% extends 'layout_v3.html' %}
+{% block title %}{{ settings.shopName }} · 藏在学校里的剧本杀小店{% endblock %}
+{# 首页 4.0（三代）：巨字衬线首屏 + 右挂「今夜场次」小牌；正文按"编号分章"推进：
+   01 本本清单（海报轨）→ 02 今日开本（班次表）→ 03 拼车（卡片流）→ 04 店长通知
+   → 05 逛一逛（编号清单）。功能钩子（count3 / rail3 / marq3 / 表单）全部保留。 #}
+{% block body %}
+
+{# ============ 首屏 ============ #}
+<section class="v3hero">
+  <div class="v3wrap v3hero--split">
+    <div>
+      <p class="v3hero__k">{{ settings.shopName }} · 今夜开演</p>
+      <h1 class="v3hero__t">今天开<em>一本</em>吧。</h1>
+
+      <form class="sform3 rv" style="--i:2;margin-top:clamp(22px,3.4vw,36px)" method="get" action="{{ url_for('public.scripts') }}" role="search">
+        <input class="sform3__in" name="q" placeholder="找找你想冲的本" aria-label="搜剧本" value="{{ request.args.get('q','') }}">
+        <button class="sform3__btn" type="submit">找本子 ↗</button>
+      </form>
+
+      <div class="v3hero__row rv" style="--i:3">
+        <a class="b3 b3--solid" href="{{ url_for('public.scripts') }}">去挑本</a>
+        <a class="b3" href="{{ url_for('public.car') }}">去拼车</a>
+      </div>
+
+      <div class="v3hero__stats rv" style="--i:4">
+        <div><b class="count3 ink-drop" data-to="{{ stat.plays }}">0</b><span>累计开本</span></div>
+        <div><b class="count3 ink-drop" data-to="{{ scripts|length }}">0</b><span>在架剧本</span></div>
+        <div><b class="count3 ink-drop" data-to="{{ sessions|length }}">0</b><span>今日场次</span></div>
+        <div><b class="count3 ink-drop" data-to="{{ served }}">0</b><span>累计接待</span></div>
+      </div>
+    </div>
+
+    <aside class="v3hero__aside rv" style="--i:2">
+      <div class="board3">
+        <div class="board3__head">
+          <h2>今夜开演 · Today</h2>
+          <span class="line"></span>
+          <span class="copy-mono">实时</span>
+        </div>
+        {% if sessions %}
+        <ol class="board3__list">
+          {% for s in sessions[:6] %}
+          <li class="board3__row">
+            <span class="board3__t">{{ s.time }}</span>
+            <span class="board3__n">{{ s.title }}
+              <small>{{ s.roomId or '房间待定' }} · DM {{ s.dmName or '待安排' }}</small></span>
+            <span class="board3__s">已报 <b>{{ s.joined }}</b>/{{ s.cap or '—' }} 人</span>
+          </li>
+          {% endfor %}
+        </ol>
+        {% else %}
+        <div class="board3__empty">
+          <span class="empty3__t" style="display:block">今天还没排场次。</span>
+          <span class="empty3__s" style="display:block">去挑本选好时间，我们给你开一场。</span>
+        </div>
+        {% endif %}
+        <div class="board3__foot">
+          <a class="b3 b3--sm b3--ghost" href="{{ url_for('public.car') }}">拼车大厅</a>
+          <span class="copy-mono">满员即开</span>
+        </div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+{# ============ 今日小黑板 ============ #}
+{% if settings.notice %}
+<section class="v3sec" style="border-top:0;padding-top:clamp(20px,3vw,32px)">
+  <div class="v3wrap">
+    <div class="chalk3 rv unfold">
+      <span class="chalk3__pin" aria-hidden="true">✦</span>
+      <div class="chalk3__b">
+        <p class="chalk3__k">今日小黑板 · Note</p>
+        <p class="chalk3__t">{{ settings.notice }}</p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ============ 剧友圈：短评滚动 ============ #}
+<section class="v3sec">
+  <span class="v3sec__no">卷首 · Reviews</span>
+  <div class="v3wrap">
+    <h2 class="v3sec__title">剧友圈 <small>真实测评 · 慢慢滚</small></h2>
+    {% if reviews %}
+    <div class="marq3">
+      <div class="marq3__track">
+        {% for r in reviews + reviews %}
+        <figure class="marq3__item">
+          <div class="marq3__who">
+            {% if r.avatar and r.avatar.startswith('/img/') %}<img src="{{ r.avatar }}" alt="">{% else %}<span>{{ r.nick[0] }}</span>{% endif %}
+            <b>{{ r.nick }}</b><i>{% for _ in range(r.stars|int) %}★{% endfor %}</i>
+          </div>
+          <p class="marq3__t">『{{ r.text }}』</p>
+          <p class="marq3__s">—— {{ r.title or '本店' }}</p>
+        </figure>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <p class="dsec__lead">还没人分享？你第一个来唠唠？</p>
+    {% endif %}
+
+    <div class="realstrip rv" style="margin-top:clamp(18px,2.6vw,28px)">
+      {% if dm_duty %}
+      <div class="realstrip__c">
+        <span class="realstrip__k">今日 DM 排班</span>
+        <span class="realstrip__v">{{ dm_duty|join('、') }}</span>
+      </div>
+      {% endif %}
+      {% if boss_pick %}
+      <a class="realstrip__c realstrip__pick" href="{{ url_for('public.script_detail', sid=boss_pick.id) }}">
+        <span class="realstrip__k">今日推荐本</span>
+        <span class="realstrip__v">{{ boss_pick.title }} · ¥{{ boss_pick.price|int }}/人 →</span>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{# ============ 热玩本 / 新本首车 ============ #}
+{% if (hotScripts and hotScripts|length) or (newScripts and newScripts|length) %}
+<section class="v3sec">
+  <span class="v3sec__no">特辑 · Now Playing</span>
+  <div class="v3wrap">
+    <h2 class="v3sec__title">这周在玩什么 <small>热玩本 · 新本首车</small></h2>
+    <div class="split3">
+      <div>
+        {% if hotScripts %}
+        <p class="sidehead3">热玩本<span class="line"></span></p>
+        <div class="mason3">
+          {% for s in hotScripts[:6] %}
+          <article class="pcard3 rv" style="--i:{{ loop.index0 }}">
+            <a class="pcard3__cover" href="{{ url_for('public.script_detail', sid=s.id) }}">
+              {% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}" loading="lazy">
+              {% else %}{% include '_script_ph.html' %}{% endif %}
+              <span class="pcard3__type">{{ s.type or '剧本' }}</span>
+            </a>
+            <div class="pcard3__body">
+              <h3 class="pcard3__title"><a href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.title }}</a></h3>
+              <p class="pcard3__meta">{{ s.players or '人数待定' }} · 难度 {{ s.diff or 3 }}/5</p>
+              <div class="pcard3__foot">
+                <span class="pcard3__price">¥{{ s.price|int }}<span style="color:var(--d-ink-4);font-size:11px">/人</span></span>
+                <span class="tag3 tag3--accent">热玩</span>
+              </div>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}<p class="dsec__lead">还没有热玩本数据。</p>{% endif %}
+      </div>
+      <div>
+        {% if newScripts %}
+        <p class="sidehead3">新本首车<span class="line"></span></p>
+        <div class="mason3">
+          {% for s in newScripts[:6] %}
+          <article class="pcard3 rv" style="--i:{{ loop.index0 }}">
+            <a class="pcard3__cover" href="{{ url_for('public.script_detail', sid=s.id) }}">
+              {% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}" loading="lazy">
+              {% else %}{% include '_script_ph.html' %}{% endif %}
+              <span class="pcard3__type">{{ s.type or '剧本' }}</span>
+            </a>
+            <div class="pcard3__body">
+              <h3 class="pcard3__title"><a href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.title }}</a></h3>
+              <p class="pcard3__meta">{{ s.players or '人数待定' }} · 难度 {{ s.diff or 3 }}/5</p>
+              <div class="pcard3__foot">
+                <span class="pcard3__price">¥{{ s.price|int }}<span style="color:var(--d-ink-4);font-size:11px">/人</span></span>
+                <span class="tag3">新本首车</span>
+              </div>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}<p class="dsec__lead">最近没上新本。</p>{% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ============ 01 本本清单：横向海报轨 ============ #}
+<section class="v3sec">
+  <span class="v3sec__no">01 · Shelf</span>
+  <div class="v3wrap">
+    <h2 class="v3sec__title">本本清单 <small>{{ scripts|length }} 个本 · 左右拖着看</small></h2>
+    {% if scripts %}
+    <div class="rail3 rv">
+      <div class="rail3__nav">
+        <button type="button" data-rail="prev" aria-label="上一张">←</button>
+        <button type="button" data-rail="next" aria-label="下一张">→</button>
+      </div>
+      <div class="rail3__track">
+        {% for s in scripts %}
+        <article class="pcard3">
+          <a class="pcard3__cover" href="{{ url_for('public.script_detail', sid=s.id) }}">
+            {% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}" loading="lazy">
+            {% else %}{% include '_script_ph.html' %}{% endif %}
+            <span class="pcard3__type">{{ s.type or '剧本' }}</span>
+          </a>
+          <div class="pcard3__body">
+            <h3 class="pcard3__title"><a href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.title }}</a></h3>
+            <p class="pcard3__meta">{{ s.players or '人数待定' }} · {{ s.dur or '时长待定' }} · 难度 {{ s.diff or 3 }}/5</p>
+            <div class="pcard3__foot">
+              <span class="pcard3__price">¥{{ s.price|int }}<span style="color:var(--d-ink-4);font-size:11px">/人</span></span>
+              {% if rating.get(s.id|string) %}
+              <span class="tag3">★ {{ rating[s.id|string] }}</span>
+              {% elif s.isNew %}
+              <span class="tag3 tag3--accent">上新</span>
+              {% else %}
+              <span class="tag3">{{ s.type or '开本' }}</span>
+              {% endif %}
+            </div>
+          </div>
+          {% if me %}
+          <form class="pcard3__fav" method="post" action="{{ url_for('public.fav', sid=s.id) }}">
+            <button class="fav-btn {{ 'on' if s.id|string in favs }}" type="submit"
+                    aria-label="收藏{{ s.title }}">{{ '❤' if s.id|string in favs else '♡' }}</button>
+          </form>
+          {% endif %}
+        </article>
+        {% endfor %}
+      </div>
+      <div class="rail3__bar"><i></i></div>
+    </div>
+    <div class="rv" style="margin-top:var(--d-s6)">
+      <a class="b3" href="{{ url_for('public.scripts') }}">看全部剧本 →</a>
+    </div>
+    {% else %}
+    <div class="empty3 rv">
+      <p class="empty3__k">Now Empty</p>
+      <h3 class="empty3__t">店长正在熬夜测本，马上就上！</h3>
+      <p class="empty3__p">点下面「看全部剧本」去本本墙先逛逛。</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+{# ============ 02 今日开本：班次表 ============ #}
+<section class="v3sec">
+  <span class="v3sec__no">02 · Today</span>
+  <div class="v3wrap">
+    <h2 class="v3sec__title">今日开本 <small>按开演时间排</small></h2>
+    {% if sessions %}
+    <div class="sheet3 rv">
+      {% for s in sessions %}
+      <div class="sheet3__row">
+        <span class="sheet3__t">{{ s.time }}</span>
+        <span class="sheet3__m">
+          <b>{{ s.title }}</b>
+          <span>{{ s.roomId or '房间待定' }} · DM {{ s.dmName or '待安排' }}</span>
+        </span>
+        <span class="sheet3__cap">已报 {{ s.joined }}/{{ s.cap or '—' }} 人</span>
+        <span class="sheet3__act">
+          <a class="b3 b3--sm" href="{{ url_for('public.script_detail', sid=s.sid) }}">去看看</a>
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="dsec__lead">今天还没排场次。想玩的话，去挑本选好时间，我们给你开一场。</p>
+    <a class="b3 b3--accent" href="{{ url_for('public.scripts') }}">去挑本子</a>
+    {% endif %}
+  </div>
+</section>
+
+{# ============ 03 拼车：卡片流 ============ #}
+<section class="v3sec">
+  <span class="v3sec__no">03 · Share a Table</span>
+  <div class="v3wrap">
+    <h2 class="v3sec__title">正在发车的局 <small>拼车大厅 · 随时上车</small></h2>
+    {% if cars %}
+    <div class="mason3">
+      {% for c in cars %}
+      <article class="ccard3 rv" style="--i:{{ loop.index0 }}">
+        <div class="ccard3__top">
+          <span class="ccard3__tag">{{ c.day }} {{ c.time }}</span>
+          {% if c.full %}<span class="tag3 tag3--accent">满员</span>
+          {% elif c.need %}<span class="tag3 tag3--accent">还差 {{ c.need }} 人</span>
+          {% else %}<span class="tag3 tag3--ok">已成局</span>{% endif %}
+        </div>
+        <h3 class="ccard3__title">{{ c.title }}</h3>
+        <div class="ccard3__meta">
+          <span>车主 <b>{{ c.owner }}</b></span>
+          <span><b>{{ c.joined }}</b>/{{ c.cap }} 人</span>
+          {% if c.reserved %}<span>留位 {{ c.reserved }}</span>{% endif %}
+        </div>
+        {% if c.tags %}
+        <div class="ccard3__people">{% for t in c.tags %}<i>{{ t }}</i>{% endfor %}</div>
+        {% endif %}
+        <div class="bar3"><i style="width:{{ (c.joined * 100 / (c.cap or 8))|round|int }}%"></i></div>
+        <div class="ccard3__foot">
+          <a class="b3 b3--sm b3--ghost" href="{{ url_for('public.car_detail', cid=c.id) }}">进车队 →</a>
+          <a class="b3 b3--sm" href="{{ url_for('public.car') }}">全部拼车</a>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty3 rv">
+      <p class="empty3__k">No Cars Yet</p>
+      <h3 class="empty3__t">还没人发车</h3>
+      <p class="empty3__p">还没人发车，不如你来开个头？去本本墙挑一个本，把玩法选成<b>拼车</b>就发一车。</p>
+      <div class="empty3__a">
+        <a class="b3 b3--solid" href="{{ url_for('public.scripts') }}">去挑本</a>
+        <a class="b3" href="{{ url_for('public.car') }}">看拼车大厅</a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+{# ============ 04 店长通知 ============ #}
+{% if banners %}
+<section class="v3sec">
+  <span class="v3sec__no">04 · Notice</span>
+  <div class="v3wrap">
+    <h2 class="v3sec__title">店长通知 <small>活动 / 上新 / 通知</small></h2>
+    <div class="mason3">
+      {% for b in banners %}
+      <article class="ccard3 rv" style="--i:{{ loop.index0 }}">
+        <div class="ccard3__top">
+          <span style="font-size:28px;line-height:1">{{ b.emoji or '🎭' }}</span>
+          <span class="ccard3__tag" style="color:var(--d-accent);font-size:13px">/ {{ '%02d' % loop.index }}</span>
+        </div>
+        <h3 class="ccard3__title">{{ b.title }}</h3>
+        <p class="empty3__p" style="margin:0">{{ b.text }}</p>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ============ 05 逛一逛：编号清单 ============ #}
+<section class="v3sec">
+  <span class="v3sec__no">05 · Index</span>
+  <div class="v3wrap">
+    <h2 class="v3sec__title">逛一逛 <small>四条路，随便挑</small></h2>
+    <ul class="idx3 rv">
+      <li><a href="{{ url_for('public.scripts') }}">
+        <span class="idx3__no">01</span>
+        <span class="idx3__main"><b>剧本库</b><span>按类型 / 人数 / 难度挑一本今晚的本子</span></span>
+        <span class="idx3__arrow">→</span></a></li>
+      <li><a href="{{ url_for('public.car') }}">
+        <span class="idx3__no">02</span>
+        <span class="idx3__main"><b>拼车大厅</b><span>找搭子一起开本，满员就开，退位有人喊你</span></span>
+        <span class="idx3__arrow">→</span></a></li>
+      <li><a href="{{ url_for('public.comm') }}">
+        <span class="idx3__no">03</span>
+        <span class="idx3__main"><b>玩家社区</b><span>动态、攻略、组队，看看别人在玩什么</span></span>
+        <span class="idx3__arrow">→</span></a></li>
+      <li><a href="{% if my_dm %}{{ url_for('dm.index') }}{% else %}{{ url_for('user.me') }}{% endif %}">
+        <span class="idx3__no">04</span>
+        <span class="idx3__main"><b>{% if my_dm %}DM 工作台{% else %}我的主页{% endif %}</b><span>{% if my_dm %}带本、练本、结算，今天的事都在里头{% else %}订单、定金、券和消息，一处看全{% endif %}</span></span>
+        <span class="idx3__arrow">→</span></a></li>
+    </ul>
+  </div>
+</section>
+
+{# ============ 店铺实拍 ============ #}
+{% if settings.shopPhotos %}
+<section class="v3sec">
+  <span class="v3sec__no">附 · Photos</span>
+  <div class="v3wrap">
+    <h2 class="v3sec__title">店里的样子 <small>实拍 · 不是网图</small></h2>
+    <div class="shopwall3 rv">
+      {% for p in settings.shopPhotos %}
+      <figure class="shopwall3__item">
+        <img src="{{ p.url }}" alt="{{ p.cap }}" loading="lazy">
+        {% if p.cap %}<figcaption class="hand">{{ p.cap }}</figcaption>{% endif %}
+      </figure>
+      {% endfor %}
+    </div>
+    {% if settings.shopIntro %}
+    <p class="shopwall3__intro hand rv">{{ settings.shopIntro }}</p>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+{# ============ 收尾：一句台词 ============ #}
+<section class="v3sec" style="border-bottom:0">
+  <div class="v3wrap" style="text-align:center">
+    <p class="rv copy-mono" style="margin:0;color:var(--d-accent)">好本子只演一次</p>
+    <h2 class="rv" style="--i:1;margin:14px auto 0;font-family:var(--d-serif);font-weight:900;
+        font-size:min(var(--d-fs-title),5vw,40px);line-height:1.16;letter-spacing:-.02em;max-width:22ch">
+      “好本子只演一次，好搭子只凑一回。”
+    </h2>
+    <div class="rv" style="--i:2;margin-top:24px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <a class="b3 b3--accent" href="{{ url_for('public.scripts') }}">现在挑本子</a>
+      <a class="b3" href="{{ url_for('public.car') }}">去拼车大厅</a>
+    </div>
+  </div>
+</section>
+
+{# 剧友圈横滑墙：JS 驱动 + 指针拖拽（与二代同一段逻辑，选择器不变） #}
+<script>
+(function () {
+  var marq = document.querySelector('.marq3');
+  if (!marq) return;
+  var track = marq.querySelector('.marq3__track');
+  if (!track) return;
+  track.style.animation = 'none';
+  track.style.cursor = 'grab';
+  marq.style.touchAction = 'pan-y';
+  var pos = 0, half = 0, hover = false, dragging = false, startX = 0, startPos = 0, lastT = 0;
+  function measure() { half = track.scrollWidth / 2; }
+  measure();
+  window.addEventListener('resize', measure);
+  function wrap(v) {
+    if (half <= 0) return v;
+    v = v % half;
+    if (v > 0) v -= half;
+    return v;
+  }
+  function frame(ts) {
+    if (!lastT) lastT = ts;
+    var dt = Math.min(48, ts - lastT);
+    lastT = ts;
+    if (!hover && !dragging) pos -= dt * 0.032;
+    pos = wrap(pos);
+    track.style.transform = 'translateX(' + pos + 'px)';
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  marq.addEventListener('pointerenter', function () { hover = true; });
+  marq.addEventListener('pointerleave', function () { hover = false; dragging = false; track.style.cursor = 'grab'; });
+  marq.addEventListener('pointerdown', function (e) {
+    dragging = true; startX = e.clientX; startPos = pos;
+    track.style.cursor = 'grabbing';
+    if (marq.setPointerCapture) { try { marq.setPointerCapture(e.pointerId); } catch (err) {} }
+  });
+  marq.addEventListener('pointermove', function (e) {
+    if (!dragging) return;
+    pos = wrap(startPos + (e.clientX - startX));
+    track.style.transform = 'translateX(' + pos + 'px)';
+  });
+  marq.addEventListener('pointerup', function () { dragging = false; track.style.cursor = 'grab'; });
+  marq.addEventListener('pointercancel', function () { dragging = false; track.style.cursor = 'grab'; });
+})();
+</script>
+
+{% endblock %}

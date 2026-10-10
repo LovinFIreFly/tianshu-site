@@ -1,0 +1,261 @@
+{# ============================================================================
+   三代骨架 · 竖排导轨（2026-10 全新重构，不沿用二代顶栏）
+   ----------------------------------------------------------------------------
+   骨架：桌面 = 左侧固定竖排导轨（竖排店名 / 竖字导航 / 底部账户区）
+              + 右侧全幅内容画布 + 版权页式页脚
+         手机 = 顶部迷你条 + 底部标签栏（.mobtab，与二代同一批功能钩子）
+   功能钩子全部保留：#siteNav（ui3.js 只加类名，安全）· .mobtab 四入口 ·
+   .js-install / csrf.js / upload.js / tabs.js / sw · flash · 主题三态
+   款式（skin）写在 <html data-skin>：加载顺序 style → design2 → design3 →
+   design-v3 → 皮肤（皮肤永远最后加载、有最终决定权，九套款式全部兼容）。
+   ============================================================================ #}
+{% set _skins = skins if skins is defined else {} %}
+{% set _admin = my_admin if my_admin is defined else False %}
+{% set _is_mobile = is_mobile if is_mobile is defined else False %}
+{% set _device = 'mobile' if _is_mobile else 'desktop' %}
+{% set _q_skin = request.args.get('skin') if request.args.get('skin') is defined else none %}
+{# 手机端 / 电脑端款式分开选：手机壳 UA / ?shell=mobile / 移动浏览器 → 走 skin_mobile #}
+{% set _skin_for_device = (settings.skin_mobile if _is_mobile else settings.skin_desktop) or settings.skin %}
+{% set cur_skin = (_q_skin if (_admin and _q_skin in _skins)
+                   else (_skin_for_device if _skin_for_device in _skins else 'playbill')) %}
+{% set _ep = request.endpoint or '' %}
+<!DOCTYPE html>
+<html lang="zh-CN" data-skin="{{ cur_skin }}" data-device="{{ _device }}" {% if theme == 'dark' %}data-theme="dark"{% endif %}>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  {# 主题三态（日 / 夜 / 跟随系统）：放 <head> 最前，赶在 CSS 绘制前定好 data-theme，避免闪白 #}
+  <script>
+  (function(){
+    function gc(n){var m=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return m?decodeURIComponent(m.pop()):'';}
+    var t=gc('theme')||'auto', el=document.documentElement;
+    function dark(){
+      if(t==='dark') return true;
+      if(t==='light') return false;
+      return !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+    el.setAttribute('data-theme', dark()?'dark':'light');
+    if(window.matchMedia){
+      var mq=matchMedia('(prefers-color-scheme: dark)');
+      var loop=function(){ if(t==='auto') el.setAttribute('data-theme', dark()?'dark':'light'); };
+      if(mq.addEventListener) mq.addEventListener('change', loop); else if(mq.addListener) mq.addListener(loop);
+    }
+  })();
+  </script>
+  <meta name="theme-color" content="#F5F2E9">
+  <meta name="description" content="{{ settings.shopName }}：藏在学校里的剧本杀小店。挑本、拼车、到店开演，定金锁位玩完退回。">
+  {# Open Graph：社交分享卡片。剧本页用 og_title/og_description/og_image 块覆盖 #}
+  <meta property="og:site_name" content="{{ settings.shopName }}">
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}{{ settings.shopName }}{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}{{ settings.shopName }}：藏在学校里的剧本杀小店。挑本、拼车、到店开演，定金锁位玩完退回。{% endblock %}">
+  <meta property="og:image" content="{% block og_image %}{{ url_for('static', filename='icon.svg', _external=True) }}{% endblock %}">
+  {# 埋点：页面加载后约 1.5s 用 sendBeacon 上报当前路径（POST /api/track），不阻塞渲染 #}
+  <script>
+  window.addEventListener('load', function(){
+    setTimeout(function(){
+      try{
+        var path=location.pathname+location.search;
+        if(navigator.sendBeacon){
+          navigator.sendBeacon('/api/track', new Blob([JSON.stringify({path:path})], {type:'application/json'}));
+        }
+      }catch(e){}
+    }, 1500);
+  });
+  </script>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@400;600;900&display=swap">
+  <link rel="icon" href="{{ url_for('static', filename='icon.svg') }}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="甜薯">
+  <title>{% block title %}{{ settings.shopName }}{% endblock %}</title>
+  {# 基础组件 → 二代令牌 → 三代骨架与默认观感 → 皮肤（最后加载，永远赢） #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=static_v('css/style.css')) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design2.css', v=2) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design3.css', v=static_v('css/design3.css')) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-v3.css', v=static_v('css/design-v3.css')) }}">
+{% if cur_skin != 'playbill' %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/skin-' ~ cur_skin ~ '.css',
+                                v=static_v('css/skin-' ~ cur_skin ~ '.css')) }}">
+{% endif %}
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<div class="v3shell">
+
+  {# ================= 左：竖排导轨（桌面） ================= #}
+  <aside class="v3rail" id="siteNav" aria-label="站内导航">
+    <a class="v3rail__mark" href="{{ url_for('public.home') }}" aria-label="{{ settings.shopName }} 首页">
+      <svg width="26" height="26" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M3 12.5c-1-3 1-6.5 4-7.2 1.6-.4 3 .1 4 .9 3.4-1 6.6.6 6.9 3.6.2 2.4-1.4 4.6-3.9 5.2-1 .3-2 .1-2.8-.3-.6 1.1-2 1.8-3.4 1.4-2-.6-3.8-1.7-4.8-3.6Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+        <circle cx="7.4" cy="8.6" r="1" fill="currentColor"/>
+        <circle cx="12" cy="7.6" r="1" fill="currentColor"/>
+        <path d="M8.6 11.6c1 .5 2.2.4 3-.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+    </a>
+
+    <a class="v3rail__brand" href="{{ url_for('public.home') }}">{{ settings.shopName }}</a>
+
+    <nav class="v3rail__nav" aria-label="栏目">
+      <a href="{{ url_for('public.home') }}" class="{{ 'on' if _ep == 'public.home' }}">大厅</a>
+      <a href="{{ url_for('public.scripts') }}" class="{{ 'on' if _ep.startswith('public.script') }}">本本墙</a>
+      <a href="{{ url_for('public.car') }}" class="{{ 'on' if _ep.startswith('public.car') }}">拼车局</a>
+      <a href="{{ url_for('public.comm') }}" class="{{ 'on' if _ep == 'public.comm' }}">唠嗑区</a>
+      <a href="{{ url_for('user.me') }}" class="{{ 'on' if _ep == 'user.me' }}">我的</a>
+    </nav>
+
+    <div class="v3rail__foot">
+      <span class="v3rail__date" id="v3date" aria-hidden="true"></span>
+      <a class="v3rail__ic" href="{{ url_for('public.toggle_theme') }}" title="切换深浅色" aria-label="切换深浅色">
+        {% if theme == 'dark' %}日{% else %}夜{% endif %}</a>
+      {% if me %}
+      <a class="v3rail__ic {{ 'has' if unread }}" href="{{ url_for('user.notice_center') }}"
+         title="消息{% if unread %}（{{ unread }} 条未读）{% endif %}" aria-label="消息">✉{% if unread %}<i>{{ unread }}</i>{% endif %}</a>
+      <a class="v3rail__who" href="{{ url_for('user.me') }}" title="{{ me.profile.nick or me.username }}">
+        {% set _av = me.profile.avatar or '' %}
+        {% if _av.startswith('/img/') %}<img src="{{ _av }}" alt="">{% else %}{{ (_av or (me.profile.nick or me.username)[0]) }}{% endif %}
+      </a>
+      {% if my_dm %}<a class="v3rail__ic" href="{{ url_for('dm.index') }}" title="DM 工作台">工</a>{% endif %}
+      {% if my_admin %}<a class="v3rail__ic" href="{{ url_for('admin.dashboard') }}" title="管理后台">管</a>{% endif %}
+      {% else %}
+      <a class="v3rail__ic" href="{{ url_for('user.login') }}" title="上车登记">登</a>
+      {% endif %}
+    </div>
+  </aside>
+
+  {# ================= 右：内容画布 ================= #}
+  <div class="v3canvas">
+
+    {# 手机顶部迷你条：导轨在手机上收起后的替代入口 #}
+    <header class="v3bar" aria-label="站内导航">
+      <a class="v3bar__brand" href="{{ url_for('public.home') }}">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M3 12.5c-1-3 1-6.5 4-7.2 1.6-.4 3 .1 4 .9 3.4-1 6.6.6 6.9 3.6.2 2.4-1.4 4.6-3.9 5.2-1 .3-2 .1-2.8-.3-.6 1.1-2 1.8-3.4 1.4-2-.6-3.8-1.7-4.8-3.6Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+          <circle cx="7.4" cy="8.6" r="1" fill="currentColor"/>
+        </svg>
+        <b>{{ settings.shopName }}</b>
+      </a>
+      <div class="v3bar__acts">
+        <a href="{{ url_for('public.toggle_theme') }}" aria-label="切换深浅色">{% if theme == 'dark' %}日{% else %}夜{% endif %}</a>
+        {% if me %}
+        <a class="{{ 'has' if unread }}" href="{{ url_for('user.notice_center') }}" aria-label="消息">✉{% if unread %}<i>{{ unread }}</i>{% endif %}</a>
+        <a href="{{ url_for('user.me') }}" aria-label="我的">{{ (me.profile.nick or me.username)[0] }}</a>
+        {% else %}
+        <a href="{{ url_for('user.login') }}">登记</a>
+        {% endif %}
+      </div>
+    </header>
+
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% if msgs %}<div class="flash-wrap">{% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}</div>{% endif %}
+    {% endwith %}
+
+    <main class="v3main {% block main_class %}{% endblock %}">{% block body %}{% endblock %}</main>
+
+    {% set in_tianshu_app = 'TianshuApp' in (request.headers.get('User-Agent') or '') or 'TianshuDesktop' in (request.headers.get('User-Agent') or '') %}
+    {% set in_app = in_tianshu_app or in_shell %}
+    {# 后台 / DM 工作台不铺整站页脚（店里干活的地方） #}
+    {% if not (_ep.startswith('admin.') or _ep.startswith('dm.')) %}
+    <footer class="v3foot">
+      <div class="v3wrap v3foot__grid">
+        <div class="v3foot__col">
+          <p class="v3foot__brand">{{ settings.shopName }}</p>
+          <p class="v3foot__line">藏在学校的小店，<br>陪你把每一场演完。</p>
+        </div>
+        <div class="v3foot__col">
+          <p class="v3foot__head">目录</p>
+          <a href="{{ url_for('public.home') }}">大厅</a>
+          <a href="{{ url_for('public.scripts') }}">本本墙</a>
+          <a href="{{ url_for('public.car') }}">拼车局</a>
+          <a href="{{ url_for('public.comm') }}">唠嗑区</a>
+          <a href="/faq">常见问题</a>
+        </div>
+        <div class="v3foot__col">
+          <p class="v3foot__head">我的</p>
+          {% if me %}
+          <a href="{{ url_for('user.me') }}">打本生涯</a>
+          <a href="{{ url_for('user.me') }}?tab=orders">订单 / 定金</a>
+          <a href="{{ url_for('user.me') }}?tab=notices">消息与留言</a>
+          <a href="{{ url_for('user.me') }}?tab=coupons">券 / 心愿单</a>
+          {% else %}
+          <a href="{{ url_for('user.login') }}">上车登记</a>
+          <a href="{{ url_for('user.register') }}">注册</a>
+          <a href="{{ url_for('user.forgot') }}">忘密码了？</a>
+          {% endif %}
+          {% if my_dm %}<a href="{{ url_for('dm.index') }}">DM 工作台</a>{% endif %}
+          {% if my_admin %}<a href="{{ url_for('admin.dashboard') }}">管理后台</a>{% endif %}
+        </div>
+        <div class="v3foot__col v3foot__meta">
+          <p class="v3foot__head">门店</p>
+          <span>© {{ year }} {{ settings.shopName }}</span>
+          <span>熬夜改本中 · 好本子只演一次</span>
+          {% if not in_app %}
+          <a href="{{ url_for('static', filename='app/tianshu-desktop.exe', v=static_v('app/tianshu-desktop.exe')) }}"
+             download="甜薯剧本杀-电脑版.exe">电脑端更爽 ↓</a>
+          {% endif %}
+        </div>
+      </div>
+      <div class="v3wrap v3foot__bar">
+        {# 版式/款式预览只在电脑浏览器给管理员看；客户端壳里不出现 #}
+        {% if _admin and not in_app %}
+        <div class="skin-bar">
+          <span>版式预览：</span>
+          <a href="{{ request.path }}?ui=3" class="{{ 'on' if ui_ver == '3' }}">三代</a>
+          <a href="{{ request.path }}?ui=2" class="{{ 'on' if ui_ver == '2' }}">二代</a>
+          <a href="{{ request.path }}?ui=1" class="{{ 'on' if ui_ver == '1' }}">一代</a>
+        </div>
+        {% endif %}
+        {% if _admin and _skins and not in_app %}
+        <div class="skin-bar">
+          <span>款式预览：</span>
+          <a href="{{ request.path }}" class="{{ 'on' if cur_skin == 'playbill' }}">默认</a>
+          {% for k, label in _skins.items() %}
+          <a href="{{ request.path }}?skin={{ k }}" class="{{ 'on' if cur_skin == k }}">{{ label.split('（')[0] }}</a>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </footer>
+    {% endif %}
+  </div>
+</div>
+
+{# 手机底部标签栏：功能与二代同一批（.js-install 安装钩子保留） #}
+<nav class="mobtab" aria-label="主要导航">
+  <a href="{{ url_for('public.home') }}" class="{{ 'on' if _ep == 'public.home' }}"><span class="ico" aria-hidden="true">01</span><span>大厅</span></a>
+  <a href="{{ url_for('public.scripts') }}" class="{{ 'on' if _ep.startswith('public.script') }}"><span class="ico" aria-hidden="true">02</span><span>本本墙</span></a>
+  <a href="{{ url_for('public.car') }}" class="{{ 'on' if _ep == 'public.car' }}"><span class="ico" aria-hidden="true">03</span><span>拼车局</span></a>
+  <a href="{{ url_for('public.comm') }}" class="{{ 'on' if _ep == 'public.comm' }}"><span class="ico" aria-hidden="true">04</span><span>唠嗑区</span></a>
+  <a href="{{ url_for('user.me') }}" class="{{ 'on' if _ep == 'user.me' }}"><span class="ico" aria-hidden="true">05</span><span>我的</span></a>
+  {% if not in_app %}<a id="install-btn" class="js-install" href="{{ url_for('static', filename='app/tianshu.apk', v=static_v('app/tianshu.apk')) }}" download="甜薯剧本杀.apk" aria-label="下载手机端 App"><span class="ico" aria-hidden="true">06</span><span>揣兜里随时约本</span></a>{% endif %}
+</nav>
+
+<script>
+  (function(){
+    var d = document.getElementById('v3date');
+    if (d) {
+      var t = new Date();
+      var wk = ['日','一','二','三','四','五','六'][t.getDay()];
+      d.textContent = ('0'+t.getMonth()+1).slice(-2) + '·' + ('0'+t.getDate()).slice(-2) + ' 周' + wk;
+    }
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+      var _els = document.querySelectorAll('.js-install');
+      for (var _i = 0; _i < _els.length; _i++) _els[_i].style.display = 'none';
+    }
+  })();
+</script>
+<script src="{{ url_for('static', filename='js/ui3.js', v=static_v('js/ui3.js')) }}" defer></script>
+<script src="{{ url_for('static', filename='js/csrf.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/upload.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/tabs.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/emojisvg.js', v=static_v('js/emojisvg.js')) }}" defer></script>
+<script>
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('/sw.js').catch(function(){});
+  }
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

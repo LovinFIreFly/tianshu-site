@@ -1,0 +1,434 @@
+{% extends 'layout_v3.html' %}
+{% block title %}{{ sc.title }} · {{ settings.shopName }}{% endblock %}
+{% block og_title %}{{ sc.title }} · {{ settings.shopName }}{% endblock %}
+{% block og_description %}{{ (sc.desc or settings.shopName)|truncate(60, True, '…') }}{% endblock %}
+{% block og_image %}{% if sc.img %}{{ sc.img if sc.img.startswith('http') else request.url_root ~ sc.img.lstrip('/') }}{% else %}{{ url_for('static', filename='icon.svg', _external=True) }}{% endif %}{% endblock %}
+{# 剧本详情（三代）：暗场海报抬头 + 编辑式排版；下方按编号分章（角色 / 评价 / 预约）。
+   表单字段名、action、id（mode-sel / car-sel / car-mode-box / car-pick-box / players-in）、
+   data-ajax-fav、分享脚本全部保留。 #}
+{% block body %}
+
+{# ============ 海报抬头（暗场） ============ #}
+<section class="dsec--stage on-stage" style="border-bottom:0;
+  padding:clamp(34px,6vh,72px) 0 clamp(30px,4.6vw,54px)">
+  <div class="glow3" aria-hidden="true"></div>
+  <div class="v3wrap">
+    <div class="split3">
+      <div>
+        <a class="b3 b3--sm" style="margin-bottom:clamp(12px,1.6vw,20px)"
+           href="{{ url_for('public.scripts') }}">← 回本本墙</a>
+        <p class="copy-mono" style="margin:0;color:var(--d-stage-2);letter-spacing:.28em;font-size:12px">
+          {{ sc.type or '剧本' }} / SCRIPT</p>
+        <h1 style="margin:clamp(10px,1.6vw,16px) 0 0;font-family:var(--d-serif);font-weight:900;
+            font-size:clamp(34px,6.4vw,72px);line-height:1.1;letter-spacing:-.01em;color:var(--d-stage-ink)">
+          {{ sc.title }}</h1>
+
+        <div class="row" style="margin-top:18px;gap:8px;flex-wrap:wrap">
+          {% if rating %}<span class="tag3 tag3--accent">★ {{ rating }}</span>{% endif %}
+          {% if sc.isNew %}<span class="tag3">上新</span>{% endif %}
+          {% if sc.diff and sc.diff <= 2 %}<span class="tag3">新手友好</span>{% endif %}
+          {% for t in sc.tags %}<span class="tag3">{{ t }}</span>{% endfor %}
+        </div>
+
+        <div class="script-desc" style="color:var(--d-stage-2)">
+          {{ (sc.desc or '门店还没写简介。') | nl2p | safe }}
+        </div>
+
+        <div class="row" style="margin-top:clamp(20px,2.6vw,30px);gap:14px;flex-wrap:wrap">
+          <span style="font-family:var(--d-mono);font-size:clamp(22px,2.6vw,30px);color:var(--d-stage-ink);letter-spacing:-.02em">
+            ¥{{ sc.price|int }}<span style="font-size:12px;letter-spacing:.08em;color:var(--d-stage-2)"> /人</span>
+          </span>
+          <form method="post" action="{{ url_for('public.fav', sid=sc.id) }}" data-ajax-fav style="display:inline">
+            <button class="b3 b3--sm fav-btn {{ 'on' if sc.id|string in favs }}" type="submit">
+              {{ '❤ 已想玩' if sc.id|string in favs else '♡ 想玩' }}
+            </button>
+          </form>
+          <a class="b3 b3--sm b3--accent" href="#book">约这个本 ↓</a>
+          <button class="b3 b3--sm b3--ghost" type="button" id="share-btn"
+                  data-share-text="甜薯剧本杀｜《{{ sc.title }}》">分享这本</button>
+        </div>
+
+        <p class="sub" style="margin:16px 0 0;color:var(--d-stage-2);font-size:13px;max-width:56ch">
+          ¥{{ sc.price|int }} 是<b style="color:var(--d-stage-ink)">游玩费</b>（玩完再付）；
+          先付定金 ¥{{ car_deposit|int }}/人 占位 —— <b style="color:var(--d-stage-ink)">玩完由小客服退回</b>，
+          没到场 / 中途跳车的不退。
+        </p>
+      </div>
+
+      <div>
+        {% if sc.img %}
+        <div class="rv" style="border:1px solid var(--d-hair);border-radius:var(--d-r);overflow:hidden;background:rgba(255,255,255,.04)">
+          <img src="{{ sc.img }}" alt="{{ sc.title }}" style="width:100%;aspect-ratio:3/4;object-fit:cover;display:block">
+        </div>
+        {% else %}
+        {% set d = (sc.diff or 3)|int %}
+        <div class="poster3 rv">
+          <span class="poster3__wm">{{ sc.emoji or '🎭' }}</span>
+          <p class="poster3__k">{{ sc.type or '剧本' }} · No.{{ sc.id }}</p>
+          <p class="poster3__t">{{ sc.title }}</p>
+          {% if sc.desc %}<div class="poster3__d">{{ sc.desc | nl2p | safe }}</div>{% endif %}
+          <div class="poster3__row">
+            <span class="poster3__m">
+              <b>{{ sc.players or '—' }}</b> 人 · <b>{{ sc.dur or '待定' }}</b> · 难度 {{ d }}/5
+              <span class="dots3">{% for i in range(5) %}<i class="{{ 'on' if i < d }}"></i>{% endfor %}</span>
+            </span>
+            <span class="poster3__s">{{ settings.shopName }}</span>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ============ 规格条 ============ #}
+<section class="v3sec" style="padding:clamp(20px,2.6vw,34px) 0">
+  <div class="v3wrap">
+    <div class="ticker3" style="margin-top:0">
+      <div><b style="font-family:var(--d-serif);font-weight:900;font-size:clamp(18px,2.2vw,26px)">{{ sc.players or '—' }}</b><span>人数</span></div>
+      <div><b style="font-family:var(--d-serif);font-weight:900;font-size:clamp(18px,2.2vw,26px)">{{ sc.dur or '待定' }}</b><span>时长</span></div>
+      <div><b style="font-family:var(--d-serif);font-weight:900;font-size:clamp(18px,2.2vw,26px)">{{ sc.diff or 3 }}/5</b><span>难度</span></div>
+      <div><b style="font-family:var(--d-serif);font-weight:900;font-size:clamp(18px,2.2vw,26px)">{{ sc.type or '盒装' }}</b><span>类型</span></div>
+      <div><b style="font-family:var(--d-serif);font-weight:900;font-size:clamp(18px,2.2vw,26px)">{% if rating %}★ {{ rating }}{% else %}—{% endif %}</b>
+        <span>玩家评分{% if rating_n %} · {{ rating_n }} 条{% endif %}</span></div>
+    </div>
+  </div>
+</section>
+
+{# ============ 01 角色 + 能带这本 ============ #}
+{% if sc.roles or sc.dms %}
+<section class="v3sec">
+  <span class="v3sec__no">01 · Cast</span>
+  <div class="v3wrap">
+    <h2 class="v3sec__title">{% if sc.roles %}角色卡（{{ sc.roles|length }} 张）{% else %}这本谁带{% endif %}
+      <small>{% if sc.roles %}{% if sc.allowRolePick %}可提前选角{% else %}到店随机分配{% endif %}{% endif %}</small></h2>
+
+    {% if sc.roles %}
+      {% if sc.roles|selectattr('img')|list %}
+      <div class="role3 role-gallery rv">
+        {% for r in sc.roles %}
+        <div class="role3__c {{ 'is-taken' if r.name in taken }}">
+          <span class="role3__no" aria-hidden="true">{{ '%02d'|format(loop.index) }}</span>
+          {% if r.img %}<img src="{{ r.img }}" alt="{{ r.name }}" loading="lazy">
+          {% else %}<div class="role3__ph">{{ r.name[0] }}</div>{% endif %}
+          <div class="role3__b">
+            <b>{{ r.name }}</b>
+            {% if r.line %}<p class="role3__line">{{ r.line }}</p>{% endif %}
+            {% if r.name in taken %}<span class="tag3">已被选</span>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="chips3 rv">
+        {% for r in sc.roles %}
+        <span class="tag3 {{ 'tag3--solid' if r.name in taken }}">{{ r.name }}{% if r.line %} · {{ r.line }}{% endif %}{% if r.name in taken %} · 已被选{% endif %}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endif %}
+
+    {% if sc.dms %}
+    <div style="margin-top:clamp(22px,3vw,38px)">
+      <p class="sidehead3" style="max-width:340px">能带这本<span class="line"></span></p>
+      <div class="chips3">
+        {% for d in sc.dms %}<a class="tag3" href="{{ url_for('public.dm_page', phone=d.phone) }}">{{ d.name }}</a>{% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+{# ============ 02 演绎视频 ============ #}
+{% if sc.videoUrl %}
+<section class="v3sec">
+  <span class="v3sec__no">02 · Video</span>
+  <div class="v3wrap">
+    <h2 class="v3sec__title">演绎视频 <small>看看这车人怎么演</small></h2>
+    <a class="b3 b3--accent" href="{{ sc.videoUrl }}" target="_blank" rel="noopener nofollow">观看演绎视频 ↗</a>
+  </div>
+</section>
+{% endif %}
+
+{# ============ 03 演后复盘（仅 DM / 管理员可见） ============ #}
+{% if canSeeReview and sc.reviewDoc %}
+<section class="v3sec">
+  <span class="v3sec__no">03 · Debrief</span>
+  <div class="v3wrap">
+    <h2 class="v3sec__title">演后复盘 <small>DM / 店家可见 · 客人看不到</small></h2>
+    <details class="rv sheet3">
+      <summary class="copy-mono" style="cursor:pointer">点开看复盘记录</summary>
+      <div class="rev3__t" style="margin-top:14px">{{ sc.reviewDoc | nl2p | safe }}</div>
+    </details>
+  </div>
+</section>
+{% endif %}
+
+{# ============ 04 剧友评价 ============ #}
+{% if settings.reviewsEnabled and reviews %}
+<section class="v3sec">
+  <span class="v3sec__no">04 · Reviews</span>
+  <div class="v3wrap">
+    <h2 class="v3sec__title">剧友评价（{{ reviews|length }}） <small>玩过的人怎么说</small></h2>
+
+    <div class="split3">
+      <div>
+        {% for r in reviews %}
+        <article class="rev3 rv" style="--i:{{ loop.index0 }}">
+          <div class="rev3__h rev3__h--author">
+            <div class="rev3__author">
+              <div class="rev3__avatar">
+                {% if r.avatar and r.avatar.startswith('/img/') %}
+                <img src="{{ r.avatar }}" alt="">
+                {% else %}
+                <span>{{ r.avatar or (r.nick or r.username or '玩家')[0] }}</span>
+                {% endif %}
+              </div>
+              <span class="rev3__name">{{ r.nick or r.username or '玩家' }}</span>
+            </div>
+            <span class="caption">{% for i in range(r.rating or 5) %}★{% endfor %} · {{ day_label(r.createdAt) }}</span>
+          </div>
+          <p class="rev3__t">{{ r.text or '（只给了分）' }}</p>
+          {% if r.dims %}
+          <div class="rev3__d">
+            {% for k, v in r.dims.items() %}<span class="tag3">{{ k }} {{ v }}/5</span>{% endfor %}
+          </div>
+          {% endif %}
+          {% if r.followUps %}{% for f in r.followUps %}
+          <p class="rev3__q">补两句（{{ day_label(f.at) }}）：{{ f.text }}</p>
+          {% endfor %}{% endif %}
+          {% if r.reply %}<p class="rev3__q">门店回复：{{ r.reply }}</p>{% endif %}
+          <div class="rev3__a">
+            <form method="post" action="{{ url_for('public.review_like', rid=r.id) }}">
+              <button class="b3 b3--sm b3--ghost fav-btn" type="submit">
+                {{ '❤' if (me and me.phone|string in (r.likes or [])) else '♡' }} {{ (r.likes or [])|length }}</button>
+            </form>
+            {% if r.username in user_names %}
+            <a class="b3 b3--sm b3--ghost" href="{{ url_for('public.user_profile', username=(r.username or '')) }}">看 TA 主页</a>
+            {% endif %}
+          </div>
+          {% if me and r.username == me.username %}
+          <form class="row" style="margin-top:12px" method="post" action="{{ url_for('public.review_follow', rid=r.id) }}">
+            <input class="input" name="text" placeholder="过几天想补两句？" style="flex:1;min-width:180px">
+            <button class="b3 b3--sm b3--solid" type="submit">补两句</button>
+          </form>
+          {% endif %}
+        </article>
+        {% endfor %}
+      </div>
+      <div>
+        <div class="note3 sticky3">
+          <b>评价从哪来</b><br>
+          只有<b>核销到店、玩完这一场</b>的客人才能打分，所以这里没有水军。
+          分数会算进上面那条「玩家评分」。
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ============ 05 预约 + 场次 ============ #}
+<section class="v3sec" id="book">
+  <span class="v3sec__no">05 · Book</span>
+  <div class="v3wrap">
+    <h2 class="v3sec__title">预约这一本 <small>定金锁位 · 客服确认</small></h2>
+
+    <div class="split3">
+      {# —— 左：预约表单 —— #}
+      <div>
+        <form method="post" action="{{ url_for('user.book') }}" class="form-stack rv">
+          <input type="hidden" name="sid" value="{{ sc.id }}">
+
+          <div class="form-grid">
+            <div class="field">
+              <label>日期</label>
+              <input name="ts_day" type="date" value="{{ day_min }}" min="{{ day_min }}" max="{{ day_max }}" required>
+              <span class="sub">今天起 30 天内随便挑，点右边小日历能翻月</span>
+            </div>
+            <div class="field">
+              <label>开场时间（自己填）</label>
+              <input name="time" type="time" value="{{ request.form.get('time') or '19:00' }}" required>
+              <span class="sub">店里一般 13:00 / 15:30 / 19:00 / 20:30 开场，其它时间也可以商量</span>
+            </div>
+            <div class="field">
+              <label>人数（{{ lo }}-{{ hi }} 人）<span class="sub">单开一辆车时固定 1 人，别人上车各付各的</span></label>
+              <input id="players-in" name="players" type="number" min="{{ lo }}" max="{{ hi }}" value="{{ lo }}"
+                     data-lo="{{ lo }}" data-hi="{{ hi }}">
+            </div>
+            <div class="field">
+              <label>玩法</label>
+              <select name="mode" id="mode-sel">
+                <option value="拼车">拼车（跟别人凑一车）· 定金 ¥{{ car_deposit|int }}</option>
+                <option value="包车">包车（自己人一车）</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field" id="car-mode-box" style="border-top:1px solid var(--d-rule);padding-top:var(--d-s4)">
+            <label>拼车怎么拼</label>
+            <select name="car" id="car-sel">
+              <option value="new">自己单开一辆车（我来组队）</option>
+              <option value="join"{{ ' disabled' if not open_cars }}>加入已有的车（现在 {{ open_cars|length }} 辆有位）</option>
+            </select>
+            <span class="sub">定金 ¥{{ car_deposit|int }} / 人：单开一辆车先收你 1 人的 ¥{{ car_deposit|int }}，
+              别人上车后每人再各付 ¥{{ car_deposit|int }}（<b>玩完由小客服退回</b>；没到场或中途跳车不退）；
+              付完等小客服确认到账，核销码才会出现</span>
+            {% if settings.carTags %}
+            <label style="display:block;margin-top:10px">给这车贴标签（可多选）</label>
+            <div class="chips3" style="margin-top:6px">
+              {% for t in settings.carTags %}
+              <label class="chip-check"><input type="checkbox" name="carTags" value="{{ t }}"><span>{{ t }}</span></label>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="field" id="car-pick-box" style="display:none">
+            <label>挑一辆车</label>
+            <select name="carId">
+              {% for c in open_cars %}
+              <option value="{{ c.id }}">{{ c.day }} {{ c.time }} · 车主 {{ c.owner }} · 已 {{ c.joined }}/{{ c.cap }} 人{% if c.need %} · 还差 {{ c.need }} 人{% else %} · 人够开局{% endif %}</option>
+              {% else %}<option value="">现在还没有别人开着的车 —— 自己开一辆吧</option>{% endfor %}
+            </select>
+            <span class="sub">上别人的车，日期和时间跟着那辆车走</span>
+          </div>
+
+          {% if dms %}
+          <div class="field">
+            <label>指定 DM（每人 +¥{{ dm_fee|int }}）</label>
+            <select name="dmPhone">
+              <option value="">不用，店里安排</option>
+              {% for d in dms %}<option value="{{ d.phone }}">{{ d.name }}</option>{% endfor %}
+            </select>
+            <span class="sub">想先看看人？
+              {% for d in dms %}<a class="lnk" href="{{ url_for('public.dm_page', phone=d.phone) }}">{{ d.name }}</a>{% if not loop.last %} · {% endif %}{% endfor %}
+            </span>
+          </div>
+          {% endif %}
+
+          {% if sc.allowRolePick and sc.roles %}
+          <div class="field">
+            <label>想演的角色（可选）</label>
+            <select name="role">
+              <option value="">到店再说</option>
+              {% for r in sc.roles %}{% if r.name not in taken %}<option value="{{ r.name }}">{{ r.name }}</option>{% endif %}{% endfor %}
+            </select>
+          </div>
+          {% endif %}
+
+          {% if me %}
+          <button class="b3 b3--accent b3--wide" type="submit">提交预约</button>
+          <p class="sub">定金 ¥{{ car_deposit|int }} / 人：拼车每人一份（单开先收 1 人份）、包车按人数一次交齐 —— 付完定金、小客服确认到账后核销码才显示；
+            <b>玩完由小客服退回</b>，没到场或中途跳车的不退。游玩费玩完再付（也可用券抵）。</p>
+          {% else %}
+          <a class="b3 b3--solid b3--wide" href="{{ url_for('user.login', next=request.path) }}">登录后预约</a>
+          {% endif %}
+        </form>
+      </div>
+
+      {# —— 右：店里已排的场次 —— #}
+      <div>
+        <div class="sticky3">
+          <p class="sidehead3">店里已排的场次<span class="line"></span></p>
+          {% if sessions %}
+          <div class="sheet3 rv">
+            {% for s in sessions %}{% set left = (s.cap or 99) - join.get(s.id|string, 0) %}
+            <div class="sheet3__row" style="grid-template-columns:auto 1fr">
+              <span class="sheet3__t" style="font-size:15px">{{ s.time }}</span>
+              <span class="sheet3__m">
+                <b>{{ day_label(s.ts) }}</b>
+                <span>{{ s.roomId or '房间待定' }}{% if s.dmName %} · DM {{ s.dmName }}{% endif %}</span>
+              </span>
+              <span class="sheet3__cap">已报 {{ join.get(s.id|string, 0) }}/{{ s.cap or '—' }}
+                {% if left > 0 %}<span class="tag3 tag3--accent">剩 {{ left }} 位</span>{% else %}<span class="tag3">满了</span>{% endif %}
+              </span>
+              <span class="sheet3__act">
+                {% if me and left > 0 %}
+                <form method="post" action="{{ url_for('user.book') }}">
+                  <input type="hidden" name="sid" value="{{ sc.id }}">
+                  <input type="hidden" name="ts" value="{{ s.ts }}">
+                  <input type="hidden" name="time" value="{{ s.time }}">
+                  <input type="hidden" name="players" value="{{ lo }}">
+                  <input type="hidden" name="mode" value="拼车">
+                  <button class="b3 b3--sm b3--solid" type="submit">约这一场</button>
+                </form>
+                {% elif not me %}
+                <a class="b3 b3--sm" href="{{ url_for('user.login', next=request.path) }}">登录后约</a>
+                {% endif %}
+              </span>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="empty3">
+            <p class="empty3__k">Sessions</p>
+            <h3 class="empty3__t">还没排场次</h3>
+            <p class="empty3__p">左边自己挑日期和时间下单，我们会按你的时间安排房间和 DM。</p>
+          </div>
+          {% endif %}
+
+          <div class="note3" style="margin-top:var(--d-s5)">
+            <b>到店流程</b><br>
+            下单 → 付定金（一人 ¥{{ car_deposit|int }}）→ 小客服确认到账 → 到店报 6 位核销码 →
+            玩完付游玩费（<b>定金由小客服退回</b>）→ 小客服确认到账后给剧本和 DM 打分。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  var mode = document.getElementById('mode-sel');
+  var car = document.getElementById('car-sel');
+  var boxMode = document.getElementById('car-mode-box');
+  var boxPick = document.getElementById('car-pick-box');
+  var pin = document.getElementById('players-in');
+  if (!mode || !car || !boxMode || !boxPick) return;
+  function sync() {
+    var carpool = mode.value === '拼车';
+    boxMode.style.display = carpool ? '' : 'none';
+    boxPick.style.display = (carpool && car.value === 'join') ? '' : 'none';
+    if (pin && carpool && car.value === 'new') {
+      if (!pin.dataset.keep) pin.dataset.keep = pin.value || pin.min || '1';
+      pin.value = 1; pin.min = 1; pin.max = 1; pin.disabled = true;
+    } else if (pin) {
+      pin.disabled = false;
+      pin.min = pin.dataset.lo || pin.min;
+      pin.max = pin.dataset.hi || pin.max;
+      if (pin.dataset.keep) { pin.value = pin.dataset.keep; delete pin.dataset.keep; }
+    }
+  }
+  mode.addEventListener('change', sync);
+  car.addEventListener('change', sync);
+  sync();
+})();
+</script>
+
+{# 分享：navigator.share 优先，降级 clipboard 复制 #}
+<script>
+(function(){
+  var btn=document.getElementById('share-btn');
+  if(!btn) return;
+  function toast(msg){
+    var t=document.getElementById('share-toast');
+    if(!t){ t=document.createElement('div'); t.id='share-toast'; t.className='share-toast'; document.body.appendChild(t); }
+    t.textContent=msg; t.classList.add('show');
+    clearTimeout(t._tm); t._tm=setTimeout(function(){ t.classList.remove('show'); }, 1800);
+  }
+  btn.addEventListener('click', function(){
+    var data={ title: document.title, text: btn.getAttribute('data-share-text') || document.title, url: location.href };
+    if(navigator.share){ navigator.share(data).catch(function(){}); }
+    else {
+      var text=data.text+' '+data.url;
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(function(){toast('链接已复制，去粘贴给朋友');}, function(){toast('复制失败，手动复制地址栏');});
+      } else { toast('请手动复制地址栏链接'); }
+    }
+  });
+})();
+</script>
+{% endblock %}

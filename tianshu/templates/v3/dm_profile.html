@@ -1,0 +1,91 @@
+{% extends 'layout_v3.html' %}
+{% block title %}{{ nickname }} · 主持人主页{% endblock %}
+{# DM 公开主页（三代）：竖排导轨骨架。暗场身份卡（形象照 + 段位）+ 数据条 +「简介 / 最近评价」两栏。 #}
+{% block body %}
+{% set pf = u.dmProfile or {} %}
+
+<section class="v3head">
+  <div class="v3wrap v3head__grid">
+    <p class="v3head__k">主持人 / Game Master</p>
+    <div>
+      <a class="lnk" href="{{ url_for('public.scripts') }}" style="color:var(--d-accent);font-size:13px">← 回剧本库</a>
+      <h1 class="v3head__t" style="font-size:clamp(34px,6vw,72px);margin-top:8px">{{ nickname }}</h1>
+      {% if pf.style %}
+      <p class="v3head__lead">{{ pf.style }}</p>
+      {% endif %}
+      <div class="v3head__meta">
+        <span class="tag3 tag3--accent">{{ st.tier.icon }} {{ st.tier.name }}</span>
+        {% if st.rating %}<span class="tag3">★ {{ st.rating }}（{{ st.ratingCount }} 条评价）</span>{% endif %}
+        {% if st.assigned %}<span class="tag3">被点名 {{ st.assigned }} 次</span>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% if pf.photo %}
+  <img src="{{ pf.photo }}" alt="{{ nickname }}" class="v3head__seal"
+       style="width:88px;height:88px;border-radius:var(--d-r-lg);object-fit:cover;border:1px solid var(--d-rule);color:transparent;transform:none;font-size:0">
+  {% endif %}
+</section>
+
+<section class="v3sec" style="border-top:0">
+  <div class="v3wrap">
+    <div class="ticker3" style="margin-top:0">
+      <div><b class="count3" data-to="{{ st.done }}">0</b><span>带本量</span></div>
+      <div><b>{{ st.rating or '—' }}</b><span>平均评分</span></div>
+      <div><b>{{ st.goodRate }}<span style="font-size:.6em">%</span></b><span>好评率</span></div>
+      <div><b class="count3" data-to="{{ st.players }}">0</b><span>接待人次</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="v3wrap">
+  <div class="split3" style="padding:clamp(20px,3vw,36px) 0 clamp(44px,6vw,84px)">
+
+    {# —— 左：简介 + 擅长 —— #}
+    <div>
+      {% if pf.bio %}
+      <p class="sidehead3">他自己怎么说<span class="line"></span></p>
+      <blockquote class="note3" style="margin:0;border-left-width:3px;font-size:14.5px">{{ pf.bio }}</blockquote>
+      {% endif %}
+
+      {% if st.topTags %}
+      <div style="margin-top:clamp(20px,3vw,32px)">
+        <p class="sidehead3" style="max-width:240px">擅长的类型<span class="line"></span></p>
+        <div class="chips3">{% for t in st.topTags %}<span class="tag3">{{ t }}</span>{% endfor %}</div>
+      </div>
+      {% endif %}
+
+      {% if titles %}
+      <div style="margin-top:clamp(20px,3vw,32px)">
+        <p class="sidehead3" style="max-width:240px">带过的本<span class="line"></span></p>
+        <p class="body-large" style="margin:0">{{ titles|join(' · ') }}</p>
+      </div>
+      {% endif %}
+    </div>
+
+    {# —— 右：最近评价 —— #}
+    <div>
+      <div class="sticky3">
+        <p class="sidehead3">最近的评价<span class="line"></span></p>
+        {% for r in reviews %}
+        <article class="rev3" style="padding-top:var(--d-s4);padding-bottom:var(--d-s4)">
+          <div class="rev3__h">
+            <span class="rev3__w">{{ r.username or '玩家' }}</span>
+            <span class="caption">{{ day_label(r.createdAt) }}</span>
+          </div>
+          <div style="margin-top:6px;color:var(--d-accent);letter-spacing:2px;font-size:13px">{{ '★' * (r.rating or 0) }}</div>
+          {% if r.text %}<p class="rev3__t">{{ r.text }}</p>{% endif %}
+        </article>
+        {% else %}
+        <div class="empty3">
+          <p class="empty3__k">No Reviews</p>
+          <h3 class="empty3__t">还没有评价</h3>
+          <p class="empty3__p">玩过他的本，可以在「我的 → 预约」里给一句评价。</p>
+        </div>
+        {% endfor %}
+        <a class="b3 b3--accent b3--wide" style="margin-top:var(--d-s5)" href="{{ url_for('public.scripts') }}">找个本，约他开场</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

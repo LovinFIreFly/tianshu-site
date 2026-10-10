@@ -1,0 +1,144 @@
+{% extends 'layout_v3.html' %}
+{% block title %}拼车局 · {{ settings.shopName }}{% endblock %}
+{# 拼车局（三代）：编辑式页头 + 筛选条 + 卡片流。表单字段与 action 全部保留。 #}
+{% block body %}
+
+<section class="v3head">
+  <div class="v3wrap v3head__grid" style="position:relative">
+    <p class="v3head__k">拼车局 · Share a Table</p>
+    <div>
+      <h1 class="v3head__t">拼车局</h1>
+      <p class="v3head__lead">同一本、同一时段凑一车。<b>人齐发车</b>；满了还能蹲候补，有人跳车就先喊你。</p>
+    </div>
+    <span class="v3head__seal" aria-hidden="true">发车</span>
+  </div>
+</section>
+
+<div class="v3wrap">
+  {# 多维筛选条：GET 回显。q 剧本名 / players 人数 / time 时段 / diff 难度 #}
+  <form class="filterbar3 rv" method="get" action="{{ url_for('public.car') }}" style="margin-top:clamp(16px,2.4vw,26px)">
+    <input class="input" name="q" value="{{ q or '' }}" placeholder="搜剧本名" aria-label="剧本名">
+    <input class="input" name="players" value="{{ players or '' }}" placeholder="至少几人" aria-label="人数" style="max-width:120px">
+    <select name="time" aria-label="时段">
+      <option value="">全部时段</option>
+      {% for t_opt in ['上午', '下午', '晚上'] %}
+      <option value="{{ t_opt }}" {{ 'selected' if (time or '') == t_opt }}>{{ t_opt }}</option>
+      {% endfor %}
+    </select>
+    <select name="diff" aria-label="难度">
+      <option value="">全部难度</option>
+      {% for d_opt in [1,2,3,4,5] %}
+      <option value="{{ d_opt }}" {{ 'selected' if (diff or '')|string == d_opt|string }}>{{ d_opt }}/5</option>
+      {% endfor %}
+    </select>
+    <button class="b3 b3--sm b3--solid" type="submit">筛选</button>
+    {% if q or players or time or diff %}<a class="b3 b3--sm b3--ghost" href="{{ url_for('public.car') }}">重置</a>{% endif %}
+  </form>
+
+  <div class="toolbar3">
+    <span class="copy-mono">正在发车的局 · {{ cars|length }}</span>
+    <div class="toolbar3__end">
+      <a class="b3 b3--solid b3--sm" href="{{ url_for('public.scripts') }}">我要发车</a>
+    </div>
+  </div>
+
+  {% if cars %}
+  <div class="mason3" style="padding:clamp(18px,2.6vw,30px) 0 0">
+    {% for c in cars %}
+    <article class="ccard3 rv" style="--i:{{ loop.index0 }}">
+      <div class="ccard3__top">
+        <span class="ccard3__tag">{{ c.day }} {{ c.time }}</span>
+        {% if c.closed %}<span class="tag3">已截止</span>
+        {% elif c.filled %}<span class="tag3 tag3--ok">补满发车</span>
+        {% elif c.full %}<span class="tag3 tag3--accent">已满锁车</span>
+        {% elif c.need %}<span class="tag3 tag3--accent">差 {{ c.need }}！</span>
+        {% else %}<span class="tag3 tag3--ok">人齐发车</span>{% endif %}
+      </div>
+
+      <h3 class="ccard3__title">{{ c.title }}</h3>
+
+      {% if not c.closed and not c.filled and c.deadlineIn and c.deadlineIn > 0 %}
+      <p class="ccard3__count copy-mono" style="margin:6px 0 0;color:var(--d-accent)">
+        剩 {{ (c.deadlineIn / 3600000)|round(method='ceil')|int }} 小时{% if c.need %} · 还差 {{ c.need }} 人{% endif %}
+      </p>
+      {% elif c.need %}
+      <p class="ccard3__count copy-mono" style="margin:6px 0 0;color:var(--d-ink-4)">还差 {{ c.need }} 人</p>
+      {% endif %}
+
+      {% if c.likeMind %}
+      <p class="ccard3__like" style="margin:6px 0 0;font-size:12.5px;color:var(--d-accent)">
+        有和你口味相近的玩家在车上
+      </p>
+      {% endif %}
+
+      <div class="ccard3__meta">
+        <span>车主 <b>{{ c.owner }}</b></span>
+        <span><b>{{ c.joined }}</b>/{{ c.cap }} 人</span>
+        {% if c.reserved %}<span>熟人留位 <b>{{ c.reserved }}</b></span>{% endif %}
+      </div>
+
+      {% if c.tags %}
+      <div class="ccard3__people">{% for t in c.tags %}<i>{{ t }}</i>{% endfor %}</div>
+      {% endif %}
+
+      <div class="bar3"><i style="width:{{ (c.joined * 100 / (c.cap or 8))|round|int }}%"></i></div>
+
+      <div class="ccard3__foot">
+        <a class="b3 b3--sm b3--ghost" href="{{ url_for('public.car_detail', cid=c.id) }}">进车队 →</a>
+        {% if not me %}
+          <a class="b3 b3--sm b3--solid" href="{{ url_for('user.login', next=request.path) }}">上车登记后上车</a>
+        {% elif c.mine %}
+          <span class="tag3 tag3--ok">你在这车上</span>
+          {% if not c.owner == (me.username) %}
+          <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='quit') }}">
+            <button class="b3 b3--sm b3--ghost" type="submit">下车</button></form>
+          {% endif %}
+        {% elif c.full %}
+          <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='wait') }}">
+            <button class="b3 b3--sm" type="submit">蹲候补</button></form>
+        {% else %}
+          <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='join') }}">
+            <button class="b3 b3--sm b3--solid" type="submit">上车</button></form>
+        {% endif %}
+      </div>
+
+      <details>
+        <summary class="copy-mono" style="cursor:pointer;color:var(--d-ink-4)">车上的人（{{ c.members|length }}）</summary>
+        <div class="ccard3__people" style="margin-top:10px">
+          {% for m in c.members %}
+          <i>{{ m.nick }}{% if m.owner %} · 车主{% endif %}{% if m.gender %} · {{ m.gender }}{% endif %}{% if m.ageBucket %} · {{ m.ageBucket }}{% endif %}</i>
+          {% endfor %}
+        </div>
+        <p class="empty3__p" style="font-size:12.5px;margin-top:10px">
+          车上只露昵称、性别、年龄段，电话啥的看不到，保护隐私。
+        </p>
+      </details>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty3 rv" style="margin-top:clamp(18px,2.6vw,30px)">
+    <p class="empty3__k">No Cars</p>
+    <h3 class="empty3__t">还没人发车</h3>
+    <p class="empty3__p">还没人发车，不如你来开个头？去本本墙挑本，玩法选<b>拼车</b>就发车。</p>
+    <div class="empty3__a">
+      <a class="b3 b3--solid" href="{{ url_for('public.scripts') }}">去挑个本子</a>
+      <a class="b3" href="{{ url_for('public.comm') }}">去唠嗑区问问</a>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if tags %}
+  <details class="rv" style="margin:clamp(24px,3vw,40px) 0 clamp(40px,6vw,80px)">
+    <summary class="copy-mono" style="cursor:pointer;color:var(--d-ink-4)">车队标签是啥</summary>
+    <div class="chips3" style="margin-top:12px">
+      {% for t in tags %}<span class="tag3">{{ t }}</span>{% endfor %}
+    </div>
+    <p class="empty3__p" style="font-size:13px;margin-top:12px">
+      车主开单时能选这些标签，标明这车是什么风格，方便大家判断合不合得来。
+    </p>
+  </details>
+  {% endif %}
+</div>
+
+{% endblock %}

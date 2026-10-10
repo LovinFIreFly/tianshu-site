@@ -1,0 +1,84 @@
+{% extends 'layout_v3.html' %}
+{% block title %}{{ who.username }} 的主页{% endblock %}
+{# 玩家公开主页（三代）：竖排导轨骨架。身份条 + 关注 + TA 的评价流水；DM 额外列出可开本。 #}
+{% block body %}
+
+<section class="v3head">
+  <div class="v3wrap v3head__grid">
+    <p class="v3head__k">玩家主页 · Profile</p>
+    <div>
+      <h1 class="v3head__t" style="display:flex;align-items:center;gap:14px">
+        {% set av = who.profile.avatar or '' %}
+        {% if av.startswith('/img/') %}
+        <img src="{{ av }}" alt="" style="width:48px;height:48px;border-radius:var(--d-round);object-fit:cover;border:1px solid var(--d-rule)">
+        {% else %}
+        <span class="avatar-circle" style="width:48px;height:48px">{{ av or (who.profile.nick or who.username)[0] }}</span>
+        {% endif %}
+        <span>{{ who.profile.nick or who.username }}</span>
+      </h1>
+      <div class="v3head__meta">
+        {% if role_name == 'dm' %}<span class="tag3 tag3--accent">🗡 DM</span>
+        {% elif role_name == 'user' %}<span class="tag3">🎭 玩家</span>
+        {% else %}<span class="tag3 tag3--solid">门店</span>{% endif %}
+        <span class="copy-mono">{{ followers }} 人关注</span>
+        {% if who.profile.gender %}<span class="copy-mono">{{ who.profile.gender }}</span>{% endif %}
+        {% if who.profile.age %}<span class="copy-mono">{{ who.profile.age }} 岁</span>{% endif %}
+        {% if me and me.username != who.username %}
+        <form method="post" action="{{ url_for('public.user_follow', username=who.username) }}">
+          <button class="b3 {{ 'b3--accent' if not following else '' }}" type="submit">{{ '已关注 ✓' if following else '+ 关注' }}</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="v3wrap">
+  {% if role_name == 'dm' %}
+  <div style="padding:clamp(20px,2.8vw,34px) 0 0">
+    <p class="sidehead3" style="max-width:300px">可开本<span class="line"></span></p>
+    <div class="chips3">
+      {% for s in scripts %}{% if who.username in (s.dms or []) %}<span class="tag3">{{ s.title }}</span>{% endif %}
+      {% else %}<span class="sub">还没登记可开的本</span>{% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div style="padding:clamp(24px,3.4vw,44px) 0 clamp(44px,6vw,84px)">
+    <header class="dsec__head">
+      <span class="dsec__no">评价</span>
+      <h2 class="dsec__title">TA 写过的评价（{{ reviews|length }}）</h2>
+      <span class="dsec__rule"></span>
+    </header>
+
+    {% for r in reviews %}
+    <article class="rev3 rv" style="--i:{{ loop.index0 }}">
+      <div class="rev3__h rev3__h--author">
+        <div class="rev3__author">
+          <div class="rev3__avatar">
+            {% if r.avatar and r.avatar.startswith('/img/') %}
+            <img src="{{ r.avatar }}" alt="">
+            {% else %}
+            <span>{{ r.avatar or (r.nick or r.username or '玩家')[0] }}</span>
+            {% endif %}
+          </div>
+          <span class="rev3__name">{{ r.nick or r.username or '玩家' }}</span>
+        </div>
+        <span class="caption"><a class="lnk" href="{{ url_for('public.script_detail', sid=r.sid) }}">{{ r.title or '剧本评价' }}</a> · {{ r.rating }}/5 · {{ day_label(r.createdAt) }}</span>
+      </div>
+      <p class="rev3__t">{{ r.text or '（只打了分）' }}</p>
+      {% if r.followUps %}{% for f in r.followUps %}
+      <p class="rev3__q">追评：{{ f.text }}</p>
+      {% endfor %}{% endif %}
+    </article>
+    {% else %}
+    <div class="empty3">
+      <p class="empty3__k">Empty</p>
+      <h3 class="empty3__t">还没写过评价</h3>
+      <p class="empty3__p">玩完一场、核销到店之后就能给这本打分写两句。</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}

@@ -214,7 +214,8 @@
       {% if _admin and not in_app %}
       <div class="skin-bar">
         <span>版式预览：</span>
-        <a href="{{ request.path }}?ui=2" class="{{ 'on' if ui_ver != '1' }}">二代 · 新骨架</a>
+        <a href="{{ request.path }}?ui=3" class="{{ 'on' if ui_ver == '3' }}">三代 · 竖排导轨</a>
+        <a href="{{ request.path }}?ui=2" class="{{ 'on' if ui_ver == '2' }}">二代 · 新骨架</a>
         <a href="{{ request.path }}?ui=1" class="{{ 'on' if ui_ver == '1' }}">一代 · 老版式</a>
       </div>
       {% endif %}

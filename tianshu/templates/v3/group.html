@@ -1,0 +1,53 @@
+{% extends 'layout_v3.html' %}
+{% block title %}组局 · {{ settings.shopName }}{% endblock %}
+{# 组局（三代）：竖排导轨骨架。今日在开本 + 两个入口。 #}
+{% block body %}
+
+<section class="v3head">
+  <div class="v3wrap v3head__grid">
+    <p class="v3head__k">组局 · Host Your Table</p>
+    <div>
+      <h1 class="v3head__t">组个局</h1>
+      <p class="v3head__lead">看今天谁在开本，挑个顺眼的局直接上车；或直接挑本自己开一桌，定金锁位就成。</p>
+      <div class="v3head__row" style="margin-top:18px">
+        <a class="b3 b3--solid" href="{{ url_for('public.scripts') }}">去挑本自己开一桌</a>
+        <a class="b3" href="{{ url_for('public.car') }}">去拼车大厅</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="v3wrap">
+  <div class="toolbar3">
+    <span class="copy-mono">今天在开的局 · {{ sessions|length }}</span>
+  </div>
+
+  {% if sessions %}
+  <div class="board3 rv" style="margin-top:18px">
+    <div class="board3__head">
+      <h2>今日开演</h2>
+      <span class="copy-mono">满员即开</span>
+    </div>
+    <ol class="board3__list">
+      {% for s in sessions[:8] %}
+      <li class="board3__row">
+        <span class="board3__t">{{ s.time }}</span>
+        <span class="board3__n">{{ s.title }}
+          <small>{{ s.roomId or '房间待定' }} · DM {{ s.dmName or '待安排' }}</small></span>
+        <span class="board3__s">已报 <b>{{ s.joined }}</b>/{{ s.cap or '—' }} 人</span>
+      </li>
+      {% endfor %}
+    </ol>
+  </div>
+  {% else %}
+  <div class="empty3 rv" style="margin-top:18px">
+    <p class="empty3__k">No Tables</p>
+    <h3 class="empty3__t">今天还没人开桌</h3>
+    <p class="empty3__p">挑个本、选好时间，定金锁位就开一桌。</p>
+    <div class="empty3__a">
+      <a class="b3 b3--solid" href="{{ url_for('public.scripts') }}">去挑本开一桌</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

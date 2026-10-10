@@ -51,15 +51,24 @@ class UiLoader(BaseLoader):
     def __init__(self, paths):
         self.v2 = FileSystemLoader(paths)
         self.v1 = FileSystemLoader([os.path.join(p, 'v1') for p in paths])
+        # 三代（2026-10）：templates/v3/ —— 竖排导轨骨架。同样"v3 优先、缺的落回二代"，
+        # 后台面板 / DM 工作台在三代模式下继续用二代模板（那是店里干活的地方）。
+        self.v3 = FileSystemLoader([os.path.join(p, 'v3') for p in paths])
+
+    def _pick(self, environment, template, loaders):
+        for loader in loaders:
+            try:
+                return loader.get_source(environment, template)
+            except TemplateNotFound:
+                continue
+        raise TemplateNotFound(template)
 
     def get_source(self, environment, template):
-        if business.ui_ver() == '1':
-            for loader in (self.v1, self.v2):        # 一代优先，缺的落回二代
-                try:
-                    return loader.get_source(environment, template)
-                except TemplateNotFound:
-                    continue
-            raise TemplateNotFound(template)
+        v = business.ui_ver()
+        if v == '1':
+            return self._pick(environment, template, (self.v1, self.v2))
+        if v == '3':
+            return self._pick(environment, template, (self.v3, self.v2))
         return self.v2.get_source(environment, template)
 
 
