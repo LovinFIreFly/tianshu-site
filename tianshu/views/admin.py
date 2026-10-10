@@ -295,7 +295,16 @@ def coupon():
 @staff_required
 def scripts():
     """剧本管理：改价、上下架、角色、是否允许客人提前选角"""
-    return render_template('admin/panel_scripts.html', rows=db.rows('scripts'),
+    rows = db.rows('scripts')
+    # 2026-10 修复：模板读 s.plays 显示"已开几场"，但脚本本身没存这个字段，
+    # 原来永远显示 0。这里按 bookings 实算（同一剧本的预约数）。
+    bid_count = {}
+    for b in db.rows('bookings'):
+        sid = str(b.get('sid'))
+        bid_count[sid] = bid_count.get(sid, 0) + 1
+    for s in rows:
+        s['plays'] = bid_count.get(str(s.get('id')), 0)
+    return render_template('admin/panel_scripts.html', rows=rows,
                            tag_presets=TAG_PRESETS)
 
 
@@ -1209,7 +1218,11 @@ def backup_import():
     with zipfile.ZipFile(io.BytesIO(f.read())) as z:
         for nm in z.namelist():
             if nm.endswith('.json') or nm.startswith('img/'):
-                if '..' in nm or nm.startswith('/'):
+                # 2026-10 修复：zip-slip 防护要覆盖 Windows 路径。原来只查 '..' 和
+                # 以 '/' 开头，挡不住 "..\" 或 "C:\xxx" 这种跳出 data/ 的写法，
+                # 恶意备份包能把任意文件写到磁盘任意位置。
+                if ('..' in nm or nm.startswith('/') or '\\' in nm
+                        or re.match(r'^[a-zA-Z]:', nm)):
                     continue
                 z.extract(nm, DATA_DIR)
                 n += 1

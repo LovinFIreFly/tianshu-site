@@ -11,9 +11,19 @@ import secrets
 from flask import (Blueprint, flash, jsonify, redirect, render_template, request, session, url_for)
 
 from tianshu import business
+from config import PLAYER_TAGS
 from tianshu.db import db
 from tianshu.security import (current_user, hash_password, is_staff, login_required, rate,
-                              rate_clear, rate_peek, safe_next, verify_password)
+                             rate_clear, rate_peek, safe_next, verify_password)
+
+
+def _safe_int(v, default=0):
+    """2026-10：表单里可能传来非数字（手滑/攻击），直接 int() 会 500。
+    统一走这里，解析失败就退回默认值。"""
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return default
 
 bp = Blueprint('user', __name__)
 
@@ -303,7 +313,8 @@ def me():
                            msgs=business.my_messages(u), days=next_days(7),
                            favGroups=favGroups, myTags=myTags,
                            serviceWechat=serviceWechat,
-                           faqUrl=url_for('public.faq'))
+                           faqUrl=url_for('public.faq'),
+                           PLAYER_TAGS=PLAYER_TAGS)
 
 
 @bp.post('/profile')
@@ -380,13 +391,13 @@ def review(bid):
         # 四个细分维度（老版本就有）：剧情 / DM / 氛围 / 房间，各 1-5 分
         dims = {}
         for key, label in (('plot', '剧情'), ('dm', 'DM'), ('vibe', '氛围'), ('room', '房间')):
-            v = int(request.form.get(key) or 0)
+            v = _safe_int(request.form.get(key), 0)
             if 1 <= v <= 5:
                 dims[label] = v
         db.update('reviews', lambda rows: rows + [{
             'id': business.now_ms(), 'sid': bk.get('sid'), 'bid': bid,
             'dmPhone': bk.get('dmPhone') or '',
-            'rating': max(1, min(5, int(request.form.get('rating') or 5))),
+            'rating': max(1, min(5, _safe_int(request.form.get('rating'), 5))),
             'text': business.clean(request.form.get('text'), 800),
             'username': '匿名玩家' if anon else u.get('username'), 'anonymous': anon,
             'dims': dims, 'reply': '', 'likes': [], 'hidden': False, 'createdAt': business.now_ms()}])

@@ -30,7 +30,7 @@
 
     {# 老板手写寄语（九·页脚/告示的人味） #}
     <p class="hand" style="margin:14px auto 0;color:var(--d-ink-4);font-size:15px">
-      —— {{ settings.shName if settings.get('shopName') else '老板' }} 留
+      —— {{ settings.get('shopName') or '老板' }} 留
     </p>
 
     <div class="row" style="justify-content:center;margin-top:clamp(24px,3.4vw,38px);gap:12px">

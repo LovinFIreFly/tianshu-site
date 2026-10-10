@@ -212,6 +212,7 @@ def api_cars():
     u = current_user()
     me_phone = u.get("phone") if u else ""
     users = {str(x.get("phone")): x for x in db.rows("users")}
+    by_name = {str(x.get("username")): x for x in db.rows("users")}
     # 多维筛选（与桌面 car 同口径，§3.1）：剧本名 q / 最低人数 players / 时段 time / 难度 diff(1-5)
     f_q = (request.args.get("q") or "").strip().lower()
     f_players = request.args.get("players")
@@ -235,7 +236,10 @@ def api_cars():
             continue
         if want_diff and int(c.get("scriptDiff") or 0) != want_diff:
             continue
-        owner = users.get(str(c.get("owner"))) if c.get("owner") else None
+        # 2026-10 修复：car_pool 的 owner 可能是 phone 也可能是 username（历史数据混用），
+        # 只按 phone 查会查不到，头像恒为 🎭。两个索引都试一下。
+        _okey = str(c.get("owner") or "")
+        owner = (users.get(_okey) or by_name.get(_okey)) if _okey else None
         prof = (owner or {}).get("profile") or {}
         av = prof.get("avatar") or ((owner or {}).get("username") or "🎭")
         # 头像若是图片地址就用原值；否则当文字（首字 / emoji）
@@ -649,7 +653,17 @@ def api_notice_read():
     nid = request.form.get("id") or request.args.get("id")
     if not nid:
         return jsonify({"error": "缺少通知 id"}), 400
-    db.update("notices", lambda rows: [dict(n, read=True) if str(n.get("id")) == str(nid) else n for n in rows])
+    # 2026-10 修复：原来任意登录用户能把**别人**的通知标已读（IDOR）——
+    # 传入任意 id 即可篡改他人消息状态。现在只标"收件人在列表里有我"的那条。
+    me = str(u.get("phone"))
+    def _mark(n):
+        if str(n.get("id")) != str(nid):
+            return n
+        to = n.get("to")
+        if isinstance(to, list) and me not in to:
+            return n                       # 不是发给我的，不动
+        return dict(n, read=True)
+    db.update("notices", lambda rows: [_mark(n) for n in rows])
     return jsonify({"ok": True})
 
 
@@ -755,6 +769,16 @@ def api_code_send():
 @bp.post("/m/api/register")
 def api_register():
     """内联注册（对齐桌面 /register）：手机号+邮箱验证码+昵称+两次密码+邀请码"""
+    # 2026-10 修复：/m/api/register 原本没有限流（桌面端有），可被脚本刷手机号注册、
+    # 连带狂刷邀请券。这里加单进程内存兜底限流（多 worker 各自计数，能挡大部分，
+    # 反向代理层也建议再加一层）。
+    _reg_hits = globals().setdefault("_reg_hits", {})
+    _now = business.now_ms()
+    _ip = request.remote_addr or "?"
+    _wl = [t for t in _reg_hits.get(_ip, []) if _now - t < 60000]
+    if len(_wl) >= 6:
+        return jsonify({"ok": False, "msg": "操作太频繁，请 1 分钟后再试"})
+    _wl.append(_now); _reg_hits[_ip] = _wl
     f = request.form
     phone = (f.get("phone") or "").strip()
     email = (f.get("email") or "").strip()

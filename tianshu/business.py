@@ -1690,6 +1690,10 @@ def fav_set(user, sid, group, on):
     if group not in FAV_GROUPS:
         return False, '分组只能是 want / done / avoid'
     sid = str(sid)
+    # 2026-10 修复：原来不校验剧本是否存在，收藏一个被删掉的 sid 会在
+    # "我的想玩"列表里留下一条打不开的脏数据。先确认剧本真实存在。
+    if not db.one('scripts', id=sid):
+        return False, '这个剧本不存在'
     rows = db.rows('favs')
     rec = _fav_rec(rows, str(user.get('phone')))
     if rec is None:
