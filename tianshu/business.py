@@ -1874,11 +1874,29 @@ def create_booking(user, form):
              'status': 'unpaid', 'createdAt': now_ms(),
              'couponId': 0, 'paidAt': 0, 'refundAt': 0, 'claimedAt': 0}
 
-    db.update('bookings', lambda rows: rows + [booking])
-    db.update('pays', lambda rows: rows + [order])
-    if used:
-        adjust_balance(user.get('phone'), -used, '抵扣《%s》%s 的定金' % (sc.get('title'), booking['day']),
-                       user.get('username'))
+    # 2026-10 修复：余额扣款 + 建预约 + 建订单放进同一个事务，并在持锁区间把"余位"
+    # 再数一遍。上面 1779-1802 的校验在事务**外**，极端并发下两个请求可能都通过，
+    # 这里串行重做，真正超卖的那一下会被拦下来（返回"手慢了，刚被订满"）。
+    with db.transaction():
+        if not join_car and ses:
+            _used = sum((b.get('players') or 1) for b in db.rows('bookings')
+                        if b.get('sessionId') == ses.get('id') and b.get('status') != 'cancelled')
+            if (ses.get('cap') or 99) - _used < players:
+                return False, '手慢了，这场刚被别人订满，换个时段或者改下人数', None
+        if join_car:
+            _ses = next((x for x in db.rows('sessions')
+                         if str(x.get('id')) == str(session_id)), None)
+            if _ses and (_ses.get('cap') or 0) > 0:
+                _used = sum((b.get('players') or 1) for b in db.rows('bookings')
+                            if str(b.get('sessionId')) == str(session_id)
+                            and b.get('status') != 'cancelled')
+                if (_ses.get('cap') or 0) - _used < players:
+                    return False, '手慢了，这辆车/这场刚满，换个时段或者改下人数', None
+        db.update('bookings', lambda rows: rows + [booking])
+        db.update('pays', lambda rows: rows + [order])
+        if used:
+            adjust_balance(user.get('phone'), -used, '抵扣《%s》%s 的定金' % (sc.get('title'), booking['day']),
+                           user.get('username'))
 
     if join_car:
         notify(join_car.get('phone'), '有人上你的车了',

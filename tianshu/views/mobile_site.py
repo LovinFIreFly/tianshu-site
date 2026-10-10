@@ -102,6 +102,9 @@ def _norm_script(s, rating=0):
         "allowRolePick": bool(s.get("allowRolePick")),
         "roles": [r.get("name") for r in (s.get("roles") or []) if r.get("name")],
         "rating": rating,
+        # 2026-10 修复：前端"新本首车"靠 s.isNew 判断，原来接口只回了 hot，
+        # 导致新本永远进不了"首车"推荐，只能退而用 id 倒序兜底。这里把 isNew 也带上。
+        "isNew": bool(s.get("hot") or s.get("isNew")),
     }
 
 
