@@ -1,19 +1,20 @@
-/* ===== 甜薯剧本杀 · 手机端 v3 · zine 设计 × 旧版全功能 ===== */
+/* ===== 甜薯剧本杀 · 手机端 · 对齐第五版「暖调手作剧场」（焦橙 / 思源宋体编辑式） ===== */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Noto+Serif+SC:wght@700;900&display=swap');
 :root{
-  --paper:#F1EDE4; --paper-deep:#E4DECF;
+  --paper:#FBF5EC; --paper-deep:#F4EADB;
   --ink:#17140F; --ink-soft:#5C564B; --ink-faint:#7A7263;
   --line:#D6CFC0; --line-w:1px;
-  --accent:#BD3318; --accent-2:#C7430B; --accent-tint:#F7E2DA; --accent-deep:#8E2413;
-  --card:#FFFFFF; --mask:rgba(23,20,15,.4);
+  --accent:#E0571F; --accent-2:#B8431A; --accent-tint:#FBE9DE; --accent-deep:#8E3A14;
+  --card:#FFFCF6; --mask:rgba(23,20,15,.4);
   --ok:#1F6B3D; --ok-tint:#E2F0E7;
   --warn-tint:#F9E3D9;
-  --font-display:'ZCOOL QingKe HuangYou','Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+  --font-display:'Noto Serif SC','Fraunces','ZCOOL QingKe HuangYou','PingFang SC','Microsoft YaHei',serif;
   --font-body:'Noto Sans SC','PingFang SC','Microsoft YaHei','Segoe UI',sans-serif;
   --fs-hero:40px; --fs-title:24px; --fs-sub:18px; --fs-body:15px; --fs-meta:12px; --fs-nav:11px;
   --lh-tight:1.08; --lh-body:1.7; --track-wide:0.18em;
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s8:48px;
   --page-pad:18px;
-  --r-sm:6px; --r-md:12px; --r-sheet:16px; --r-pill:999px;
+  --r-sm:8px; --r-md:14px; --r-sheet:18px; --r-pill:999px;
   --sh-tab:0 8px 24px rgba(23,20,15,.14); --sh-sheet:0 -14px 44px rgba(23,20,15,.20);
   --container:560px;
   --tap:44px; --nav-h:54px; --inp-h:44px;
@@ -27,6 +28,10 @@
   --d-tap:.24s;
   --dur-pop:240ms; --dur-mask:200ms;
 }
+/* 手作纸纹颗粒：极轻，叠在最上层不参与交互（对齐第五版氛围层） */
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9998;opacity:.045;
+  mix-blend-mode:soft-light;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
 /* ===== 暗色模式：同一 token 结构覆盖（色板经 WCAG AA 校对，沿用 zine 已验证值） =====
    触发：① 系统 prefers-color-scheme:dark 且用户未手动选浅色；
         ② 用户顶栏手动切 dark（html[data-theme=dark]）。
@@ -35,7 +40,7 @@
   --paper:#15130F; --paper-deep:#100E0B;
   --ink:#F2ECE0; --ink-soft:#DCD5C6; --ink-faint:#B3AB99;
   --line:#332F27;
-  --accent:#FF7A57; --accent-2:#FF9C80; --accent-tint:#3A1E15; --accent-deep:#FF9C80;
+  --accent:#FF7A3D; --accent-2:#E0571F; --accent-tint:#3A1E15; --accent-deep:#FF7A3D;
   --card:#1C1914; --mask:rgba(21,19,15,.6);
   --ok:#6FD39A; --ok-tint:#142A1C; --warn-tint:#3A2418;
   --sh-sheet:0 -14px 44px rgba(0,0,0,.5);
@@ -45,7 +50,7 @@
     --paper:#15130F; --paper-deep:#100E0B;
     --ink:#F2ECE0; --ink-soft:#DCD5C6; --ink-faint:#B3AB99;
     --line:#332F27;
-    --accent:#FF7A57; --accent-2:#FF9C80; --accent-tint:#3A1E15; --accent-deep:#FF9C80;
+    --accent:#FF7A3D; --accent-2:#E0571F; --accent-tint:#3A1E15; --accent-deep:#FF7A3D;
     --card:#1C1914; --mask:rgba(21,19,15,.6);
     --ok:#6FD39A; --ok-tint:#142A1C; --warn-tint:#3A2418;
     --sh-sheet:0 -14px 44px rgba(0,0,0,.5);

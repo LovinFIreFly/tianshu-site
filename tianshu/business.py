@@ -1027,8 +1027,9 @@ SKINS = {
     'film':      '胶片 · 做旧（暖棕颗粒 / 手绘朱线 / 纸张噪点）',
     'ledger':    '柜台 · 手写账本（虚线框 / 等宽数字 / 印章红）',
     'symphony':  'Symphony · 暗色剧场（去模板化 / 高质感暗色 SaaS）',
+    'v5':        '第五版 · 暖调手作剧场（焦橙品牌色 / 圆润温润 / 思源宋体编辑式）',
 }
-DEFAULT_SKIN = 'playbill'
+DEFAULT_SKIN = 'v5'
 
 
 def current_skin(st=None):

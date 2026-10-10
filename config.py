@@ -58,12 +58,13 @@ SETTINGS_DEFAULT = {
     "mailFromName": "甜薯剧本杀",   # 发件人昵称（收件箱里显示的名字）；留空 = 只显示邮箱地址
     # 站点外观款式：**手机端 / 电脑端分开选**（后台「门店设置 → 外观款式」里各挑一个）
     # 可选值见 business.SKINS；二选一留空就回退到下面的 skin（历史部署兼容用）
-    "skin_desktop": "playbill",
-    "skin_mobile": "playbill",
+    # 注意：2026-10 起的「第五版 · 暖调手作剧场」已作为默认款式（v5）。
+    "skin_desktop": "v5",
+    "skin_mobile": "v5",
     # 手机端方案：zine=第三版(旧原生层功能×zine设计，推荐)；legacy=旧原生层素颜；app=独立手机站(/m)
     "mobileMode": "zine",
     # 历史兼容：单款式旧值，二选一都没配时回退到这里
-    "skin": "playbill",
+    "skin": "v5",
     # 店铺实拍（"真实照片前置"用）：后台「门店设置」里传，首页会挂一条照片墙
     "shopPhotos": [],          # 形如 [{'url':'/img/shop/...','cap':'前台'}, ...]
     "shopIntro": "",           # 店铺一句话（实拍区旁边配的手写小字）
