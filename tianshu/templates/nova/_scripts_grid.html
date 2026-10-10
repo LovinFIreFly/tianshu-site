@@ -1,39 +1,65 @@
-{# 剧本库网格片段（NOVA）：前端点标签用 fetch 拉这段原地替换，整页不跳。
-   钩子与二代一致：data-spa-grid / data-count / data-anim / data-ajax-fav #}
+{# 剧本库清单片段（NOVA · 第三轮）
+   版式从"均质卡片网格"改为**编号索引清单**（原型 B）：
+   一行读完 —— 编号 · 缩略图 · 书名 + 规格 · 价格 · 箭头。
+   前端点标签仍用 fetch 拉这段原地替换；钩子 data-spa-grid / data-count /
+   data-anim / data-ajax-fav 原样保留。
+   `view` 参数：'list' 走清单体（默认），'plate' 走海报墙（首页/精选用）。 #}
 {% if scripts %}
-<div class="nv-grid" data-spa-grid data-count="{{ scripts|length }}">
+{% if view == 'plate' %}
+<div class="nv-plates" data-spa-grid data-count="{{ scripts|length }}">
   {% for s in scripts %}
-  <article class="nv-card" data-anim>
-    <a class="nv-card__cover" href="{{ url_for('public.script_detail', sid=s.id) }}"
+  <article class="nv-plate {{ 'nv-plate--wide' if loop.first and scripts|length > 2 else '' }}" data-anim>
+    <a class="nv-plate__cover" href="{{ url_for('public.script_detail', sid=s.id) }}"
        data-curtain data-cursor="view" data-cursor-label="看本">
       {% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}" loading="lazy">
       {% else %}{% include '_script_ph.html' %}{% endif %}
-      <span class="nv-card__type">{{ s.type or '剧本' }}</span>
-      <span class="nv-card__hint">打开剧本 →</span>
     </a>
-    <div class="nv-card__body">
-      <h3 class="nv-card__title"><a href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.title }}</a></h3>
-      <p class="nv-card__meta">{{ s.players or '—' }} · {{ s.dur or '—' }} · 难度 {{ s.diff or 3 }}/5</p>
-      <div class="nv-card__foot">
-        <span class="nv-card__price">¥{{ s.price|int }}<small>/人</small></span>
-        {% if rating.get(s.id|string) %}<span class="nv-tag">★ {{ rating[s.id|string] }}</span>
-        {% elif s.diff and s.diff <= 2 %}<span class="nv-tag nv-tag--accent">新手友好</span>
-        {% elif s.isNew %}<span class="nv-tag nv-tag--accent">上新</span>
-        {% else %}<span class="nv-tag">{{ s.type or '可玩' }}</span>{% endif %}
-      </div>
+    <div class="nv-plate__body">
+      <b><a href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.title }}</a></b>
+      <em>{{ s.type or '剧本' }} · {{ s.players or '—' }} · {{ s.dur or '—' }} · ¥{{ s.price|int }}/人</em>
     </div>
-    <form class="nv-card__fav" method="post" action="{{ url_for('public.fav', sid=s.id) }}" data-ajax-fav>
+  </article>
+  {% endfor %}
+</div>
+
+{% else %}
+<ol class="nv-index nv-index--pic" data-spa-grid data-count="{{ scripts|length }}">
+  {% for s in scripts %}
+  <li data-anim>
+    <a class="nv-index__a" href="{{ url_for('public.script_detail', sid=s.id) }}"
+       data-curtain data-cursor="view" data-cursor-label="看本">
+      <span class="nv-index__no">{{ '%02d'|format(loop.index) }}</span>
+      <span class="nv-index__pic">
+        {% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}" loading="lazy">
+        {% else %}{% include '_script_ph.html' %}{% endif %}
+      </span>
+      <span class="nv-index__main">
+        <b>{{ s.title }}</b>
+        <em>{{ s.type or '剧本' }} · {{ s.players or '—' }} 人 · {{ s.dur or '—' }} · 难度 {{ s.diff or 3 }}/5</em>
+      </span>
+      <span class="nv-index__side">
+        <b>¥{{ s.price|int }}</b><br>/人{% if rating.get(s.id|string) %} · ★{{ rating[s.id|string] }}{% endif %}
+      </span>
+      <span class="nv-index__go">→</span>
+    </a>
+    <form class="nv-index__fav" method="post" action="{{ url_for('public.fav', sid=s.id) }}" data-ajax-fav>
       <button class="fav-btn {{ 'on' if s.id|string in favs }}" type="submit" aria-label="想玩">
         {{ '❤' if s.id|string in favs else '♡' }}
       </button>
     </form>
-  </article>
+  </li>
   {% endfor %}
-</div>
+</ol>
+{% endif %}
+
 {% else %}
-<div class="nv-empty" data-anim data-count="0">
-  <p class="nv-empty__k">No Match</p>
-  <h3>没找着想冲的本</h3>
+<div class="nv-blank" data-anim data-count="0">
+  <p class="nv-blank__k">No Match</p>
+  <b>没找着想冲的本</b>
   <p>换个词，或者去掉几个类型再试试。类型选得越少，结果越宽。</p>
+  <div class="nv-blank__act">
+    <a class="nv-btn nv-btn--sm nv-btn--solid" href="{{ url_for('public.scripts') }}">清空条件重来</a>
+    <a class="nv-btn nv-btn--sm" href="{{ url_for('public.car') }}">去拼车大厅看看</a>
+  </div>
 </div>
 {% endif %}

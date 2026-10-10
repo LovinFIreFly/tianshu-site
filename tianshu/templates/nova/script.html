@@ -3,155 +3,202 @@
 {% block og_title %}{{ sc.title }} · {{ settings.shopName }}{% endblock %}
 {% block og_description %}{{ (sc.desc or settings.shopName)|truncate(60, True, '…') }}{% endblock %}
 {% block og_image %}{% if sc.img %}{{ sc.img if sc.img.startswith('http') else request.url_root ~ sc.img.lstrip('/') }}{% else %}{{ url_for('static', filename='icon.svg', _external=True) }}{% endif %}{% endblock %}
-{# NOVA 剧本详情：编辑式书页。左文右图 + 规格条 + 角色 + 评价 + 预约。
-   表单字段名、action、id（mode-sel / car-sel / car-mode-box / car-pick-box / players-in）、
-   data-ajax-fav、share-btn 全部保留（功能与二代一致，只是换了皮与结构）。 #}
+{# NOVA 剧本详情（第三轮）：**编辑式书页**。
+   版式 = 通栏书名 + 关键事实三连（原型 D 变体）+ 杂志式正文（首字下沉 / 两栏）
+        + 角色海报墙（原型 E 破格）+ 评价通栏流水 + 右侧 sticky 预约窄栏（原型 F）。
+   与上一版的差别：正文从"一坨散文"变成有节奏的杂志排版；角色从等宽网格变成
+   首发宽幅的破格海报墙；评价从卡片堆变成带作者列的通栏流水。
+   表单字段名 / action / id（mode-sel / car-sel / car-mode-box / car-pick-box /
+   players-in）/ data-ajax-fav / share-btn 全部保留（功能与二代一致）。 #}
 {% block body %}
 
-<section class="nv-head" style="padding-bottom:0;border-bottom:0">
-  <div class="nv-wrap">
-    <a class="nv-btn nv-btn--sm nv-btn--ghost rv" href="{{ url_for('public.scripts') }}" data-curtain data-cursor="view" data-cursor-label="返回">← 回本本墙</a>
-  </div>
-</section>
-
 <div class="nv-wrap">
-  <div class="nv-detail">
+  <div class="nv-script">
 
-    {# —— 左：正文 —— #}
+    {# ═══════════════ 左：正文 ═══════════════ #}
     <div>
-      <p class="nv-kick nv-head__k rv">{{ sc.type or '剧本' }} / SCRIPT · No.{{ sc.id }}</p>
-      <h1 class="nv-detail__title rv" data-d="40">{{ sc.title }}</h1>
+      <div class="nv-script__bar">
+        <a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('public.scripts') }}"
+           data-curtain data-cursor="view" data-cursor-label="返回">← 回本本墙</a>
+        <p class="nv-kick">{{ sc.type or '剧本' }} · Script No.{{ '%03d'|format(sc.id) }}</p>
+      </div>
 
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:var(--nv-s4)" class="rv" data-d="80">
-        {% if rating %}<span class="nv-tag nv-tag--accent">★ {{ rating }}</span>{% endif %}
-        {% if sc.isNew %}<span class="nv-tag">上新</span>{% endif %}
+      <h1 class="nv-script__title">{{ sc.title }}</h1>
+
+      <div class="nv-tags">
+        {% if rating %}<span class="nv-tag nv-tag--accent">★ {{ rating }}{% if rating_n %}（{{ rating_n }} 条）{% endif %}</span>{% endif %}
+        {% if sc.isNew %}<span class="nv-tag nv-tag--accent">上新</span>{% endif %}
         {% if sc.diff and sc.diff <= 2 %}<span class="nv-tag">新手友好</span>{% endif %}
         {% for t in sc.tags %}<span class="nv-tag">{{ t }}</span>{% endfor %}
       </div>
 
-      <div class="nv-prose rv" data-d="120">
-        {{ (sc.desc or '门店还没写简介。') | nl2p | safe }}
+      {# 关键事实：价格 / 定金 / 人数 / 时长 / 难度 —— 靠字级而不是卡片区分 #}
+      <div class="nv-script__facts">
+        <div class="nv-script__fact">
+          <b class="nv-accent">¥{{ sc.price|int }}</b><span>每人游玩费</span>
+        </div>
+        <div class="nv-script__fact">
+          <b>¥{{ car_deposit|int }}</b><span>定金 / 人 · 玩完退</span>
+        </div>
+        <div class="nv-script__fact">
+          <b>{{ sc.players or '—' }}</b><span>开局人数</span>
+        </div>
+        <div class="nv-script__fact">
+          <b>{{ sc.dur or '—' }}</b><span>预计时长</span>
+        </div>
+        <div class="nv-script__fact">
+          <b>{{ sc.diff or 3 }}<small style="font-size:15px;color:var(--nv-ink-3)">/5</small></b><span>推理难度</span>
+        </div>
       </div>
 
-      {# 规格条 #}
-      <dl class="nv-facts rv">
-        <div><dt>人数</dt><dd>{{ sc.players or '—' }}</dd></div>
-        <div><dt>时长</dt><dd>{{ sc.dur or '待定' }}</dd></div>
-        <div><dt>难度</dt><dd>{{ sc.diff or 3 }}/5</dd></div>
-        <div><dt>类型</dt><dd>{{ sc.type or '盒装' }}</dd></div>
-        <div><dt>玩家评分</dt><dd>{% if rating %}★ {{ rating }}{% else %}—{% endif %}</dd></div>
-      </dl>
-
-      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center" class="rv">
+      <div class="nv-acts">
         <form method="post" action="{{ url_for('public.fav', sid=sc.id) }}" data-ajax-fav style="display:inline">
           <button class="nv-btn nv-btn--sm fav-btn {{ 'on' if sc.id|string in favs }}" type="submit">
             {{ '❤ 已想玩' if sc.id|string in favs else '♡ 想玩' }}</button>
         </form>
-        <a class="nv-btn nv-btn--sm nv-btn--accent" href="#book">约这个本 ↓</a>
+        <a class="nv-btn nv-btn--sm nv-btn--accent" href="#book" data-cursor="view" data-cursor-label="预约">约这个本 ↓</a>
         <button class="nv-btn nv-btn--sm nv-btn--ghost" type="button" id="share-btn"
                 data-share-text="甜薯剧本杀｜《{{ sc.title }}》">分享这本</button>
       </div>
 
-      <p class="nv-mute" style="margin-top:var(--nv-s3)">
-        ¥{{ sc.price|int }} 是<b>游玩费</b>（玩完再付）；先付定金 ¥{{ car_deposit|int }}/人 占位 ——
-        <b>玩完由小客服退回</b>，没到场 / 中途跳车的不退。
-      </p>
+      {# ── 剧情简介：杂志式正文（首字下沉 + 宽屏两栏） ── #}
+      <section class="nv-chapter">
+        <div class="nv-chapter__hd">
+          <span class="nv-chapter__no">01</span>
+          <h2 class="nv-chapter__t">这本讲什么</h2>
+          <span class="nv-chapter__s">Synopsis</span>
+        </div>
+        <div class="nv-article">
+          {% set _paras = (sc.desc or '门店还没写简介。')|nl2p|safe %}
+          <div class="nv-article__cols nv-prose">{{ _paras }}</div>
+        </div>
+        <p class="nv-note" style="margin-top:var(--nv-s4)">
+          ¥{{ sc.price|int }} 是<b>游玩费</b>（玩完再付）；先付定金 ¥{{ car_deposit|int }}/人 占位 ——
+          <b>玩完由小客服退回</b>，没到场 / 中途跳车的不退。
+        </p>
+      </section>
 
-      {# 角色 #}
+      {# ── 角色：海报墙（首张宽幅破格） ── #}
       {% if sc.roles or sc.dms %}
-      <div class="nv-panel" style="margin-top:var(--nv-s6)">
-        <h2 class="nv-panel__title">{% if sc.roles %}角色卡（{{ sc.roles|length }}）{% else %}这本谁带{% endif %}
-          <small>{% if sc.roles %}{% if sc.allowRolePick %}可提前选角{% else %}到店随机分配{% endif %}{% endif %}</small></h2>
+      <section class="nv-chapter">
+        <div class="nv-chapter__hd">
+          <span class="nv-chapter__no">02</span>
+          <h2 class="nv-chapter__t">{% if sc.roles %}角色卡 · {{ sc.roles|length }} 张{% else %}这本谁带{% endif %}</h2>
+          <span class="nv-chapter__s">
+            {% if sc.roles %}{{ '可提前选角' if sc.allowRolePick else '到店随机分配' }}{% endif %}
+          </span>
+        </div>
+
         {% if sc.roles %}
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--nv-s3)">
+        <div class="nv-roles">
           {% for r in sc.roles %}
-          <div class="nv-card rv" data-d="{{ loop.index0 * 50 }}" style="{{ 'opacity:.55' if r.name in taken else '' }}">
-            <div class="nv-card__cover" style="aspect-ratio:3/4">
+          <article class="nv-role">
+            <div class="nv-role__face {{ 'is-taken' if r.name in taken }}">
               {% if r.img %}<img src="{{ r.img }}" alt="{{ r.name }}" loading="lazy">
-              {% else %}<div style="display:grid;place-items:center;height:100%;font-family:var(--nv-serif);font-size:40px;color:var(--nv-ink-3)">{{ r.name[0] }}</div>{% endif %}
-              <span class="nv-card__type">{{ '%02d'|format(loop.index) }}</span>
+              {% else %}<span class="nv-role__ini">{{ r.name[0] }}</span>{% endif %}
+              <span class="nv-role__ix">{{ '%02d'|format(loop.index) }}</span>
             </div>
-            <div class="nv-card__body">
-              <h3 class="nv-card__title" style="font-size:17px">{{ r.name }}</h3>
-              {% if r.line %}<p class="nv-card__meta">{{ r.line }}</p>{% endif %}
-              {% if r.name in taken %}<span class="nv-tag nv-tag--seal">已被选</span>{% endif %}
+            <div>
+              <b>{{ r.name }}</b>
+              {% if r.line %}<br><em>{{ r.line }}</em>{% endif %}
             </div>
-          </div>
+          </article>
           {% endfor %}
         </div>
         {% endif %}
+
         {% if sc.dms %}
-        <div style="margin-top:var(--nv-s4)">
-          <p class="nv-sidehead">能带这本</p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div style="margin-top:var(--nv-s5)">
+          <p class="nv-sidehead">能带这本的主持人</p>
+          <div class="nv-tags">
             {% for d in sc.dms %}<a class="nv-tag" href="{{ url_for('public.dm_page', phone=d.phone) }}">{{ d.name }}</a>{% endfor %}
           </div>
         </div>
         {% endif %}
-      </div>
+      </section>
       {% endif %}
 
-      {# 演绎视频 #}
+      {# ── 演绎视频 ── #}
       {% if sc.videoUrl %}
-      <div class="nv-panel">
-        <h2 class="nv-panel__title">演绎视频 <small>看看这车人怎么演</small></h2>
-        <a class="nv-btn nv-btn--accent" href="{{ sc.videoUrl }}" target="_blank" rel="noopener nofollow">观看演绎视频 ↗</a>
-      </div>
+      <section class="nv-chapter">
+        <div class="nv-chapter__hd">
+          <span class="nv-chapter__no">03</span>
+          <h2 class="nv-chapter__t">演绎视频</h2>
+          <span class="nv-chapter__s">Watch</span>
+        </div>
+        <p class="nv-mute" style="margin-bottom:var(--nv-s3)">看看这车人怎么演 —— 心里先有个底。</p>
+        <a class="nv-btn nv-btn--accent" href="{{ sc.videoUrl }}" target="_blank" rel="noopener nofollow"
+           data-magnet>观看演绎视频 ↗</a>
+      </section>
       {% endif %}
 
-      {# 演后复盘（仅 DM / 管理员） #}
+      {# ── 演后复盘（仅 DM / 管理员） ── #}
       {% if canSeeReview and sc.reviewDoc %}
-      <div class="nv-panel">
-        <h2 class="nv-panel__title">演后复盘 <small>DM / 店家可见 · 客人看不到</small></h2>
-        <details class="nv-card" style="padding:var(--nv-s3)">
-          <summary class="nv-mono" style="cursor:pointer">点开看复盘记录</summary>
+      <section class="nv-chapter">
+        <div class="nv-chapter__hd">
+          <span class="nv-chapter__no">·</span>
+          <h2 class="nv-chapter__t">演后复盘</h2>
+          <span class="nv-chapter__s">DM / 店家可见 · 客人看不到</span>
+        </div>
+        <details class="nv-fold" style="margin-top:0;border-top:0">
+          <summary>点开看复盘记录</summary>
           <div class="nv-prose" style="margin-top:14px">{{ sc.reviewDoc | nl2p | safe }}</div>
         </details>
-      </div>
+      </section>
       {% endif %}
 
-      {# 剧友评价 #}
+      {# ── 剧友评价：通栏流水 ── #}
       {% if settings.reviewsEnabled and reviews %}
-      <div class="nv-panel">
-        <h2 class="nv-panel__title">剧友评价（{{ reviews|length }}） <small>玩过的人怎么说</small></h2>
-        <div class="nv-reviews">
+      <section class="nv-chapter">
+        <div class="nv-chapter__hd">
+          <span class="nv-chapter__no">{{ '04' if sc.videoUrl else '03' }}</span>
+          <h2 class="nv-chapter__t">剧友评价</h2>
+          <span class="nv-chapter__s">{{ reviews|length }} 条 · 玩过的人怎么说</span>
+        </div>
+        <div class="nv-voices">
           {% for r in reviews %}
-          <article class="nv-review rv">
-            <div class="nv-review__who">
-              <span class="av" style="display:grid;place-items:center;width:34px;height:34px;background:var(--nv-paper-3);overflow:hidden">
-                {% if r.avatar and r.avatar.startswith('/img/') %}<img src="{{ r.avatar }}" alt="" style="width:100%;height:100%;object-fit:cover">
-                {% else %}{{ r.avatar or (r.nick or r.username or '玩家')[0] }}{% endif %}</span>
-              <b>{{ r.nick or r.username or '玩家' }}</b>
-              <i>{% for i in range(r.rating or 5) %}★{% endfor %} · {{ day_label(r.createdAt) }}</i>
+          <article class="nv-voice">
+            <div class="nv-voice__who">
+              <span class="nv-av nv-av--sm" aria-hidden="true">
+                {% if r.avatar and r.avatar.startswith('/img/') %}<img src="{{ r.avatar }}" alt="">
+                {% else %}{{ r.avatar or (r.nick or r.username or '玩家')[0] }}{% endif %}
+              </span>
+              <b>{% if r.username in user_names %}<a class="nv-lnk" href="{{ url_for('public.user_profile', username=(r.username or '')) }}">{{ r.nick or r.username or '玩家' }}</a>{% else %}{{ r.nick or r.username or '玩家' }}{% endif %}</b>
+              <span class="nv-stars">{% for i in range(r.rating or 5) %}★{% endfor %}</span>
+              <em>{{ day_label(r.createdAt) }}</em>
             </div>
-            <p class="nv-review__t">{{ r.text or '（只给了分）' }}</p>
-            {% if r.dims %}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">{% for k, v in r.dims.items() %}<span class="nv-tag">{{ k }} {{ v }}/5</span>{% endfor %}</div>{% endif %}
-            {% if r.followUps %}{% for f in r.followUps %}<p class="nv-mute" style="margin-top:8px">补两句（{{ day_label(f.at) }}）：{{ f.text }}</p>{% endfor %}{% endif %}
-            {% if r.reply %}<p class="nv-mute" style="margin-top:8px">门店回复：{{ r.reply }}</p>{% endif %}
-            <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
-              <form method="post" action="{{ url_for('public.review_like', rid=r.id) }}">
-                <button class="nv-btn nv-btn--sm nv-btn--ghost fav-btn" type="submit">
-                  {{ '❤' if (me and me.phone|string in (r.likes or [])) else '♡' }} {{ (r.likes or [])|length }}</button>
+            <div class="nv-voice__body">
+              <p class="nv-voice__t">{{ r.text or '（只给了分）' }}</p>
+              {% if r.dims %}
+              <div class="nv-tags">{% for k, v in r.dims.items() %}<span class="nv-tag">{{ k }} {{ v }}/5</span>{% endfor %}</div>
+              {% endif %}
+              {% if r.followUps %}{% for f in r.followUps %}<p class="nv-mute">补两句（{{ day_label(f.at) }}）：{{ f.text }}</p>{% endfor %}{% endif %}
+              {% if r.reply %}<p class="nv-mute">门店回复：{{ r.reply }}</p>{% endif %}
+              <div class="nv-voice__foot">
+                <form method="post" action="{{ url_for('public.review_like', rid=r.id) }}">
+                  <button class="nv-btn nv-btn--sm nv-btn--ghost fav-btn" type="submit">
+                    {{ '❤' if (me and me.phone|string in (r.likes or [])) else '♡' }} {{ (r.likes or [])|length }}</button>
+                </form>
+                {% if r.username in user_names %}
+                <a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('public.user_profile', username=(r.username or '')) }}">看 TA 主页</a>
+                {% endif %}
+              </div>
+              {% if me and r.username == me.username %}
+              <form method="post" action="{{ url_for('public.review_follow', rid=r.id) }}" class="nv-inline">
+                <input class="nv-input nv-input--grow" name="text" placeholder="过几天想补两句？">
+                <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">补两句</button>
               </form>
-              {% if r.username in user_names %}
-              <a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('public.user_profile', username=(r.username or '')) }}">看 TA 主页</a>
               {% endif %}
             </div>
-            {% if me and r.username == me.username %}
-            <form method="post" action="{{ url_for('public.review_follow', rid=r.id) }}" style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
-              <input class="nv-field--box" name="text" placeholder="过几天想补两句？" style="flex:1;min-width:180px;padding:10px 12px;border:1px solid var(--nv-line-2);background:var(--nv-paper);color:var(--nv-ink);border-radius:0;outline:none">
-              <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">补两句</button>
-            </form>
-            {% endif %}
           </article>
           {% endfor %}
         </div>
-      </div>
+      </section>
       {% endif %}
     </div>
 
-    {# —— 右：封面 + 预约面板 —— #}
-    <div>
+    {# ═══════════════ 右：封面 + 预约窄栏 ═══════════════ #}
+    <aside>
       <div class="nv-detail__cover rv par" data-par="6" style="margin-bottom:var(--nv-s4)">
         {% if sc.img %}<img src="{{ sc.img }}" alt="{{ sc.title }}">
         {% else %}{% with s = sc %}{% include '_script_ph.html' %}{% endwith %}{% endif %}
@@ -164,7 +211,7 @@
         </div>
         <div class="nv-book__body">
           {% if me %}
-          <form method="post" action="{{ url_for('user.book') }}">
+          <form method="post" action="{{ url_for('user.book') }}" data-busy>
             <input type="hidden" name="sid" value="{{ sc.id }}">
             <div class="nv-book__row">
               <label>日期</label>
@@ -232,19 +279,23 @@
             <p class="nv-book__note">定金 ¥{{ car_deposit|int }}/人：付完、小客服确认到账后核销码才显示；<b>玩完由小客服退回</b>，没到场或中途跳车的不退。游玩费玩完再付。</p>
           </form>
           {% else %}
-          <a class="nv-btn nv-btn--solid nv-btn--block" href="{{ url_for('user.login', next=request.path) }}">登录后预约</a>
+          <a class="nv-btn nv-btn--solid nv-btn--block" href="{{ url_for('user.login', next=request.path) }}"
+             data-curtain data-magnet>登录后预约</a>
           {% endif %}
         </div>
       </div>
 
       {# 店里已排的场次 #}
-      <div class="nv-panel" style="margin-top:var(--nv-s5)">
-        <h2 class="nv-panel__title" style="font-size:22px">店里已排的场次</h2>
+      <section style="margin-top:var(--nv-s6)">
+        <div class="nv-chapter__hd" style="padding-top:0">
+          <span class="nv-chapter__no">04</span>
+          <h2 class="nv-chapter__t" style="font-size:clamp(19px,2.4vw,26px)">店里已排的场次</h2>
+        </div>
         {% if sessions %}
         <div class="nv-sheet">
           {% for s in sessions %}{% set left = (s.cap or 99) - join.get(s.id|string, 0) %}
-          <div class="nv-sheet__row" style="grid-template-columns:56px 1fr;gap:var(--nv-s3)">
-            <span class="nv-sheet__t">{{ s.time }}</span>
+          <div class="nv-sheet__row" style="grid-template-columns:64px 1fr;gap:var(--nv-s3)">
+            <span class="nv-sheet__t" style="font-size:19px">{{ s.time }}</span>
             <span class="nv-sheet__m"><b>{{ day_label(s.ts) }}</b>
               <span>{{ s.roomId or '房间待定' }}{% if s.dmName %} · DM {{ s.dmName }}{% endif %}</span>
               <span class="nv-mono" style="color:var(--nv-ink-3);display:block;margin-top:4px">已报 {{ join.get(s.id|string, 0) }}/{{ s.cap or '—' }} {% if left > 0 %}· 剩 {{ left }} 位{% else %}· 满了{% endif %}</span>
@@ -267,15 +318,16 @@
         {% else %}
         <p class="nv-mute">还没排场次。左边自己挑日期和时间下单，我们会按你的时间安排房间和 DM。</p>
         {% endif %}
-      </div>
+      </section>
 
-      <div class="nv-card" style="padding:var(--nv-s3);margin-top:var(--nv-s4);background:var(--nv-paper-2)">
-        <p class="nv-kick">到店流程</p>
-        <p style="margin:8px 0 0;font-size:13.5px;line-height:1.7;color:var(--nv-ink-2)">
-          下单 → 付定金（一人 ¥{{ car_deposit|int }}）→ 小客服确认到账 → 到店报 6 位核销码 →
-          玩完付游玩费（<b>定金退回</b>）→ 给剧本和 DM 打分。</p>
+      {# 到店流程：编号带 #}
+      <div class="nv-paysteps" style="margin-top:var(--nv-s5)">
+        <div><i>01</i><b>下单锁位</b><span>挑日子与时间，付定金 ¥{{ car_deposit|int }}/人</span></div>
+        <div><i>02</i><b>客服确认</b><span>到账后核销码出现在「我的」</span></div>
+        <div><i>03</i><b>到店报码</b><span>房间与 DM 按你的时间安排</span></div>
+        <div><i>04</i><b>玩完结账</b><span>付游玩费，<b>定金退回</b>，然后打分</span></div>
       </div>
-    </div>
+    </aside>
   </div>
 </div>
 

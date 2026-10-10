@@ -1,45 +1,62 @@
 {% extends 'layout.html' %}
 {% block title %}本本墙 · {{ settings.shopName }}{% endblock %}
-{# NOVA 剧本库：编辑式页头 + 工具条 + 类型筛片 + 网格。
-   筛选走前端 fetch 换 #scriptGrid（window.TS_LIB 与 library.js 钩子原样保留）。 #}
+{# NOVA 剧本库（第三轮）：
+   版式 = 编辑式导读页头（原型 A）+ 栏目索引带 + 编号索引清单（原型 B）。
+   与上一版的差别：不再是"卡片网格"，而是**一行读完一本**的清单体；
+   筛选从三条工具条收成一条"栏目索引带"。
+   筛选仍走前端 fetch 换 #scriptGrid（window.TS_LIB 与 library.js 钩子原样保留）。 #}
 {% block body %}
 
-<section class="nv-head">
-  <div class="nv-wrap nv-head__grid">
-    <div>
-      <p class="nv-kick nv-head__k rv">本本墙 · Wall</p>
-      <h1 class="nv-h1 rv" data-d="60" style="font-size:clamp(38px,7vw,96px)">本本清单</h1>
-      <p class="nv-head__lead rv" data-d="120">类型可以多选：选几个就摆几类。挑好了分享给搭子，网址里带条件。</p>
+<header class="nv-lead-hd">
+  <div class="nv-wrap">
+    <p class="nv-lead-hd__k">本本墙 · Wall of Scripts</p>
+    <div class="nv-lead-hd__row">
+      <div>
+        <h1 class="nv-lead-hd__t">本本清单</h1>
+        <p class="nv-lead-hd__d">
+          类型可以多选：选几个就摆几类。挑好了分享给搭子，<b>网址里带条件</b>，
+          打开就是同一份单子。
+        </p>
+      </div>
+      <dl class="nv-lead-hd__m">
+        <div><dt>在架</dt><dd>{{ scripts|length }}</dd></div>
+        <div><dt>类型</dt><dd>{{ tags|length }}</dd></div>
+        <div><dt>想玩</dt><dd>{{ favs|length }}</dd></div>
+      </dl>
     </div>
-    <span class="nv-head__seal rv" data-d="160">选本</span>
+    <nav class="nv-lead-hd__toc">
+      <a href="{{ url_for('public.car') }}"><i>01</i>拼车大厅</a>
+      <a href="{{ url_for('public.comm') }}"><i>02</i>唠嗑区</a>
+      <a href="{{ url_for('public.group') }}"><i>03</i>今日组局</a>
+      <a href="{{ url_for('public.faq') }}"><i>04</i>开演前答疑</a>
+    </nav>
   </div>
-</section>
+</header>
 
 <div class="nv-wrap">
 
-  <div class="nv-toolbar">
-    <form class="nv-search spa-search" method="get" action="{{ url_for('public.scripts') }}" role="search" style="flex:1;max-width:440px">
+  {# 搜索 + 计数 + 清空：一条横向带，不再是三段工具条 #}
+  <div class="nv-shelfbar">
+    <form class="nv-search spa-search" method="get" action="{{ url_for('public.scripts') }}" role="search">
       <input name="q" value="{{ q }}" placeholder="找找你想冲的本" aria-label="搜剧本">
       <button type="submit">搜 ↗</button>
     </form>
-    <div class="nv-toolbar__end">
+    <div class="nv-shelfbar__end">
       <span class="nv-mono" id="hitCount" style="color:var(--nv-ink-3)">{{ scripts|length }} 本</span>
       <button type="button" class="nv-btn nv-btn--sm nv-btn--ghost" id="clearAll">清空条件</button>
     </div>
   </div>
 
-  <div class="nv-toolbar" style="border-bottom:0">
-    <div class="nv-chips spa-filters" id="filters">
+  {# 栏目索引带：类型 / 其他，各占一行，靠左侧标签对齐 —— 像期刊的栏目页 #}
+  <div class="nv-filters">
+    <div class="nv-filters__line spa-filters" id="filters">
       <span class="nv-chips__lab">类型</span>
       {% for t in tags %}
       <button type="button" class="nv-chip {{ 'on' if (t in sel_tags) or tag == t }}"
               data-tag="{{ t }}" aria-pressed="{{ 'true' if (t in sel_tags) or tag == t else 'false' }}">{{ t }}</button>
       {% endfor %}
     </div>
-  </div>
-
-  <div class="nv-toolbar" style="border-top:0;padding-top:0">
-    <div class="nv-chips">
+    <div class="nv-filters__line">
       <span class="nv-chips__lab">其他</span>
       <button type="button" class="nv-chip {{ 'on' if diff == '1' }}" data-flag="diff"
               aria-pressed="{{ 'true' if diff == '1' else 'false' }}">新手友好</button>

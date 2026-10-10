@@ -1,40 +1,58 @@
 {% extends 'layout.html' %}
 {% block title %}{{ settings.shopName }} · 藏在学校里的剧本杀小店{% endblock %}
 {# ============================================================================
-   NOVA 欢迎页：进站第一屏（2026-10 纵向版）
-   巨字店名（逐行遮罩揭示）+ 两个动作 + 一栏事实。不用横滚，不用弹窗。
+   NOVA 欢迎页：进站第一屏（2026-10 · 与首页同一套"杂志封面"语言）
+   ----------------------------------------------------------------------------
+   复用首页的 .nv-cover* 版式：页眉横线 + 巨型题词 + 右栏竖印与数据题花 + 目录带。
+   与首页的差别只有内容和色调 —— 没登录的人先看见这屏，点是"上车登记"还是
+   "先随便逛逛"。纯纵向、无横滚、无弹窗。
    ============================================================================ #}
 {% block body %}
-<section class="hm-hero wc-hero">
-  <div class="nv-wrap hm-hero__in">
-    <div class="hm-hero__meta">
-      <p class="nv-kick">{{ settings.shopName }} · Est. 藏在学校里</p>
-      <p class="nv-kick">欢迎进来 · 随便看看也行</p>
-    </div>
+<section class="nv-cover wc-cover">
+  <div class="nv-wrap nv-cover__in">
 
-    <h1 class="nv-h1 hm-hero__title wc-hero__title">
-      <span class="mask"><span>推门进来，</span></span>
-      <span class="mask"><span>挑个本，坐下就开始。</span></span>
-    </h1>
+    <p class="nv-cover__k">
+      <span>{{ settings.shopName }}</span>
+      <span class="nv-cover__rule" aria-hidden="true"></span>
+      <span>恭候多时</span>
+      <span>进门先看</span>
+    </p>
 
-    <div class="hm-hero__foot">
-      <p class="nv-lead hm-hero__lead">
-        情感、硬核、恐怖、欢乐都在这儿。<br>
-        一个人来也行，拼车区喊一声就有搭子。
-      </p>
-      <div class="hm-hero__cta">
-        <a class="nv-btn nv-btn--accent" href="{{ url_for('user.login') }}" data-magnet data-cursor="view" data-cursor-label="进站">上车登记</a>
-        <a class="nv-btn nv-btn--ghost" href="{{ url_for('public.home', browse=1) }}" data-curtain data-magnet>先随便逛逛 →</a>
+    <div class="nv-cover__row">
+      <div class="nv-cover__main">
+        <h1 class="nv-cover__t">
+          <span class="mask"><span>推门进来，</span></span>
+          <span class="mask"><span>挑个本，坐下就开始。</span></span>
+        </h1>
+        <p class="nv-cover__d">
+          情感、硬核、恐怖、欢乐都在这儿。<br>
+          <b>一个人来也行</b>，拼车区喊一声就有搭子。
+        </p>
+        <div class="nv-cover__cta">
+          <a class="nv-btn nv-btn--accent" href="{{ url_for('user.login') }}"
+             data-magnet data-cursor="view" data-cursor-label="进站">上车登记 <i>→</i></a>
+          <a class="nv-btn nv-btn--ghost" href="{{ url_for('public.home', browse=1) }}"
+             data-curtain data-magnet>先随便逛逛</a>
+        </div>
       </div>
+
+      <aside class="nv-cover__side">
+        <span class="nv-seal" aria-hidden="true">欢 迎 进 来</span>
+        <dl class="nv-cover__figs">
+          <div><dt>在架剧本</dt><dd><span class="count" data-to="{{ meta.scripts or 0 }}">0</span></dd></div>
+          <div><dt>今日开场</dt><dd><span class="count" data-to="{{ meta.today or 0 }}">0</span></dd></div>
+          <div><dt>可拼可包</dt><dd>随你挑</dd></div>
+        </dl>
+      </aside>
     </div>
 
-    <div class="nv-stats hm-hero__stats">
-      <div><p class="nv-stat__n"><span class="count" data-to="{{ meta.scripts or 0 }}">0</span></p><p class="nv-stat__l">在架剧本</p></div>
-      <div><p class="nv-stat__n"><span class="count" data-to="{{ meta.today or 0 }}">0</span></p><p class="nv-stat__l">今日开场</p></div>
-      <div><p class="nv-stat__n">可拼可包</p><p class="nv-stat__l">随你挑</p></div>
-    </div>
+    <nav class="nv-cover__toc">
+      <a href="{{ url_for('user.login') }}"><i>01</i>上车登记</a>
+      <a href="{{ url_for('public.home', browse=1) }}"><i>02</i>先逛逛</a>
+      <a href="{{ url_for('user.register') }}"><i>03</i>注册一个</a>
+    </nav>
 
-    <p class="nv-mono wc-hero__note">
+    <p class="nv-mono wc-cover__note">
       还没登记？<a class="nv-ul" href="{{ url_for('user.register') }}">去登记一个</a>
     </p>
   </div>

@@ -624,102 +624,710 @@ html[data-theme="dark"] .nv-tag--ok { border-color: #7FB08A; color: #7FB08A; }
 .nv-detail__cover { aspect-ratio: 4/3; background: var(--nv-paper-3); }
 
 /* ============================================================================
-   NOVA · 全站增强层（2026-10 纵向改版）
-   ----------------------------------------------------------------------------
-   目的：把"能用"提到"精致"。只做三件事 ——
-     ① 统一状态反馈：hover / active / focus / loading / 空态 / 禁用，口径一致
-     ② 复用首页亮点：卡片提示条、下划线扫过、磁性、遮罩揭示、光标状态
-     ③ 提升排版层级：留白梯度、字阶、分区节奏、卡片区分度
-   约束：只动 transform / opacity / color / border，不碰布局属性，不劫持滚动。
+   ══════════════════════════════════════════════════════════════════════════
+   NOVA · 版式原型系统（2026-10 · 第三轮重构）
+   ══════════════════════════════════════════════════════════════════════════
+   这一层不是"再来一批组件"，而是把整站收敛到 **六个版式原型**：
+
+     原型 A · 编辑式导读页头        .nv-lead-hd        —— 目录页/列表页的开场
+     原型 B · 编号索引清单          .nv-index          —— 列表的"清单体"变体
+     原型 C · 杂志式多栏正文        .nv-col3 / .nv-lede —— 详情页/长文
+     原型 D · 发丝线数据表          .nv-ledger         —— 表格类信息
+     原型 E · 海报式网格            .nv-plate          —— 卡片流（非对称破格）
+     原型 F · 侧栏窄表单            .nv-aside          —— 表单/预约/设置
+
+   六个原型的共性来自拆解文档里的顶级站点（Anton & Irene 的杂志网格、
+   Socio 的英式极简排版、Obys 的留白节奏、Build in Amsterdam 的克制）：
+     · 每个区块由**【编号 + 字级 + 一条墨线】**三件套定义，不靠卡片描边
+     · 灰阶承载层级（ink / ink-2 / ink-3），藤黄只出现在"编号/当前/关键数字"
+     · 首字下沉、引言块、规则线、严谨字距 —— 印刷品的阅读质感
+     · 破格只允许一次（一个元素跨栏 / 一个字级跳档）
+
+   铁律不变：只动 transform / opacity / color / border，不劫持滚动，内容默认可见。
    ============================================================================ */
 
-/* ---------- ① 卡片：统一 hover / 提示条 / 焦点环 ---------- */
-.nv-card__cover { position: relative; display: block; }
-.nv-card__hint {
-  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
-  padding: 9px 12px; background: color-mix(in srgb, var(--nv-ink) 88%, transparent);
-  color: var(--nv-paper); font-family: var(--nv-mono); font-size: 10px;
-  letter-spacing: .14em; text-transform: uppercase;
-  transform: translateY(101%); transition: transform .4s var(--nv-ease);
+/* ───────────────────────── 原型 A · 编辑式导读页头 ─────────────────────────
+   结构：<header class="nv-lead-hd">
+           <p class="nv-lead-hd__k">…</p>
+           <h1 class="nv-lead-hd__t">…</h1>
+           <p class="nv-lead-hd__d">…</p>
+           <dl class="nv-lead-hd__m">…</dl>   ← 右上角"数据题花"
+         </header>
+   要点：标题与正文并置在**同一条基线轴**上（不是上下堆叠），
+        右下角放一条横向计数带 —— 这是编辑版物"导读页"的标准做法。 */
+.nv-lead-hd {
+  position: relative;
+  padding: clamp(40px, 8vh, 104px) 0 var(--nv-s3);
+  border-bottom: 1px solid var(--nv-ink);
 }
-.nv-card:hover .nv-card__hint, .nv-card:focus-within .nv-card__hint { transform: translateY(0); }
-@media (pointer: coarse) { .nv-card__hint { display: none; } }
-
-/* 卡片标题在 hover 时用下划线扫过 —— 与全站链接口径一致 */
-.nv-card__title a { position: relative; }
-.nv-card__title a::after {
-  content: ""; position: absolute; left: 0; bottom: -3px; width: 100%; height: 1px;
-  background: var(--nv-accent); transform: scaleX(0); transform-origin: right;
-  transition: transform .34s var(--nv-ease);
+.nv-lead-hd__k {
+  margin: 0 0 var(--nv-s5);
+  display: flex; align-items: baseline; gap: var(--nv-s3);
+  font-family: var(--nv-mono); font-size: 11px; letter-spacing: .24em;
+  text-transform: uppercase; color: var(--nv-ink-3);
 }
-.nv-card:hover .nv-card__title a::after { transform: scaleX(1); transform-origin: left; }
-.nv-card:focus-within { outline: 2px solid var(--nv-accent); outline-offset: 3px; }
+.nv-lead-hd__k::after { content: ""; flex: 1; height: 1px; background: var(--nv-line); }
+.nv-lead-hd__row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--nv-s5) clamp(24px, 5vw, 72px); align-items: end;
+}
+.nv-lead-hd__t {
+  font-family: var(--nv-serif); font-weight: 700;
+  font-size: clamp(44px, 10.5vw, 148px); line-height: .92;
+  letter-spacing: -.045em; margin: 0;
+}
+.nv-lead-hd__d {
+  margin: var(--nv-s4) 0 0; max-width: 46ch;
+  font-size: clamp(15px, 1.5vw, 18px); line-height: 1.72; color: var(--nv-ink-2);
+}
+.nv-lead-hd__d b { color: var(--nv-ink); font-weight: 600; }
+.nv-lead-hd__m {
+  display: grid; gap: var(--nv-s3); margin: 0; align-content: end;
+  min-width: 168px;
+}
+.nv-lead-hd__m > div { display: grid; grid-template-columns: 1fr auto; gap: 10px;
+  align-items: baseline; padding-bottom: 8px; border-bottom: var(--nv-hair); }
+.nv-lead-hd__m dt { font-family: var(--nv-mono); font-size: 10.5px; letter-spacing: .12em;
+  color: var(--nv-ink-3); text-transform: uppercase; }
+.nv-lead-hd__m dd { margin: 0; font-family: var(--nv-serif); font-weight: 700;
+  font-size: 26px; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.nv-lead-hd__seal {
+  font-family: var(--nv-serif); font-weight: 700; font-size: 19px; letter-spacing: .08em;
+  writing-mode: vertical-rl; color: var(--nv-seal);
+  border: 1px solid var(--nv-seal); padding: 14px 8px; align-self: start;
+}
+/* 页头下方的一条"横向目录"：01 02 03 …… */
+.nv-lead-hd__toc {
+  display: flex; flex-wrap: wrap; gap: 0 var(--nv-s5);
+  margin-top: var(--nv-s5); padding-top: var(--nv-s3); border-top: var(--nv-hair);
+}
+.nv-lead-hd__toc a {
+  display: inline-flex; align-items: baseline; gap: 8px; padding: 6px 0;
+  font-size: 14px; color: var(--nv-ink-2); transition: color var(--nv-t-fast);
+}
+.nv-lead-hd__toc a i { font-family: var(--nv-mono); font-size: 10.5px; font-style: normal; color: var(--nv-ink-3); }
+.nv-lead-hd__toc a:hover { color: var(--nv-accent); }
+.nv-lead-hd__toc a:hover i { color: var(--nv-accent); }
+@media (max-width: 900px) {
+  .nv-lead-hd__row { grid-template-columns: 1fr; align-items: start; }
+  .nv-lead-hd__m { min-width: 0; margin-top: var(--nv-s5); }
+}
 
-/* 卡片入场（前端 fetch 换网格后用 [data-anim]，只淡入不上抛，避免跳动） */
+/* ───────────────────────── 原型 B · 编号索引清单 ─────────────────────────
+   结构：<ol class="nv-index"><li><a>
+           <span class="nv-index__no">01</span>
+           <span class="nv-index__main"><b>标题</b><em>副行</em></span>
+           <span class="nv-index__side">规格 / 价格</span>
+           <span class="nv-index__go">→</span>
+         </a></li>…
+   要点：整行是一条墨线隔开的通栏，hover 时**左推 + 数字变藤黄 + 箭头右移**。
+        这是把"清单"从卡片流里解放出来的关键 —— 不用描边，靠线与字级。 */
+.nv-index { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--nv-ink); }
+.nv-index > li { border-bottom: var(--nv-hair); }
+.nv-index__a {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) minmax(0, 22ch) 30px;
+  gap: var(--nv-s4); align-items: center;
+  padding: clamp(16px, 2.4vw, 26px) 0;
+  transition: padding-left var(--nv-t-fast) var(--nv-ease), color var(--nv-t-fast) var(--nv-ease);
+}
+.nv-index__a:hover { padding-left: 16px; }
+.nv-index__no {
+  font-family: var(--nv-mono); font-size: 12px; letter-spacing: .08em;
+  color: var(--nv-ink-3); transition: color var(--nv-t-fast);
+}
+.nv-index__a:hover .nv-index__no { color: var(--nv-accent); }
+.nv-index__main { min-width: 0; display: grid; gap: 5px; }
+.nv-index__main b {
+  font-family: var(--nv-serif); font-weight: 700; letter-spacing: -.022em;
+  font-size: clamp(19px, 2.5vw, 29px); line-height: 1.14;
+}
+.nv-index__main em {
+  font-style: normal; font-size: 13px; color: var(--nv-ink-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.nv-index__side {
+  font-family: var(--nv-mono); font-size: 12px; color: var(--nv-ink-3);
+  text-align: right; white-space: nowrap;
+}
+.nv-index__side b { color: var(--nv-ink); font-size: 15px; }
+.nv-index__go {
+  justify-self: end; font-size: 17px; color: var(--nv-ink-3);
+  transition: transform var(--nv-t-fast) var(--nv-ease), color var(--nv-t-fast);
+}
+.nv-index__a:hover .nv-index__go { transform: translateX(7px); color: var(--nv-accent); }
+/* 缩略图版本：清单左侧带一枚小图 */
+.nv-index--pic .nv-index__a { grid-template-columns: 54px 64px minmax(0, 1fr) minmax(0, 20ch) 30px; }
+.nv-index__pic { width: 64px; aspect-ratio: 3/4; overflow: hidden; background: var(--nv-paper-3); position: relative; }
+.nv-index__pic img { width: 100%; height: 100%; object-fit: cover; transition: transform .7s var(--nv-ease); }
+.nv-index__a:hover .nv-index__pic img { transform: scale(1.07); }
+@media (max-width: 760px) {
+  .nv-index__a, .nv-index--pic .nv-index__a { grid-template-columns: 34px 1fr 24px; gap: var(--nv-s3); }
+  .nv-index__pic, .nv-index__side { display: none; }
+}
+
+/* ───────────────────────── 原型 C · 杂志式多栏正文 ─────────────────────────
+   结构：<div class="nv-article">
+           <p class="nv-article__lede">…</p>        ← 首段放大 + 首字下沉
+           <div class="nv-article__cols">…</div>     ← 两栏正文（宽屏才分栏）
+         </div>
+   要点：分栏只在 ≥1040px 生效，且列宽固定在 34ch 附近；
+        分栏会引入列间距发丝线 —— 这是印刷杂志的标志性细节。 */
+.nv-article { max-width: 78ch; }
+.nv-article__lede {
+  font-family: var(--nv-serif); font-size: clamp(19px, 2.1vw, 25px);
+  line-height: 1.55; letter-spacing: -.012em; margin: 0 0 var(--nv-s4);
+  color: var(--nv-ink);
+}
+.nv-article__lede::first-letter {
+  float: left; font-size: 3.4em; line-height: .84; font-weight: 700;
+  padding: .06em .12em 0 0; color: var(--nv-accent);
+}
+.nv-article__cols { font-size: 16px; line-height: 1.82; color: var(--nv-ink-2); }
+.nv-article__cols p { margin: 0 0 var(--nv-s3); }
+@media (min-width: 1040px) {
+  .nv-article__cols { columns: 2; column-gap: var(--nv-s5); column-rule: 1px solid var(--nv-line); }
+  .nv-article__cols p { break-inside: avoid-column; }
+}
+/* 引文块：左侧墨竖线 + 衬线大字 */
+.nv-pull {
+  margin: var(--nv-s5) 0; padding: var(--nv-s2) 0 var(--nv-s2) var(--nv-s4);
+  border-left: 2px solid var(--nv-ink);
+  font-family: var(--nv-serif); font-size: clamp(19px, 2.2vw, 26px);
+  line-height: 1.44; letter-spacing: -.016em; color: var(--nv-ink);
+}
+.nv-pull cite { display: block; margin-top: var(--nv-s2);
+  font-family: var(--nv-mono); font-size: 11px; font-style: normal;
+  letter-spacing: .12em; color: var(--nv-ink-3); text-transform: uppercase; }
+
+/* ───────────────────────── 原型 D · 发丝线数据表 ─────────────────────────
+   结构：<div class="nv-ledger">
+           <div class="nv-ledger__hd"><span>列</span>…</div>
+           <div class="nv-ledger__row"><span>…</span>…</div>
+         </div>
+   要点：不用 <table> 也能做表（响应式更好）；小屏自动塌成"标签 : 值"两列。 */
+.nv-ledger { border-top: 1px solid var(--nv-ink); }
+.nv-ledger__hd, .nv-ledger__row {
+  display: grid; grid-template-columns: var(--cols, 1.4fr .9fr .9fr .7fr 1fr);
+  gap: var(--nv-s3); align-items: center; padding: 13px 0;
+  border-bottom: var(--nv-hair);
+}
+.nv-ledger__hd { font-family: var(--nv-mono); font-size: 10.5px; letter-spacing: .12em;
+  color: var(--nv-ink-3); text-transform: uppercase; padding: 10px 0;
+  border-bottom: 1px solid var(--nv-line-2); }
+.nv-ledger__row { transition: background var(--nv-t-fast), padding-left var(--nv-t-fast) var(--nv-ease); }
+.nv-ledger__row:hover { background: color-mix(in srgb, var(--nv-paper-2) 66%, transparent); padding-left: 10px; }
+.nv-ledger__row b { font-family: var(--nv-serif); font-size: 15.5px; font-weight: 700; }
+.nv-ledger__row .num { font-family: var(--nv-mono); font-variant-numeric: tabular-nums; font-size: 13.5px; }
+@media (max-width: 820px) {
+  .nv-ledger__hd { display: none; }
+  .nv-ledger__row { grid-template-columns: 1fr auto; gap: 6px var(--nv-s3); padding: 14px 0; }
+  .nv-ledger__row > *:nth-child(n+3) { grid-column: 2; }
+}
+
+/* ───────────────────────── 原型 E · 海报式网格（破格） ─────────────────────────
+   结构：<div class="nv-plates">
+           <article class="nv-plate nv-plate--wide">…</article>
+           <article class="nv-plate">…</article>
+         </div>
+   要点：12 栏底网格 + 明确的跨栏配额（wide=7 / tall=5 / 常规=4），
+        每行高度不完全一致 —— 这是"非对称但不乱"的实现方式。 */
+.nv-plates { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--nv-s3); align-items: start; }
+.nv-plates > * { grid-column: span 4; }
+.nv-plates > .nv-plate--wide { grid-column: span 7; }
+.nv-plates > .nv-plate--tall { grid-column: span 5; }
+.nv-plates > .nv-plate--full { grid-column: span 12; }
+/* 海报本体：一张图 + 一行题，不描边不加底色 —— 靠图本身的版面感 */
+.nv-plate { display: grid; gap: 12px; min-width: 0; }
+/* 第一张图更大：让观感从"均质网格"变"海报墙" */
+.nv-plate__cover { position: relative; overflow: hidden; background: var(--nv-paper-3); aspect-ratio: 3/4; }
+.nv-plate--wide .nv-plate__cover { aspect-ratio: 16/10; }
+.nv-plate--tall .nv-plate__cover { aspect-ratio: 4/5; }
+.nv-plate__cover img { width: 100%; height: 100%; object-fit: cover; transition: transform .9s var(--nv-ease); }
+.nv-plate:hover .nv-plate__cover img { transform: scale(1.04); }
+.nv-plate__body { padding-top: 12px; display: grid; gap: 6px; }
+.nv-plate__body b { font-family: var(--nv-serif); font-weight: 700;
+  font-size: clamp(17px, 1.9vw, 21px); letter-spacing: -.016em; line-height: 1.2; }
+.nv-plate__body em { font-style: normal; font-family: var(--nv-mono);
+  font-size: 11.5px; letter-spacing: .06em; color: var(--nv-ink-3); }
+@media (max-width: 900px) {
+  .nv-plates > * , .nv-plates > .nv-plate--wide, .nv-plates > .nv-plate--tall { grid-column: span 6; }
+  .nv-plates > .nv-plate--full { grid-column: span 12; }
+  .nv-plate--wide .nv-plate__cover { aspect-ratio: 3/4; }
+}
+@media (max-width: 560px) {
+  .nv-plates { gap: var(--nv-s2); }
+  .nv-plates > *, .nv-plates > .nv-plate--wide, .nv-plates > .nv-plate--tall { grid-column: span 12; }
+  .nv-plate__cover { aspect-ratio: 4/3 !important; }
+}
+
+/* ───────────────────────── 原型 F · 侧栏窄表单 ─────────────────────────
+   结构：<div class="nv-aside">
+           <form class="nv-aside__form">…</form>   ← sticky 窄栏（≤380px）
+           <div class="nv-aside__note">…</div>
+         </div>
+   要点：表单永远窄（≤380px），长文/列表占主栏；
+        窄栏 sticky，滚动阅读时始终可见 —— 这是"工具页"最优解。 */
+.nv-aside {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: clamp(28px, 5vw, 72px); align-items: start;
+}
+.nv-aside--left { grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); }
+.nv-aside__form { position: sticky; top: 92px; display: grid; gap: var(--nv-s3); }
+.nv-aside--left .nv-aside__form { grid-column: 1; grid-row: 1; }
+.nv-aside__note {
+  border-top: 1px solid var(--nv-ink); padding-top: var(--nv-s3);
+  font-size: 13px; line-height: 1.72; color: var(--nv-ink-3);
+}
+.nv-aside__note b { color: var(--nv-ink-2); }
+@media (max-width: 980px) {
+  .nv-aside, .nv-aside--left { grid-template-columns: 1fr; }
+  .nv-aside__form { position: static; }
+}
+
+/* ───────────────────────── 版式工具件 ───────────────────────── */
+
+/* 章节：编号 + 标题 + 说明，三件套定义区块（替代"卡片描边"） */
+.nv-cap { display: block; }
+.nv-chapter { padding-top: clamp(36px, 6vh, 72px); }
+.nv-chapter__hd {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--nv-s4); align-items: baseline;
+  padding-bottom: var(--nv-s3); margin-bottom: var(--nv-s4);
+  border-bottom: 1px solid var(--nv-ink);
+}
+.nv-chapter__no {
+  font-family: var(--nv-mono); font-size: 11px; letter-spacing: .14em;
+  color: var(--nv-accent); white-space: nowrap;
+}
+.nv-chapter__t {
+  font-family: var(--nv-serif); font-weight: 700;
+  font-size: clamp(22px, 3.4vw, 40px); letter-spacing: -.026em;
+  line-height: 1.1; margin: 0;
+}
+.nv-chapter__s {
+  font-family: var(--nv-mono); font-size: 11px; letter-spacing: .1em;
+  color: var(--nv-ink-3); white-space: nowrap;
+}
+@media (max-width: 680px) {
+  .nv-chapter__hd { grid-template-columns: auto 1fr; }
+  .nv-chapter__s { display: none; }
+}
+
+/* 规格条：横排"标签 / 值"，用发丝线分隔（比 dl 更扁） */
+.nv-specs { display: flex; flex-wrap: wrap; gap: 0; border-top: 1px solid var(--nv-ink); }
+.nv-specs > div {
+  flex: 1 1 120px; padding: var(--nv-s3) var(--nv-s3) var(--nv-s3) 0;
+  border-right: var(--nv-hair); display: grid; gap: 4px;
+}
+.nv-specs > div:last-child { border-right: 0; }
+.nv-specs dt { font-family: var(--nv-mono); font-size: 10px; letter-spacing: .12em;
+  color: var(--nv-ink-3); text-transform: uppercase; }
+.nv-specs dd { margin: 0; font-family: var(--nv-serif); font-weight: 700; font-size: 19px;
+  letter-spacing: -.016em; }
+
+/* 编号小标题（章节内部） */
+.nv-numhead { display: flex; align-items: baseline; gap: 10px; margin: 0 0 var(--nv-s3); }
+.nv-numhead i { font-family: var(--nv-mono); font-size: 11px; font-style: normal;
+  letter-spacing: .1em; color: var(--nv-accent); }
+.nv-numhead b { font-family: var(--nv-serif); font-size: 19px; letter-spacing: -.014em; }
+
+/* 统计带：一串"数字 + 标签"，靠字号差拉层级 */
+.nv-figures { display: flex; flex-wrap: wrap; gap: clamp(20px, 4vw, 56px); }
+.nv-figure { display: grid; gap: 3px; }
+.nv-figure b { font-family: var(--nv-serif); font-weight: 700;
+  font-size: clamp(26px, 3.6vw, 44px); line-height: 1; letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums; }
+.nv-figure span { font-family: var(--nv-mono); font-size: 10.5px; letter-spacing: .13em;
+  color: var(--nv-ink-3); text-transform: uppercase; }
+
+/* 空态：与编号系统一致的"没有内容"表达 */
+.nv-blank { border-top: 1px solid var(--nv-ink); padding-top: var(--nv-s4); display: grid; gap: var(--nv-s3); }
+.nv-blank__k { font-family: var(--nv-mono); font-size: 11px; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--nv-ink-3); margin: 0; }
+.nv-blank b { font-family: var(--nv-serif); font-size: clamp(20px, 2.8vw, 30px);
+  letter-spacing: -.022em; }
+.nv-blank p { margin: 0; color: var(--nv-ink-3); font-size: 14px; max-width: 46ch; }
+.nv-blank__act { display: flex; gap: 10px; flex-wrap: wrap; margin-top: var(--nv-s2); }
+
+/* 明细列表（键值对，比表格轻） */
+.nv-pairs { border-top: var(--nv-hair); }
+.nv-pairs__r { display: grid; grid-template-columns: minmax(96px, auto) minmax(0, 1fr);
+  gap: var(--nv-s3); padding: 10px 0; border-bottom: var(--nv-hair); align-items: baseline; }
+.nv-pairs__r dt { font-family: var(--nv-mono); font-size: 11px; letter-spacing: .1em;
+  color: var(--nv-ink-3); text-transform: uppercase; }
+.nv-pairs__r dd { margin: 0; font-size: 14.5px; }
+
+/* 状态字：一个极小面积的状态标记（取代圆角 pill） */
+.nv-st { font-family: var(--nv-mono); font-size: 10.5px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--nv-ink-3); display: inline-flex; align-items: center; gap: 6px; }
+.nv-st::before { content: ""; width: 5px; height: 5px; background: currentColor; flex: none; }
+.nv-st--on { color: var(--nv-accent); }
+.nv-st--off { color: var(--nv-ink-3); }
+.nv-st--warn { color: var(--nv-seal); }
+
+/* 键盘可达：所有被改造的"整行链接"都要有焦点环 */
+.nv-index__a:focus-visible, .nv-plate:focus-visible, .nv-ledger__row:focus-visible {
+  outline: 2px solid var(--nv-accent); outline-offset: 3px;
+}
+
+/* 入场节奏：新版式块统一的揭示口径（与 .rv 同一套，只是给新类补上） */
 @media (prefers-reduced-motion: no-preference) {
-  [data-spa-grid] .nv-card { animation: nvCardIn .5s var(--nv-ease) both; }
-  [data-spa-grid] .nv-card:nth-child(2) { animation-delay: .04s; }
-  [data-spa-grid] .nv-card:nth-child(3) { animation-delay: .08s; }
-  [data-spa-grid] .nv-card:nth-child(4) { animation-delay: .12s; }
-  [data-spa-grid] .nv-card:nth-child(5) { animation-delay: .16s; }
-  [data-spa-grid] .nv-card:nth-child(n+6) { animation-delay: .2s; }
+  .nv-index > li, .nv-plates > *, .nv-ledger__row, .nv-specs > div {
+    animation: nvLineIn .62s var(--nv-ease) both;
+  }
+  .nv-index > li:nth-child(2), .nv-plates > *:nth-child(2) { animation-delay: .05s; }
+  .nv-index > li:nth-child(3), .nv-plates > *:nth-child(3) { animation-delay: .1s; }
+  .nv-index > li:nth-child(4), .nv-plates > *:nth-child(4) { animation-delay: .15s; }
+  .nv-index > li:nth-child(5), .nv-plates > *:nth-child(5) { animation-delay: .2s; }
+  .nv-index > li:nth-child(n+6), .nv-plates > *:nth-child(n+6) { animation-delay: .24s; }
 }
-@keyframes nvCardIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes nvLineIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 
-/* ---------- ② 工具条 / 筛选片：完整的按下与选中反馈 ---------- */
-.nv-toolbar { display: flex; align-items: center; gap: var(--nv-s3);
-  justify-content: space-between; flex-wrap: wrap;
-  padding: 14px 0; border-bottom: var(--nv-hair); }
-.nv-toolbar__end { display: flex; align-items: center; gap: var(--nv-s3); }
+/* ───────────────────────── 旧类 → 新原型 的兼容垫片 ─────────────────────────
+   模板里还有一批早期类名（nv-head / nv-idx / nv-toolbar…），
+   这里让它们**自动获得新版式的观感**，避免逐处改名带来的回归风险。 */
+.nv-head { padding: clamp(40px, 8vh, 104px) 0 var(--nv-s3); border-bottom: 1px solid var(--nv-ink); }
+.nv-head__grid { display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--nv-s5) clamp(24px, 5vw, 72px); align-items: end; }
+.nv-head .nv-h1 { font-size: clamp(44px, 10.5vw, 148px) !important;
+  line-height: .92 !important; letter-spacing: -.045em !important; }
+.nv-head__lead { font-size: clamp(15px, 1.5vw, 18px); line-height: 1.72;
+  color: var(--nv-ink-2); max-width: 46ch; margin: var(--nv-s4) 0 0; }
+.nv-head__seal { font-family: var(--nv-serif); font-weight: 700; font-size: 19px;
+  letter-spacing: .08em; writing-mode: vertical-rl; color: var(--nv-seal);
+  border: 1px solid var(--nv-seal); padding: 14px 8px; align-self: start; }
+@media (max-width: 900px) { .nv-head__grid { grid-template-columns: 1fr; align-items: start; } }
 
-.nv-chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.nv-chips__lab { font-family: var(--nv-mono); font-size: 11px; letter-spacing: .14em;
-  color: var(--nv-ink-3); text-transform: uppercase; margin-right: 4px; }
-.nv-chip {
-  padding: 6px 13px; border: var(--nv-hair); background: none; cursor: pointer;
-  font-size: 13px; color: var(--nv-ink-2); white-space: nowrap;
-  transition: color var(--nv-t-fast), border-color var(--nv-t-fast),
-              background var(--nv-t-fast), transform var(--nv-t-fast);
+/* ============================================================================
+   ══════════════════════════════════════════════════════════════════════════
+   NOVA · 页面级版式补丁（第三轮）
+   ══════════════════════════════════════════════════════════════════════════
+   每个页面用它自己的类名，但都遵守上面六个原型。
+   这一节做的是"**改变信息呈现方式**"，不是加装饰：
+     原本横排堆叠的 → 拆成主/副两栏（.nv-lead-hd__row 式）
+     原本卡片流的   → 收成编号清单或海报墙
+     原本卡片描边的 → 改成"章节头 + 发丝线"的印刷结构
+   ============================================================================ */
+
+/* ═════════════════════════ 剧本库（scripts） ═════════════════════════ */
+/* 页头：大标题与"筛选目录"并置，工具条收成一条横向目录带 */
+.nv-shelfbar {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--nv-s3) var(--nv-s5); align-items: end;
+  padding: var(--nv-s4) 0; border-bottom: var(--nv-hair);
 }
-.nv-chip:hover { color: var(--nv-ink); border-color: var(--nv-ink-2); transform: translateY(-1px); }
-.nv-chip:active { transform: translateY(0) scale(.97); }
-.nv-chip.on { background: var(--nv-ink); border-color: var(--nv-ink); color: var(--nv-paper); }
-.nv-chip:focus-visible { outline: 2px solid var(--nv-accent); outline-offset: 2px; }
+.nv-shelfbar .nv-search { max-width: 460px; }
+.nv-shelfbar__end { display: flex; align-items: center; gap: var(--nv-s3); }
+/* 筛片带：横排 + 底部计数，视觉上像期刊的"栏目索引" */
+.nv-filters { padding: var(--nv-s3) 0; border-bottom: var(--nv-hair); display: grid; gap: 12px; }
+.nv-filters__line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px var(--nv-s3); }
+.nv-filters__line .nv-chips__lab { min-width: 46px; }
+@media (max-width: 760px) { .nv-shelfbar { grid-template-columns: 1fr; align-items: start; } }
 
-/* ---------- ③ 搜索框：聚焦时的整体反馈 ---------- */
-.nv-search { transition: border-color var(--nv-t-fast); }
-.nv-search:focus-within { border-bottom-color: var(--nv-accent); }
-.nv-search input::placeholder { transition: color var(--nv-t-fast); }
-.nv-search:focus-within input::placeholder { color: transparent; }
-
-/* ---------- ④ 空态：给所有空态补齐"下一步"的视觉重量 ---------- */
-.nv-empty { text-align: left; }
-.nv-empty .nv-btn { margin-top: var(--nv-s2); }
-
-/* ---------- ⑤ 详情页 / 分段导航：状态与节奏 ---------- */
-.nv-seg { border-bottom: 1px solid var(--nv-ink); }
-.nv-seg .mi { transition: color var(--nv-t-fast), border-color var(--nv-t-fast); }
-.nv-seg .mi:hover { color: var(--nv-ink); }
-
-/* ---------- ⑥ 列表行通用：hover 左移 + 底线呼应 ---------- */
-.nv-row { transition: padding-left var(--nv-t-fast) var(--nv-ease),
-                      background var(--nv-t-fast) var(--nv-ease); }
-.nv-row:hover { padding-left: 12px; background: color-mix(in srgb, var(--nv-paper-2) 60%, transparent); }
-
-/* ---------- ⑦ 标签页切换的入场 ---------- */
-@media (prefers-reduced-motion: no-preference) {
-  .tabpane.on { animation: nvPaneIn .42s var(--nv-ease) both; }
+/* ═════════════════════════ 剧本详情（script） ═════════════════════════ */
+/* 版式：主栏（正文 + 角色 + 评价）＋ 窄侧栏（封面 + 预约）
+   正文用杂志式首字下沉 + 两栏；规格条用发丝线横排。 */
+.nv-script { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  gap: clamp(28px, 5vw, 76px); align-items: start; padding: var(--nv-s5) 0 clamp(48px, 8vh, 100px); }
+.nv-script__bar {
+  display: flex; align-items: baseline; gap: var(--nv-s3); flex-wrap: wrap;
+  padding-bottom: var(--nv-s3); margin-bottom: var(--nv-s4); border-bottom: 1px solid var(--nv-ink);
 }
-@keyframes nvPaneIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.nv-script__bar .nv-kick { flex: 1; }
+.nv-script__title {
+  font-family: var(--nv-serif); font-weight: 700;
+  font-size: clamp(38px, 7.6vw, 96px); line-height: .96;
+  letter-spacing: -.04em; margin: 0 0 var(--nv-s3);
+}
+/* 关键事实三连：价格 / 定金 / 评分 —— 字级拉大，靠字号而非卡片区分 */
+.nv-script__facts { display: flex; flex-wrap: wrap; gap: clamp(20px, 3.6vw, 48px);
+  margin: var(--nv-s4) 0; padding: var(--nv-s3) 0; border-top: 1px solid var(--nv-ink);
+  border-bottom: var(--nv-hair); }
+.nv-script__fact { display: grid; gap: 3px; }
+.nv-script__fact b { font-family: var(--nv-serif); font-weight: 700;
+  font-size: clamp(22px, 3vw, 34px); line-height: 1; letter-spacing: -.028em;
+  font-variant-numeric: tabular-nums; }
+.nv-script__fact b.nv-accent { color: var(--nv-accent); }
+.nv-script__fact span { font-family: var(--nv-mono); font-size: 10px; letter-spacing: .14em;
+  color: var(--nv-ink-3); text-transform: uppercase; }
+/* 角色卡：海报墙（首张宽幅破格） */
+.nv-roles { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--nv-s3); }
+.nv-roles > * { grid-column: span 3; }
+.nv-roles > :first-child { grid-column: span 6; }
+.nv-roles > :first-child .nv-role__face { aspect-ratio: 16/11; }
+.nv-role { display: grid; gap: 10px; }
+.nv-role__face { position: relative; aspect-ratio: 3/4; overflow: hidden; background: var(--nv-paper-3);
+  display: grid; place-items: center; }
+.nv-role__face img { width: 100%; height: 100%; object-fit: cover; transition: transform .8s var(--nv-ease); }
+.nv-role:hover .nv-role__face img { transform: scale(1.06); }
+.nv-role__face .nv-role__ini { font-family: var(--nv-serif); font-size: 44px; color: var(--nv-ink-3); }
+.nv-role__face .nv-role__ix { position: absolute; left: 0; top: 0; padding: 4px 8px;
+  background: var(--nv-ink); color: var(--nv-paper); font-family: var(--nv-mono); font-size: 10px; }
+.nv-role__face.is-taken { opacity: .5; }
+.nv-role__face.is-taken::after { content: "已被选"; position: absolute; inset: auto 0 0 0;
+  padding: 4px 8px; background: var(--nv-seal); color: #FFFDF7;
+  font-family: var(--nv-mono); font-size: 10px; letter-spacing: .1em; text-align: center; }
+.nv-role b { font-family: var(--nv-serif); font-size: 17px; letter-spacing: -.012em; }
+.nv-role em { font-style: normal; font-size: 12.5px; color: var(--nv-ink-3); }
+@media (max-width: 900px) { .nv-roles > * { grid-column: span 6; } .nv-roles > :first-child { grid-column: span 12; }
+  .nv-roles > :first-child .nv-role__face { aspect-ratio: 3/4; } }
+@media (max-width: 480px) { .nv-roles > * { grid-column: span 12; } }
 
-/* ---------- ⑧ 收藏按钮：明确的按下反馈 ---------- */
-.fav-btn:active { transform: scale(.9); }
-.fav-btn.on { animation: nvFavPop .42s var(--nv-ease); }
-@keyframes nvFavPop { 0% { transform: scale(1); } 40% { transform: scale(1.28); } 100% { transform: scale(1); } }
+/* 评价：整条通栏流水，不用卡片描边（靠头像列 + 竖线分区） */
+.nv-voices { border-top: 1px solid var(--nv-ink); }
+.nv-voice { display: grid; grid-template-columns: minmax(0, 150px) minmax(0, 1fr);
+  gap: var(--nv-s4); padding: var(--nv-s4) 0; border-bottom: var(--nv-hair); }
+.nv-voice__who { display: grid; gap: 6px; align-content: start; }
+.nv-voice__who b { font-family: var(--nv-serif); font-size: 15.5px; }
+.nv-voice__who em { font-style: normal; font-family: var(--nv-mono); font-size: 11px; color: var(--nv-ink-3); }
+.nv-voice__who .nv-stars { color: var(--nv-accent); font-size: 12px; letter-spacing: 2px; }
+.nv-voice__body { display: grid; gap: var(--nv-s2); }
+.nv-voice__t { margin: 0; font-size: 15.5px; line-height: 1.72; color: var(--nv-ink-2); }
+.nv-voice__foot { display: flex; gap: var(--nv-s3); flex-wrap: wrap; align-items: center; }
+@media (max-width: 680px) { .nv-voice { grid-template-columns: 1fr; gap: var(--nv-s2); } }
 
-/* ---------- ⑨ 画面级：统一分区的纵向留白梯度 ---------- */
-.nv-sec { padding-top: clamp(48px, 8vh, 96px); }
-.nv-sec:first-child { padding-top: clamp(28px, 5vh, 56px); }
+/* ═════════════════════════ 拼车（car） ═════════════════════════ */
+/* 版式：左侧"筛选 + 计数"，右侧车队清单体（编号索引），
+   不再是均质卡片流 —— 车队信息在清单里一行读完。 */
+.nv-cars { display: grid; grid-template-columns: minmax(0, 232px) minmax(0, 1fr);
+  gap: clamp(24px, 4vw, 56px); align-items: start; padding: var(--nv-s4) 0 clamp(48px, 8vh, 100px); }
+.nv-cars__side { position: sticky; top: 92px; display: grid; gap: var(--nv-s3); }
+.nv-cars__form { display: grid; gap: var(--nv-s3); }
+.nv-cars__list { border-top: 1px solid var(--nv-ink); }
+.nv-cars__row { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto;
+  gap: var(--nv-s4); align-items: center; padding: clamp(16px, 2.2vw, 24px) 0;
+  border-bottom: var(--nv-hair);
+  transition: padding-left var(--nv-t-fast) var(--nv-ease), background var(--nv-t-fast); }
+.nv-cars__row:hover { padding-left: 12px; background: color-mix(in srgb, var(--nv-paper-2) 55%, transparent); }
+.nv-cars__when { font-family: var(--nv-mono); font-size: 12.5px; color: var(--nv-accent);
+  line-height: 1.5; display: grid; gap: 4px; }
+.nv-cars__when span { color: var(--nv-ink-3); font-size: 11px; }
+.nv-cars__mid { display: grid; gap: 8px; min-width: 0; }
+.nv-cars__mid b { font-family: var(--nv-serif); font-weight: 700;
+  font-size: clamp(18px, 2.2vw, 25px); letter-spacing: -.022em; line-height: 1.16; }
+.nv-cars__mid .nv-cars__meta { display: flex; flex-wrap: wrap; gap: 6px 18px;
+  font-size: 13px; color: var(--nv-ink-3); }
+.nv-cars__mid .nv-cars__meta b { font-family: var(--nv-sans); font-weight: 600;
+  font-size: 13px; color: var(--nv-ink); letter-spacing: 0; }
+.nv-cars__right { display: grid; gap: 10px; justify-items: end; }
+@media (max-width: 980px) {
+  .nv-cars { grid-template-columns: 1fr; }
+  .nv-cars__side { position: static; }
+}
+@media (max-width: 640px) {
+  .nv-cars__row { grid-template-columns: 1fr; gap: var(--nv-s2); }
+  .nv-cars__right { justify-items: start; }
+}
 
-/* ---------- ⑩ 表单提交按钮的统一 loading（无 JS 也能看出的禁用态） ---------- */
-.nv-btn[aria-busy="true"], .nv-btn.is-loading { opacity: .75; }
+/* ═════════════════════════ 车队详情（car_detail） ═════════════════════════ */
+/* 深色抬头保留（这是全站唯一的一处"暗场"节奏），
+   下面主体改为：左成员名单（清单体）+ 右侧窄栏唠嗑（sticky）。 */
+.nv-carblk { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: clamp(28px, 5vw, 72px); align-items: start; padding: var(--nv-s5) 0 clamp(48px, 8vh, 100px); }
+.nv-carblk__side { position: sticky; top: 92px; display: grid; gap: var(--nv-s4); }
+@media (max-width: 980px) { .nv-carblk { grid-template-columns: 1fr; } .nv-carblk__side { position: static; } }
+
+/* ═════════════════════════ 唠嗑区（comm） ═════════════════════════ */
+/* 版式：左侧帖子用"通栏流水"（封面小图 + 标题 + 正文节选），
+   右侧发帖表单 sticky 窄栏 —— 与原型 F 完全一致。 */
+.nv-threads { display: grid; gap: 0; border-top: 1px solid var(--nv-ink); }
+.nv-thread { display: grid; gap: 12px; padding: clamp(18px, 2.6vw, 28px) 0;
+  border-bottom: var(--nv-hair); transition: padding-left var(--nv-t-fast) var(--nv-ease); }
+.nv-thread:hover { padding-left: 12px; }
+.nv-thread__k { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px var(--nv-s3); }
+.nv-thread__k b { font-family: var(--nv-mono); font-size: 12px; font-weight: 400;
+  letter-spacing: .04em; color: var(--nv-ink-2); }
+.nv-thread__k em { font-style: normal; font-family: var(--nv-mono); font-size: 11px; color: var(--nv-ink-3); }
+.nv-thread__t { font-family: var(--nv-serif); font-weight: 700;
+  font-size: clamp(18px, 2.3vw, 26px); line-height: 1.22; letter-spacing: -.022em; margin: 0; }
+.nv-thread__x { margin: 0; font-size: 15px; line-height: 1.78; color: var(--nv-ink-2); white-space: pre-wrap; }
+.nv-thread__f { display: flex; gap: var(--nv-s3); flex-wrap: wrap; align-items: center; }
+.nv-forum { display: grid; grid-template-columns: minmax(0, 1fr) minmax(290px, 370px);
+  gap: clamp(28px, 5vw, 72px); align-items: start; padding: var(--nv-s4) 0 clamp(48px, 8vh, 100px); }
+.nv-forum__side { position: sticky; top: 92px; display: grid; gap: var(--nv-s4); }
+@media (max-width: 980px) { .nv-forum { grid-template-columns: 1fr; } .nv-forum__side { position: static; } }
+
+/* ═════════════════════════ 我的（me） ═════════════════════════ */
+/* 身份条改为"数据带"（大数字）；分段导航保留横排；
+   预约票卡改为"票根"结构：左侧日期栏 + 右侧主体，虚线分割。 */
+.nv-idbar { align-items: flex-end; }
+.nv-idbar__stats b { font-size: clamp(26px, 3.4vw, 40px); }
+/* 票根：左边一条竖排日期，右边主体，中间一条虚线 —— 纸质票的手感 */
+.nv-ticket { display: grid; grid-template-columns: 92px minmax(0, 1fr);
+  gap: 0; padding: 0; overflow: hidden; }
+.nv-ticket__date {
+  display: grid; align-content: center; gap: 4px; justify-items: center;
+  padding: var(--nv-s3) 8px; background: var(--nv-paper-3);
+  border-right: 1px dashed var(--nv-line-2);
+}
+.nv-ticket__date b { font-family: var(--nv-serif); font-size: 26px; line-height: 1;
+  letter-spacing: -.02em; }
+.nv-ticket__date span { font-family: var(--nv-mono); font-size: 11px; letter-spacing: .08em;
+  color: var(--nv-ink-3); }
+.nv-ticket__date i { font-style: normal; font-family: var(--nv-mono); font-size: 12px;
+  color: var(--nv-accent); }
+.nv-ticket__in { padding: clamp(18px, 2.4vw, 26px); min-width: 0; }
+@media (max-width: 560px) { .nv-ticket { grid-template-columns: 1fr; }
+  .nv-ticket__date { grid-auto-flow: column; justify-content: start; gap: 14px;
+    border-right: 0; border-bottom: 1px dashed var(--nv-line-2); } }
+
+/* ═════════════════════════ 登录 / 注册（auth） ═════════════════════════ */
+/* 左半幅补上"编号清单 + 数据带"，让静态页也有印刷品的分量。 */
+.nv-auth__figs { display: flex; gap: clamp(18px, 3vw, 40px); flex-wrap: wrap;
+  padding-top: var(--nv-s3); border-top: var(--nv-hair); }
+.nv-auth__figs > div { display: grid; gap: 2px; }
+.nv-auth__figs b { font-family: var(--nv-serif); font-weight: 700;
+  font-size: clamp(22px, 2.8vw, 32px); line-height: 1; letter-spacing: -.028em; }
+.nv-auth__figs span { font-family: var(--nv-mono); font-size: 10px; letter-spacing: .14em;
+  color: var(--nv-ink-3); text-transform: uppercase; }
+/* 表单卡：给标题加一条编号线，与站内其它页同一套语言 */
+.nv-authcard__title::before {
+  content: "登记 · Sign in"; display: block; margin-bottom: 10px;
+  font-family: var(--nv-mono); font-size: 10.5px; letter-spacing: .22em;
+  color: var(--nv-ink-3); text-transform: uppercase; font-weight: 400;
+}
+
+/* ═════════════════════════ 玩家/DM 主页（profile / dm_profile） ═════════════════════════ */
+/* 评价流水改为"编号 + 通栏"的清单结构，弃用卡片描边。 */
+.nv-profrevs .nv-rev { border-top: var(--nv-hair); }
+.nv-profrevs .nv-rev__hd b { font-size: 16.5px; }
+.nv-profable { border-top: 1px solid var(--nv-ink); margin-top: var(--nv-s5); padding-top: var(--nv-s4); }
+.nv-gmstats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0; border-top: 1px solid var(--nv-ink); border-bottom: var(--nv-hair); }
+.nv-gmstats > div { padding: var(--nv-s3) var(--nv-s3) var(--nv-s3) 0;
+  border-right: var(--nv-hair); display: grid; gap: 4px; }
+.nv-gmstats > div:last-child { border-right: 0; }
+.nv-gmstats dt { font-family: var(--nv-mono); font-size: 10px; letter-spacing: .12em;
+  color: var(--nv-ink-3); text-transform: uppercase; }
+.nv-gmstats dd { margin: 0; font-family: var(--nv-serif); font-weight: 700;
+  font-size: clamp(20px, 2.6vw, 30px); line-height: 1; letter-spacing: -.024em;
+  font-variant-numeric: tabular-nums; }
+
+/* ═════════════════════════ 消息中心（notice） ═════════════════════════ */
+/* 变成"信件流"：左侧日期列 + 右侧正文，未读用藤黄竖线。 */
+.nv-letters { border-top: 1px solid var(--nv-ink); }
+.nv-letter { display: grid; grid-template-columns: minmax(0, 130px) minmax(0, 1fr);
+  gap: var(--nv-s4); padding: var(--nv-s4) 0; border-bottom: var(--nv-hair);
+  transition: padding-left var(--nv-t-fast) var(--nv-ease); }
+.nv-letter:hover { padding-left: 10px; }
+.nv-letter.is-new { border-left: 2px solid var(--nv-accent); padding-left: var(--nv-s3); }
+.nv-letter__when { display: grid; gap: 4px; align-content: start; }
+.nv-letter__when em { font-style: normal; font-family: var(--nv-mono);
+  font-size: 11px; color: var(--nv-ink-3); }
+.nv-letter__body { display: grid; gap: 8px; }
+.nv-letter__body b { font-family: var(--nv-serif); font-size: clamp(17px, 2vw, 21px);
+  letter-spacing: -.016em; }
+.nv-letter__body p { margin: 0; font-size: 14.5px; line-height: 1.75; color: var(--nv-ink-2); }
+@media (max-width: 680px) { .nv-letter { grid-template-columns: 1fr; gap: var(--nv-s2); } }
+
+/* ═════════════════════════ 组局（group） / 场次表 ═════════════════════════ */
+.nv-sheet { border-top: 1px solid var(--nv-ink); }
+.nv-sheet__row { display: grid; grid-template-columns: 88px minmax(0, 1fr) auto auto;
+  gap: var(--nv-s4); align-items: center; padding: clamp(14px, 2vw, 22px) 0;
+  border-bottom: var(--nv-hair);
+  transition: padding-left var(--nv-t-fast) var(--nv-ease), background var(--nv-t-fast); }
+.nv-sheet__row:hover { padding-left: 10px; background: color-mix(in srgb, var(--nv-paper-2) 55%, transparent); }
+.nv-sheet__t { font-family: var(--nv-serif); font-weight: 700; font-size: clamp(19px, 2.2vw, 26px);
+  letter-spacing: -.024em; color: var(--nv-accent); }
+.nv-sheet__m b { display: block; font-family: var(--nv-serif); font-weight: 700;
+  font-size: clamp(16px, 1.9vw, 20px); letter-spacing: -.018em; }
+.nv-sheet__m span { font-family: var(--nv-mono); font-size: 11.5px; color: var(--nv-ink-3); }
+.nv-sheet__cap { font-family: var(--nv-mono); font-size: 12px; color: var(--nv-ink-3); white-space: nowrap; }
+@media (max-width: 680px) {
+  .nv-sheet__row { grid-template-columns: 56px 1fr; gap: var(--nv-s3); }
+  .nv-sheet__cap, .nv-sheet__act { grid-column: 2; }
+}
+
+/* ═════════════════════════ FAQ（faq） ═════════════════════════ */
+/* 问答改为"目录体"：编号大字 + 问题 + 答案，横向规则线。 */
+.nv-qa { border-top: 1px solid var(--nv-ink); }
+.nv-qa__item { display: grid; grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--nv-s4); padding: clamp(20px, 3vw, 34px) 0; border-bottom: var(--nv-hair); }
+.nv-qa__no { font-family: var(--nv-mono); font-size: 12px; letter-spacing: .1em;
+  color: var(--nv-accent); padding-top: .35em; }
+.nv-qa__q { font-family: var(--nv-serif); font-weight: 700;
+  font-size: clamp(19px, 2.4vw, 27px); line-height: 1.24; letter-spacing: -.022em; margin: 0 0 10px; }
+.nv-qa__a { margin: 0; font-size: 15.5px; line-height: 1.82; color: var(--nv-ink-2); max-width: 62ch; }
+@media (max-width: 560px) { .nv-qa__item { grid-template-columns: 1fr; gap: var(--nv-s2); } }
+
+/* ═════════════════════════ 支付（pay_deposit） ═════════════════════════ */
+/* 金额已经是主角，这里再补一条"付款流程编号带"，把流程从散文变成可扫的步骤。 */
+.nv-paysteps { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0; border-top: 1px solid var(--nv-ink); margin-top: var(--nv-s5); }
+.nv-paysteps > div { padding: var(--nv-s3) var(--nv-s3) var(--nv-s3) 0;
+  border-right: var(--nv-hair); display: grid; gap: 6px; }
+.nv-paysteps > div:last-child { border-right: 0; }
+.nv-paysteps i { font-style: normal; font-family: var(--nv-mono); font-size: 10.5px;
+  letter-spacing: .14em; color: var(--nv-accent); }
+.nv-paysteps b { font-family: var(--nv-serif); font-size: 15.5px; letter-spacing: -.012em; }
+.nv-paysteps span { font-size: 12.5px; color: var(--nv-ink-3); line-height: 1.6; }
+
+/* ═════════════════════════ 错误页（error） ═════════════════════════ */
+.nv-errpage { min-height: 74vh; display: grid; align-content: center;
+  gap: var(--nv-s3); padding: clamp(40px, 10vh, 120px) 0; }
+.nv-errpage__no { font-family: var(--nv-serif); font-weight: 700;
+  font-size: clamp(88px, 26vw, 300px); line-height: .84; letter-spacing: -.06em; margin: 0; }
+.nv-errpage__k { font-family: var(--nv-mono); font-size: 11px; letter-spacing: .24em;
+  text-transform: uppercase; color: var(--nv-accent); margin: 0; }
+.nv-errpage__d { max-width: 44ch; font-size: clamp(16px, 1.7vw, 19px);
+  line-height: 1.7; color: var(--nv-ink-2); margin: 0; }
+.nv-errpage__act { display: flex; gap: 12px; flex-wrap: wrap; margin-top: var(--nv-s3); }
+
+/* ═════════════════════════ 欢迎页（welcome） ═════════════════════════ */
+.nv-welcome__figs { display: flex; flex-wrap: wrap; gap: clamp(20px, 4vw, 52px);
+  margin-top: var(--nv-s5); padding-top: var(--nv-s3); border-top: var(--nv-hair); }
+
+/* 清单行的收藏按钮：浮在行右侧，不占版式格 */
+.nv-index > li { position: relative; }
+.nv-index__fav { position: absolute; right: -6px; bottom: 10px; }
+@media (max-width: 760px) { .nv-index__fav { display: none; } }
+/* 小尺寸占位：清单里的 64px 缩略图不需要大字号水印 */
+.nv-index__pic .pcard3__ph { padding: 6px; justify-content: center; }
+.nv-index__pic .pcard3__wm { font-size: 26px; opacity: .28; top: 50%; right: -.1em; }
+.nv-index__pic .pcard3__d, .nv-index__pic .pcard3__m { display: none; }
+.nv-plate__cover .pcard3__ph { padding: 18px; }
+/* 海报墙上的占位：字级随格子放大，避免"空盒子"观感 */
+.nv-plate--wide .pcard3__ph, .nv-plate--tall .pcard3__ph { padding: 22px; }
+.nv-plate--wide .pcard3__wm, .nv-plate--tall .pcard3__wm { font-size: clamp(64px, 8vw, 118px); }
+.nv-plate--wide .pcard3__d, .nv-plate--tall .pcard3__d { font-size: 13px; max-width: 34ch; }
+.nv-plate .pcard3__ph { transition: transform .9s var(--nv-ease); }
+.nv-plate:hover .pcard3__ph { transform: scale(1.03); }
+
+/* ═════════════════════════ 海报墙（原型 E）在别的页面上的用法 ═════════════════════════
+   列表页用 .nv-plates；这里补上封面内的角标与 hover 提示条，
+   让"编号索引清单"与"海报墙"两种列表可以任意切换而不掉细节。 */
+.nv-plate__badge {
+  position: absolute; left: 0; top: 0; z-index: 2;
+  padding: 4px 9px; background: var(--nv-ink); color: var(--nv-paper);
+  font-family: var(--nv-mono); font-size: 10px; letter-spacing: .12em;
+}
+.nv-plate__hint {
+  position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 2;
+  padding: 7px 10px; background: color-mix(in srgb, var(--nv-ink) 88%, transparent);
+  color: var(--nv-paper); font-family: var(--nv-mono); font-size: 10.5px;
+  letter-spacing: .16em; text-transform: uppercase;
+  opacity: 0; transform: translateY(8px);
+  transition: opacity var(--nv-t-fast) var(--nv-ease), transform var(--nv-t-fast) var(--nv-ease);
+}
+.nv-plate:hover .nv-plate__hint,
+.nv-plate:focus-visible .nv-plate__hint { opacity: 1; transform: none; }
+.nv-plate:focus-visible { outline: 2px solid var(--nv-accent); outline-offset: 3px; }
+
+/* 带缩略图/海报的网格里，占位块的水印与说明按小尺寸收敛 */
+.nv-plates .pcard3__d, .nv-plates .pcard3__m { font-size: 11px; }
+
+/* 首页的破格配额：两张宽幅 + 一张竖长，其余常规 —— 非对称但不乱 */
+.nv-plates--home > *:nth-child(4) { grid-column: span 5; }
+.nv-plates--home > *:nth-child(5) { grid-column: span 7; }
+@media (max-width: 900px) {
+  .nv-plates--home > *:nth-child(4),
+  .nv-plates--home > *:nth-child(5) { grid-column: span 6; }
+}
+@media (max-width: 560px) {
+  .nv-plates--home > *:nth-child(4),
+  .nv-plates--home > *:nth-child(5) { grid-column: span 12; }
+}
+
+/* 清单里的价格副行（首页副列用） */
+.nv-index__side br + b { font-size: 13px; color: var(--nv-ink-2); }

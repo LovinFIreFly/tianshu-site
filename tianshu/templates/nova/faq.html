@@ -3,16 +3,29 @@
 {% block og_title %}常见问题 · {{ settings.shopName }}{% endblock %}
 {% block body %}
 
-<section class="nv-head">
-  <div class="nv-wrap nv-head__grid">
-    <div>
-      <p class="nv-kick nv-head__k rv">FAQ · 开演前你可能想问</p>
-      <h1 class="nv-h1 rv" data-d="60" style="font-size:clamp(34px,6vw,80px)">常见问题</h1>
-      <p class="nv-head__lead rv" data-d="120">定金、迟到、拼车、核销码、改期 —— 开到店之前最常问的六件事，都在这儿。</p>
-      <div style="margin-top:var(--nv-s4)" class="rv" data-d="160"><a class="nv-btn nv-btn--sm" href="{{ url_for('public.home') }}">← 回首页</a></div>
+<header class="nv-lead-hd">
+  <div class="nv-wrap">
+    <p class="nv-lead-hd__k">FAQ · 开演前你可能想问</p>
+    <div class="nv-lead-hd__row">
+      <div>
+        <h1 class="nv-lead-hd__t">常见问题</h1>
+        <p class="nv-lead-hd__d">
+          定金、迟到、拼车、核销码、改期 —— <b>到店之前最常问的六件事</b>，都在这儿。
+          还有没答上的，底下有小客服的路。
+        </p>
+      </div>
+      <dl class="nv-lead-hd__m">
+        <div><dt>条目</dt><dd>6</dd></div>
+        <div><dt>客服</dt><dd>{{ '在线' if serviceWechat else '留言' }}</dd></div>
+      </dl>
     </div>
+    <nav class="nv-lead-hd__toc">
+      <a href="{{ url_for('public.home') }}"><i>←</i>回大厅</a>
+      <a href="{{ url_for('public.scripts') }}"><i>01</i>去挑本</a>
+      <a href="{{ url_for('public.car') }}"><i>02</i>拼车大厅</a>
+    </nav>
   </div>
-</section>
+</header>
 
 <div class="nv-wrap">
   {% set faqs = [
@@ -23,19 +36,19 @@
     ('核销码哪来？', '定金确认到账后，「我的预约」里会显示 6 位核销码，到店报码即可开本。'),
     ('改期规则？', '开场前可在「我的预约」申请改期，一次一改；改期后原定金跟着单子走，不用重交。')
   ] %}
-  <ol style="list-style:none;margin:0;padding:var(--nv-s4) 0 0;border-top:1px solid var(--nv-ink);margin-top:var(--nv-s5)">
+  <div class="nv-qa" style="margin-top:var(--nv-s5)">
     {% for q, a in faqs %}
-    <li class="rv" style="display:grid;grid-template-columns:70px 1fr;gap:var(--nv-s4);padding:var(--nv-s4) 0;border-bottom:var(--nv-hair);align-items:baseline">
-      <span class="nv-mono" style="color:var(--nv-accent);font-size:13px">{{ '%02d'|format(loop.index) }}</span>
+    <article class="nv-qa__item">
+      <span class="nv-qa__no">{{ '%02d'|format(loop.index) }}</span>
       <div>
-        <h3 class="nv-h3" style="margin:0 0 8px;font-size:clamp(18px,2.2vw,24px)">{{ q }}</h3>
-        <p style="margin:0;color:var(--nv-ink-2);line-height:1.75;max-width:64ch">{{ a }}</p>
+        <h3 class="nv-qa__q">{{ q }}</h3>
+        <p class="nv-qa__a">{{ a }}</p>
       </div>
-    </li>
+    </article>
     {% endfor %}
-  </ol>
+  </div>
 
-  <div class="nv-split" style="margin-top:var(--nv-s6)">
+  <div class="nv-two" style="margin-top:var(--nv-s6)">
     <div>
       <p class="nv-sidehead">还没解决？找小客服</p>
       <div class="nv-card" style="padding:var(--nv-s3);display:flex;align-items:center;justify-content:space-between;gap:12px">

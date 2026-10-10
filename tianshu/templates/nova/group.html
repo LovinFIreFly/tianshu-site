@@ -3,23 +3,33 @@
 {# NOVA 组局：今日在开本一览 + 两个入口。#}
 {% block body %}
 
-<section class="nv-head">
-  <div class="nv-wrap nv-head__grid">
-    <div>
-      <p class="nv-kick nv-head__k rv">组局 · Host Your Table</p>
-      <h1 class="nv-h1 rv" data-d="60" style="font-size:clamp(38px,7vw,96px)">组个局</h1>
-      <p class="nv-head__lead rv" data-d="120">看今天谁在开本，挑个顺眼的局直接上车；或直接挑本自己开一桌，定金锁位就成。</p>
-      <div style="margin-top:var(--nv-s4);display:flex;gap:12px;flex-wrap:wrap" class="rv" data-d="160">
-        <a class="nv-btn nv-btn--solid" href="{{ url_for('public.scripts') }}">去挑本自己开一桌</a>
-        <a class="nv-btn" href="{{ url_for('public.car') }}">去拼车大厅</a>
+<header class="nv-lead-hd">
+  <div class="nv-wrap">
+    <p class="nv-lead-hd__k">组局 · Host Your Table</p>
+    <div class="nv-lead-hd__row">
+      <div>
+        <h1 class="nv-lead-hd__t">组个局</h1>
+        <p class="nv-lead-hd__d">
+          看今天谁在开本，挑个顺眼的局直接上车；或<b>直接挑本自己开一桌</b>，定金锁位就成。
+        </p>
       </div>
+      <dl class="nv-lead-hd__m">
+        <div><dt>今天在开</dt><dd>{{ sessions|length }}</dd></div>
+        <div><dt>开场时段</dt><dd>{{ sessions[0].time if sessions else '—' }}</dd></div>
+      </dl>
     </div>
+    <nav class="nv-lead-hd__toc">
+      <a href="{{ url_for('public.scripts') }}"><i>01</i>挑本开一桌</a>
+      <a href="{{ url_for('public.car') }}"><i>02</i>拼车大厅</a>
+      <a href="{{ url_for('public.comm') }}"><i>03</i>唠嗑区</a>
+    </nav>
   </div>
-</section>
+</header>
 
 <div class="nv-wrap">
   <div class="nv-toolbar">
     <span class="nv-mono" style="color:var(--nv-ink-3)">今天在开的局 · {{ sessions|length }}</span>
+    <span class="nv-st {{ 'nv-st--on' if sessions else 'nv-st--off' }}">{{ '可以上车' if sessions else '今天空场' }}</span>
   </div>
 
   {% if sessions %}
@@ -34,11 +44,14 @@
     {% endfor %}
   </div>
   {% else %}
-  <div class="nv-empty rv" style="margin-top:var(--nv-s4)">
-    <p class="nv-empty__k">No Tables</p>
-    <h3>今天还没人开桌</h3>
+  <div class="nv-blank" style="margin-top:var(--nv-s4)">
+    <p class="nv-blank__k">No Tables</p>
+    <b>今天还没人开桌</b>
     <p>挑个本、选好时间，定金锁位就开一桌。</p>
-    <a class="nv-btn nv-btn--solid" href="{{ url_for('public.scripts') }}">去挑本开一桌</a>
+    <div class="nv-blank__act">
+      <a class="nv-btn nv-btn--solid" href="{{ url_for('public.scripts') }}">去挑本开一桌</a>
+      <a class="nv-btn" href="{{ url_for('public.car') }}">看看谁在拼车</a>
+    </div>
   </div>
   {% endif %}
 </div>

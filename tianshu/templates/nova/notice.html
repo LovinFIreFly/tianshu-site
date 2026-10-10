@@ -3,14 +3,20 @@
 {# NOVA 消息中心：编号流水式列表，未读用左侧强调色短线标出。 #}
 {% block body %}
 
-<section class="nv-head">
-  <div class="nv-wrap nv-head__grid">
-    <div>
-      <p class="nv-kick nv-head__k rv">消息中心 · Notices</p>
-      <h1 class="nv-h1 rv" data-d="60" style="font-size:clamp(34px,6vw,80px)">消息中心</h1>
-      <p class="nv-mono rv" data-d="120" style="color:var(--nv-ink-3);margin-top:var(--nv-s3)">共 {{ rows|length }} 条{% if unread %} · <span style="color:var(--nv-accent)">未读 {{ unread }}</span>{% endif %}</p>
+<header class="nv-lead-hd">
+  <div class="nv-wrap">
+    <p class="nv-lead-hd__k">消息中心 · Notices</p>
+    <div class="nv-lead-hd__row">
+      <div>
+        <h1 class="nv-lead-hd__t">消息中心</h1>
+        <p class="nv-lead-hd__d">预约成功、退款、门店回复、信用分变动 —— 每一条都在这儿留档。</p>
+      </div>
+      <dl class="nv-lead-hd__m">
+        <div><dt>全部</dt><dd>{{ rows|length }}</dd></div>
+        <div><dt>未读</dt><dd style="color:var(--nv-accent)">{{ unread }}</dd></div>
+      </dl>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--nv-s4)">
       {% if unread %}
       <form method="post" action="{{ url_for('user.notice_read') }}">
         <button class="nv-btn nv-btn--sm nv-btn--ghost" type="submit">全部标为已读</button>
@@ -19,25 +25,27 @@
       <a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('user.me') }}">← 回我的</a>
     </div>
   </div>
-</section>
+</header>
 
 <div class="nv-wrap">
-  <div style="padding:var(--nv-s4) 0 clamp(48px,7vw,90px)">
+  <div class="nv-letters" style="margin:var(--nv-s5) 0 clamp(48px,7vw,90px)">
     {% for n in rows %}
     {% set is_new = (me.phone|string) not in (n.readBy or []) %}
-    <article class="nv-post rv" style="margin-bottom:var(--nv-s2){% if is_new %};border-left:3px solid var(--nv-accent){% endif %}">
-      <div class="nv-post__who" style="align-items:baseline">
-        <b style="font-family:var(--nv-serif);font-size:17px">{{ n.title }}</b>
+    <article class="nv-letter {{ 'is-new' if is_new }}">
+      <div class="nv-letter__when">
+        <em>{{ day_label(n.at) }}</em>
         {% if n.kind %}<span class="nv-tag">{{ n.kind }}</span>{% endif %}
-        {% if is_new %}<span class="nv-tag nv-tag--accent">未读</span>{% endif %}
-        <span>{{ day_label(n.at) }}</span>
+        {% if is_new %}<span class="nv-st nv-st--on">未读</span>{% endif %}
       </div>
-      <p class="nv-post__x">{{ n.text }}</p>
+      <div class="nv-letter__body">
+        <b>{{ n.title }}</b>
+        <p>{{ n.text }}</p>
+      </div>
     </article>
     {% else %}
-    <div class="nv-empty">
-      <p class="nv-empty__k">Empty</p>
-      <h3>还没有消息</h3>
+    <div class="nv-blank" style="margin-top:var(--nv-s3)">
+      <p class="nv-blank__k">Empty</p>
+      <b>还没有消息</b>
       <p>预约成功、退款、门店回复、信用分变动都会发到这里。</p>
     </div>
     {% endfor %}

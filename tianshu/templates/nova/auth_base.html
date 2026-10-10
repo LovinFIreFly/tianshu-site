@@ -47,6 +47,11 @@
       <li><span>02</span>拼车大厅找搭子，满员就开</li>
       <li><span>03</span>到店开演，演完写两句</li>
     </ul>
+    <div class="nv-auth__figs">
+      <div><b>{{ settings.shopName|length }}<small style="font-size:14px">字</small></b><span>店招</span></div>
+      <div><b>¥{{ settings.carDeposit|int }}</b><span>定金 / 人</span></div>
+      <div><b>{{ settings.inviteCoupon|int }}</b><span>邀请券</span></div>
+    </div>
     <a class="nv-auth__theme" href="{{ url_for('public.toggle_theme') }}" title="切换深浅色" aria-label="切换深浅色">
       {% if theme == 'dark' %}切到日间{% else %}切到夜间{% endif %}
     </a>

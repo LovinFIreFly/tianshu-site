@@ -4,34 +4,37 @@
 {% block body %}
 {% set pf = u.dmProfile or {} %}
 
-<section class="nv-head">
-  <div class="nv-wrap nv-head__grid">
-    <div>
-      <a href="{{ url_for('public.scripts') }}" style="color:var(--nv-accent);font-size:13px">← 回剧本库</a>
-      <p class="nv-kick nv-head__k rv" style="margin-top:var(--nv-s3)">主持人 / Game Master</p>
-      <h1 class="nv-h1 rv" data-d="60" style="font-size:clamp(34px,6vw,80px)">{{ nickname }}</h1>
-      {% if pf.style %}<p class="nv-head__lead rv" data-d="100">{{ pf.style }}</p>{% endif %}
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--nv-s3)" class="rv" data-d="140">
-        <span class="nv-tag nv-tag--accent">{{ st.tier.icon }} {{ st.tier.name }}</span>
-        {% if st.rating %}<span class="nv-tag">★ {{ st.rating }}（{{ st.ratingCount }} 条评价）</span>{% endif %}
-        {% if st.assigned %}<span class="nv-tag">被点名 {{ st.assigned }} 次</span>{% endif %}
+<header class="nv-lead-hd">
+  <div class="nv-wrap">
+    <p class="nv-lead-hd__k">主持人 · Game Master</p>
+    <div class="nv-lead-hd__row">
+      <div>
+        <h1 class="nv-lead-hd__t">{{ nickname }}</h1>
+        {% if pf.style %}<p class="nv-lead-hd__d">{{ pf.style }}</p>{% endif %}
+        <div class="nv-tags" style="margin-top:var(--nv-s3)">
+          <span class="nv-tag nv-tag--accent">{{ st.tier.icon }} {{ st.tier.name }}</span>
+          {% if st.assigned %}<span class="nv-tag">被点名 {{ st.assigned }} 次</span>{% endif %}
+        </div>
+      </div>
+      <div style="display:grid;gap:var(--nv-s3);justify-items:end">
+        {% if pf.photo %}
+        <img src="{{ pf.photo }}" alt="{{ nickname }}" style="width:120px;height:120px;object-fit:cover;border:var(--nv-hair)">
+        {% endif %}
+        <a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('public.scripts') }}">← 回剧本库</a>
       </div>
     </div>
-    {% if pf.photo %}
-    <img src="{{ pf.photo }}" alt="{{ nickname }}" style="width:96px;height:96px;object-fit:cover;border:var(--nv-hair)">
-    {% endif %}
   </div>
-</section>
+</header>
 
 <div class="nv-wrap">
-  <div class="nv-facts" style="border-top:0;margin-bottom:0">
+  <dl class="nv-gmstats" style="margin-top:var(--nv-s4)">
     <div><dt>带本量</dt><dd><span class="count" data-to="{{ st.done }}">0</span></dd></div>
     <div><dt>平均评分</dt><dd>{{ st.rating or '—' }}</dd></div>
     <div><dt>好评率</dt><dd>{{ st.goodRate }}%</dd></div>
     <div><dt>接待人次</dt><dd><span class="count" data-to="{{ st.players }}">0</span></dd></div>
-  </div>
+  </dl>
 
-  <div class="nv-split" style="padding:var(--nv-s5) 0 clamp(48px,7vw,90px)">
+  <div class="nv-aside" style="padding:var(--nv-s5) 0 clamp(48px,7vw,90px)">
     <div>
       {% if pf.bio %}
       <p class="nv-sidehead">他自己怎么说</p>
@@ -52,7 +55,7 @@
     </div>
 
     <div>
-      <div class="nv-split__side">
+      <div>
         <p class="nv-sidehead">最近的评价</p>
         <div class="nv-reviews">
           {% for r in reviews %}

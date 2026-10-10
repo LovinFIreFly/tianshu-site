@@ -58,6 +58,13 @@
       {% else %}点完这一单会显示「待小客服确认」。小客服确认到账后，就能去「我的预约」给剧本和 DM 打分了。{% endif %}
     </p>
 
+    <div class="nv-paysteps">
+      <div><i>01</i><b>转账给小客服</b><span>加上面的微信，转 ¥{{ o.due }}</span></div>
+      <div><i>02</i><b>点「我已支付」</b><span>订单进入「待确认」</span></div>
+      <div><i>03</i><b>客服核对到账</b><span>确认后核销码就出现在「我的」</span></div>
+      <div><i>04</i><b>到店报码开演</b><span>{% if o.dueKind == '定金' %}玩完定金由客服退回{% else %}到此结清，可以去打分了{% endif %}</span></div>
+    </div>
+
     <div style="display:flex;gap:8px;margin-top:var(--nv-s5);flex-wrap:wrap">
       <a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('user.me') }}">← 回我的</a>
       {% if o.dueKind == '定金' %}

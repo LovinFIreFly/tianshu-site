@@ -1,265 +1,315 @@
 {% extends 'layout.html' %}
 {% block title %}{{ settings.shopName }} · 藏在学校里的剧本杀小店{% endblock %}
 {# ============================================================================
-   NOVA · 首页（2026-10 纵向版）
+   NOVA · 首页（2026-10 · 第四轮：把六个版式原型全部铺到首屏）
    ----------------------------------------------------------------------------
-   纯纵向、常规浏览习惯：滚轮/手指往下，一屏接一屏。没有横向推轨、没有粘性长轴。
-   保留并复用首页原有亮点，且**全站通用**：
-     · 逐行遮罩揭示（.mask）        · 数字滚动（.count）
-     · 色幕转场（data-curtain）     · 自定义光标（data-cursor）
-     · 磁性按钮（data-magnet）      · 卡片 hover 浮起 + 提示条
-   节奏：开屏满幅 → 01 今夜 → 02 本子墙 → 03 口碑 → 04 拼车 → 05 进站
+   纯纵向、常规浏览习惯。与前三版的差别 —— **首屏就是一本翻开的杂志**：
+
+     开屏    原型 A（编辑式导读页头）的极端版：巨型题词 + 右栏数据题花 +
+             竖排朱印 + 底部横向目录带；一侧留白给"今日一句"。
+     01 今夜 原型 D（发丝线数据表）+ 进度条 —— 排期表读起来像一张时刻表。
+     02 架藏 原型 E（海报式网格破格）：2 张大图 + 4 张小图，非对称。
+             附 原型 B（编号索引清单）作为"冷门但好看"的副列。
+     03 口碑 原型 C（杂志式多栏正文）：首字下沉 + 两栏 + 破格引言。
+     04 拼车 原型 B（编号索引清单）通栏一行读完一局。
+     05 进站 原型 B 的另一种写法：巨型序号 + 衬线大字。
+     页脚前   原型 C 的收束：一句引文 + 出发按钮。
+
+   动效层沿用全站：遮罩揭示(.mask) / 数字滚动(.count) / 色幕转场(data-curtain)
+   / 自定义光标(data-cursor) / 磁性按钮(data-magnet)。**全部只动
+   transform / opacity / color / border，不劫持滚动，内容默认可见。**
    数据契约来自 views/public.py:home()。
    ============================================================================ #}
 {% block body %}
 
-{# ==================== 开屏：满幅巨字 + 数字栏 ==================== #}
-<section class="hm-hero">
-  <div class="nv-wrap hm-hero__in">
-    <div class="hm-hero__meta">
-      <p class="nv-kick">{{ settings.shopName }} · Est. 藏在学校里</p>
-      <p class="nv-kick hm-hero__nums">
-        No.{{ served }} 场已开演 &nbsp;/&nbsp; {{ stat.plays }} 本累计开场 &nbsp;/&nbsp; 今日 {{ sessions|length }} 场
-      </p>
-    </div>
+{# ══════════════════ 开屏：杂志封面 ══════════════════ #}
+<section class="nv-cover">
+  <div class="nv-wrap nv-cover__in">
 
-    <h1 class="nv-h1 hm-hero__title">
-      <span class="mask"><span>今天开<em class="nv-em">一本</em>吧，</span></span>
-      <span class="mask"><span>反正明天也逃不掉。</span></span>
-    </h1>
+    <p class="nv-cover__k">
+      <span>{{ settings.shopName }}</span>
+      <span class="nv-cover__rule" aria-hidden="true"></span>
+      <span>Est. 藏在学校里</span>
+      <span>No.{{ served }}</span>
+    </p>
 
-    <div class="hm-hero__foot">
-      <p class="nv-lead hm-hero__lead">情感、硬核、恐怖、欢乐，都摆在这一页往下。<br>挑一本，选个时间，我们给你开一场。</p>
-      <div class="hm-hero__cta">
-        <a class="nv-btn nv-btn--accent" href="{{ url_for('public.scripts') }}"
-           data-curtain data-magnet data-cursor="view" data-cursor-label="挑本">去挑一本 →</a>
-        <a class="nv-btn nv-btn--ghost" href="{{ url_for('public.car') }}" data-curtain data-magnet>看看今晚谁在拼车</a>
+    <div class="nv-cover__row">
+      <div class="nv-cover__main">
+        <h1 class="nv-cover__t">
+          <span class="mask"><span>今天开<em class="nv-em">一本</em>吧，</span></span>
+          <span class="mask"><span>反正明天也逃不掉。</span></span>
+        </h1>
+        <p class="nv-cover__d">
+          情感、硬核、恐怖、欢乐，都摆在这一页往下。挑一本，选个时间，
+          我们给你开一场 —— <b>人不够也不慌，拼车区喊一声就有人</b>。
+        </p>
+        <div class="nv-cover__cta">
+          <a class="nv-btn nv-btn--accent" href="{{ url_for('public.scripts') }}"
+             data-curtain data-magnet data-cursor="view" data-cursor-label="挑本">去挑一本 <i>→</i></a>
+          <a class="nv-btn nv-btn--ghost" href="{{ url_for('public.car') }}"
+             data-curtain data-magnet>今晚谁在拼车</a>
+        </div>
       </div>
+
+      {# 右栏：竖排朱印 + 数据题花 —— 原型 A 的"数据题花"扩写 #}
+      <aside class="nv-cover__side">
+        <span class="nv-seal" aria-hidden="true">今 夜 开 演</span>
+        <dl class="nv-cover__figs">
+          <div><dt>在架精选</dt><dd><span class="count" data-to="{{ scripts|length }}">0</span></dd></div>
+          <div><dt>今日排定</dt><dd><span class="count" data-to="{{ sessions|length }}">0</span></dd></div>
+          <div><dt>累计开本</dt><dd><span class="count" data-to="{{ stat.plays }}">0</span></dd></div>
+          <div><dt>累计接待</dt><dd><span class="count" data-to="{{ served }}">0</span></dd></div>
+        </dl>
+      </aside>
     </div>
 
-    <div class="nv-stats hm-hero__stats">
-      <div><p class="nv-stat__n"><span class="count" data-to="{{ stat.plays }}">0</span></p><p class="nv-stat__l">累计开本</p></div>
-      <div><p class="nv-stat__n"><span class="count" data-to="{{ served }}">0</span></p><p class="nv-stat__l">累计接待</p></div>
-      <div><p class="nv-stat__n"><span class="count" data-to="{{ sessions|length }}">0</span></p><p class="nv-stat__l">今日排定</p></div>
-      <div><p class="nv-stat__n"><span class="count" data-to="{{ scripts|length }}">0</span></p><p class="nv-stat__l">在架精选</p></div>
-    </div>
+    {# 底部横排目录带：01–05，直接锚到下面的章节 #}
+    <nav class="nv-cover__toc">
+      <a href="#nv-01"><i>01</i>今夜在演</a>
+      <a href="#nv-02"><i>02</i>架子上</a>
+      {% if reviews %}<a href="#nv-03"><i>03</i>剧友怎么讲</a>{% endif %}
+      <a href="#nv-04"><i>04</i>正在发车</a>
+      <a href="#nv-05"><i>05</i>进站</a>
+    </nav>
   </div>
-  <span class="hm-cue" aria-hidden="true"><i></i>往下滚</span>
+  <span class="nv-cover__cue" aria-hidden="true"><i></i>往下</span>
 </section>
 
-{# ==================== 01 · 今夜在演 ==================== #}
-<section class="nv-wrap hm-sec">
-  <div class="nv-sechead rv">
-    <p class="nv-sechead__no">01</p>
-    <div class="nv-sechead__main">
-      <h2 class="nv-h2">今夜，店里在演什么</h2>
-      <small>Today's lineup · 现场排期</small>
-    </div>
-  </div>
+{# ══════════════════ 01 · 今夜在演（原型 D 发丝线数据表） ══════════════════ #}
+<section class="nv-wrap nv-chapter" id="nv-01">
+  <header class="nv-chapter__hd rv">
+    <span class="nv-chapter__no">01</span>
+    <h2 class="nv-chapter__t">今夜，店里在演什么</h2>
+    <span class="nv-chapter__s">Today's lineup · 现场排期</span>
+  </header>
 
   {% if sessions %}
-  <ol class="hm-board">
+  <div class="nv-ledger nv-ledger--board" style="--cols:92px minmax(0,1fr) minmax(120px,1fr) 96px">
+    <div class="nv-ledger__hd"><span>时间</span><span>本子 / 房间</span><span>报名进度</span><span>带本 DM</span></div>
     {% for s in sessions[:8] %}
-    <li class="hm-board__row rv" data-d="{{ loop.index0 * 45 }}">
-      <span class="hm-board__t nv-mono">{{ s.time }}</span>
-      <span class="hm-board__n">
-        <b>{{ s.title }}</b>
-        <small>{{ s.roomId or '房间待定' }} · DM {{ s.dmName or '待安排' }}</small>
+    {% set _p = ((s.joined or 0) * 100 / (s.cap or 8))|round|int %}
+    <div class="nv-ledger__row rv" data-d="{{ loop.index0 * 45 }}">
+      <span class="nv-sheet__t nv-mono">{{ s.time }}</span>
+      <span class="nv-board__n"><b>{{ s.title }}</b><em>{{ s.roomId or '房间待定' }}</em></span>
+      <span class="nv-board__s">
+        <span class="nv-bar"><i style="width:{{ _p }}%"></i></span>
+        <em>已报 <b>{{ s.joined }}</b>/{{ s.cap or '—' }}</em>
       </span>
-      <span class="hm-board__s">
-        {% set _p = ((s.joined or 0) * 100 / (s.cap or 8))|round|int %}
-        <span class="nv-bar hm-board__bar"><i style="width:{{ _p }}%"></i></span>
-        已报 <b>{{ s.joined }}</b>/{{ s.cap or '—' }}
-      </span>
-    </li>
+      <span class="nv-mono nv-mute">{{ s.dmName or '待安排' }}</span>
+    </div>
     {% endfor %}
-  </ol>
+  </div>
   {% else %}
-  <div class="nv-empty rv">
-    <p class="nv-empty__k">NO SESSION</p>
-    <h3>今天还没排场次</h3>
+  <div class="nv-blank rv">
+    <p class="nv-blank__k">No session today</p>
+    <b>今天还没排场次</b>
     <p>挑一本选好时间，我们给你开一场。人不够也不慌，拼车区喊一声就有人。</p>
-    <a class="nv-btn nv-btn--solid" href="{{ url_for('public.scripts') }}" data-curtain data-magnet>去挑本子 →</a>
+    <div class="nv-blank__act">
+      <a class="nv-btn nv-btn--solid" href="{{ url_for('public.scripts') }}" data-curtain data-magnet>去挑本子 →</a>
+      <a class="nv-btn nv-btn--ghost" href="{{ url_for('public.car') }}" data-curtain data-magnet>看拼车局</a>
+    </div>
   </div>
   {% endif %}
 </section>
 
-{# ==================== 02 · 本子墙 ==================== #}
-<section class="nv-wrap hm-sec">
-  <div class="nv-sechead rv">
-    <p class="nv-sechead__no">02</p>
-    <div class="nv-sechead__main">
-      <h2 class="nv-h2">架子上这些本，今晚都能开</h2>
-      <small>The Shelf · 热玩与刚到</small>
-    </div>
-  </div>
+{# ══════════════════ 02 · 架子上（原型 E 海报墙破格 + 原型 B 副列） ══════════════════ #}
+<section class="nv-wrap nv-chapter" id="nv-02">
+  <header class="nv-chapter__hd rv">
+    <span class="nv-chapter__no">02</span>
+    <h2 class="nv-chapter__t">架子上这些本，今晚都能开</h2>
+    <span class="nv-chapter__s">The Shelf · 热玩与刚到</span>
+  </header>
 
   {% if hotScripts or newScripts %}
-  <div class="nv-grid hm-shelf">
-    {% set _i = [] %}
-    {% for s in hotScripts[:4] %}
-    {% set _ = _i.append(1) %}
-    <article class="nv-card rv" data-d="{{ loop.index0 * 60 }}">
-      <a class="nv-card__cover" href="{{ url_for('public.script_detail', sid=s.id) }}"
+  {% set _all = (hotScripts[:4] + newScripts[:4]) %}
+  <div class="nv-plates nv-plates--home">
+    {% for s in _all %}
+    {% set _i = loop.index0 %}
+    <article class="nv-plate{% if _i == 0 %} nv-plate--wide{% elif _i == 5 %} nv-plate--tall{% endif %} rv" data-d="{{ _i * 55 }}">
+      <a class="nv-plate__cover" href="{{ url_for('public.script_detail', sid=s.id) }}"
          data-curtain data-cursor="view" data-cursor-label="看本" aria-label="{{ s.title }}">
         {% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}" loading="lazy">{% endif %}
-        <span class="nv-card__type">热玩</span>
-        <span class="nv-card__hint">打开剧本 →</span>
+        <span class="nv-plate__badge">{{ '热玩' if _i < (hotScripts[:4]|length) else '新本' }}</span>
+        <span class="nv-plate__hint">打开剧本 →</span>
       </a>
-      <div class="nv-card__body">
-        <h3 class="nv-card__title">{{ s.title }}</h3>
-        <p class="nv-card__meta">{{ s.players or '人数待定' }} · 难度 {{ s.diff or 3 }}/5</p>
-        <div class="nv-card__foot">
-          <span class="nv-card__price">¥{{ s.price|int }}<small> /人</small></span>
-          <span class="nv-tag">热度 {{ s.hot or 0 }}</span>
-        </div>
-      </div>
-    </article>
-    {% endfor %}
-    {% for s in newScripts[:4] %}
-    <article class="nv-card rv" data-d="{{ (loop.index0 + 4) * 60 }}">
-      <a class="nv-card__cover" href="{{ url_for('public.script_detail', sid=s.id) }}"
-         data-curtain data-cursor="view" data-cursor-label="看本" aria-label="{{ s.title }}">
-        {% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}" loading="lazy">{% endif %}
-        <span class="nv-card__type nv-card__type--new">新本</span>
-        <span class="nv-card__hint">打开剧本 →</span>
-      </a>
-      <div class="nv-card__body">
-        <h3 class="nv-card__title">{{ s.title }}</h3>
-        <p class="nv-card__meta">{{ s.players or '人数待定' }} · 难度 {{ s.diff or 3 }}/5</p>
-        <div class="nv-card__foot">
-          <span class="nv-card__price">¥{{ s.price|int }}<small> /人</small></span>
-          {% if s.onSale %}<span class="nv-tag nv-tag--accent">在售</span>{% endif %}
-        </div>
+      <div class="nv-plate__body">
+        <b>{{ s.title }}</b>
+        <em>{{ s.players or '人数待定' }} · 难度 {{ s.diff or 3 }}/5 · ¥{{ s.price|int }}/人</em>
       </div>
     </article>
     {% endfor %}
   </div>
 
-  <div class="hm-more rv">
-    <a class="nv-btn" href="{{ url_for('public.scripts') }}" data-curtain data-magnet data-cursor="view" data-cursor-label="全部">全部剧本，慢慢挑 →</a>
+  {# 副列：编号索引清单 —— 把"还没被翻到"的本子用清单体再列一遍 #}
+  {% if scripts %}
+  <div class="nv-home__sub">
+    <p class="nv-numhead"><i>Also on the shelf</i><b>顺便翻翻这几本</b></p>
+    <ol class="nv-index nv-index--pic">
+      {% for s in scripts[:5] %}
+      <li>
+        <a class="nv-index__a" href="{{ url_for('public.script_detail', sid=s.id) }}"
+           data-curtain data-cursor="view" data-cursor-label="看本">
+          <span class="nv-index__no">{{ '%02d'|format(loop.index) }}</span>
+          <span class="nv-index__pic">
+            {% if s.img %}<img src="{{ s.img }}" alt="" loading="lazy">
+            {% else %}{% with s = s %}{% include '_script_ph.html' %}{% endwith %}{% endif %}
+          </span>
+          <span class="nv-index__main">
+            <b>{{ s.title }}</b>
+            <em>{{ (s.tags or [])|join(' · ') or (s.players or '人数待定') }}</em>
+          </span>
+          <span class="nv-index__side">¥{{ s.price|int }}<br><b>{{ s.players or '—' }}</b></span>
+          <span class="nv-index__go">→</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ol>
   </div>
+  {% endif %}
+
+  <p class="nv-chapter__more rv">
+    <a class="nv-btn" href="{{ url_for('public.scripts') }}" data-curtain data-magnet
+       data-cursor="view" data-cursor-label="全部">全部剧本，慢慢挑 <i>→</i></a>
+  </p>
   {% else %}
-  <div class="nv-empty rv">
-    <p class="nv-empty__k">EMPTY SHELF</p>
-    <h3>架子还空着</h3>
+  <div class="nv-blank rv">
+    <p class="nv-blank__k">Empty shelf</p>
+    <b>架子还空着</b>
     <p>本子正在进货。过两天再来，或者先去唠嗑区看看大家在聊什么。</p>
-    <a class="nv-btn nv-btn--solid" href="{{ url_for('public.comm') }}" data-curtain data-magnet>去唠嗑区 →</a>
+    <div class="nv-blank__act">
+      <a class="nv-btn nv-btn--solid" href="{{ url_for('public.comm') }}" data-curtain data-magnet>去唠嗑区 →</a>
+    </div>
   </div>
   {% endif %}
 </section>
 
-{# ==================== 03 · 剧友怎么说 ==================== #}
+{# ══════════════════ 03 · 剧友怎么讲（原型 C 杂志式多栏正文） ══════════════════ #}
 {% if reviews %}
-<section class="nv-wrap hm-sec">
-  <div class="nv-sechead rv">
-    <p class="nv-sechead__no">03</p>
-    <div class="nv-sechead__main">
-      <h2 class="nv-h2">剧友怎么说</h2>
-      <small>Word of mouth · 真实短评</small>
+<section class="nv-wrap nv-chapter" id="nv-03">
+  <header class="nv-chapter__hd rv">
+    <span class="nv-chapter__no">03</span>
+    <h2 class="nv-chapter__t">剧友怎么说</h2>
+    <span class="nv-chapter__s">Word of mouth · 真实短评</span>
+  </header>
+
+  {% set _r0 = reviews[0] %}
+  <div class="nv-press">
+    <div class="nv-press__lead rv">
+      <p class="nv-press__lede">第一次来是被同学拖来的，本以为是坐一晚上听人念台词。结果三个人哭两个笑一个，
+        散场还站在门口聊了四十分钟。这里最贵的东西是那张桌子 —— 上面坐下来的人对了，
+        本子就活了。</p>
+      <blockquote class="nv-pull">
+        {{ _r0.text }}
+        <cite>{{ _r0.nick }} · {{ _r0.title or '本店玩家' }} · {{ _r0.stars }} 星</cite>
+      </blockquote>
+    </div>
+
+    <div class="nv-press__side">
+      {% for r in reviews[1:5] %}
+      <figure class="nv-press__item rv" data-d="{{ loop.index0 * 55 }}">
+        <p>「{{ r.text }}」</p>
+        <figcaption>
+          <span>{{ r.nick }}</span>
+          <span class="nv-stars" aria-label="{{ r.stars }} 星">{% for _ in range(r.stars|int) %}★{% endfor %}</span>
+          <em>{{ r.title or '本店玩家' }}</em>
+        </figcaption>
+      </figure>
+      {% endfor %}
     </div>
   </div>
-
-  <figure class="hm-quote rv">
-    <span class="hm-quote__mark" aria-hidden="true">“</span>
-    <blockquote class="hm-quote__t">{{ reviews[0].text }}</blockquote>
-    <figcaption class="hm-quote__who">
-      <span class="hm-quote__nick">{{ reviews[0].nick }}</span>
-      <span class="nv-mute">{{ reviews[0].title or '本店玩家' }}</span>
-      <span class="hm-stars" aria-label="{{ reviews[0].stars }} 星">{% for _ in range(reviews[0].stars|int) %}★{% endfor %}</span>
-    </figcaption>
-  </figure>
-
-  {% if reviews|length > 1 %}
-  <div class="hm-quotes">
-    {% for r in reviews[1:7] %}
-    <figure class="hm-mini rv" data-d="{{ loop.index0 * 55 }}">
-      <p>「{{ r.text }}」</p>
-      <figcaption>
-        <span>{{ r.nick }}</span>
-        <span class="nv-mute">{{ r.title or '本店玩家' }}</span>
-        <span class="hm-stars" aria-label="{{ r.stars }} 星">{% for _ in range(r.stars|int) %}★{% endfor %}</span>
-      </figcaption>
-    </figure>
-    {% endfor %}
-  </div>
-  {% endif %}
 </section>
 {% endif %}
 
-{# ==================== 04 · 正在发车的局 ==================== #}
-<section class="nv-wrap hm-sec">
-  <div class="nv-sechead rv">
-    <p class="nv-sechead__no">04</p>
-    <div class="nv-sechead__main">
-      <h2 class="nv-h2">正在发车的局</h2>
-      <small>Carpool · 差一个就开</small>
-    </div>
-  </div>
+{# ══════════════════ 04 · 正在发车的局（原型 B 编号索引清单） ══════════════════ #}
+<section class="nv-wrap nv-chapter" id="nv-04">
+  <header class="nv-chapter__hd rv">
+    <span class="nv-chapter__no">04</span>
+    <h2 class="nv-chapter__t">正在发车的局</h2>
+    <span class="nv-chapter__s">Carpool · 差一个就开</span>
+  </header>
 
   {% if cars %}
-  <div class="hm-cars">
+  <ol class="nv-index nv-index--car">
     {% for c in cars %}
-    <article class="hm-car rv" data-d="{{ loop.index0 * 70 }}">
-      <div class="hm-car__top">
-        <span class="nv-mono">{{ c.day }} {{ c.time }}</span>
-        {% if c.full %}<span class="nv-tag nv-tag--seal">满员</span>
-        {% elif c.need %}<span class="nv-tag nv-tag--accent">还差 {{ c.need }} 人</span>
-        {% else %}<span class="nv-tag">已成局</span>{% endif %}
-      </div>
-      <h3 class="hm-car__t">{{ c.title }}</h3>
-      <p class="hm-car__m">车主 {{ c.owner }} · <b>{{ c.joined }}</b>/{{ c.cap }} 人</p>
-      {% set _cp = ((c.joined or 0) * 100 / (c.cap or 8))|round|int %}
-      <span class="nv-bar hm-car__bar"><i style="width:{{ _cp }}%"></i></span>
-      <a class="nv-btn nv-btn--sm nv-btn--ghost hm-car__go"
-         href="{{ url_for('public.car_detail', cid=c.id) }}" data-curtain data-cursor="view" data-cursor-label="上车">进车队 →</a>
-    </article>
+    <li>
+      <a class="nv-index__a rv" data-d="{{ loop.index0 * 70 }}"
+         href="{{ url_for('public.car_detail', cid=c.id) }}"
+         data-curtain data-cursor="view" data-cursor-label="上车">
+        <span class="nv-index__no">{{ '%02d'|format(loop.index) }}</span>
+        <span class="nv-index__main">
+          <b>{{ c.title }}</b>
+          <em>车主 {{ c.owner }} · {{ c.day }} {{ c.time }}</em>
+        </span>
+        <span class="nv-index__side">
+          {{ c.joined }}/{{ c.cap }} 人
+          {% if c.full %}<br><b class="nv-seal-t">已满</b>
+          {% elif c.need %}<br><b>还差 {{ c.need }}</b>
+          {% else %}<br><b>已成局</b>{% endif %}
+        </span>
+        <span class="nv-index__go">→</span>
+      </a>
+    </li>
     {% endfor %}
-  </div>
-  <div class="hm-more rv">
+  </ol>
+  <p class="nv-chapter__more rv">
     <a class="nv-btn" href="{{ url_for('public.car') }}" data-curtain data-magnet>拼车大厅 →</a>
-  </div>
+  </p>
   {% else %}
-  <div class="nv-empty rv">
-    <p class="nv-empty__k">NO CAR</p>
-    <h3>还没人发车</h3>
+  <div class="nv-blank rv">
+    <p class="nv-blank__k">No car yet</p>
+    <b>还没人发车</b>
     <p>不如你来开个头？发一个局，满员就开，不用一个人凑人头。</p>
-    <a class="nv-btn nv-btn--solid" href="{{ url_for('public.car') }}" data-curtain data-magnet>去发个局 →</a>
+    <div class="nv-blank__act">
+      <a class="nv-btn nv-btn--solid" href="{{ url_for('public.car') }}" data-curtain data-magnet>去发个局 →</a>
+    </div>
   </div>
   {% endif %}
 </section>
 
-{# ==================== 05 · 进站 ==================== #}
-<section class="nv-wrap hm-sec hm-enter">
-  <div class="nv-sechead rv">
-    <p class="nv-sechead__no">05</p>
-    <div class="nv-sechead__main">
-      <h2 class="nv-h2">好本子只演一次</h2>
-      <small>Enter · 挑一条路走</small>
-    </div>
-  </div>
+{# ══════════════════ 05 · 进站（原型 B 巨型序号版） ══════════════════ #}
+<section class="nv-wrap nv-chapter nv-gate" id="nv-05">
+  <header class="nv-chapter__hd rv">
+    <span class="nv-chapter__no">05</span>
+    <h2 class="nv-chapter__t">好本子只演一次</h2>
+    <span class="nv-chapter__s">Enter · 挑一条路走</span>
+  </header>
 
-  <div class="hm-enter__grid">
-    <a class="hm-link rv" data-d="0" href="{{ url_for('public.scripts') }}" data-curtain data-cursor="view" data-cursor-label="进入">
-      <span class="hm-link__n nv-mono">01</span>
-      <span class="hm-link__l">剧本库</span>
-      <span class="hm-link__d">按类型 / 人数 / 难度，挑一本今晚的本子</span>
+  <div class="nv-gate__list">
+    <a class="nv-gate__row rv" data-d="0" href="{{ url_for('public.scripts') }}" data-curtain data-cursor="view" data-cursor-label="进入">
+      <span class="nv-gate__no nv-mono">01</span>
+      <span class="nv-gate__l">剧本库</span>
+      <span class="nv-gate__d">按类型 / 人数 / 难度，挑一本今晚的本子</span>
+      <span class="nv-gate__go">→</span>
     </a>
-    <a class="hm-link rv" data-d="70" href="{{ url_for('public.car') }}" data-curtain data-cursor="view" data-cursor-label="进入">
-      <span class="hm-link__n nv-mono">02</span>
-      <span class="hm-link__l">拼车大厅</span>
-      <span class="hm-link__d">找搭子一起开本，人满就发车</span>
+    <a class="nv-gate__row rv" data-d="70" href="{{ url_for('public.car') }}" data-curtain data-cursor="view" data-cursor-label="进入">
+      <span class="nv-gate__no nv-mono">02</span>
+      <span class="nv-gate__l">拼车大厅</span>
+      <span class="nv-gate__d">找搭子一起开本，人满就发车</span>
+      <span class="nv-gate__go">→</span>
     </a>
-    <a class="hm-link rv" data-d="140" href="{{ url_for('public.comm') }}" data-curtain data-cursor="view" data-cursor-label="进入">
-      <span class="hm-link__n nv-mono">03</span>
-      <span class="hm-link__l">玩家社区</span>
-      <span class="hm-link__d">动态、攻略、组队，看看别人在玩什么</span>
+    <a class="nv-gate__row rv" data-d="140" href="{{ url_for('public.comm') }}" data-curtain data-cursor="view" data-cursor-label="进入">
+      <span class="nv-gate__no nv-mono">03</span>
+      <span class="nv-gate__l">玩家社区</span>
+      <span class="nv-gate__d">动态、攻略、组队，看看别人在玩什么</span>
+      <span class="nv-gate__go">→</span>
     </a>
-    <a class="hm-link rv" data-d="210" href="{% if my_dm %}{{ url_for('dm.index') }}{% else %}{{ url_for('user.me') }}{% endif %}" data-curtain data-cursor="view" data-cursor-label="进入">
-      <span class="hm-link__n nv-mono">04</span>
-      <span class="hm-link__l">{% if my_dm %}DM 工作台{% else %}我的主页{% endif %}</span>
-      <span class="hm-link__d">{% if my_dm %}带本、练本、结算，一处管全{% else %}订单、定金、券和消息，一处看全{% endif %}</span>
+    <a class="nv-gate__row rv" data-d="210"
+       href="{% if my_dm %}{{ url_for('dm.index') }}{% else %}{{ url_for('user.me') }}{% endif %}"
+       data-curtain data-cursor="view" data-cursor-label="进入">
+      <span class="nv-gate__no nv-mono">04</span>
+      <span class="nv-gate__l">{% if my_dm %}DM 工作台{% else %}我的主页{% endif %}</span>
+      <span class="nv-gate__d">{% if my_dm %}带本、练本、结算，一处管全{% else %}订单、定金、券和消息，一处看全{% endif %}</span>
+      <span class="nv-gate__go">→</span>
     </a>
+  </div>
+</section>
+
+{# ══════════════════ 收束：一句题词 + 出发 ══════════════════ #}
+<section class="nv-wrap nv-coda rv">
+  <p class="nv-coda__q">剧本杀这事儿，说到底就是把一群人的两个钟头，<br>换成另一个人的人生。</p>
+  <div class="nv-coda__act">
+    <a class="nv-btn nv-btn--accent" href="{{ url_for('public.scripts') }}" data-curtain data-magnet data-cursor="view" data-cursor-label="挑本">挑一本，今晚就开 <i>→</i></a>
+    <a class="nv-btn nv-btn--ghost" href="{{ url_for('public.faq') }}" data-curtain data-magnet>第一次来？先看答疑</a>
   </div>
 </section>
 

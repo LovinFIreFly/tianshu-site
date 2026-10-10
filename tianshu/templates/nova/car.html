@@ -1,123 +1,157 @@
 {% extends 'layout.html' %}
 {% block title %}拼车局 · {{ settings.shopName }}{% endblock %}
-{# NOVA 拼车局：编辑式页头 + 筛选条 + 卡片流。字段/action 与二代一致。 #}
+{# NOVA 拼车局（第三轮）：
+   版式 = 编辑式导读页头 + **左侧筛选侧栏 / 右侧车队清单**（原型 B + F）。
+   与上一版的差别：卡片流 → **一行一车的清单体**（时间列 / 车上信息 / 动作），
+   筛选从顶部工具条搬到左侧 sticky 侧栏，滚动看车时筛选常在。
+   字段 / action 与二代一致，未改。 #}
 {% block body %}
 
-<section class="nv-head">
-  <div class="nv-wrap nv-head__grid">
-    <div>
-      <p class="nv-kick nv-head__k rv">拼车局 · Share a Table</p>
-      <h1 class="nv-h1 rv" data-d="60" style="font-size:clamp(38px,7vw,96px)">拼车局</h1>
-      <p class="nv-head__lead rv" data-d="120">同一本、同一时段凑一车。<b>人齐发车</b>；满了还能蹲候补，有人跳车就先喊你。</p>
+<header class="nv-lead-hd">
+  <div class="nv-wrap">
+    <p class="nv-lead-hd__k">拼车局 · Share a Table</p>
+    <div class="nv-lead-hd__row">
+      <div>
+        <h1 class="nv-lead-hd__t">拼车局</h1>
+        <p class="nv-lead-hd__d">
+          同一本、同一时段凑一车。<b>人齐发车</b>；满了还能蹲候补，有人跳车就先喊你。
+        </p>
+      </div>
+      <dl class="nv-lead-hd__m">
+        <div><dt>正在发车</dt><dd>{{ cars|length }}</dd></div>
+        <div><dt>时段</dt><dd>{{ time or '全部' }}</dd></div>
+        <div><dt>难度</dt><dd>{{ (diff ~ '/5') if diff else '全部' }}</dd></div>
+      </dl>
     </div>
-    <span class="nv-head__seal rv" data-d="160">发车</span>
   </div>
-</section>
+</header>
 
 <div class="nv-wrap">
-  <form class="rv" method="get" action="{{ url_for('public.car') }}"
-        style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:var(--nv-s4) 0;border-bottom:var(--nv-hair)">
-    <input name="q" value="{{ q or '' }}" placeholder="搜剧本名" aria-label="剧本名"
-           style="flex:1;min-width:140px;padding:10px 12px;border:1px solid var(--nv-line-2);background:var(--nv-paper);color:var(--nv-ink);border-radius:0;outline:none">
-    <input name="players" value="{{ players or '' }}" placeholder="至少几人" aria-label="人数"
-           style="max-width:120px;padding:10px 12px;border:1px solid var(--nv-line-2);background:var(--nv-paper);color:var(--nv-ink);border-radius:0;outline:none">
-    <select name="time" aria-label="时段" style="padding:10px 12px;border:1px solid var(--nv-line-2);background:var(--nv-paper);color:var(--nv-ink);border-radius:0;outline:none">
-      <option value="">全部时段</option>
-      {% for t_opt in ['上午', '下午', '晚上'] %}<option value="{{ t_opt }}" {{ 'selected' if (time or '') == t_opt }}>{{ t_opt }}</option>{% endfor %}
-    </select>
-    <select name="diff" aria-label="难度" style="padding:10px 12px;border:1px solid var(--nv-line-2);background:var(--nv-paper);color:var(--nv-ink);border-radius:0;outline:none">
-      <option value="">全部难度</option>
-      {% for d_opt in [1,2,3,4,5] %}<option value="{{ d_opt }}" {{ 'selected' if (diff or '')|string == d_opt|string }}>{{ d_opt }}/5</option>{% endfor %}
-    </select>
-    <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">筛选</button>
-    {% if q or players or time or diff %}<a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('public.car') }}">重置</a>{% endif %}
-  </form>
+  <div class="nv-cars">
 
-  <div class="nv-toolbar">
-    <span class="nv-mono" style="color:var(--nv-ink-3)">正在发车的局 · {{ cars|length }}</span>
-    <a class="nv-btn nv-btn--solid nv-btn--sm" href="{{ url_for('public.scripts') }}">我要发车</a>
-  </div>
-
-  {% if cars %}
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:var(--nv-s3);padding:var(--nv-s4) 0 0">
-    {% for c in cars %}
-    <article class="nv-car rv" data-d="{{ loop.index0 * 40 }}">
-      <div class="nv-car__top">
-        <span class="nv-car__when">{{ c.day }} {{ c.time }}</span>
-        {% if c.closed %}<span class="nv-tag">已截止</span>
-        {% elif c.filled %}<span class="nv-tag">补满发车</span>
-        {% elif c.full %}<span class="nv-tag nv-tag--seal">已满锁车</span>
-        {% elif c.need %}<span class="nv-tag nv-tag--accent">差 {{ c.need }}！</span>
-        {% else %}<span class="nv-tag">人齐发车</span>{% endif %}
-      </div>
-      <div class="nv-car__body">
-        <h3 class="nv-car__title">{{ c.title }}</h3>
-        {% if not c.closed and not c.filled and c.deadlineIn and c.deadlineIn > 0 %}
-        <p class="nv-mono" style="margin:0;color:var(--nv-accent)">剩 {{ (c.deadlineIn / 3600000)|round(method='ceil')|int }} 小时{% if c.need %} · 还差 {{ c.need }} 人{% endif %}</p>
-        {% elif c.need %}
-        <p class="nv-mono" style="margin:0;color:var(--nv-ink-3)">还差 {{ c.need }} 人</p>
-        {% endif %}
-        {% if c.likeMind %}<p style="margin:0;font-size:12.5px;color:var(--nv-accent)">有和你口味相近的玩家在车上</p>{% endif %}
-
-        <p class="nv-car__meta">
-          <span>车主 <b>{{ c.owner }}</b></span>
-          <span><b>{{ c.joined }}</b>/{{ c.cap }} 人</span>
-          {% if c.reserved %}<span>熟人留位 <b>{{ c.reserved }}</b></span>{% endif %}
-        </p>
-        {% if c.tags %}<div class="nv-car__people">{% for t in c.tags %}<i>{{ t }}</i>{% endfor %}</div>{% endif %}
-        <div class="nv-bar"><i style="width:{{ (c.joined * 100 / (c.cap or 8))|round|int }}%"></i></div>
-
-        <div class="nv-car__foot">
-          <a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('public.car_detail', cid=c.id) }}" data-curtain data-cursor="view" data-cursor-label="上车">进车队 →</a>
-          {% if not me %}
-            <a class="nv-btn nv-btn--sm nv-btn--solid" href="{{ url_for('user.login', next=request.path) }}">上车登记后上车</a>
-          {% elif c.mine %}
-            <span class="nv-tag">你在这车上</span>
-            {% if not c.owner == (me.username) %}
-            <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='quit') }}">
-              <button class="nv-btn nv-btn--sm nv-btn--ghost" type="submit">下车</button></form>
-            {% endif %}
-          {% elif c.full %}
-            <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='wait') }}">
-              <button class="nv-btn nv-btn--sm" type="submit">蹲候补</button></form>
-          {% else %}
-            <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='join') }}">
-              <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">上车</button></form>
+    {# ── 左：筛选侧栏（sticky） ── #}
+    <aside class="nv-cars__side">
+      <p class="nv-sidehead">筛车</p>
+      <form class="nv-cars__form" method="get" action="{{ url_for('public.car') }}">
+        <label class="nv-field nv-field--box">
+          <span>剧本名</span>
+          <input name="q" value="{{ q or '' }}" placeholder="搜剧本名" aria-label="剧本名">
+        </label>
+        <label class="nv-field nv-field--box">
+          <span>至少几人能开</span>
+          <input name="players" value="{{ players or '' }}" placeholder="例：6" aria-label="人数">
+        </label>
+        <label class="nv-field nv-field--box">
+          <span>时段</span>
+          <select name="time" aria-label="时段">
+            <option value="">全部时段</option>
+            {% for t_opt in ['上午', '下午', '晚上'] %}<option value="{{ t_opt }}" {{ 'selected' if (time or '') == t_opt }}>{{ t_opt }}</option>{% endfor %}
+          </select>
+        </label>
+        <label class="nv-field nv-field--box">
+          <span>难度</span>
+          <select name="diff" aria-label="难度">
+            <option value="">全部难度</option>
+            {% for d_opt in [1,2,3,4,5] %}<option value="{{ d_opt }}" {{ 'selected' if (diff or '')|string == d_opt|string }}>{{ d_opt }}/5</option>{% endfor %}
+          </select>
+        </label>
+        <div class="nv-inline">
+          <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">筛一下</button>
+          {% if q or players or time or diff %}
+          <a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('public.car') }}">重置</a>
           {% endif %}
         </div>
+      </form>
+      <a class="nv-btn nv-btn--sm nv-btn--block" style="margin-top:var(--nv-s3)"
+         href="{{ url_for('public.scripts') }}">我要发车 →</a>
+      {% if tags %}
+      <details class="nv-fold">
+        <summary>车队标签是啥</summary>
+        <div class="nv-tags" style="margin-top:12px">{% for t in tags %}<span class="nv-tag">{{ t }}</span>{% endfor %}</div>
+        <p class="nv-mute" style="font-size:12.5px;margin-top:12px">车主开单时能选这些标签，标明这车是什么风格。</p>
+      </details>
+      {% endif %}
+    </aside>
 
-        <details>
-          <summary class="nv-mono" style="cursor:pointer;color:var(--nv-ink-3)">车上的人（{{ c.members|length }}）</summary>
-          <div class="nv-car__people" style="margin-top:10px">
-            {% for m in c.members %}
-            <i>{{ m.nick }}{% if m.owner %} · 车主{% endif %}{% if m.gender %} · {{ m.gender }}{% endif %}{% if m.ageBucket %} · {{ m.ageBucket }}{% endif %}</i>
-            {% endfor %}
-          </div>
-          <p class="nv-mute" style="font-size:12.5px;margin-top:10px">车上只露昵称、性别、年龄段，电话看不到，保护隐私。</p>
-        </details>
+    {# ── 右：车队清单 ── #}
+    <div>
+      <div class="nv-toolbar" style="padding-top:0">
+        <span class="nv-mono" style="color:var(--nv-ink-3)">正在发车的局 · {{ cars|length }}</span>
+        <span class="nv-st {{ 'nv-st--on' if cars else 'nv-st--off' }}">{{ '可以上车' if cars else '暂时空场' }}</span>
       </div>
-    </article>
-    {% endfor %}
-  </div>
-  {% else %}
-  <div class="nv-empty rv" style="margin-top:var(--nv-s5)">
-    <p class="nv-empty__k">No Cars</p>
-    <h3>还没人发车</h3>
-    <p>还没人发车，不如你来开个头？去本本墙挑本，玩法选<b>拼车</b>就发车。</p>
-    <div style="display:flex;gap:12px;flex-wrap:wrap">
-      <a class="nv-btn nv-btn--solid" href="{{ url_for('public.scripts') }}" data-curtain data-magnet>去挑个本子</a>
-      <a class="nv-btn" href="{{ url_for('public.comm') }}" data-curtain data-magnet>去唠嗑区问问</a>
+
+      {% if cars %}
+      <div class="nv-cars__list">
+        {% for c in cars %}
+        <article class="nv-cars__row" data-d="{{ loop.index0 * 40 }}">
+          <div class="nv-cars__when">
+            {{ c.day }}
+            <span>{{ c.time }} 开场</span>
+          </div>
+
+          <div class="nv-cars__mid">
+            <b><a href="{{ url_for('public.car_detail', cid=c.id) }}">{{ c.title }}</a></b>
+            <div class="nv-cars__meta">
+              {% if c.closed %}<span class="nv-st nv-st--off">已截止</span>
+              {% elif c.filled %}<span class="nv-st nv-st--on">补满发车</span>
+              {% elif c.full %}<span class="nv-st nv-st--warn">已满锁车</span>
+              {% elif c.need %}<span class="nv-st nv-st--warn">差 {{ c.need }} 人</span>
+              {% else %}<span class="nv-st nv-st--on">人齐发车</span>{% endif %}
+              <span>车主 <b>{{ c.owner }}</b></span>
+              <span><b>{{ c.joined }}</b>/{{ c.cap }} 人{% if c.reserved %} · 熟人留位 <b>{{ c.reserved }}</b>{% endif %}</span>
+              {% if not c.closed and not c.filled and c.deadlineIn and c.deadlineIn > 0 %}
+              <span style="color:var(--nv-accent)">剩 <b style="color:var(--nv-accent)">{{ (c.deadlineIn / 3600000)|round(method='ceil')|int }}</b> 小时</span>
+              {% endif %}
+              {% if c.likeMind %}<span style="color:var(--nv-accent)">口味相近的玩家在车上</span>{% endif %}
+            </div>
+            {% if c.tags %}<div class="nv-tags">{% for t in c.tags %}<span class="nv-tag">{{ t }}</span>{% endfor %}</div>{% endif %}
+            <div class="nv-bar" style="max-width:280px"><i style="width:{{ (c.joined * 100 / (c.cap or 8))|round|int }}%"></i></div>
+            <details style="margin-top:4px">
+              <summary class="nv-mono" style="cursor:pointer;color:var(--nv-ink-3);font-size:11.5px">车上的人（{{ c.members|length }}）</summary>
+              <div class="nv-car__people" style="margin-top:10px">
+                {% for m in c.members %}
+                <i>{{ m.nick }}{% if m.owner %} · 车主{% endif %}{% if m.gender %} · {{ m.gender }}{% endif %}{% if m.ageBucket %} · {{ m.ageBucket }}{% endif %}</i>
+                {% endfor %}
+              </div>
+              <p class="nv-mute" style="font-size:12.5px;margin-top:10px">车上只露昵称、性别、年龄段，电话看不到，保护隐私。</p>
+            </details>
+          </div>
+
+          <div class="nv-cars__right">
+            <a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('public.car_detail', cid=c.id) }}"
+               data-curtain data-cursor="view" data-cursor-label="上车">进车队 →</a>
+            {% if not me %}
+              <a class="nv-btn nv-btn--sm nv-btn--solid" href="{{ url_for('user.login', next=request.path) }}">登记后上车</a>
+            {% elif c.mine %}
+              <span class="nv-st nv-st--on">你在这车上</span>
+              {% if not c.owner == (me.username) %}
+              <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='quit') }}">
+                <button class="nv-btn nv-btn--sm nv-btn--ghost" type="submit">下车</button></form>
+              {% endif %}
+            {% elif c.full %}
+              <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='wait') }}">
+                <button class="nv-btn nv-btn--sm" type="submit">蹲候补</button></form>
+            {% else %}
+              <form method="post" action="{{ url_for('user.car_act', cid=c.id, action='join') }}">
+                <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">上车</button></form>
+            {% endif %}
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="nv-blank" style="margin-top:var(--nv-s4)">
+        <p class="nv-blank__k">No Cars Running</p>
+        <b>还没人发车</b>
+        <p>还没人发车，不如你来开个头？去本本墙挑本，玩法选<b>拼车</b>就发车。</p>
+        <div class="nv-blank__act">
+          <a class="nv-btn nv-btn--solid" href="{{ url_for('public.scripts') }}" data-curtain data-magnet>去挑个本子</a>
+          <a class="nv-btn" href="{{ url_for('public.comm') }}" data-curtain data-magnet>去唠嗑区问问</a>
+        </div>
+      </div>
+      {% endif %}
     </div>
   </div>
-  {% endif %}
-
-  {% if tags %}
-  <details class="rv" style="margin:var(--nv-s5) 0 var(--nv-s7)">
-    <summary class="nv-mono" style="cursor:pointer;color:var(--nv-ink-3)">车队标签是啥</summary>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">{% for t in tags %}<span class="nv-tag">{{ t }}</span>{% endfor %}</div>
-    <p class="nv-mute" style="font-size:13px;margin-top:12px">车主开单时能选这些标签，标明这车是什么风格，方便大家判断合不合得来。</p>
-  </details>
-  {% endif %}
 </div>
 
 {% endblock %}

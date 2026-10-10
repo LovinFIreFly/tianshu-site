@@ -4,7 +4,7 @@
    DM 额外列出可开本。 #}
 {% block body %}
 
-<section class="nv-profhd">
+<header class="nv-profhd">
   <div class="nv-wrap">
     <p class="nv-kicker">玩家主页 · Profile</p>
     <div class="nv-profhd__grid">
@@ -33,13 +33,16 @@
       </div>
     </div>
   </div>
-</section>
+</header>
 
 <div class="nv-wrap">
 
   {% if role_name == 'dm' %}
   <section class="nv-profable">
-    <h2 class="nv-sechead"><i>01</i>可开本</h2>
+    <div class="nv-chapter__hd" style="padding-top:0">
+      <span class="nv-chapter__no">01</span>
+      <h2 class="nv-chapter__t">可开本</h2>
+    </div>
     <div class="nv-tags">
       {% for s in scripts %}{% if who.username in (s.dms or []) %}<span class="nv-tag">{{ s.title }}</span>{% endif %}
       {% else %}<span class="nv-muted">还没登记可开的本</span>{% endfor %}
@@ -48,7 +51,11 @@
   {% endif %}
 
   <section class="nv-profrevs">
-    <h2 class="nv-sechead"><i>{{ '02' if role_name == 'dm' else '01' }}</i>TA 写过的评价<span class="nv-sechead__n">{{ reviews|length }}</span></h2>
+    <div class="nv-chapter__hd" style="padding-top:0">
+      <span class="nv-chapter__no">{{ '02' if role_name == 'dm' else '01' }}</span>
+      <h2 class="nv-chapter__t">TA 写过的评价</h2>
+      <span class="nv-chapter__s">{{ reviews|length }} 条</span>
+    </div>
 
     {% for r in reviews %}
     <article class="nv-rev rv" style="--i:{{ loop.index0 }}">
@@ -71,9 +78,9 @@
       {% endfor %}{% endif %}
     </article>
     {% else %}
-    <div class="nv-empty">
-      <p class="nv-empty__k">Empty</p>
-      <h3>还没写过评价</h3>
+    <div class="nv-blank">
+      <p class="nv-blank__k">Empty</p>
+      <b>还没写过评价</b>
       <p>玩完一场、核销到店之后就能给这本打分写两句。</p>
     </div>
     {% endfor %}

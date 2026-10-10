@@ -5,34 +5,42 @@
 {% block body %}
 {% set TYPE_NAME = {'chat': '动态', 'diary': '日记', 'guide': '攻略', 'ask': '组队'} %}
 
-<section class="nv-head">
-  <div class="nv-wrap nv-head__grid">
-    <div>
-      <p class="nv-kick nv-head__k rv">唠嗑区 · Community</p>
-      <h1 class="nv-h1 rv" data-d="60" style="font-size:clamp(38px,7vw,96px)">唠嗑区</h1>
-      <p class="nv-head__lead rv" data-d="120">动态、日记、攻略、组队。剧透记得标，被举报就删。</p>
+<header class="nv-lead-hd">
+  <div class="nv-wrap">
+    <p class="nv-lead-hd__k">唠嗑区 · Community</p>
+    <div class="nv-lead-hd__row">
+      <div>
+        <h1 class="nv-lead-hd__t">唠嗑区</h1>
+        <p class="nv-lead-hd__d">
+          动态、日记、攻略、组队。剧透记得标，被举报就删。<b>楼上聊本，楼下发帖。</b>
+        </p>
+      </div>
+      <dl class="nv-lead-hd__m">
+        <div><dt>帖子</dt><dd>{{ posts|length }}</dd></div>
+        <div><dt>类型</dt><dd>{{ counts|length if counts else 4 }}</dd></div>
+        <div><dt>当前</dt><dd>{{ TYPE_NAME.get(t, '全部') }}</dd></div>
+      </dl>
     </div>
   </div>
-</section>
+</header>
 
 <div class="nv-wrap">
-  <form class="rv" method="get" action="{{ url_for('public.comm') }}"
-        style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:var(--nv-s4) 0;border-bottom:var(--nv-hair)">
-    <select name="type" aria-label="帖子类型" style="padding:10px 12px;border:1px solid var(--nv-line-2);background:var(--nv-paper);color:var(--nv-ink);border-radius:0;outline:none">
-      <option value="">全部帖子</option>
-      <option value="chat" {{ 'selected' if (ftype or '') == 'chat' }}>普通动态</option>
-      <option value="recruit" {{ 'selected' if (ftype or '') == 'recruit' }}>缺位招募</option>
-    </select>
-    <select name="topic" aria-label="话题" style="padding:10px 12px;border:1px solid var(--nv-line-2);background:var(--nv-paper);color:var(--nv-ink);border-radius:0;outline:none">
-      <option value="">全部话题</option>
-      {% for tp in ['情感','硬核','恐怖','欢乐'] %}<option value="{{ tp }}" {{ 'selected' if (ftopic or '') == tp }}>{{ tp }}</option>{% endfor %}
-    </select>
-    <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">筛选</button>
-    {% if ftype or ftopic %}<a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('public.comm') }}">重置</a>{% endif %}
-  </form>
-
-  <div class="nv-toolbar">
-    <div class="nv-chips" data-filter="type">
+  <div class="nv-filters">
+    <form class="nv-filters__line" method="get" action="{{ url_for('public.comm') }}">
+      <span class="nv-chips__lab">筛帖</span>
+      <select name="type" aria-label="帖子类型">
+        <option value="">全部帖子</option>
+        <option value="chat" {{ 'selected' if (ftype or '') == 'chat' }}>普通动态</option>
+        <option value="recruit" {{ 'selected' if (ftype or '') == 'recruit' }}>缺位招募</option>
+      </select>
+      <select name="topic" aria-label="话题">
+        <option value="">全部话题</option>
+        {% for tp in ['情感','硬核','恐怖','欢乐'] %}<option value="{{ tp }}" {{ 'selected' if (ftopic or '') == tp }}>{{ tp }}</option>{% endfor %}
+      </select>
+      <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">筛一下</button>
+      {% if ftype or ftopic %}<a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('public.comm') }}">重置</a>{% endif %}
+    </form>
+    <div class="nv-filters__line nv-chips" data-filter="type">
       <span class="nv-chips__lab">类型</span>
       <button type="button" class="nv-chip {{ 'on' if not t }}" data-show="all">全部</button>
       {% for k, n in TYPE_NAME.items() %}
@@ -41,29 +49,27 @@
     </div>
   </div>
 
-  <div class="nv-split" style="padding:var(--nv-s4) 0 clamp(48px,7vw,90px)">
+  <div class="nv-forum">
 
     {# —— 左：帖子流 —— #}
     <div>
+      <div class="nv-threads">
       {% for p in posts %}
-      <article class="nv-post rv" data-type="{{ p.type or 'chat' }}" style="margin-bottom:var(--nv-s3)">
-        <div class="nv-post__who">
-          <span class="av" style="display:grid;place-items:center;width:32px;height:32px;background:var(--nv-paper-3);overflow:hidden">
-            {% if p.avatar and p.avatar.startswith('/img/') %}<img src="{{ p.avatar }}" alt="" style="width:100%;height:100%;object-fit:cover">
+      <article class="nv-thread rv" data-type="{{ p.type or 'chat' }}">
+        <div class="nv-thread__k">
+          <span class="nv-av nv-av--sm" aria-hidden="true">
+            {% if p.avatar and p.avatar.startswith('/img/') %}<img src="{{ p.avatar }}" alt="">
             {% else %}{{ p.avatar or (p.nick or p.username or '玩家')[0] }}{% endif %}</span>
           <b>{{ p.nick or p.username or '玩家' }}</b>
-          <span>{{ day_label(p.at) }}</span>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          {% if p.title %}<span class="nv-tag" style="color:var(--nv-ink);border-color:var(--nv-ink)">{{ p.title }}</span>{% endif %}
+          <em>{{ day_label(p.at) }}</em>
           <span class="nv-tag">{{ TYPE_NAME.get(p.type, '动态') }}</span>
           {% if p.postType == 'recruit' %}
           <span class="nv-tag nv-tag--accent">缺 {{ p.recruitNeed or '?' }} 人{% if p.topic %} · {{ p.topic }}{% endif %}{% if p.recruitRole %} · {{ p.recruitRole }}{% endif %}</span>
-          {% endif %}
-          {% if p.topic and p.postType != 'recruit' %}<span class="nv-tag">{{ p.topic }}</span>{% endif %}
+          {% elif p.topic %}<span class="nv-tag">{{ p.topic }}</span>{% endif %}
         </div>
-        <p class="nv-post__x">{{ p.text }}</p>
-        <div class="nv-post__foot">
+        {% if p.title %}<h3 class="nv-thread__t">{{ p.title }}</h3>{% endif %}
+        <p class="nv-thread__x">{{ p.text }}</p>
+        <div class="nv-thread__f">
           <form method="post" action="{{ url_for('public.post_like', pid=p.id) }}">
             <button class="nv-likes" type="submit">{{ '❤' if p.liked else '♡' }} {{ p.likeCount }}</button>
           </form>
@@ -80,12 +86,13 @@
         </div>
       </article>
       {% else %}
-      <div class="nv-empty">
-        <p class="nv-empty__k">No Posts</p>
-        <h3>还没人唠嗑</h3>
+      <div class="nv-blank" style="margin-top:var(--nv-s4)">
+        <p class="nv-blank__k">No Posts</p>
+        <b>还没人唠嗑</b>
         <p>你可以第一个来：想拼的本、上局战报、新手攻略都行。</p>
       </div>
       {% endfor %}
+      </div>
       <div class="no-hit" hidden style="padding:var(--nv-s5) 0">
         <p class="nv-mute">这个类型下还没有帖子。点「全部」看看其它的。</p>
       </div>
@@ -93,7 +100,7 @@
 
     {# —— 右：发帖 + 规矩 —— #}
     <div>
-      <div class="nv-split__side">
+      <div class="nv-forum__side">
         {% if me %}
         <p class="nv-sidehead">来吐槽 / 安利</p>
         <form method="post" action="{{ url_for('public.post_create') }}" data-busy>

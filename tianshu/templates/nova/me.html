@@ -7,13 +7,22 @@
 {% set av = me.profile.avatar or '' %}
 
 {# ── 页头：左标题，右侧一串账号凭据 ── #}
-<section class="nv-pagehd">
+<header class="nv-lead-hd">
   <div class="nv-wrap">
-    <p class="nv-kicker">我的 · Account</p>
-    <h1 class="nv-h1 nv-h1--mid">我的打本生涯</h1>
-    <p class="nv-lead">预约、订单、券、消息、资料，都在这一页。</p>
+    <p class="nv-lead-hd__k">我的 · Account</p>
+    <div class="nv-lead-hd__row">
+      <div>
+        <h1 class="nv-lead-hd__t">我的打本生涯</h1>
+        <p class="nv-lead-hd__d">预约、订单、券、消息、资料，都在这一页。<b>五个抽屉，一页翻完。</b></p>
+      </div>
+      <dl class="nv-lead-hd__m">
+        <div><dt>预约</dt><dd>{{ bookings|length }}</dd></div>
+        <div><dt>订单</dt><dd>{{ orders|length }}</dd></div>
+        <div><dt>未读</dt><dd style="color:var(--nv-accent)">{{ unread }}</dd></div>
+      </dl>
+    </div>
   </div>
-</section>
+</header>
 
 <div class="nv-wrap nv-mewrap">
 
@@ -50,6 +59,12 @@
     {% for b in bookings %}
     {% set o = order_of.get(b.id) %}
     <article class="nv-ticket">
+      <div class="nv-ticket__date">
+        <b>{{ (b.day or '—').split('-')[-1] }}</b>
+        <span>{{ (b.day or '').split('-')[1] if b.day and '-' in b.day else '' }}{{'月' if b.day and '-' in b.day else ''}}</span>
+        <i>{{ b.time }}</i>
+      </div>
+      <div class="nv-ticket__in">
       <div class="nv-ticket__hd">
         <div class="nv-ticket__ttl">
           <h3>{{ b.emoji or '🎭' }} {{ b.title }}</h3>
@@ -61,7 +76,6 @@
             {% else %}<span class="nv-tag nv-tag--acc">已锁定</span>{% endif %}
           </div>
         </div>
-        <span class="nv-when">{{ b.day }}<br>{{ b.time }}</span>
       </div>
 
       <p class="nv-ticket__meta">
@@ -183,13 +197,17 @@
         {% if rv.reply %}<p class="nv-myrev__r">店长回复：{{ rv.reply }}</p>{% endif %}
       </div>
       {% endif %}
+      </div>
     </article>
     {% else %}
-    <div class="nv-empty">
-      <p class="nv-empty__k">No Bookings</p>
-      <h3>还没上车记录</h3>
+    <div class="nv-blank">
+      <p class="nv-blank__k">No Bookings</p>
+      <b>还没上车记录</b>
       <p>去本本墙挑本、选好时间，定金锁位后就在这。</p>
-      <a class="nv-btn nv-btn--solid" href="{{ url_for('public.scripts') }}">去挑个本子</a>
+      <div class="nv-blank__act">
+        <a class="nv-btn nv-btn--solid" href="{{ url_for('public.scripts') }}">去挑个本子</a>
+        <a class="nv-btn" href="{{ url_for('public.car') }}">看看谁在拼车</a>
+      </div>
     </div>
     {% endfor %}
   </div>
@@ -243,9 +261,9 @@
       </table>
     </div>
     {% else %}
-    <div class="nv-empty">
-      <p class="nv-empty__k">No Orders</p>
-      <h3>还没有订单</h3>
+    <div class="nv-blank">
+      <p class="nv-blank__k">No Orders</p>
+      <b>还没有订单</b>
       <p>下单、付定金、退款都会在这里留一条记录。</p>
     </div>
     {% endif %}
@@ -266,9 +284,9 @@
           <span class="nv-tag {{ 'nv-tag--ok' if not c.used }}">{{ '已用' if c.used else '可用' }}</span>
         </div>
         {% else %}
-        <div class="nv-empty nv-empty--sm">
-          <p class="nv-empty__k">No Coupons</p>
-          <h3>还没有券</h3>
+        <div class="nv-blank" style="margin-top:var(--nv-s3)">
+          <p class="nv-blank__k">No Coupons</p>
+          <b>还没有券</b>
           <p>店里偶尔会发，邀请朋友注册也送 —— 你俩各得一张。</p>
         </div>
         {% endfor %}
@@ -318,9 +336,9 @@
           <p>{{ n.text }}</p>
         </div>
         {% else %}
-        <div class="nv-empty nv-empty--sm">
-          <p class="nv-empty__k">No Notices</p>
-          <h3>还没有消息</h3>
+        <div class="nv-blank" style="margin-top:var(--nv-s3)">
+          <p class="nv-blank__k">No Notices</p>
+          <b>还没有消息</b>
           <p>预约、退款、门店回复、信用分变动都会发到这儿。</p>
         </div>
         {% endfor %}

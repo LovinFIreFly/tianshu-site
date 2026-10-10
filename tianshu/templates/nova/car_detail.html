@@ -34,11 +34,15 @@
   </div>
 </section>
 
-<div class="nv-wrap nv-split">
+<div class="nv-wrap nv-carblk">
 
   {# —— 左：成员 + 上下车 —— #}
   <div>
-    <h2 class="nv-sechead"><i>01</i>车上的成员<span class="nv-sechead__n">{{ car.members|length }}</span></h2>
+    <div class="nv-chapter__hd" style="padding-top:0">
+      <span class="nv-chapter__no">01</span>
+      <h2 class="nv-chapter__t">车上的成员</h2>
+      <span class="nv-chapter__s">{{ car.members|length }} 人</span>
+    </div>
     <div class="nv-roster">
       {% for m in car.members %}
       <div class="nv-roster__row">
@@ -75,8 +79,11 @@
   </div>
 
   {# —— 右：唠嗑 + 车主设置 —— #}
-  <div>
-    <h2 class="nv-sechead"><i>02</i>车队唠嗑</h2>
+  <aside class="nv-carblk__side">
+    <div class="nv-chapter__hd" style="margin-bottom:var(--nv-s3)">
+      <span class="nv-chapter__no">02</span>
+      <h2 class="nv-chapter__t" style="font-size:clamp(19px,2.4vw,26px)">车队唠嗑</h2>
+    </div>
     <div class="nv-chat">
       {% for m in msgs %}
       <div class="nv-chat__row">
@@ -137,7 +144,7 @@
       </div>
     </div>
     {% endif %}
-  </div>
+  </aside>
 
 </div>
 
