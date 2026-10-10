@@ -59,34 +59,39 @@ def session_secret():
 
 
 # ---------------------------------------------------------------- 限流
-_RL = {}
-
+# 2026-10 修复：原来用模块级 _RL 字典，多 worker 各自计数、互不共享，
+# 攻击者开多个连接打不同 worker 就能绕开限流。改为持久化到 data/ratelimit.json，
+# 靠 db 的文件锁跨进程共享同一份计数（单进程内 db.transaction 保原子）。
 
 def rate(key, limit, window_ms):
-    """同一个 key 在窗口期内最多来几次（防暴力试密码）"""
+    """同一个 key 在窗口期内最多来几次（防暴力试密码）。跨进程共享。"""
     now = int(time.time() * 1000)
-    arr = [t for t in _RL.get(key, []) if now - t < window_ms]
-    if len(arr) >= limit:
-        _RL[key] = arr
-        return False
-    arr.append(now)
-    _RL[key] = arr
+    with db.transaction():
+        data = db.read('ratelimit') or {}
+        arr = [t for t in (data.get(key) or []) if now - t < window_ms]
+        if len(arr) >= limit:
+            return False
+        arr.append(now)
+        data[key] = arr
+        db.write('ratelimit', data)
     return True
-
 
 def rate_peek(key, window_ms):
     """只看次数不计数（登录用：成功就清零，别让正常用户被自己人挤掉）"""
     now = int(time.time() * 1000)
-    arr = [t for t in _RL.get(key, []) if now - t < window_ms]
-    _RL[key] = arr
+    with db.transaction():
+        data = db.read('ratelimit') or {}
+        arr = [t for t in (data.get(key) or []) if now - t < window_ms]
+        data[key] = arr
+        db.write('ratelimit', data)
     return len(arr)
 
-
 def rate_clear(*keys):
-    for k in keys:
-        _RL.pop(k, None)
-
-
+    with db.transaction():
+        data = db.read('ratelimit') or {}
+        for k in keys:
+            data.pop(k, None)
+        db.write('ratelimit', data)
 # ---------------------------------------------------------------- 身份
 def current_user():
     """当前登录的账号（没登录返回 None）。一次请求只查一次库。
