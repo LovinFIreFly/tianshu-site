@@ -215,6 +215,15 @@ def script_detail(sid):
     # 演后复盘仅 DM/管理员可见（§2.5）
     canSeeReview = bool(u) and (business.has_role(u, 'dm') or business.has_role(u, 'admin'))
 
+    # 「下一个本」：Unseen 每个案例底部都平滑接到下一个，把散页串成一条可一直逛的流。
+    # 取的是与本页同一个口径（在售剧本、按库里的顺序），走到头就绕回第一本。
+    _pool = [x for x in db.rows('scripts') if x.get('onSale') is not False]
+    next_sc = None
+    for _i, _x in enumerate(_pool):
+        if str(_x.get('id')) == str(sid):
+            next_sc = _pool[(_i + 1) % len(_pool)] if len(_pool) > 1 else None
+            break
+
     return render_template('script.html', sc=sc, days=days, sessions=ses, coupons=coupons,
                            lo=lo, hi=hi, dm_fee=st['dmFee'], reviews=reviews, dms=dms,
                            taken=taken_roles, favs=my_fav_ids(u), join=joined,
@@ -222,7 +231,7 @@ def script_detail(sid):
                            # 日历控件的可选范围：今天 ~ 30 天后（别再让客人翻无意义的月份）
                            day_min=business.iso_day(0), day_max=business.iso_day(30),
                            rating=_st.get('rating'), rating_n=_st.get('n'),
-                           canSeeReview=canSeeReview,
+                           canSeeReview=canSeeReview, next_sc=next_sc,
                            # 评价里写的用户名不一定还是本站账号（改过名/注销/历史脏数据），
                            # 模板用它决定要不要显示「看 TA 主页」—— 不判断就会点出 404
                            user_names={str(d.get('username')) for d in db.rows('users')})

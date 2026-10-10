@@ -1,56 +1,66 @@
 {% extends 'layout.html' %}
-{% block title %}组局 · {{ settings.shopName }}{% endblock %}
-{# NOVA 组局：今日在开本一览 + 两个入口。#}
-{% block body %}
+{# 组局：今天在开的局一览。用发丝线数据表排，一眼看完谁在开、还差几人。 #}
+{% block title %}今天在开的局 · {{ settings.shopName }}{% endblock %}
 
-<header class="nv-lead-hd">
-  <div class="nv-wrap">
-    <p class="nv-lead-hd__k">组局 · Host Your Table</p>
-    <div class="nv-lead-hd__row">
+{% block body %}
+<header class="u-lead">
+  <div class="u-wrap">
+    <div class="u-lead__row">
       <div>
-        <h1 class="nv-lead-hd__t">组个局</h1>
-        <p class="nv-lead-hd__d">
-          看今天谁在开本，挑个顺眼的局直接上车；或<b>直接挑本自己开一桌</b>，定金锁位就成。
+        <p class="u-kick u-lead__k">Tonight · 今天在开的局</p>
+        <h1 class="u-lead__t">今天的<br><em>这几桌</em></h1>
+        <p class="u-lead__d">
+          位子先到先得。看到想玩的直接约，人不够就先去拼车局挂个车等人来凑。
         </p>
       </div>
-      <dl class="nv-lead-hd__m">
-        <div><dt>今天在开</dt><dd>{{ sessions|length }}</dd></div>
-        <div><dt>开场时段</dt><dd>{{ sessions[0].time if sessions else '—' }}</dd></div>
-      </dl>
+      <div class="u-lead__m">
+        <dl><dt>场次</dt><dd data-to="{{ sessions|length }}">0</dd></dl>
+        <dl><dt>余位</dt><dd>{{ sessions|sum(attribute='left') if sessions else 0 }}</dd></dl>
+        <div class="u-seal">今晚开演</div>
+      </div>
     </div>
-    <nav class="nv-lead-hd__toc">
-      <a href="{{ url_for('public.scripts') }}"><i>01</i>挑本开一桌</a>
-      <a href="{{ url_for('public.car') }}"><i>02</i>拼车大厅</a>
-      <a href="{{ url_for('public.comm') }}"><i>03</i>唠嗑区</a>
-    </nav>
   </div>
 </header>
 
-<div class="nv-wrap">
-  <div class="nv-toolbar">
-    <span class="nv-mono" style="color:var(--nv-ink-3)">今天在开的局 · {{ sessions|length }}</span>
-    <span class="nv-st {{ 'nv-st--on' if sessions else 'nv-st--off' }}">{{ '可以上车' if sessions else '今天空场' }}</span>
-  </div>
-
+<div class="u-wrap" style="padding-top:var(--us-s5)">
   {% if sessions %}
-  <div class="nv-sheet rv" style="margin-top:var(--nv-s3)">
-    {% for s in sessions[:8] %}
-    <div class="nv-sheet__row">
-      <span class="nv-sheet__t">{{ s.time }}</span>
-      <span class="nv-sheet__m"><b>{{ s.title }}</b><span>{{ s.roomId or '房间待定' }} · DM {{ s.dmName or '待安排' }}</span></span>
-      <span class="nv-sheet__cap">已报 {{ s.joined }}/{{ s.cap or '—' }} 人</span>
-      <span class="nv-sheet__act"><a class="nv-btn nv-btn--sm" href="{{ url_for('public.script_detail', sid=s.sid) }}">去看看</a></span>
+  <div class="u-ledger" style="--cols: 92px minmax(0,1fr) 150px 110px 140px">
+    <div class="u-ledger__hd"><span>时间</span><span>在演</span><span>DM</span><span>房间</span><span>位次</span></div>
+    {% for s in sessions %}
+    <div class="u-ledger__row" data-d="{{ loop.index0 * 55 }}">
+      <span class="cr-row__w">{{ s.time or '—' }}</span>
+      <span>
+        <span class="u-h4">{{ s.title or '待定' }}</span>
+        {% if s.emoji %}<span class="u-dim" style="margin-left:6px">{{ s.emoji }}</span>{% endif %}
+      </span>
+      <span class="u-dim">{{ s.dmName or '待安排' }}</span>
+      <span class="u-mono u-dim">{{ s.roomId or '—' }}</span>
+      <span>
+        {% if s.left and s.left > 0 %}
+        <span class="u-st u-st--on">还差 {{ s.left }}（{{ s.joined }}/{{ s.cap }}）</span>
+        {% else %}
+        <span class="u-st u-st--warn">已满 · 可排候补</span>
+        {% endif %}
+      </span>
     </div>
     {% endfor %}
   </div>
+
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:var(--us-s5)">
+    <a class="u-pill u-pill--ink" href="{{ url_for('public.scripts') }}" data-magnet="7">
+      我也开一桌 <span class="u-pill__a" aria-hidden="true">↘</span>
+    </a>
+    <a class="u-pill u-pill--ghost" href="{{ url_for('public.car') }}">先去拼车局看看</a>
+  </div>
   {% else %}
-  <div class="nv-blank" style="margin-top:var(--nv-s4)">
-    <p class="nv-blank__k">No Tables</p>
-    <b>今天还没人开桌</b>
-    <p>挑个本、选好时间，定金锁位就开一桌。</p>
-    <div class="nv-blank__act">
-      <a class="nv-btn nv-btn--solid" href="{{ url_for('public.scripts') }}">去挑本开一桌</a>
-      <a class="nv-btn" href="{{ url_for('public.car') }}">看看谁在拼车</a>
+  <div class="u-blank">
+    <p class="u-blank__k">今天还没开桌</p>
+    <p class="u-blank__d">排期是空的。想开一局的话，挑一本、选个时间，剩下的等人来凑。</p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
+      <a class="u-pill u-pill--ink" href="{{ url_for('public.scripts') }}" data-magnet="7">
+        挑一本开桌 <span class="u-pill__a" aria-hidden="true">↘</span>
+      </a>
+      <a class="u-pill u-pill--ghost" href="{{ url_for('public.car') }}">拼车局</a>
     </div>
   </div>
   {% endif %}

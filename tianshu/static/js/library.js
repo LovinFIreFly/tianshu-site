@@ -66,6 +66,9 @@
     if (hit && root && root.getAttribute('data-count') != null) {
       hit.textContent = root.getAttribute('data-count') + ' 本';
     }
+    /* Nova：换进来的卡片是全新节点，得让动效层重新认一遍
+       （揭示延迟 / 视角折叠 / 光标状态）。没挂 Nova 时这行是空操作。 */
+    if (window.NV && window.NV.rebind) window.NV.rebind(grid);
     if (!window.Element || !Element.prototype.animate) return;
     var items = grid.querySelectorAll('[data-anim]');
     Array.prototype.forEach.call(items, function (el, i) {

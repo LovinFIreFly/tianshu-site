@@ -1,80 +1,104 @@
 {% extends 'layout.html' %}
+{# DM 公开主页：身份条 + 数据题花 + 简介 / 评价两栏。 #}
 {% block title %}{{ nickname }} · 主持人主页{% endblock %}
-{# NOVA DM 主页：身份条 + 数据条 + 简介/评价两栏。 #}
+
 {% block body %}
 {% set pf = u.dmProfile or {} %}
 
-<header class="nv-lead-hd">
-  <div class="nv-wrap">
-    <p class="nv-lead-hd__k">主持人 · Game Master</p>
-    <div class="nv-lead-hd__row">
+<header class="u-lead">
+  <div class="u-wrap">
+    <div class="u-lead__row">
       <div>
-        <h1 class="nv-lead-hd__t">{{ nickname }}</h1>
-        {% if pf.style %}<p class="nv-lead-hd__d">{{ pf.style }}</p>{% endif %}
-        <div class="nv-tags" style="margin-top:var(--nv-s3)">
-          <span class="nv-tag nv-tag--accent">{{ st.tier.icon }} {{ st.tier.name }}</span>
-          {% if st.assigned %}<span class="nv-tag">被点名 {{ st.assigned }} 次</span>{% endif %}
+        <p class="u-kick u-lead__k">Game Master · 主持人</p>
+        <h1 class="u-lead__t">{{ nickname }}</h1>
+        <p class="u-lead__d">{{ pf.style or '带你入戏，也带你出来。' }}</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--us-s3)">
+          {% if st.tier %}<span class="u-tag u-tag--ink">{{ st.tier.icon }} {{ st.tier.name }}</span>{% endif %}
+          {% if st.assigned %}<span class="u-tag">被点名 {{ st.assigned }} 次</span>{% endif %}
+          {% for t in st.topTags or [] %}<span class="u-tag">{{ t }}</span>{% endfor %}
         </div>
       </div>
-      <div style="display:grid;gap:var(--nv-s3);justify-items:end">
+      <div class="u-lead__m">
         {% if pf.photo %}
-        <img src="{{ pf.photo }}" alt="{{ nickname }}" style="width:120px;height:120px;object-fit:cover;border:var(--nv-hair)">
+        <img src="{{ pf.photo }}" alt="{{ nickname }}"
+             style="width:132px;height:132px;object-fit:cover;border-radius:50%;justify-self:end">
         {% endif %}
-        <a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('public.scripts') }}">← 回剧本库</a>
+        <a class="u-pill u-pill--ghost" style="justify-self:end;padding:11px 20px;font-size:13.5px"
+           href="{{ url_for('public.scripts') }}">← 回本本墙</a>
       </div>
     </div>
   </div>
 </header>
 
-<div class="nv-wrap">
-  <dl class="nv-gmstats" style="margin-top:var(--nv-s4)">
-    <div><dt>带本量</dt><dd><span class="count" data-to="{{ st.done }}">0</span></dd></div>
-    <div><dt>平均评分</dt><dd>{{ st.rating or '—' }}</dd></div>
-    <div><dt>好评率</dt><dd>{{ st.goodRate }}%</dd></div>
-    <div><dt>接待人次</dt><dd><span class="count" data-to="{{ st.players }}">0</span></dd></div>
-  </dl>
+<div class="u-wrap" style="padding-top:var(--us-s4)">
 
-  <div class="nv-aside" style="padding:var(--nv-s5) 0 clamp(48px,7vw,90px)">
+  <div class="u-figs">
+    <div class="u-fig"><b data-to="{{ st.done or 0 }}">0</b><s>带本量</s></div>
+    <div class="u-fig"><b>{{ st.rating or '—' }}</b><s>平均评分</s></div>
+    <div class="u-fig"><b>{{ st.goodRate or 0 }}%</b><s>好评率</s></div>
+    <div class="u-fig"><b data-to="{{ st.players or 0 }}">0</b><s>接待人次</s></div>
+  </div>
+
+  <div class="u-split" style="padding-top:var(--us-s5)">
+
     <div>
       {% if pf.bio %}
-      <p class="nv-sidehead">他自己怎么说</p>
-      <blockquote class="nv-card" style="margin:0;padding:var(--nv-s3);border-left:3px solid var(--nv-accent);font-size:15px;line-height:1.75">{{ pf.bio }}</blockquote>
+      <div class="u-chap">
+        <span class="u-chap__no">01</span>
+        <h2 class="u-chap__t">他自己怎么说</h2>
+      </div>
+      <p class="u-pull">{{ pf.bio }}</p>
       {% endif %}
-      {% if st.topTags %}
-      <div style="margin-top:var(--nv-s5)">
-        <p class="nv-sidehead">擅长的类型</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">{% for t in st.topTags %}<span class="nv-tag">{{ t }}</span>{% endfor %}</div>
+
+      {% if titles %}
+      <div style="margin-top:var(--us-s5)">
+        <p class="u-kick u-kick--ink">带过的本</p>
+        <p style="font-size:17px;line-height:1.8;margin-top:10px">{{ titles|join(' · ') }}</p>
       </div>
       {% endif %}
-      {% if titles %}
-      <div style="margin-top:var(--nv-s5)">
-        <p class="nv-sidehead">带过的本</p>
-        <p style="margin:0;font-size:16px;line-height:1.7">{{ titles|join(' · ') }}</p>
+
+      {% if st.topTags %}
+      <div style="margin-top:var(--us-s5)">
+        <p class="u-kick u-kick--ink">擅长的类型</p>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+          {% for t in st.topTags %}<span class="u-tag">{{ t }}</span>{% endfor %}
+        </div>
       </div>
       {% endif %}
     </div>
 
-    <div>
-      <div>
-        <p class="nv-sidehead">最近的评价</p>
-        <div class="nv-reviews">
-          {% for r in reviews %}
-          <article class="nv-review">
-            <div class="nv-review__who"><b>{{ r.username or '玩家' }}</b><i>{{ day_label(r.createdAt) }}</i></div>
-            <div style="color:var(--nv-accent);letter-spacing:2px;font-size:13px;margin-bottom:6px">{{ '★' * (r.rating or 0) }}</div>
-            {% if r.text %}<p class="nv-review__t">{{ r.text }}</p>{% endif %}
-          </article>
-          {% else %}
-          <div class="nv-empty">
-            <p class="nv-empty__k">No Reviews</p>
-            <h3>还没有评价</h3>
-            <p>玩过他的本，可以在「我的 → 预约」里给一句评价。</p>
-          </div>
-          {% endfor %}
-        </div>
-        <a class="nv-btn nv-btn--accent nv-btn--block" style="margin-top:var(--nv-s5)" href="{{ url_for('public.scripts') }}">找个本，约他开场</a>
+    <aside class="u-split__side">
+      <div class="u-chap" style="margin-bottom:var(--us-s3)">
+        <span class="u-chap__no">02</span>
+        <h2 class="u-chap__t" style="font-size:clamp(18px,2.2vw,24px)">最近的评价</h2>
       </div>
-    </div>
+
+      {% if reviews %}
+      <div>
+        {% for r in reviews %}
+        <div style="padding:14px 0;border-bottom:var(--us-hair)">
+          <p style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--us-ink-3)">
+            <span style="color:var(--us-ink)">{{ r.username or '玩家' }}</span>
+            <span class="u-mono">{{ day_label(r.createdAt) if r.createdAt else '' }}</span>
+          </p>
+          <p class="hp-quote__s" style="margin-top:6px">{% for _ in range((r.rating or 0)|int) %}★{% endfor %}</p>
+          {% if r.text %}<p style="font-size:14.5px;line-height:1.65;color:var(--us-ink-2);margin-top:8px">{{ r.text }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="u-blank" style="padding:var(--us-s3) 0">
+        <p class="u-blank__k" style="font-size:clamp(22px,4vw,36px)">还没有评价</p>
+        <p class="u-blank__d">玩过他的本，可以在「我的 → 预约」里留一句。</p>
+      </div>
+      {% endif %}
+
+      <a class="u-pill u-pill--ink u-pill--wide" style="margin-top:var(--us-s3)"
+         href="{{ url_for('public.scripts') }}" data-magnet="6">
+        找个本，约他开场 <span class="u-pill__a" aria-hidden="true">↘</span>
+      </a>
+    </aside>
+
   </div>
 </div>
 {% endblock %}

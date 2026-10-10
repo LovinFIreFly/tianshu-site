@@ -1,1333 +1,880 @@
+@charset "utf-8";
 /* ============================================================================
-   NOVA · 首页与各页专属版式（2026-10）
+   NOVA · Unseen 语言 —— 页级版式（2026-10 重写）
    ----------------------------------------------------------------------------
-   这里放"内容形态"的样式：满幅首屏、窄栏长文、编号索引、横向轨道、
-   拼车卡、场次表、店招墙、探店实拍…… 与 nova.css 一套变量，单独成文件
-   是为了让设计系统(nova.css)和页面结构(nova-pages.css)分得开、好维护。
+   只放"某一个页面才用到"的东西。通用件（药丸/chips/搜索/表格/卡片/折叠/正文）
+   都在 nova.css 里，这里不重复定义，只做页面的骨架与局部微调。
+
+   命名：hp-（首页） lp-（清单/列表） dt-（详情） cr-（拼车） cm-（社区）
+        qa-（问答） nt-（通知） me-（我的） pf-（个人主页） au-（登录注册）
+        er-（错误）
    ============================================================================ */
 
-/* =========================== 满幅首屏 =========================== */
-.nv-hero {
-  position: relative; min-height: min(92vh, 900px);
-  display: grid; grid-template-columns: 1fr; align-items: end;
-  padding: clamp(72px, 12vh, 150px) 0 clamp(40px, 7vh, 76px);
-  border-bottom: 1px solid var(--nv-ink); overflow: hidden;
+/* ══════════════════════════ 首页 ══════════════════════════ */
+
+/* 首屏：整屏、居中、背后是场景画布。
+   [data-sway] 里的东西跟着指针做视角晃动（JS 写 --swx/--swy/--swr）。 */
+.hp-hero {
+  position: relative;
+  min-height: min(100svh, 920px);
+  display: grid;
+  place-items: center;
+  padding: calc(var(--us-nav) + 40px) var(--us-gut) 64px;
+  overflow: hidden;
 }
-.nv-hero__inner { width: 100%; max-width: var(--nv-wrap); margin: 0 auto; padding: 0 clamp(20px, 4vw, 56px);
-  position: relative; z-index: 2; }
-.nv-hero__k { margin-bottom: var(--nv-s4); }
-.nv-hero__title { position: relative; }
-.nv-hero__title .nv-line { display: block; overflow: hidden; }
-.nv-hero__title .nv-line > span { display: block; }
-
-/* 首屏右侧的"今夜场次"小牌：绝对定位到右下（非对称构图） */
-.nv-hero__aside {
-  position: absolute; right: clamp(20px, 4vw, 56px); bottom: clamp(40px, 7vh, 76px);
-  width: min(340px, 34vw); z-index: 3;
+.hp-hero__in {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  transform:
+    translate3d(var(--swx, 0px), var(--swy, 0px), 0)
+    rotate(var(--swr, 0deg));
+  transition: transform .9s var(--us-ease);
+  will-change: transform;
 }
-.nv-hero__foot { margin-top: var(--nv-s6); display: flex; align-items: flex-end;
-  justify-content: space-between; gap: var(--nv-s4); flex-wrap: wrap; }
-.nv-hero__stats { display: flex; gap: clamp(20px, 4vw, 52px); flex-wrap: wrap; }
-.nv-hero__stats > div { display: flex; flex-direction: column; gap: 2px; }
-.nv-hero__stats b { font-family: var(--nv-serif); font-weight: 700; font-size: clamp(28px, 3.4vw, 44px); letter-spacing: -.03em; line-height: 1; }
-.nv-hero__stats span { font-family: var(--nv-mono); font-size: 10.5px; letter-spacing: .1em; color: var(--nv-ink-3); }
-
-/* 首屏底部滚动提示 */
-.nv-scrolltip { display: inline-flex; align-items: center; gap: 8px; font-family: var(--nv-mono);
-  font-size: 11px; letter-spacing: .12em; color: var(--nv-ink-3); }
-.nv-scrolltip i { display: block; width: 26px; height: 1px; background: var(--nv-ink-3); position: relative; overflow: hidden; }
-.nv-scrolltip i::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 40%; background: var(--nv-accent);
-  animation: nv-scan 2.4s var(--nv-ease) infinite; }
-@keyframes nv-scan { 0% { transform: translateX(-110%); } 60%,100% { transform: translateX(260%); } }
-
-/* =========================== 今夜场次牌 =========================== */
-.nv-board { background: var(--nv-paper); border: 1px solid var(--nv-ink); }
-.nv-board__head { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--nv-ink); }
-.nv-board__head h2 { font-family: var(--nv-mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; margin: 0; flex: 1; }
-.nv-board__list { list-style: none; margin: 0; padding: 0; max-height: 300px; overflow-y: auto; }
-.nv-board__row { display: grid; grid-template-columns: 52px 1fr auto; gap: 12px; align-items: center;
-  padding: 11px 16px; border-bottom: var(--nv-hair); }
-.nv-board__row:last-child { border-bottom: 0; }
-.nv-board__t { font-family: var(--nv-mono); font-size: 13px; color: var(--nv-accent); }
-.nv-board__n { font-size: 14px; line-height: 1.3; }
-.nv-board__n small { display: block; color: var(--nv-ink-3); font-size: 11.5px; margin-top: 1px; }
-.nv-board__s { font-family: var(--nv-mono); font-size: 11px; color: var(--nv-ink-3); white-space: nowrap; }
-.nv-board__s b { color: var(--nv-ink); }
-.nv-board__empty { padding: 20px 16px; color: var(--nv-ink-3); font-size: 14px; }
-.nv-board__foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--nv-ink); }
-
-/* =========================== 公告条 =========================== */
-.nv-notice {
-  display: grid; grid-template-columns: auto 1fr; gap: var(--nv-s4); align-items: baseline;
-  padding: var(--nv-s4) 0; border-bottom: 1px solid var(--nv-ink);
+.hp-hero__k {
+  font-size: 12px;
+  letter-spacing: .26em;
+  text-transform: uppercase;
+  color: var(--us-ink-2);
+  margin-bottom: clamp(18px, 3vw, 34px);
 }
-.nv-notice__k { font-family: var(--nv-mono); font-size: 11px; letter-spacing: .12em; color: var(--nv-accent); white-space: nowrap; }
-.nv-notice__t { font-family: var(--nv-serif); font-size: clamp(18px, 2.2vw, 26px); line-height: 1.4; letter-spacing: -.01em; margin: 0; }
-
-/* =========================== 短评轨（横向） =========================== */
-.nv-rail { position: relative; }
-.nv-rail__track {
-  display: flex; gap: var(--nv-s3); overflow-x: auto; scroll-snap-type: x proximity;
-  padding-bottom: var(--nv-s2); scrollbar-width: none; cursor: grab;
+.hp-hero__t {
+  font-size: clamp(46px, 11.4vw, 178px);
+  line-height: .84;
+  letter-spacing: -.052em;
+  font-weight: 500;
 }
-.nv-rail__track::-webkit-scrollbar { display: none; }
-.nv-rail__track.dragging { cursor: grabbing; }
-.nv-rail__track > * { scroll-snap-align: start; flex: none; }
-.nv-rail__nav { display: flex; gap: 8px; }
-.nv-rail__nav button {
-  width: 38px; height: 38px; border: 1px solid var(--nv-ink); background: none; cursor: pointer;
-  display: grid; place-items: center; font-size: 15px;
-  transition: background var(--nv-t-fast), color var(--nv-t-fast);
+.hp-hero__t span { display: block; }
+.hp-hero__t em {
+  font-family: var(--us-serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -.028em;
 }
-.nv-rail__nav button:hover { background: var(--nv-ink); color: var(--nv-paper); }
-.nv-rail__bar { height: 1px; background: var(--nv-line); margin-top: var(--nv-s3); }
-
-/* 短评卡 */
-.nv-quote {
-  width: min(360px, 78vw); padding: var(--nv-s4); border: var(--nv-hair);
-  background: var(--nv-paper-2); display: flex; flex-direction: column; gap: 12px;
+/* 中间那行是"重音"：比上下两行更实、更紧，形成 unseen 那种交错咬合 */
+.hp-hero__t .mid {
+  font-size: 1.06em;
+  letter-spacing: -.06em;
+  margin: .02em 0 .06em;
 }
-.nv-quote__who { display: flex; align-items: center; gap: 10px; }
-.nv-quote__who .av { display: grid; place-items: center; width: 34px; height: 34px; background: var(--nv-paper-3);
-  overflow: hidden; font-size: 14px; font-weight: 600; }
-.nv-quote__who .av img { width: 100%; height: 100%; object-fit: cover; }
-.nv-quote__who b { font-size: 14px; }
-.nv-quote__who i { font-style: normal; color: var(--nv-accent); font-size: 12px; letter-spacing: 1px; }
-.nv-quote__t { font-family: var(--nv-serif); font-size: 17px; line-height: 1.5; margin: 0; }
-.nv-quote__s { font-size: 12px; color: var(--nv-ink-3); margin: 0; font-family: var(--nv-mono); }
-
-/* =========================== 编辑式两栏（宽窄对照） =========================== */
-.nv-split { display: grid; grid-template-columns: minmax(0, 0.42fr) minmax(0, 1fr); gap: clamp(24px, 6vw, 80px); align-items: start; }
-.nv-split__side { position: sticky; top: 90px; }
-.nv-split__side h2 { margin: 0 0 var(--nv-s2); }
-.nv-split__side p { color: var(--nv-ink-2); margin: 0; font-size: 14.5px; }
-.nv-sidehead { font-family: var(--nv-mono); font-size: 11px; letter-spacing: .14em; color: var(--nv-ink-3);
-  display: flex; align-items: center; gap: 12px; margin: 0 0 var(--nv-s3); text-transform: uppercase; }
-.nv-sidehead::after { content: ""; flex: 1; height: 1px; background: var(--nv-line); }
-
-/* 非对称图墙：第一张跨 2 列，其余均分 —— 打破 Bento 的均质 */
-.nv-mosaic { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--nv-s3); }
-.nv-mosaic > :first-child { grid-column: span 2; }
-.nv-mosaic > :first-child .nv-card__cover { aspect-ratio: 3 / 2.1; }
-
-/* =========================== 编号索引清单 =========================== */
-.nv-idx { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--nv-ink); }
-.nv-idx li { border-bottom: var(--nv-hair); }
-.nv-idx a { display: grid; grid-template-columns: 60px 1fr auto; gap: var(--nv-s4); align-items: center;
-  padding: clamp(18px, 2.6vw, 30px) 0; transition: padding-left var(--nv-t-fast), color var(--nv-t-fast); }
-.nv-idx a:hover { padding-left: 18px; color: var(--nv-accent); }
-.nv-idx__no { font-family: var(--nv-mono); font-size: 12px; color: var(--nv-ink-3); }
-.nv-idx__main b { display: block; font-family: var(--nv-serif); font-weight: 700;
-  font-size: clamp(20px, 2.6vw, 30px); letter-spacing: -.02em; line-height: 1.15; }
-.nv-idx__main span { display: block; color: var(--nv-ink-3); font-size: 13.5px; margin-top: 4px; }
-.nv-idx__arrow { font-size: 20px; color: var(--nv-ink-3); transition: transform var(--nv-t-fast); }
-.nv-idx a:hover .nv-idx__arrow { transform: translateX(6px); color: var(--nv-accent); }
-
-/* =========================== 拼车卡 =========================== */
-.nv-car { border: var(--nv-hair); background: var(--nv-paper); display: flex; flex-direction: column;
-  transition: transform var(--nv-t-fast) var(--nv-ease), box-shadow var(--nv-t-fast); }
-.nv-car:hover { transform: translateY(-3px); box-shadow: 0 14px 34px -22px rgba(0,0,0,.5); }
-.nv-car__top { display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 12px 16px; border-bottom: var(--nv-hair); }
-.nv-car__when { font-family: var(--nv-mono); font-size: 12px; color: var(--nv-ink-2); }
-.nv-car__body { padding: 16px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
-.nv-car__title { font-family: var(--nv-serif); font-weight: 700; font-size: 20px; line-height: 1.2; letter-spacing: -.012em; margin: 0; }
-.nv-car__meta { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--nv-ink-2); margin: 0; }
-.nv-car__meta b { color: var(--nv-ink); }
-.nv-car__people { display: flex; flex-wrap: wrap; gap: 6px; }
-.nv-car__people i { font-style: normal; font-size: 11.5px; padding: 2px 8px; border: var(--nv-hair); color: var(--nv-ink-3); }
-.nv-car__foot { margin-top: auto; padding-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
-
-/* =========================== 场次表 =========================== */
-.nv-sheet { border-top: 1px solid var(--nv-ink); }
-.nv-sheet__row { display: grid; grid-template-columns: 76px 1fr auto auto; gap: var(--nv-s4); align-items: center;
-  padding: 16px 0; border-bottom: var(--nv-hair); transition: background var(--nv-t-fast); }
-.nv-sheet__row:hover { background: var(--nv-paper-2); }
-.nv-sheet__t { font-family: var(--nv-mono); font-size: 15px; color: var(--nv-accent); }
-.nv-sheet__m b { display: block; font-size: 16px; }
-.nv-sheet__m span { font-size: 12.5px; color: var(--nv-ink-3); }
-.nv-sheet__cap { font-family: var(--nv-mono); font-size: 12px; color: var(--nv-ink-3); white-space: nowrap; }
-
-/* =========================== 店招墙（实拍） =========================== */
-.nv-wall { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--nv-s2); }
-.nv-wall figure { margin: 0; position: relative; overflow: hidden; background: var(--nv-paper-3); }
-.nv-wall img { width: 100%; height: 100%; object-fit: cover; transition: transform .9s var(--nv-ease); }
-.nv-wall figure:hover img { transform: scale(1.04); }
-.nv-wall figcaption { font-family: var(--nv-mono); font-size: 11px; color: var(--nv-ink-3); padding-top: 6px; }
-.nv-wall figure:nth-child(1) { grid-column: span 7; aspect-ratio: 16/10; }
-.nv-wall figure:nth-child(2) { grid-column: span 5; aspect-ratio: 16/12; }
-.nv-wall figure:nth-child(3) { grid-column: span 5; aspect-ratio: 16/12; }
-.nv-wall figure:nth-child(4) { grid-column: span 7; aspect-ratio: 16/10; }
-.nv-wall figure:nth-child(n+5) { grid-column: span 4; aspect-ratio: 4/3; }
-.nv-wall__intro { font-family: var(--nv-serif); font-size: clamp(16px, 1.8vw, 21px); line-height: 1.6; margin: var(--nv-s4) 0 0; max-width: 48ch; }
-
-/* =========================== 收尾大句 =========================== */
-.nv-outro { text-align: center; padding: clamp(64px, 12vh, 130px) 0; border-top: 1px solid var(--nv-ink); }
-.nv-outro__q { font-family: var(--nv-serif); font-weight: 700; font-size: clamp(26px, 4.4vw, 56px);
-  line-height: 1.14; letter-spacing: -.028em; margin: var(--nv-s3) auto 0; max-width: 22ch; }
-.nv-outro__a { margin-top: var(--nv-s5); display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-
-/* =========================== 内页页头 =========================== */
-.nv-head { padding: clamp(48px, 9vh, 110px) 0 clamp(24px, 4vh, 44px); border-bottom: 1px solid var(--nv-ink); }
-.nv-head__grid { display: grid; grid-template-columns: 1fr auto; gap: var(--nv-s4); align-items: end; }
-.nv-head__k { margin-bottom: var(--nv-s3); }
-.nv-head__lead { color: var(--nv-ink-2); margin: var(--nv-s3) 0 0; max-width: 58ch; font-size: clamp(15px, 1.5vw, 18px); }
-.nv-head__seal { font-family: var(--nv-mono); font-size: 11px; letter-spacing: .14em; color: var(--nv-ink-3);
-  border: 1px solid var(--nv-seal); color: var(--nv-seal); padding: 6px 12px; align-self: start; }
-
-/* =========================== 工具条 / 筛片 =========================== */
-.nv-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--nv-s3);
-  flex-wrap: wrap; padding: var(--nv-s4) 0; border-bottom: var(--nv-hair); }
-.nv-toolbar__end { display: flex; align-items: center; gap: var(--nv-s3); }
-.nv-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.nv-chips__lab { font-family: var(--nv-mono); font-size: 11px; letter-spacing: .1em; color: var(--nv-ink-3); margin-right: 4px; }
-.nv-chip { padding: 6px 13px; border: var(--nv-hair); background: none; cursor: pointer; font-size: 13.5px;
-  color: var(--nv-ink-2); border-radius: 0; transition: all var(--nv-t-fast); }
-.nv-chip:hover { color: var(--nv-ink); border-color: var(--nv-ink-2); }
-.nv-chip.on { background: var(--nv-ink); color: var(--nv-paper); border-color: var(--nv-ink); }
-
-/* =========================== 剧本详情 =========================== */
-.nv-detail { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: clamp(28px, 5vw, 72px); align-items: start;
-  padding: var(--nv-s6) 0; }
-.nv-detail__cover { aspect-ratio: 3/4; overflow: hidden; background: var(--nv-paper-3); border: var(--nv-hair); }
-.nv-detail__cover img { width: 100%; height: 100%; object-fit: cover; }
-.nv-detail__title { font-family: var(--nv-serif); font-weight: 700; font-size: clamp(32px, 5vw, 64px);
-  line-height: 1.02; letter-spacing: -.03em; margin: 0 0 var(--nv-s3); }
-.nv-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--nv-s3);
-  border-top: 1px solid var(--nv-ink); border-bottom: var(--nv-hair); padding: var(--nv-s3) 0; margin: var(--nv-s4) 0; }
-.nv-facts > div { display: flex; flex-direction: column; gap: 3px; }
-.nv-facts dt { font-family: var(--nv-mono); font-size: 10.5px; letter-spacing: .1em; color: var(--nv-ink-3); }
-.nv-facts dd { margin: 0; font-size: 16px; font-weight: 600; }
-.nv-prose { font-size: 16px; line-height: 1.8; color: var(--nv-ink-2); }
-.nv-prose p { margin: 0 0 var(--nv-s3); }
-
-/* 预约面板：sticky 侧栏 */
-.nv-book { position: sticky; top: 90px; border: 1px solid var(--nv-ink); background: var(--nv-paper); }
-.nv-book__head { padding: 16px; border-bottom: 1px solid var(--nv-ink); display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.nv-book__price { font-family: var(--nv-serif); font-weight: 700; font-size: 30px; letter-spacing: -.02em; }
-.nv-book__price small { font-family: var(--nv-sans); font-weight: 400; font-size: 12px; color: var(--nv-ink-3); }
-.nv-book__body { padding: 16px; }
-.nv-book__row { display: flex; flex-direction: column; gap: 6px; margin-bottom: var(--nv-s3); }
-.nv-book__row > label { font-family: var(--nv-mono); font-size: 10.5px; letter-spacing: .1em; color: var(--nv-ink-3); text-transform: uppercase; }
-.nv-book__row select, .nv-book__row input {
-  width: 100%; padding: 10px 12px; border: 1px solid var(--nv-line-2); background: var(--nv-paper);
-  color: var(--nv-ink); font-size: 15px; border-radius: 0; outline: none;
+.hp-hero__act {
+  margin-top: clamp(26px, 4vw, 48px);
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
-.nv-book__row select:focus, .nv-book__row input:focus { border-color: var(--nv-ink); }
-.nv-book__note { font-size: 12px; color: var(--nv-ink-3); margin: var(--nv-s2) 0 0; line-height: 1.6; }
-
-/* 评分 / 评价卡 */
-.nv-reviews { display: grid; gap: var(--nv-s3); }
-.nv-review { border: var(--nv-hair); padding: var(--nv-s3); background: var(--nv-paper-2); }
-.nv-review__who { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.nv-review__who b { font-size: 14px; }
-.nv-review__who i { font-style: normal; color: var(--nv-accent); font-size: 12px; letter-spacing: 1px; margin-left: auto; }
-.nv-review__t { margin: 0; font-size: 15px; line-height: 1.6; }
-
-/* =========================== 个人中心 =========================== */
-.nv-me { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: clamp(24px, 4vw, 64px); align-items: start;
-  padding: var(--nv-s6) 0; }
-.nv-me__side { position: sticky; top: 90px; }
-.nv-me__who { display: flex; flex-direction: column; gap: var(--nv-s3); }
-.nv-me__av { width: 84px; height: 84px; overflow: hidden; background: var(--nv-paper-3);
-  display: grid; place-items: center; font-size: 30px; border: var(--nv-hair); }
-.nv-me__av img { width: 100%; height: 100%; object-fit: cover; }
-.nv-me__name { font-family: var(--nv-serif); font-weight: 700; font-size: 26px; letter-spacing: -.02em; margin: 0; }
-.nv-me__tabs { display: flex; flex-direction: column; border-top: 1px solid var(--nv-ink); margin-top: var(--nv-s3); }
-.nv-me__tabs a { padding: 12px 0; border-bottom: var(--nv-hair); font-size: 14.5px; color: var(--nv-ink-2);
-  display: flex; justify-content: space-between; align-items: center; }
-.nv-me__tabs a:hover, .nv-me__tabs a.on { color: var(--nv-accent); }
-.nv-me__tabs a span { font-family: var(--nv-mono); font-size: 12px; color: var(--nv-ink-3); }
-.nv-panel { border-top: 1px solid var(--nv-ink); padding-top: var(--nv-s4); margin-bottom: var(--nv-s6); }
-.nv-panel__title { font-family: var(--nv-serif); font-weight: 700; font-size: clamp(22px, 3vw, 32px);
-  letter-spacing: -.02em; margin: 0 0 var(--nv-s4); display: flex; align-items: baseline; gap: 12px; }
-.nv-panel__title small { font-family: var(--nv-mono); font-size: 11px; color: var(--nv-ink-3); font-weight: 400; }
-.nv-order { border: var(--nv-hair); padding: var(--nv-s3); margin-bottom: var(--nv-s2); background: var(--nv-paper-2);
-  display: flex; align-items: center; gap: var(--nv-s3); flex-wrap: wrap; }
-.nv-order__main { flex: 1; min-width: 200px; }
-.nv-order__title { font-weight: 600; margin: 0 0 4px; }
-.nv-order__meta { font-size: 12.5px; color: var(--nv-ink-3); margin: 0; font-family: var(--nv-mono); }
-
-/* =========================== 社区 =========================== */
-.nv-posts { display: grid; gap: var(--nv-s3); }
-.nv-post { border: var(--nv-hair); padding: var(--nv-s4); background: var(--nv-paper); display: flex; flex-direction: column; gap: 12px; }
-.nv-post__who { display: flex; align-items: center; gap: 10px; }
-.nv-post__who b { font-size: 14px; }
-.nv-post__who span { font-family: var(--nv-mono); font-size: 11px; color: var(--nv-ink-3); margin-left: auto; }
-.nv-post__t { font-family: var(--nv-serif); font-size: clamp(18px, 2.2vw, 24px); line-height: 1.3; letter-spacing: -.01em; margin: 0; }
-.nv-post__x { margin: 0; color: var(--nv-ink-2); line-height: 1.7; white-space: pre-wrap; }
-.nv-post__foot { display: flex; gap: var(--nv-s3); flex-wrap: wrap; align-items: center; padding-top: 10px; border-top: var(--nv-hair); }
-.nv-post__recruit { font-size: 13px; color: var(--nv-accent); font-family: var(--nv-mono); }
-.nv-likes { display: inline-flex; align-items: center; gap: 6px; border: var(--nv-hair); background: none;
-  cursor: pointer; padding: 6px 12px; font-size: 13px; color: var(--nv-ink-2); }
-.nv-likes:hover { color: var(--nv-seal); border-color: var(--nv-seal); }
-
-/* =========================== 空/其他 =========================== */
-.nv-narrow { max-width: var(--nv-read); margin-inline: auto; }
-.nv-stack { display: grid; gap: var(--nv-s4); }
-.nv-center { text-align: center; }
-
-@media (max-width: 1000px) {
-  .nv-hero__aside { position: static; width: 100%; margin-top: var(--nv-s5); }
-  .nv-split { grid-template-columns: 1fr; }
-  .nv-split__side { position: static; }
-  .nv-mosaic { grid-template-columns: repeat(2, 1fr); }
-  .nv-mosaic > :first-child { grid-column: span 2; }
-  .nv-detail { grid-template-columns: 1fr; }
-  .nv-book { position: static; }
-  .nv-me { grid-template-columns: 1fr; }
-  .nv-me__side { position: static; }
-  .nv-sheet__row { grid-template-columns: 64px 1fr auto; }
-  .nv-sheet__act { display: none; }
+/* 悬在字间的柔光球（参考图里的虹彩球）：外层跟着指针晃，内层自己慢慢呼吸 */
+.hp-hero__orbwrap {
+  position: absolute;
+  z-index: 1;
+  right: 12%;
+  top: 24%;
+  width: clamp(120px, 15vw, 230px);
+  aspect-ratio: 1;
+  transform: translate3d(var(--swx, 0px), var(--swy, 0px), 0);
+  transition: transform .9s var(--us-ease);
+  will-change: transform;
 }
-@media (max-width: 680px) {
-  .nv-hero { min-height: 76vh; align-items: start; }
-  .nv-hero__foot { margin-top: var(--nv-s5); }
-  .nv-mosaic, .nv-grid { grid-template-columns: 1fr 1fr; }
-  .nv-wall { grid-template-columns: 1fr 1fr; }
-  .nv-wall figure:nth-child(n) { grid-column: span 1; aspect-ratio: 4/3; }
-  .nv-wall figure:nth-child(1) { grid-column: span 2; aspect-ratio: 16/11; }
-  .nv-idx a { grid-template-columns: 40px 1fr auto; gap: var(--nv-s3); }
-  .nv-head__grid { grid-template-columns: 1fr; }
-  .nv-head__seal { justify-self: start; }
-  .nv-board__row { grid-template-columns: 48px 1fr; }
-  .nv-board__s { display: none; }
+.hp-hero__orb {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 30%, rgba(255, 255, 255, .95), transparent 52%),
+    conic-gradient(from 200deg, #F3D9E6, #DCE6F5, #F6E6D2, #E4D8F0, #F3D9E6);
+  filter: blur(.4px) saturate(1.06);
+  opacity: .78;
+  animation: hp-float 11s ease-in-out infinite;
+}
+@keyframes hp-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-22px) scale(1.045); }
+}
+/* 底部一行：左边滚动提示，右边几个数字 */
+.hp-hero__foot {
+  position: absolute;
+  left: 0; right: 0; bottom: 30px;
+  z-index: 3;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--us-s3);
+  padding: 0 var(--us-gut);
+  font-size: 12px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--us-ink-3);
+  flex-wrap: wrap;
+}
+.hp-hero__scroll {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.hp-hero__scroll i {
+  display: block;
+  width: 1px; height: 26px;
+  background: linear-gradient(to bottom, var(--us-ink-3), transparent);
+  animation: hp-drop 2s var(--us-ease) infinite;
+  transform-origin: top;
+}
+@keyframes hp-drop {
+  0%   { transform: scaleY(0); opacity: 0; }
+  40%  { transform: scaleY(1); opacity: 1; }
+  100% { transform: scaleY(1) translateY(14px); opacity: 0; }
+}
+.hp-hero__nums { display: flex; gap: var(--us-s4); text-transform: none; letter-spacing: 0; }
+.hp-hero__nums b { font-size: 17px; color: var(--us-ink); letter-spacing: -.02em; }
+
+/* 区块通用节奏 */
+.hp-sec { padding: var(--us-s7) 0 var(--us-s6); }
+.hp-sec--tight { padding: var(--us-s6) 0 var(--us-s4); }
+.hp-sec--last { padding-bottom: var(--us-s6); }
+
+/* 区块抬头：一个大标题 + 右侧一句说明 + 底下一条线 */
+.hp-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
+  gap: var(--us-s3);
+  align-items: end;
+  padding-bottom: var(--us-s3);
+  border-bottom: var(--us-hair);
+  margin-bottom: var(--us-s4);
+}
+.hp-head__t {
+  font-size: clamp(28px, 5vw, 64px);
+  line-height: .96;
+  letter-spacing: -.042em;
+  font-weight: 500;
+}
+.hp-head__t em { font-family: var(--us-serif); font-style: italic; font-weight: 400; }
+.hp-head__d { font-size: 14px; line-height: 1.6; color: var(--us-ink-3); }
+
+/* 焦点位（今日推荐）：12 栏里 7/5 破格，图文不对称 */
+.hp-spot { display: grid; grid-template-columns: 7fr 5fr; gap: var(--us-s4); align-items: stretch; }
+.hp-spot__fig {
+  position: relative;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--us-bg-3);
+  min-height: 380px;
+}
+.hp-spot__fig img, .hp-spot__fig .u-ph { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+.hp-spot__fig img { transition: transform 1.2s var(--us-ease); }
+.hp-spot:hover .hp-spot__fig img { transform: scale(1.04); }
+.hp-spot__bd {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--us-s2);
+  padding-bottom: 4px;
+}
+.hp-spot__t {
+  font-size: clamp(26px, 3.4vw, 46px);
+  line-height: 1;
+  letter-spacing: -.04em;
+  font-weight: 500;
+}
+.hp-spot__x { font-size: 15px; line-height: 1.62; color: var(--us-ink-2); max-width: 34ch; }
+.hp-spot__m {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--us-s3);
+  padding-top: var(--us-s2);
+  border-top: var(--us-hair);
+  margin-top: var(--us-s1);
+}
+.hp-spot__m b { display: block; font-size: 19px; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.hp-spot__m s {
+  text-decoration: none; display: block; margin-top: 3px;
+  font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--us-ink-3);
 }
 
-/* ============================================================================
-   NOVA · 通用组件补全（2026-10）
-   ----------------------------------------------------------------------------
-   me / car_detail / profile 三个内页用到的结构性类，以及早期模板里的一批
-   命名变体（nv-kicker / nv-tag--acc / nv-muted …）都在这里统一补齐。
-   原则：一切沿用 nova 的令牌（--nv-*），方角、发丝线、藤黄唯一强调色，不引新色。
-   ============================================================================ */
-
-/* ---- 页头：页眉文字族（nv-pagehd 与 nv-head 两种写法归一） ---- */
-.nv-pagehd { padding: clamp(40px, 8vh, 96px) 0 clamp(20px, 3vw, 34px); border-bottom: var(--nv-hair); }
-.nv-pagehd .nv-h1 { margin: var(--nv-s3) 0 0; }
-.nv-kicker, .nv-head__k, .nv-kick {
-  margin: 0; font-family: var(--nv-mono); font-size: 12px; letter-spacing: .26em;
-  text-transform: uppercase; color: var(--nv-ink-3);
+/* 口碑：杂志体，首字下沉 + 一条破格引言 + 右侧流水 */
+.hp-note { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 420px); gap: var(--us-s6); }
+.hp-quotes { border-top: var(--us-hair); }
+.hp-quote {
+  padding: 18px 0;
+  border-bottom: var(--us-hair);
+  display: grid;
+  gap: 6px;
 }
-.nv-kicker--stage { color: rgba(240,237,229,.62); }
-.nv-h1--mid { font-size: clamp(38px, 7.6vw, 92px); }
-.nv-h1--prof { font-size: clamp(34px, 6.4vw, 78px); }
-.nv-h1--stage { font-size: min(clamp(38px, 7.4vw, 88px), 13vw); color: #F2EFE7; }
-.nv-h4 { margin: var(--nv-s3) 0 var(--nv-s2); font-family: var(--nv-serif); font-size: 15px; font-weight: 700; }
+.hp-quote__x { font-size: 15px; line-height: 1.6; color: var(--us-ink-2); }
+.hp-quote__k { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--us-ink-3); }
+.hp-quote__k img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
+.hp-quote__s { color: var(--us-ink); letter-spacing: .12em; font-size: 11px; }
 
-/* ---- 小工具 ---- */
-.nv-mono { font-family: var(--nv-mono); font-variant-numeric: tabular-nums; }
-.nv-muted, .nv-mute { color: var(--nv-ink-3); }
-.nv-lnk { color: inherit; text-decoration: none; border-bottom: 1px solid var(--nv-line-2); }
-.nv-lnk:hover { border-bottom-color: var(--nv-accent); color: var(--nv-accent); }
-.nv-cap { font-size: 12.5px; color: var(--nv-ink-3); }
-.nv-lb { font-size: 12.5px; color: var(--nv-ink-3); letter-spacing: .04em; }
-
-/* ---- 标签族（统一 acc / accent / ok / solid / seal） ---- */
-.nv-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.nv-tag--acc, .nv-tag--accent { border-color: var(--nv-accent); color: var(--nv-accent); }
-.nv-tag--ok { border-color: #3E6B4A; color: #3E6B4A; }
-.nv-tag--solid { background: var(--nv-ink); color: var(--nv-paper); border-color: var(--nv-ink); }
-html[data-theme="dark"] .nv-tag--ok { border-color: #7FB08A; color: #7FB08A; }
-.nv-tags--stage .nv-tag { border-color: rgba(240,237,229,.34); color: rgba(240,237,229,.9); }
-
-/* ---- 按钮补全 ---- */
-.nv-btn--acc { border-color: var(--nv-accent); color: var(--nv-accent); }
-.nv-btn--acc:hover { background: var(--nv-accent); color: #FFFDF7; }
-.nv-btn--wide, .nv-btn--block { width: 100%; justify-content: center; }
-.nv-btn--stage { border-color: rgba(240,237,229,.34); color: #F2EFE7; }
-.nv-btn--stage:hover { background: #F2EFE7; color: #141210; }
-.nv-btn--stage-ghost { border-color: transparent; color: rgba(240,237,229,.7); }
-.nv-btn--stage-ghost:hover { color: #F2EFE7; }
-
-/* ---- 表单族补全 ---- */
-.nv-form { display: grid; gap: var(--nv-s4); }
-.nv-form__grid { display: grid; grid-template-columns: 1fr auto; gap: var(--nv-s3); align-items: end; }
-.nv-field > span { display: block; font-size: 12.5px; color: var(--nv-ink-3); margin-bottom: 6px; letter-spacing: .03em; }
-.nv-field--grow { flex: 1 1 150px; }
-.nv-field--mid { flex: 0 1 190px; }
-.nv-field--tiny { max-width: 92px; }
-.nv-input {
-  width: 100%; padding: 10px 12px; background: var(--nv-paper-2);
-  border: var(--nv-hair); border-radius: 1px; color: var(--nv-ink); font: inherit;
-}
-.nv-input--grow { flex: 1; min-width: 140px; }
-.nv-input:focus { outline: none; border-color: var(--nv-accent); }
-.nv-inline { display: flex; gap: var(--nv-s2); align-items: flex-end; flex-wrap: wrap; }
-.nv-inline--top { margin-top: var(--nv-s3); }
-.nv-inline--sep { margin-top: var(--nv-s4); padding-top: var(--nv-s4); border-top: var(--nv-hair); }
-.nv-inline-form { display: inline; }
-.nv-check { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--nv-ink-2); cursor: pointer; }
-.nv-check input { position: absolute; opacity: 0; }
-.nv-check > span { width: 14px; height: 14px; border: 1px solid var(--nv-line-2); display: inline-block; position: relative; }
-.nv-check input:checked + span { background: var(--nv-accent); border-color: var(--nv-accent); }
-.nv-check input:checked + span::after { content: "✓"; position: absolute; inset: -3px 0 0 2px; color: #FFFDF7; font-size: 11px; }
-
-/* ---- 折叠区 ---- */
-.nv-fold { margin-top: var(--nv-s4); border-top: var(--nv-hair); }
-.nv-fold > summary { cursor: pointer; padding: 12px 0 0; font-size: 13.5px; color: var(--nv-ink-2); list-style: none; }
-.nv-fold > summary::-webkit-details-marker { display: none; }
-.nv-fold > summary::before { content: "＋ "; color: var(--nv-accent); }
-.nv-fold[open] > summary::before { content: "－ "; }
-.nv-fold--danger > summary { color: var(--nv-seal); }
-.nv-fold--danger > summary::before { color: var(--nv-seal); }
-
-/* ---- 空态补全 ---- */
-.nv-empty--sm { padding: var(--nv-s5) 0; }
-.nv-empty--sm h3 { font-size: 18px; }
-
-/* ---- 提示条 ---- */
-.nv-note {
-  margin-top: var(--nv-s3); font-size: 13px; color: var(--nv-ink-3);
-  border-left: 2px solid var(--nv-line-2); padding: 2px 0 2px 12px;
+/* 车队：一行一条，时间在左 */
+.hp-cars { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto auto; gap: var(--us-s2); align-items: center; }
+.hp-cars__t {
+  font-family: var(--us-mono);
+  font-size: 13px;
+  color: var(--us-ink);
+  font-variant-numeric: tabular-nums;
 }
 
-/* ================= 我的打本生涯（me） ================= */
-.nv-mewrap { padding-bottom: clamp(48px, 7vw, 90px); }
-.nv-idbar {
-  display: flex; flex-wrap: wrap; gap: var(--nv-s4); align-items: center; justify-content: space-between;
-  padding: var(--nv-s4) 0; border-bottom: var(--nv-hair);
+/* 收束：一整屏的大字题词 */
+.hp-coda {
+  padding: var(--us-s8) 0 var(--us-s6);
+  text-align: center;
 }
-.nv-idbar__who { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.nv-idbar__txt { display: grid; gap: 3px; min-width: 0; }
-.nv-idbar__txt b { font-family: var(--nv-serif); font-size: 20px; }
-.nv-idbar__txt em { font-style: normal; font-family: var(--nv-mono); font-size: 12.5px; color: var(--nv-ink-3); }
-.nv-idbar__stats { display: flex; gap: clamp(18px, 4vw, 44px); margin: 0; }
-.nv-idbar__stats > div { display: grid; gap: 2px; }
-.nv-idbar__stats dt { font-size: 12px; color: var(--nv-ink-3); letter-spacing: .04em; }
-.nv-idbar__stats dd { margin: 0; }
-.nv-idbar__stats b { font-family: var(--nv-serif); font-size: 24px; font-variant-numeric: tabular-nums; }
-
-.nv-av {
-  width: 46px; height: 46px; flex: none; display: grid; place-items: center;
-  background: var(--nv-paper-3); border: var(--nv-hair); border-radius: 1px;
-  font-family: var(--nv-serif); font-size: 20px; overflow: hidden;
+.hp-coda__q {
+  font-size: clamp(32px, 7.4vw, 108px);
+  line-height: .96;
+  letter-spacing: -.046em;
+  font-weight: 500;
 }
-.nv-av img { width: 100%; height: 100%; object-fit: cover; }
-.nv-av--sm { width: 34px; height: 34px; font-size: 15px; }
-.nv-av--lg { width: clamp(76px, 12vw, 120px); height: clamp(76px, 12vw, 120px); font-size: clamp(30px, 5vw, 46px); }
+.hp-coda__q em { font-family: var(--us-serif); font-style: italic; font-weight: 400; }
+.hp-coda__act { margin-top: var(--us-s4); display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
 
-/* 横向分段导航：编号 + 名称 + 计数，下划线标示当前 */
-.nv-seg {
-  display: flex; gap: 0; flex-wrap: wrap;
-  border-bottom: var(--nv-hair); margin-bottom: var(--nv-s5);
-  position: sticky; top: 0; z-index: 20;
-  background: var(--nv-paper);
+/* ══════════════════════════ 清单页（剧本库） ══════════════════════════ */
+.lp-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--us-s3);
+  padding: var(--us-s3) 0;
+  border-bottom: var(--us-hair);
+  flex-wrap: wrap;
 }
-.nv-seg .mi {
-  appearance: none; background: none; border: 0; cursor: pointer;
-  display: inline-flex; align-items: baseline; gap: 8px;
-  padding: 14px 20px 12px; color: var(--nv-ink-3); font: inherit; font-size: 14px;
-  border-bottom: 2px solid transparent; margin-bottom: -1px;
+.lp-count {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--us-ink-3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.nv-seg .mi i { font-family: var(--nv-mono); font-size: 11px; letter-spacing: .05em; }
-.nv-seg .mi b { font-family: var(--nv-mono); font-size: 11.5px; color: var(--nv-ink-3); }
-.nv-seg .mi span { color: var(--nv-line-2); }
-.nv-seg .mi:hover { color: var(--nv-ink); }
-.nv-seg .mi.on { color: var(--nv-ink); border-bottom-color: var(--nv-accent); }
+.lp-chips { padding: var(--us-s3) 0; display: grid; gap: 12px; }
+.lp-chips__line { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.lp-chips__line > .u-lab { margin-right: 6px; min-width: 3.4em; }
+.lp-grid { margin-top: var(--us-s5); }
+.lp-grid [data-anim] { transition: opacity .4s var(--us-ease); }
 
-/* 面板通用 */
-.nv-two { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(28px, 5vw, 64px); align-items: start; }
-.nv-hdrow { display: flex; justify-content: space-between; align-items: baseline; gap: var(--nv-s3); margin-bottom: var(--nv-s3); }
+/* ══════════════════════════ 剧本详情 ══════════════════════════ */
+.dt-hero { padding: calc(var(--us-nav) + 26px) 0 var(--us-s4); }
+.dt-hero__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--us-s2);
+  font-size: 12px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--us-ink-3);
+  margin-bottom: var(--us-s4);
+}
+.dt-hero__bar a { display: inline-flex; align-items: center; gap: 7px; transition: color .3s, gap .3s var(--us-ease); }
+.dt-hero__bar a:hover { color: var(--us-ink); gap: 11px; }
+.dt-title {
+  font-size: clamp(38px, 7.6vw, 104px);
+  line-height: .9;
+  letter-spacing: -.05em;
+  font-weight: 500;
+}
+.dt-title em { font-family: var(--us-serif); font-style: italic; font-weight: 400; }
 
-/* 预约票卡 */
-.nv-ticket { border: var(--nv-hair); background: var(--nv-paper-2); padding: clamp(18px, 2.4vw, 26px); margin-bottom: var(--nv-s4); border-radius: 1px; }
-.nv-ticket__hd { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--nv-s4); }
-.nv-ticket__ttl h3 { margin: 0; font-family: var(--nv-serif); font-size: 19px; }
-.nv-ticket__ttl .nv-tags { margin-top: 8px; }
-.nv-ticket__meta { margin: var(--nv-s3) 0 0; font-size: 13.5px; color: var(--nv-ink-2); }
-.nv-ticket__meta em { font-style: normal; color: var(--nv-ink-3); }
-.nv-when { flex: none; text-align: right; font-family: var(--nv-mono); font-size: 12.5px; color: var(--nv-ink-3); line-height: 1.5; }
+/* 五个事实并排：价格是唯一被强调的数字 */
+.dt-facts {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--us-s2);
+  margin-top: var(--us-s4);
+  padding: var(--us-s3) 0;
+  border-top: var(--us-hair);
+  border-bottom: var(--us-hair);
+}
+.dt-fact b {
+  display: block;
+  font-size: clamp(20px, 2.6vw, 32px);
+  line-height: 1;
+  letter-spacing: -.04em;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.dt-fact s {
+  text-decoration: none;
+  display: block;
+  margin-top: 7px;
+  font-size: 10.5px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--us-ink-3);
+}
+.dt-fact--hi b { color: var(--us-stop); }
 
-.nv-code { display: flex; align-items: baseline; gap: 12px; margin-top: var(--nv-s3); }
-.nv-code__lb { font-size: 13px; color: var(--nv-ink-3); }
-.nv-code__v { font-family: var(--nv-mono); font-size: 22px; font-weight: 700; letter-spacing: .18em; color: var(--nv-accent); }
+/* 封面 + 预订栏 */
+.dt-side { display: grid; gap: var(--us-s3); }
+.dt-cover {
+  position: relative;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--us-bg-3);
+  aspect-ratio: 4 / 5;
+}
+.dt-cover img, .dt-cover .u-ph { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.dt-book {
+  border: var(--us-hair);
+  border-radius: 12px;
+  padding: var(--us-s3);
+  background: color-mix(in srgb, var(--us-paper) 70%, transparent);
+  backdrop-filter: blur(8px);
+  display: grid;
+  gap: var(--us-s2);
+}
+.dt-price { display: flex; align-items: baseline; gap: 10px; }
+.dt-price b { font-size: 34px; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.dt-price s { text-decoration: none; font-size: 12px; color: var(--us-ink-3); }
 
-.nv-acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: var(--nv-s4); }
-.nv-actbig { margin-top: var(--nv-s5); }
+/* 角色：海报墙，首张破格跨两列 */
+.dt-roles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--us-s2); }
+.dt-role {
+  position: relative;
+  border-top: var(--us-hair);
+  padding-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+.dt-role__f {
+  aspect-ratio: 3 / 4;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--us-bg-3);
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  color: var(--us-ink-3);
+}
+.dt-role__f img { width: 100%; height: 100%; object-fit: cover; }
+.dt-role__n { font-size: 14.5px; letter-spacing: -.02em; }
+.dt-role__x { font-size: 12.5px; color: var(--us-ink-3); line-height: 1.5; }
+.dt-role.is-taken { opacity: .48; }
+.dt-roles > .dt-role:first-child { grid-column: span 2; }
+.dt-roles > .dt-role:first-child .dt-role__f { aspect-ratio: 3 / 4; }
 
-/* 我的评价回显 */
-.nv-myrev { margin-top: var(--nv-s4); border-top: var(--nv-hair); padding-top: var(--nv-s4); }
-.nv-myrev__hd { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.nv-myrev__hd em { font-style: normal; font-size: 12.5px; color: var(--nv-ink-3); }
-.nv-myrev__stars i { color: var(--nv-line-2); font-style: normal; }
-.nv-myrev__stars i.on { color: var(--nv-accent); }
-.nv-myrev__t { margin: 10px 0 0; }
-.nv-myrev__r { margin: 10px 0 0; font-size: 13.5px; color: var(--nv-accent); }
+/* 评价：通栏流水，不做卡片 */
+.dt-voices { border-top: var(--us-hair); }
+.dt-voice {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr) auto;
+  gap: var(--us-s3);
+  padding: var(--us-s3) 0;
+  border-bottom: var(--us-hair);
+  align-items: start;
+}
+.dt-voice__k { display: grid; gap: 6px; justify-items: start; }
+.dt-voice__k img, .dt-voice__k i {
+  width: 40px; height: 40px; border-radius: 50%; object-fit: cover;
+  display: grid; place-items: center; background: var(--us-bg-3); font-style: normal; font-size: 16px;
+}
+.dt-voice__x { font-size: 15px; line-height: 1.66; color: var(--us-ink-2); }
+.dt-voice__f { display: flex; gap: 12px; font-size: 12.5px; color: var(--us-ink-3); }
+.dt-voice__f button, .dt-voice__f a { color: inherit; transition: color .3s; }
+.dt-voice__f button:hover, .dt-voice__f a:hover { color: var(--us-ink); }
 
-/* 评价表单 */
-.nv-review { margin-top: var(--nv-s4); border-top: var(--nv-hair); padding-top: var(--nv-s4); display: flex; flex-wrap: wrap; gap: var(--nv-s3) var(--nv-s3); align-items: flex-end; }
-.nv-review__rate { display: grid; gap: 6px; }
-.nv-review .stars { display: inline-flex; gap: 2px; }
-.nv-review .stars input { position: absolute; opacity: 0; }
-.nv-review .stars label { cursor: pointer; font-size: 20px; color: var(--nv-line-2); }
-.nv-review .stars label.on { color: var(--nv-accent); }
-.nv-review__dims { display: flex; gap: var(--nv-s2); }
-.nv-review .nv-btn { align-self: flex-end; }
+/* 车次（可约场次）：发丝线表 */
+.dt-sheet { display: grid; }
 
-/* 订单表 */
-.nv-tablewrap { overflow-x: auto; border: var(--nv-hair); }
-.nv-table { width: 100%; min-width: 620px; border-collapse: collapse; font-size: 13.5px; }
-.nv-table th { text-align: left; padding: 12px 14px; font-family: var(--nv-mono); font-size: 11.5px; letter-spacing: .08em; color: var(--nv-ink-3); border-bottom: 1px solid var(--nv-line-2); }
-.nv-table td { padding: 13px 14px; border-bottom: var(--nv-hair); vertical-align: middle; }
-.nv-table tr:last-child td { border-bottom: 0; }
+/* 到店流程 */
+.dt-steps { display: grid; gap: 12px; }
+.dt-steps__i { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 12px; align-items: baseline; }
+.dt-steps__i b { font-family: var(--us-mono); font-size: 11px; color: var(--us-ink-3); }
+.dt-steps__i span { font-size: 14px; color: var(--us-ink-2); line-height: 1.55; }
+
+/* ── Next 衔接（unseen 的 js-footer-next / "Keep Scrolling"）──
+   整块是一条通往下一本的巨型链接：编号 + 巨字 + 右下那一笔箭头。
+   悬停时它整个翻成墨底 —— 这是"下一页"最直白的表态。 */
+.dt-next {
+  display: block;
+  position: relative;
+  margin-top: var(--us-s6);
+  padding: var(--us-s6) 0 var(--us-s5);
+  border-top: var(--us-hair);
+  background: color-mix(in srgb, var(--us-ink) 3%, transparent);
+  transition: background .6s var(--us-ease), color .5s var(--us-ease);
+}
+.dt-next:hover { background: var(--us-ink); color: var(--us-bg); }
+.dt-next__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--us-s4);
+  align-items: end;
+}
+.dt-next__k { margin-bottom: var(--us-s3); transition: color .4s var(--us-ease); }
+.dt-next:hover .dt-next__k { color: color-mix(in srgb, var(--us-bg) 58%, transparent); }
+.dt-next__t {
+  font-size: clamp(38px, 8.6vw, 132px);
+  line-height: .9;
+  letter-spacing: -.05em;
+  font-weight: 500;
+}
+.dt-next__t em {
+  display: block;
+  font-family: var(--us-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: .46em;
+  letter-spacing: -.02em;
+  margin-top: .14em;
+}
+.dt-next__d { margin-top: var(--us-s3); font-size: 14px; color: var(--us-ink-3); transition: color .4s var(--us-ease); }
+.dt-next:hover .dt-next__d { color: color-mix(in srgb, var(--us-bg) 60%, transparent); }
+.dt-next__a {
+  font-size: clamp(34px, 5vw, 66px);
+  line-height: 1;
+  transition: transform .72s var(--us-ease);
+}
+.dt-next:hover .dt-next__a { transform: translate(12px, 12px); }
+.dt-next__hint {
+  margin-top: var(--us-s4);
+  font-size: 11px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--us-ink-4);
+}
+
+/* ══════════════════════════ 拼车 ══════════════════════════ */
+.cr-side { display: grid; gap: var(--us-s3); }
+.cr-side__box { display: grid; gap: 14px; }
+.cr-row {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) auto;
+  gap: var(--us-s3);
+  align-items: center;
+  padding: 20px 0;
+  border-bottom: var(--us-hair);
+  transition: padding .45s var(--us-ease), background .35s;
+}
+.cr-row:hover { padding-left: 14px; background: color-mix(in srgb, var(--us-ink) 3%, transparent); }
+.cr-row__w {
+  font-family: var(--us-mono);
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .01em;
+}
+.cr-row__w s { display: block; text-decoration: none; font-size: 10.5px; color: var(--us-ink-3); margin-top: 4px; letter-spacing: .1em; }
+.cr-row__t { font-size: 17px; letter-spacing: -.022em; }
+.cr-row__m { font-size: 13px; color: var(--us-ink-3); margin-top: 5px; }
+.cr-row__r { display: flex; align-items: center; gap: 14px; }
+/* 座位进度：一条极细的线，满了转墨 */
+.cr-seat { width: 92px; height: 2px; background: var(--us-line); position: relative; overflow: hidden; border-radius: 2px; }
+.cr-seat i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--us-ink); transition: width .7s var(--us-ease); }
+
+/* ══════════════════════════ 社区 ══════════════════════════ */
+.cm-threads { border-top: var(--us-hair); }
+.cm-thread {
+  display: grid;
+  gap: 10px;
+  padding: var(--us-s3) 0;
+  border-bottom: var(--us-hair);
+  transition: padding .45s var(--us-ease), background .35s;
+}
+.cm-thread:hover { padding-left: 14px; background: color-mix(in srgb, var(--us-ink) 3%, transparent); }
+.cm-thread__k { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--us-ink-3); }
+.cm-thread__k img, .cm-thread__k i {
+  width: 26px; height: 26px; border-radius: 50%; object-fit: cover;
+  display: grid; place-items: center; background: var(--us-bg-3); font-style: normal; font-size: 13px;
+}
+.cm-thread__t { font-size: clamp(17px, 2vw, 22px); letter-spacing: -.026em; }
+.cm-thread__x { font-size: 14.5px; line-height: 1.62; color: var(--us-ink-2); max-width: 68ch; }
+.cm-thread__f { display: flex; gap: 16px; font-size: 12.5px; color: var(--us-ink-3); }
+.cm-thread__f button, .cm-thread__f a { color: inherit; transition: color .3s; }
+.cm-thread__f button:hover, .cm-thread__f a:hover { color: var(--us-ink); }
+
+/* ══════════════════════════ 问答 ══════════════════════════ */
+.qa-list { border-top: var(--us-hair); counter-reset: qa; }
+.qa-item { border-bottom: var(--us-hair); }
+.qa-item__q {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) 22px;
+  gap: var(--us-s2);
+  align-items: baseline;
+  padding: 22px 0;
+  text-align: left;
+  transition: padding .45s var(--us-ease);
+}
+.qa-item__q:hover { padding-left: 12px; }
+.qa-item__no { font-family: var(--us-mono); font-size: 11px; color: var(--us-ink-3); }
+.qa-item__t { font-size: clamp(16px, 1.9vw, 21px); letter-spacing: -.024em; }
+.qa-item__i { color: var(--us-ink-3); transition: transform .5s var(--us-ease); font-size: 15px; }
+.qa-item.is-on .qa-item__i { transform: rotate(45deg); }
+.qa-item__a {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows .6s var(--us-ease);
+}
+.qa-item.is-on .qa-item__a { grid-template-rows: 1fr; }
+.qa-item__a > div { overflow: hidden; }
+.qa-item__a p {
+  padding: 0 0 22px 66px;
+  font-size: 15px;
+  line-height: 1.72;
+  color: var(--us-ink-2);
+  max-width: 76ch;
+}
+
+/* ══════════════════════════ 消息 ══════════════════════════ */
+.nt-letters { border-top: var(--us-hair); }
+.nt-letter {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: var(--us-s3);
+  padding: var(--us-s3) 0;
+  border-bottom: var(--us-hair);
+  position: relative;
+}
+.nt-letter.is-new::before {
+  content: "";
+  position: absolute;
+  left: -14px; top: 26px;
+  width: 3px; height: 26px;
+  background: var(--us-ink);
+  border-radius: 2px;
+}
+.nt-letter__w { font-family: var(--us-mono); font-size: 11.5px; color: var(--us-ink-3); padding-top: .3em; }
+.nt-letter__t { font-size: 16px; letter-spacing: -.022em; margin-bottom: 5px; }
+.nt-letter__x { font-size: 14.5px; line-height: 1.62; color: var(--us-ink-2); max-width: 70ch; }
+
+/* ══════════════════════════ 我的 ══════════════════════════ */
+.me-tabs {
+  display: flex;
+  gap: 4px;
+  padding: var(--us-s2) 0;
+  border-bottom: var(--us-hair);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.me-tabs::-webkit-scrollbar { display: none; }
+.me-tabs button {
+  flex: none;
+  padding: 9px 17px;
+  border-radius: var(--us-round);
+  font-size: 13.5px;
+  color: var(--us-ink-2);
+  transition: background .35s var(--us-ease), color .3s;
+}
+.me-tabs button:hover { background: color-mix(in srgb, var(--us-ink) 6%, transparent); }
+/* tabs.js 打的是 .on，模板里同时给了 .is-on 让无 JS 时第一格也是亮的 —— 两个都认 */
+.me-tabs button.is-on, .me-tabs button.on { background: var(--us-ink); color: var(--us-bg); }
+.me-tabs button s {
+  text-decoration: none;
+  font-variant-numeric: tabular-nums;
+  opacity: .5;
+  margin-left: 7px;
+  font-size: .88em;
+}
+
+/* 身份栏：左头像+手机号，右信用三数 */
+.me-id {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--us-s4);
+  flex-wrap: wrap;
+  padding: var(--us-s3) 0;
+  border-bottom: var(--us-hair);
+}
+.me-id__who { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.me-id__who .u-av { width: 44px; height: 44px; font-size: 17px; }
+.me-id__txt { display: grid; gap: 3px; min-width: 0; }
+.me-id__txt b { font-size: 17px; letter-spacing: -.024em; }
+.me-id__txt em {
+  font-style: normal;
+  font-size: 12.5px;
+  color: var(--us-ink-3);
+  font-family: var(--us-mono);
+}
+.me-id__stats { border: 0; padding: 0; gap: var(--us-s5); }
+
+/* 票卡：左日期栏（虚线撕口）+ 右侧内容 */
+.me-ticket {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr);
+  border-bottom: var(--us-hair);
+  transition: background .35s;
+}
+.me-ticket:hover { background: color-mix(in srgb, var(--us-ink) 3%, transparent); }
+.me-ticket__d {
+  padding: var(--us-s3) var(--us-s2) var(--us-s3) 0;
+  border-right: 1px dashed var(--us-line-2);
+  display: grid;
+  align-content: start;
+  gap: 4px;
+}
+.me-ticket__d b { font-size: 26px; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.me-ticket__d s { text-decoration: none; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--us-ink-3); }
+.me-ticket__d i { font-style: normal; font-family: var(--us-mono); font-size: 12px; color: var(--us-ink-2); margin-top: 4px; }
+.me-ticket__in { padding: var(--us-s3) 0 var(--us-s3) var(--us-s3); display: grid; gap: 12px; }
+.me-ticket__t { font-size: 18px; letter-spacing: -.026em; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.me-ticket__m { display: flex; flex-wrap: wrap; gap: 6px var(--us-s3); font-size: 13px; color: var(--us-ink-3); }
+.me-ticket__m em { font-style: normal; color: var(--us-ink-4); }
+.me-ticket__act { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.me-ticket__tags { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* 核销码：票据上的打孔数字 */
+.me-code {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px 18px;
+  border: 1px dashed var(--us-line-2);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--us-ink) 3%, transparent);
+  justify-self: start;
+}
+.me-code__lb { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--us-ink-3); }
+.me-code__v {
+  font-family: var(--us-mono);
+  font-size: 19px;
+  letter-spacing: .1em;
+  color: var(--us-ink);
+}
+.me-note { font-size: 13px; color: var(--us-ink-3); max-width: 62ch; }
+
+/* 折叠区：改期 / 危险区 */
+.me-fold { border-top: var(--us-hair); padding-top: 12px; }
+.me-fold > summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 13px;
+  color: var(--us-ink-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: color .3s;
+}
+.me-fold > summary::-webkit-details-marker { display: none; }
+.me-fold > summary::before {
+  content: "";
+  width: 7px; height: 7px;
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform .35s var(--us-ease);
+}
+.me-fold[open] > summary { color: var(--us-ink); }
+.me-fold[open] > summary::before { transform: rotate(45deg); }
+.me-fold--danger > summary { color: var(--us-stop); }
+.me-fold > *:not(summary) { margin-top: var(--us-s3); }
+
+/* 我的评价回顾 */
+.me-rev { border-top: var(--us-hair); padding-top: 12px; display: grid; gap: 8px; }
+.me-rev__hd { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.me-rev__hd em { font-style: normal; font-size: 12px; color: var(--us-ink-3); }
+.me-rev__st { display: inline-flex; gap: 2px; }
+.me-rev__st i { font-style: normal; font-size: 13px; color: var(--us-ink-4); }
+.me-rev__st i.on { color: var(--us-ink); }
+.me-rev__t { font-size: 14.5px; color: var(--us-ink-2); max-width: 70ch; }
+.me-rev__r { font-size: 13.5px; color: var(--us-ink-2); padding-left: 14px; border-left: 1px solid var(--us-line-2); }
+
+/* 表单里的打分区 */
+.me-stars { display: flex; flex-direction: row-reverse; justify-content: flex-end; gap: 2px; }
+.me-stars input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.me-stars label {
+  font-size: 22px;
+  line-height: 1;
+  color: var(--us-ink-4);
+  cursor: pointer;
+  transition: color .25s var(--us-ease), transform .25s var(--us-ease);
+}
+.me-stars label:hover { transform: translateY(-2px) scale(1.08); }
+.me-stars label.on { color: var(--us-ink); }
+
+/* 评价的四个维度打分 */
+.me-dims { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--us-s2); }
 
 /* 券 */
-.nv-coupon { display: flex; justify-content: space-between; align-items: center; gap: var(--nv-s3); border: var(--nv-hair); background: var(--nv-paper-2); padding: 14px 18px; margin-bottom: var(--nv-s2); border-radius: 1px; }
-.nv-coupon__amt { font-family: var(--nv-mono); font-size: 20px; color: var(--nv-accent); margin-right: 6px; }
-.nv-coupon__lb { font-size: 13.5px; }
-.nv-coupon em { display: block; font-style: normal; font-size: 12px; color: var(--nv-ink-3); margin-top: 4px; }
-
-/* 心愿单清单 */
-.nv-list { border-top: var(--nv-hair); }
-.nv-list__row { display: flex; justify-content: space-between; align-items: center; gap: var(--nv-s3); padding: 11px 0; border-bottom: var(--nv-hair); }
-.nv-list__r { display: inline-flex; align-items: center; gap: 10px; }
-.nv-list__r em { font-style: normal; font-family: var(--nv-mono); font-size: 12.5px; color: var(--nv-ink-3); }
-
-/* 消息 / 留言 */
-.nv-msg { border-top: var(--nv-hair); padding: 14px 0; }
-.nv-msg__hd { display: flex; justify-content: space-between; align-items: baseline; gap: var(--nv-s3); }
-.nv-msg__hd b { font-family: var(--nv-serif); font-size: 16px; }
-.nv-msg__hd em { font-style: normal; font-size: 12.5px; color: var(--nv-ink-3); }
-.nv-msg p { margin: 8px 0 0; font-size: 14px; color: var(--nv-ink-2); }
-.nv-msg__r { color: var(--nv-accent); }
-
-/* 账号信息 kv */
-.nv-kv { border-top: var(--nv-hair); }
-.nv-kv > div { display: flex; justify-content: space-between; align-items: baseline; gap: var(--nv-s3); padding: 11px 0; border-bottom: var(--nv-hair); }
-.nv-kv dt { color: var(--nv-ink-3); font-size: 13.5px; }
-.nv-kv dd { margin: 0; font-size: 14px; }
-.nv-kv--act { display: flex; justify-content: space-between; align-items: center; gap: var(--nv-s3); border-bottom: var(--nv-hair); }
-
-/* ================= 车队详情（car_detail） ================= */
-.nv-stagehd { background: #141210; color: #F2EFE7; padding: clamp(48px, 9vh, 104px) 0 clamp(30px, 5vw, 52px); }
-.nv-stagehd__grid { display: grid; grid-template-columns: 1fr auto; gap: var(--nv-s5); align-items: start; }
-.nv-stagehd__side { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-.nv-stagehd .nv-h1 { margin: 12px 0 0; }
-.nv-stagehd .nv-tags { margin-top: var(--nv-s4); }
-.nv-deadline { margin: var(--nv-s3) 0 0; font-family: var(--nv-mono); font-size: 13px; color: var(--nv-accent-2); }
-.nv-deadline b { font-size: 17px; }
-
-.nv-roster { border-top: var(--nv-hair); }
-.nv-roster__row { display: flex; align-items: center; gap: var(--nv-s3); padding: 13px 0; border-bottom: var(--nv-hair); }
-.nv-roster__who { flex: 1; min-width: 0; display: grid; gap: 4px; }
-.nv-roster__who b { font-family: var(--nv-serif); font-size: 15.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.nv-roster__who em { font-style: normal; font-size: 12.5px; color: var(--nv-ink-3); }
-.nv-roster__st { flex: none; font-family: var(--nv-mono); font-size: 11.5px; color: var(--nv-ink-3); letter-spacing: .05em; }
-
-.nv-chat { max-height: 340px; overflow-y: auto; border-top: var(--nv-hair); }
-.nv-chat__row { padding: 13px 0; border-bottom: var(--nv-hair); }
-.nv-chat__hd { display: flex; justify-content: space-between; align-items: baseline; gap: var(--nv-s3); }
-.nv-chat__hd b { font-family: var(--nv-serif); font-size: 15px; }
-.nv-chat__hd em { font-style: normal; font-size: 12px; color: var(--nv-ink-3); }
-.nv-chat__row p { margin: 6px 0 0; font-size: 14px; color: var(--nv-ink-2); }
-
-.nv-ownerbox { margin-top: var(--nv-s5); border: var(--nv-hair); background: var(--nv-paper-2); padding: clamp(16px, 2.2vw, 24px); border-radius: 1px; }
-.nv-ownerbox__t { display: block; font-family: var(--nv-serif); font-size: 16px; margin-bottom: var(--nv-s3); }
-.nv-ownerbox form + form { margin-top: 0; }
-
-/* ================= 玩家主页（profile） ================= */
-.nv-profhd { padding: clamp(40px, 8vh, 92px) 0 clamp(20px, 3vw, 32px); border-bottom: var(--nv-hair); }
-.nv-profhd__grid { display: grid; grid-template-columns: 1fr auto; gap: var(--nv-s5); align-items: end; }
-.nv-profhd__id { display: flex; align-items: flex-end; gap: clamp(14px, 2.4vw, 26px); }
-.nv-profhd .nv-h1 { margin: 0; }
-.nv-profhd__meta { display: grid; gap: var(--nv-s3); justify-items: end; }
-.nv-profable { padding: clamp(20px, 3vw, 34px) 0 0; }
-.nv-profrevs { padding: clamp(24px, 3.4vw, 44px) 0 clamp(48px, 7vw, 90px); }
-
-/* 评价条目 */
-.nv-rev { border-top: var(--nv-hair); padding: var(--nv-s4) 0; }
-.nv-rev:first-of-type { border-top: 0; }
-.nv-rev__hd { display: flex; justify-content: space-between; align-items: center; gap: var(--nv-s3); flex-wrap: wrap; }
-.nv-rev__author { display: inline-flex; align-items: center; gap: 10px; }
-.nv-rev__author b { font-family: var(--nv-serif); font-size: 15.5px; }
-.nv-rev__meta { display: inline-flex; align-items: baseline; gap: 10px; }
-.nv-rev__meta em { font-style: normal; font-size: 12.5px; color: var(--nv-ink-3); }
-.nv-rev__t { margin: 12px 0 0; font-size: 15px; color: var(--nv-ink-2); }
-.nv-rev__q { margin: 8px 0 0; font-size: 13.5px; color: var(--nv-accent); }
-
-/* 小屏收敛 */
-@media (max-width: 900px) {
-  .nv-two { grid-template-columns: 1fr; gap: var(--nv-s5); }
-  .nv-stagehd__grid, .nv-profhd__grid { grid-template-columns: 1fr; }
-  .nv-stagehd__side, .nv-profhd__meta { justify-content: flex-start; justify-items: start; }
-  .nv-idbar__stats { width: 100%; justify-content: space-between; }
+.me-coupon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--us-s3);
+  padding: var(--us-s3) 0;
+  border-bottom: var(--us-hair);
 }
-@media (max-width: 680px) {
-  .nv-seg { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
-  .nv-seg .mi { flex: none; padding: 12px 14px 10px; }
-  .nv-sechead__n { display: none; }
-  .nv-ticket__hd { flex-direction: column; gap: var(--nv-s2); }
-  .nv-when { text-align: left; }
+.me-coupon__amt {
+  font-size: 27px;
+  line-height: 1;
+  letter-spacing: -.04em;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
 }
+.me-coupon__lb { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--us-ink-3); margin-left: 8px; }
+.me-coupon em { display: block; font-style: normal; font-size: 12.5px; color: var(--us-ink-3); margin-top: 5px; }
+.me-coupon.is-used { opacity: .48; }
 
-/* ---- 主容器与登录页补全 ---- */
-.nv-main { display: block; min-height: 40vh; }
-.nv-auth__pitch { display: grid; gap: var(--nv-s3); }
+/* 心愿单一行 */
+.me-wish { display: flex; align-items: center; justify-content: space-between; gap: var(--us-s2); padding: 11px 0; border-bottom: var(--us-hair); }
+.me-wish__l { min-width: 0; }
 
-/* ============================================================================
-   NOVA · 功能性基类（2026-10）
-   ----------------------------------------------------------------------------
-   nova 刻意不加载 style.css / design3.css，所以这些"靠二代样式表提供语义"的
-   基础规则必须在这里自己补一份 —— 否则面板切换、筛选空态、未读角标都会失灵。
-   ============================================================================ */
-.tabpane { display: none; }
-.tabpane.on { display: block; }
-.no-hit { display: none; }
-.no-hit[hidden] { display: none; }
+/* 留言 / 消息条目 */
+.me-msg { padding: var(--us-s3) 0; border-bottom: var(--us-hair); display: grid; gap: 7px; }
+.me-msg__hd { display: flex; align-items: baseline; justify-content: space-between; gap: var(--us-s2); flex-wrap: wrap; }
+.me-msg__hd em { font-style: normal; font-size: 12px; color: var(--us-ink-3); }
+.me-msg__t { font-size: 15.5px; letter-spacing: -.02em; }
+.me-msg__x { font-size: 14px; line-height: 1.62; color: var(--us-ink-2); max-width: 72ch; }
+.me-msg__r { font-size: 13.5px; color: var(--us-ink-2); padding-left: 14px; border-left: 1px solid var(--us-line-2); max-width: 72ch; }
 
-/* 顶部图标上的未读小点（nova 用 .nv-ic.has + <i> 数字） */
-.nv-ic.has { color: var(--nv-accent); }
-.nv-ic.has i {
-  font-style: normal; font-family: var(--nv-mono); font-size: 9.5px; line-height: 1;
-  position: absolute; top: -4px; right: -8px; min-width: 14px; padding: 2px 3px;
-  background: var(--nv-seal); color: #FFFDF7; border-radius: 8px; text-align: center;
+/* 键值表 */
+.me-kv { display: grid; gap: 0; border-top: var(--us-hair); }
+.me-kv > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--us-s3);
+  padding: 13px 0;
+  border-bottom: var(--us-hair);
 }
-.nv-ic { position: relative; }
+.me-kv dt { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--us-ink-3); }
+.me-kv dd { font-size: 15px; font-variant-numeric: tabular-nums; }
 
-/* ============================================================================
-   NOVA · 共享片段补全：剧本封面占位（_script_ph.html）
-   ----------------------------------------------------------------------------
-   这个片段被 剧本库网格 / 首页海报轨 / 详情页 三处共用，内部用的是
-   `.pcard3__*` + `.dots3` —— 那套类名原本只活在 design3.css 里。
-   nova 不加载 design3，所以在自己这边给同一批类名补一份 nova 版观感：
-   一张"现印的小海报"——巨字水印 + 一句简介 + 规格行 + 难度点阵。
-   ============================================================================ */
-.nv-card__cover, .nv-detail__cover { position: relative; overflow: hidden; }
-.pcard3__ph {
-  position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end;
-  padding: 16px 16px 14px; text-align: left;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--nv-paper-3) 78%, transparent), color-mix(in srgb, var(--nv-paper-2) 92%, transparent)),
-    var(--nv-paper-3);
-}
-.pcard3__wm {
-  position: absolute; right: -.06em; top: 44%; transform: translateY(-58%);
-  font-size: clamp(72px, 12vw, 120px); line-height: 1; opacity: .16; pointer-events: none;
-  filter: grayscale(1);
-}
-.pcard3__d {
-  position: relative; margin: 0; font-size: 12px; line-height: 1.6; color: var(--nv-ink-2);
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
-.pcard3__m {
-  position: relative; display: flex; align-items: center; gap: 10px; padding-top: 9px;
-  margin-top: 9px; border-top: 1px solid var(--nv-line); font-size: 11.5px; color: var(--nv-ink-3);
-}
-.pcard3__mm { margin-left: auto; font-family: var(--nv-mono); letter-spacing: .03em; }
-.dots3 { display: inline-flex; gap: 3px; vertical-align: middle; }
-.dots3 i { width: 6px; height: 6px; border-radius: 50%; background: var(--nv-line-2); display: block; }
-.dots3 i.on { background: var(--nv-accent); }
-@media (max-width: 600px) { .pcard3__m .dots3 { display: none; } }
+/* 订单表（窄屏改成标签+值竖排） */
+.me-orders { margin-top: var(--us-s2); }
+.me-empty-note { font-size: 13.5px; color: var(--us-ink-3); padding: 12px 0; }
 
-/* 详情页的封面块：占位要撑起高度，否则会塌成一条 */
-.nv-detail__cover { aspect-ratio: 4/3; background: var(--nv-paper-3); }
+.me-pane { display: none; }
+.me-pane.on, .me-pane.is-on { display: block; animation: us-drop .62s var(--us-ease) both; }
 
-/* ============================================================================
-   ══════════════════════════════════════════════════════════════════════════
-   NOVA · 版式原型系统（2026-10 · 第三轮重构）
-   ══════════════════════════════════════════════════════════════════════════
-   这一层不是"再来一批组件"，而是把整站收敛到 **六个版式原型**：
-
-     原型 A · 编辑式导读页头        .nv-lead-hd        —— 目录页/列表页的开场
-     原型 B · 编号索引清单          .nv-index          —— 列表的"清单体"变体
-     原型 C · 杂志式多栏正文        .nv-col3 / .nv-lede —— 详情页/长文
-     原型 D · 发丝线数据表          .nv-ledger         —— 表格类信息
-     原型 E · 海报式网格            .nv-plate          —— 卡片流（非对称破格）
-     原型 F · 侧栏窄表单            .nv-aside          —— 表单/预约/设置
-
-   六个原型的共性来自拆解文档里的顶级站点（Anton & Irene 的杂志网格、
-   Socio 的英式极简排版、Obys 的留白节奏、Build in Amsterdam 的克制）：
-     · 每个区块由**【编号 + 字级 + 一条墨线】**三件套定义，不靠卡片描边
-     · 灰阶承载层级（ink / ink-2 / ink-3），藤黄只出现在"编号/当前/关键数字"
-     · 首字下沉、引言块、规则线、严谨字距 —— 印刷品的阅读质感
-     · 破格只允许一次（一个元素跨栏 / 一个字级跳档）
-
-   铁律不变：只动 transform / opacity / color / border，不劫持滚动，内容默认可见。
-   ============================================================================ */
-
-/* ───────────────────────── 原型 A · 编辑式导读页头 ─────────────────────────
-   结构：<header class="nv-lead-hd">
-           <p class="nv-lead-hd__k">…</p>
-           <h1 class="nv-lead-hd__t">…</h1>
-           <p class="nv-lead-hd__d">…</p>
-           <dl class="nv-lead-hd__m">…</dl>   ← 右上角"数据题花"
-         </header>
-   要点：标题与正文并置在**同一条基线轴**上（不是上下堆叠），
-        右下角放一条横向计数带 —— 这是编辑版物"导读页"的标准做法。 */
-.nv-lead-hd {
-  position: relative;
-  padding: clamp(40px, 8vh, 104px) 0 var(--nv-s3);
-  border-bottom: 1px solid var(--nv-ink);
-}
-.nv-lead-hd__k {
-  margin: 0 0 var(--nv-s5);
-  display: flex; align-items: baseline; gap: var(--nv-s3);
-  font-family: var(--nv-mono); font-size: 11px; letter-spacing: .24em;
-  text-transform: uppercase; color: var(--nv-ink-3);
-}
-.nv-lead-hd__k::after { content: ""; flex: 1; height: 1px; background: var(--nv-line); }
-.nv-lead-hd__row {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--nv-s5) clamp(24px, 5vw, 72px); align-items: end;
-}
-.nv-lead-hd__t {
-  font-family: var(--nv-serif); font-weight: 700;
-  font-size: clamp(44px, 10.5vw, 148px); line-height: .92;
-  letter-spacing: -.045em; margin: 0;
-}
-.nv-lead-hd__d {
-  margin: var(--nv-s4) 0 0; max-width: 46ch;
-  font-size: clamp(15px, 1.5vw, 18px); line-height: 1.72; color: var(--nv-ink-2);
-}
-.nv-lead-hd__d b { color: var(--nv-ink); font-weight: 600; }
-.nv-lead-hd__m {
-  display: grid; gap: var(--nv-s3); margin: 0; align-content: end;
-  min-width: 168px;
-}
-.nv-lead-hd__m > div { display: grid; grid-template-columns: 1fr auto; gap: 10px;
-  align-items: baseline; padding-bottom: 8px; border-bottom: var(--nv-hair); }
-.nv-lead-hd__m dt { font-family: var(--nv-mono); font-size: 10.5px; letter-spacing: .12em;
-  color: var(--nv-ink-3); text-transform: uppercase; }
-.nv-lead-hd__m dd { margin: 0; font-family: var(--nv-serif); font-weight: 700;
-  font-size: 26px; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-.nv-lead-hd__seal {
-  font-family: var(--nv-serif); font-weight: 700; font-size: 19px; letter-spacing: .08em;
-  writing-mode: vertical-rl; color: var(--nv-seal);
-  border: 1px solid var(--nv-seal); padding: 14px 8px; align-self: start;
-}
-/* 页头下方的一条"横向目录"：01 02 03 …… */
-.nv-lead-hd__toc {
-  display: flex; flex-wrap: wrap; gap: 0 var(--nv-s5);
-  margin-top: var(--nv-s5); padding-top: var(--nv-s3); border-top: var(--nv-hair);
-}
-.nv-lead-hd__toc a {
-  display: inline-flex; align-items: baseline; gap: 8px; padding: 6px 0;
-  font-size: 14px; color: var(--nv-ink-2); transition: color var(--nv-t-fast);
-}
-.nv-lead-hd__toc a i { font-family: var(--nv-mono); font-size: 10.5px; font-style: normal; color: var(--nv-ink-3); }
-.nv-lead-hd__toc a:hover { color: var(--nv-accent); }
-.nv-lead-hd__toc a:hover i { color: var(--nv-accent); }
-@media (max-width: 900px) {
-  .nv-lead-hd__row { grid-template-columns: 1fr; align-items: start; }
-  .nv-lead-hd__m { min-width: 0; margin-top: var(--nv-s5); }
-}
-
-/* ───────────────────────── 原型 B · 编号索引清单 ─────────────────────────
-   结构：<ol class="nv-index"><li><a>
-           <span class="nv-index__no">01</span>
-           <span class="nv-index__main"><b>标题</b><em>副行</em></span>
-           <span class="nv-index__side">规格 / 价格</span>
-           <span class="nv-index__go">→</span>
-         </a></li>…
-   要点：整行是一条墨线隔开的通栏，hover 时**左推 + 数字变藤黄 + 箭头右移**。
-        这是把"清单"从卡片流里解放出来的关键 —— 不用描边，靠线与字级。 */
-.nv-index { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--nv-ink); }
-.nv-index > li { border-bottom: var(--nv-hair); }
-.nv-index__a {
+/* ══════════════════════════ 个人主页 ══════════════════════════ */
+.pf-head { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: var(--us-s4); align-items: end; }
+.pf-face {
+  width: 132px; height: 132px;
+  border-radius: 50%;
+  overflow: hidden;
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr) minmax(0, 22ch) 30px;
-  gap: var(--nv-s4); align-items: center;
-  padding: clamp(16px, 2.4vw, 26px) 0;
-  transition: padding-left var(--nv-t-fast) var(--nv-ease), color var(--nv-t-fast) var(--nv-ease);
+  place-items: center;
+  background: var(--us-bg-3);
+  font-size: 44px;
 }
-.nv-index__a:hover { padding-left: 16px; }
-.nv-index__no {
-  font-family: var(--nv-mono); font-size: 12px; letter-spacing: .08em;
-  color: var(--nv-ink-3); transition: color var(--nv-t-fast);
-}
-.nv-index__a:hover .nv-index__no { color: var(--nv-accent); }
-.nv-index__main { min-width: 0; display: grid; gap: 5px; }
-.nv-index__main b {
-  font-family: var(--nv-serif); font-weight: 700; letter-spacing: -.022em;
-  font-size: clamp(19px, 2.5vw, 29px); line-height: 1.14;
-}
-.nv-index__main em {
-  font-style: normal; font-size: 13px; color: var(--nv-ink-3);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.nv-index__side {
-  font-family: var(--nv-mono); font-size: 12px; color: var(--nv-ink-3);
-  text-align: right; white-space: nowrap;
-}
-.nv-index__side b { color: var(--nv-ink); font-size: 15px; }
-.nv-index__go {
-  justify-self: end; font-size: 17px; color: var(--nv-ink-3);
-  transition: transform var(--nv-t-fast) var(--nv-ease), color var(--nv-t-fast);
-}
-.nv-index__a:hover .nv-index__go { transform: translateX(7px); color: var(--nv-accent); }
-/* 缩略图版本：清单左侧带一枚小图 */
-.nv-index--pic .nv-index__a { grid-template-columns: 54px 64px minmax(0, 1fr) minmax(0, 20ch) 30px; }
-.nv-index__pic { width: 64px; aspect-ratio: 3/4; overflow: hidden; background: var(--nv-paper-3); position: relative; }
-.nv-index__pic img { width: 100%; height: 100%; object-fit: cover; transition: transform .7s var(--nv-ease); }
-.nv-index__a:hover .nv-index__pic img { transform: scale(1.07); }
-@media (max-width: 760px) {
-  .nv-index__a, .nv-index--pic .nv-index__a { grid-template-columns: 34px 1fr 24px; gap: var(--nv-s3); }
-  .nv-index__pic, .nv-index__side { display: none; }
-}
+.pf-face img { width: 100%; height: 100%; object-fit: cover; }
+.pf-stats { display: flex; flex-wrap: wrap; gap: var(--us-s4); padding-top: var(--us-s2); }
+.pf-stats div b { display: block; font-size: 24px; letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
+.pf-stats div s { text-decoration: none; font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--us-ink-3); }
 
-/* ───────────────────────── 原型 C · 杂志式多栏正文 ─────────────────────────
-   结构：<div class="nv-article">
-           <p class="nv-article__lede">…</p>        ← 首段放大 + 首字下沉
-           <div class="nv-article__cols">…</div>     ← 两栏正文（宽屏才分栏）
-         </div>
-   要点：分栏只在 ≥1040px 生效，且列宽固定在 34ch 附近；
-        分栏会引入列间距发丝线 —— 这是印刷杂志的标志性细节。 */
-.nv-article { max-width: 78ch; }
-.nv-article__lede {
-  font-family: var(--nv-serif); font-size: clamp(19px, 2.1vw, 25px);
-  line-height: 1.55; letter-spacing: -.012em; margin: 0 0 var(--nv-s4);
-  color: var(--nv-ink);
+/* ══════════════════════════ 登录 / 注册 ══════════════════════════ */
+.au {
+  min-height: 100svh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
 }
-.nv-article__lede::first-letter {
-  float: left; font-size: 3.4em; line-height: .84; font-weight: 700;
-  padding: .06em .12em 0 0; color: var(--nv-accent);
+.au__left {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: calc(var(--us-nav) + 30px) var(--us-s5) var(--us-s4);
+  border-right: var(--us-hair);
 }
-.nv-article__cols { font-size: 16px; line-height: 1.82; color: var(--nv-ink-2); }
-.nv-article__cols p { margin: 0 0 var(--nv-s3); }
-@media (min-width: 1040px) {
-  .nv-article__cols { columns: 2; column-gap: var(--nv-s5); column-rule: 1px solid var(--nv-line); }
-  .nv-article__cols p { break-inside: avoid-column; }
+.au__right { display: grid; place-items: center; padding: calc(var(--us-nav) + 30px) var(--us-s5) var(--us-s4); }
+.au__q {
+  font-size: clamp(30px, 4.4vw, 62px);
+  line-height: .98;
+  letter-spacing: -.044em;
+  font-weight: 500;
 }
-/* 引文块：左侧墨竖线 + 衬线大字 */
-.nv-pull {
-  margin: var(--nv-s5) 0; padding: var(--nv-s2) 0 var(--nv-s2) var(--nv-s4);
-  border-left: 2px solid var(--nv-ink);
-  font-family: var(--nv-serif); font-size: clamp(19px, 2.2vw, 26px);
-  line-height: 1.44; letter-spacing: -.016em; color: var(--nv-ink);
-}
-.nv-pull cite { display: block; margin-top: var(--nv-s2);
-  font-family: var(--nv-mono); font-size: 11px; font-style: normal;
-  letter-spacing: .12em; color: var(--nv-ink-3); text-transform: uppercase; }
+.au__q em { font-family: var(--us-serif); font-style: italic; font-weight: 400; }
+.au-figs { display: flex; flex-wrap: wrap; gap: var(--us-s5); }
+.au-card { width: 100%; max-width: 400px; display: grid; gap: var(--us-s3); }
+.au-card__t { font-size: clamp(24px, 3vw, 34px); letter-spacing: -.036em; font-weight: 500; }
+.au-card__s { font-size: 14px; color: var(--us-ink-3); }
+.au-alt { font-size: 13.5px; color: var(--us-ink-3); display: flex; gap: 14px; flex-wrap: wrap; }
+.au-alt a { color: var(--us-ink); }
 
-/* ───────────────────────── 原型 D · 发丝线数据表 ─────────────────────────
-   结构：<div class="nv-ledger">
-           <div class="nv-ledger__hd"><span>列</span>…</div>
-           <div class="nv-ledger__row"><span>…</span>…</div>
-         </div>
-   要点：不用 <table> 也能做表（响应式更好）；小屏自动塌成"标签 : 值"两列。 */
-.nv-ledger { border-top: 1px solid var(--nv-ink); }
-.nv-ledger__hd, .nv-ledger__row {
-  display: grid; grid-template-columns: var(--cols, 1.4fr .9fr .9fr .7fr 1fr);
-  gap: var(--nv-s3); align-items: center; padding: 13px 0;
-  border-bottom: var(--nv-hair);
+/* 验证码提示：发出去 / 没发出去都在这里回话 */
+.u-code-tip {
+  font-size: 13px;
+  color: var(--us-ok);
+  margin: -6px 0 0;
 }
-.nv-ledger__hd { font-family: var(--nv-mono); font-size: 10.5px; letter-spacing: .12em;
-  color: var(--nv-ink-3); text-transform: uppercase; padding: 10px 0;
-  border-bottom: 1px solid var(--nv-line-2); }
-.nv-ledger__row { transition: background var(--nv-t-fast), padding-left var(--nv-t-fast) var(--nv-ease); }
-.nv-ledger__row:hover { background: color-mix(in srgb, var(--nv-paper-2) 66%, transparent); padding-left: 10px; }
-.nv-ledger__row b { font-family: var(--nv-serif); font-size: 15.5px; font-weight: 700; }
-.nv-ledger__row .num { font-family: var(--nv-mono); font-variant-numeric: tabular-nums; font-size: 13.5px; }
-@media (max-width: 820px) {
-  .nv-ledger__hd { display: none; }
-  .nv-ledger__row { grid-template-columns: 1fr auto; gap: 6px var(--nv-s3); padding: 14px 0; }
-  .nv-ledger__row > *:nth-child(n+3) { grid-column: 2; }
-}
+.u-code-tip.bad { color: var(--us-stop); }
 
-/* ───────────────────────── 原型 E · 海报式网格（破格） ─────────────────────────
-   结构：<div class="nv-plates">
-           <article class="nv-plate nv-plate--wide">…</article>
-           <article class="nv-plate">…</article>
-         </div>
-   要点：12 栏底网格 + 明确的跨栏配额（wide=7 / tall=5 / 常规=4），
-        每行高度不完全一致 —— 这是"非对称但不乱"的实现方式。 */
-.nv-plates { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--nv-s3); align-items: start; }
-.nv-plates > * { grid-column: span 4; }
-.nv-plates > .nv-plate--wide { grid-column: span 7; }
-.nv-plates > .nv-plate--tall { grid-column: span 5; }
-.nv-plates > .nv-plate--full { grid-column: span 12; }
-/* 海报本体：一张图 + 一行题，不描边不加底色 —— 靠图本身的版面感 */
-.nv-plate { display: grid; gap: 12px; min-width: 0; }
-/* 第一张图更大：让观感从"均质网格"变"海报墙" */
-.nv-plate__cover { position: relative; overflow: hidden; background: var(--nv-paper-3); aspect-ratio: 3/4; }
-.nv-plate--wide .nv-plate__cover { aspect-ratio: 16/10; }
-.nv-plate--tall .nv-plate__cover { aspect-ratio: 4/5; }
-.nv-plate__cover img { width: 100%; height: 100%; object-fit: cover; transition: transform .9s var(--nv-ease); }
-.nv-plate:hover .nv-plate__cover img { transform: scale(1.04); }
-.nv-plate__body { padding-top: 12px; display: grid; gap: 6px; }
-.nv-plate__body b { font-family: var(--nv-serif); font-weight: 700;
-  font-size: clamp(17px, 1.9vw, 21px); letter-spacing: -.016em; line-height: 1.2; }
-.nv-plate__body em { font-style: normal; font-family: var(--nv-mono);
-  font-size: 11.5px; letter-spacing: .06em; color: var(--nv-ink-3); }
-@media (max-width: 900px) {
-  .nv-plates > * , .nv-plates > .nv-plate--wide, .nv-plates > .nv-plate--tall { grid-column: span 6; }
-  .nv-plates > .nv-plate--full { grid-column: span 12; }
-  .nv-plate--wide .nv-plate__cover { aspect-ratio: 3/4; }
+/* ══════════════════════════ 错误页 ══════════════════════════ */
+.er {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: calc(var(--us-nav) + 30px) var(--us-gut) var(--us-s5);
+  gap: var(--us-s3);
 }
-@media (max-width: 560px) {
-  .nv-plates { gap: var(--nv-s2); }
-  .nv-plates > *, .nv-plates > .nv-plate--wide, .nv-plates > .nv-plate--tall { grid-column: span 12; }
-  .nv-plate__cover { aspect-ratio: 4/3 !important; }
+.er__n {
+  font-size: clamp(96px, 26vw, 300px);
+  line-height: .82;
+  letter-spacing: -.06em;
+  font-weight: 500;
+  color: var(--us-ink);
+  opacity: .12;
 }
+.er__k { font-family: var(--us-serif); font-style: italic; font-size: clamp(24px, 3.6vw, 44px); letter-spacing: -.03em; }
+.er__d { font-size: 15px; color: var(--us-ink-3); max-width: 44ch; }
+.er__act { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: var(--us-s2); }
 
-/* ───────────────────────── 原型 F · 侧栏窄表单 ─────────────────────────
-   结构：<div class="nv-aside">
-           <form class="nv-aside__form">…</form>   ← sticky 窄栏（≤380px）
-           <div class="nv-aside__note">…</div>
-         </div>
-   要点：表单永远窄（≤380px），长文/列表占主栏；
-        窄栏 sticky，滚动阅读时始终可见 —— 这是"工具页"最优解。 */
-.nv-aside {
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
-  gap: clamp(28px, 5vw, 72px); align-items: start;
+/* ══════════════════════════ 欢迎页（未登录首屏） ══════════════════════════ */
+.wc {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: calc(var(--us-nav) + 30px) var(--us-gut) var(--us-s5);
+  gap: var(--us-s3);
 }
-.nv-aside--left { grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); }
-.nv-aside__form { position: sticky; top: 92px; display: grid; gap: var(--nv-s3); }
-.nv-aside--left .nv-aside__form { grid-column: 1; grid-row: 1; }
-.nv-aside__note {
-  border-top: 1px solid var(--nv-ink); padding-top: var(--nv-s3);
-  font-size: 13px; line-height: 1.72; color: var(--nv-ink-3);
+.wc__k { font-size: 11px; letter-spacing: .26em; text-transform: uppercase; color: var(--us-ink-3); }
+.wc__t {
+  font-size: clamp(40px, 10vw, 148px);
+  line-height: .88;
+  letter-spacing: -.05em;
+  font-weight: 500;
 }
-.nv-aside__note b { color: var(--nv-ink-2); }
-@media (max-width: 980px) {
-  .nv-aside, .nv-aside--left { grid-template-columns: 1fr; }
-  .nv-aside__form { position: static; }
+.wc__t em { font-family: var(--us-serif); font-style: italic; font-weight: 400; }
+.wc__d { font-size: 15px; color: var(--us-ink-2); max-width: 40ch; }
+.wc__act { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: var(--us-s2); }
+.wc-figs { display: flex; gap: var(--us-s5); margin-top: var(--us-s3); }
+
+/* ══════════════════════════ 响应式 ══════════════════════════ */
+@media (max-width: 1080px) {
+  .hp-spot { grid-template-columns: minmax(0, 1fr); }
+  .hp-spot__fig { min-height: 300px; }
+  .hp-note { grid-template-columns: minmax(0, 1fr); gap: var(--us-s4); }
+  .dt-roles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dt-roles > .dt-role:first-child { grid-column: span 2; }
+  .hp-head { grid-template-columns: minmax(0, 1fr); }
+  .au { grid-template-columns: minmax(0, 1fr); }
+  .au__left { border-right: 0; border-bottom: var(--us-hair); }
+  .dt-voice { grid-template-columns: minmax(0, 1fr) auto; }
+  .dt-voice__k { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; }
 }
-
-/* ───────────────────────── 版式工具件 ───────────────────────── */
-
-/* 章节：编号 + 标题 + 说明，三件套定义区块（替代"卡片描边"） */
-.nv-cap { display: block; }
-.nv-chapter { padding-top: clamp(36px, 6vh, 72px); }
-.nv-chapter__hd {
-  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: var(--nv-s4); align-items: baseline;
-  padding-bottom: var(--nv-s3); margin-bottom: var(--nv-s4);
-  border-bottom: 1px solid var(--nv-ink);
-}
-.nv-chapter__no {
-  font-family: var(--nv-mono); font-size: 11px; letter-spacing: .14em;
-  color: var(--nv-accent); white-space: nowrap;
-}
-.nv-chapter__t {
-  font-family: var(--nv-serif); font-weight: 700;
-  font-size: clamp(22px, 3.4vw, 40px); letter-spacing: -.026em;
-  line-height: 1.1; margin: 0;
-}
-.nv-chapter__s {
-  font-family: var(--nv-mono); font-size: 11px; letter-spacing: .1em;
-  color: var(--nv-ink-3); white-space: nowrap;
-}
-@media (max-width: 680px) {
-  .nv-chapter__hd { grid-template-columns: auto 1fr; }
-  .nv-chapter__s { display: none; }
-}
-
-/* 规格条：横排"标签 / 值"，用发丝线分隔（比 dl 更扁） */
-.nv-specs { display: flex; flex-wrap: wrap; gap: 0; border-top: 1px solid var(--nv-ink); }
-.nv-specs > div {
-  flex: 1 1 120px; padding: var(--nv-s3) var(--nv-s3) var(--nv-s3) 0;
-  border-right: var(--nv-hair); display: grid; gap: 4px;
-}
-.nv-specs > div:last-child { border-right: 0; }
-.nv-specs dt { font-family: var(--nv-mono); font-size: 10px; letter-spacing: .12em;
-  color: var(--nv-ink-3); text-transform: uppercase; }
-.nv-specs dd { margin: 0; font-family: var(--nv-serif); font-weight: 700; font-size: 19px;
-  letter-spacing: -.016em; }
-
-/* 编号小标题（章节内部） */
-.nv-numhead { display: flex; align-items: baseline; gap: 10px; margin: 0 0 var(--nv-s3); }
-.nv-numhead i { font-family: var(--nv-mono); font-size: 11px; font-style: normal;
-  letter-spacing: .1em; color: var(--nv-accent); }
-.nv-numhead b { font-family: var(--nv-serif); font-size: 19px; letter-spacing: -.014em; }
-
-/* 统计带：一串"数字 + 标签"，靠字号差拉层级 */
-.nv-figures { display: flex; flex-wrap: wrap; gap: clamp(20px, 4vw, 56px); }
-.nv-figure { display: grid; gap: 3px; }
-.nv-figure b { font-family: var(--nv-serif); font-weight: 700;
-  font-size: clamp(26px, 3.6vw, 44px); line-height: 1; letter-spacing: -.03em;
-  font-variant-numeric: tabular-nums; }
-.nv-figure span { font-family: var(--nv-mono); font-size: 10.5px; letter-spacing: .13em;
-  color: var(--nv-ink-3); text-transform: uppercase; }
-
-/* 空态：与编号系统一致的"没有内容"表达 */
-.nv-blank { border-top: 1px solid var(--nv-ink); padding-top: var(--nv-s4); display: grid; gap: var(--nv-s3); }
-.nv-blank__k { font-family: var(--nv-mono); font-size: 11px; letter-spacing: .2em;
-  text-transform: uppercase; color: var(--nv-ink-3); margin: 0; }
-.nv-blank b { font-family: var(--nv-serif); font-size: clamp(20px, 2.8vw, 30px);
-  letter-spacing: -.022em; }
-.nv-blank p { margin: 0; color: var(--nv-ink-3); font-size: 14px; max-width: 46ch; }
-.nv-blank__act { display: flex; gap: 10px; flex-wrap: wrap; margin-top: var(--nv-s2); }
-
-/* 明细列表（键值对，比表格轻） */
-.nv-pairs { border-top: var(--nv-hair); }
-.nv-pairs__r { display: grid; grid-template-columns: minmax(96px, auto) minmax(0, 1fr);
-  gap: var(--nv-s3); padding: 10px 0; border-bottom: var(--nv-hair); align-items: baseline; }
-.nv-pairs__r dt { font-family: var(--nv-mono); font-size: 11px; letter-spacing: .1em;
-  color: var(--nv-ink-3); text-transform: uppercase; }
-.nv-pairs__r dd { margin: 0; font-size: 14.5px; }
-
-/* 状态字：一个极小面积的状态标记（取代圆角 pill） */
-.nv-st { font-family: var(--nv-mono); font-size: 10.5px; letter-spacing: .1em;
-  text-transform: uppercase; color: var(--nv-ink-3); display: inline-flex; align-items: center; gap: 6px; }
-.nv-st::before { content: ""; width: 5px; height: 5px; background: currentColor; flex: none; }
-.nv-st--on { color: var(--nv-accent); }
-.nv-st--off { color: var(--nv-ink-3); }
-.nv-st--warn { color: var(--nv-seal); }
-
-/* 键盘可达：所有被改造的"整行链接"都要有焦点环 */
-.nv-index__a:focus-visible, .nv-plate:focus-visible, .nv-ledger__row:focus-visible {
-  outline: 2px solid var(--nv-accent); outline-offset: 3px;
-}
-
-/* 入场节奏：新版式块统一的揭示口径（与 .rv 同一套，只是给新类补上） */
-@media (prefers-reduced-motion: no-preference) {
-  .nv-index > li, .nv-plates > *, .nv-ledger__row, .nv-specs > div {
-    animation: nvLineIn .62s var(--nv-ease) both;
+@media (max-width: 860px) {
+  .hp-hero__orb { display: none; }
+  .dt-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--us-s3) var(--us-s2); }
+  .dt-roles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dt-roles > .dt-role:first-child { grid-column: span 2; }
+  .cr-row { grid-template-columns: 66px minmax(0, 1fr); row-gap: 12px; }
+  .cr-row__r { grid-column: 1 / -1; justify-content: space-between; }
+  .me-ticket { grid-template-columns: 84px minmax(0, 1fr); }
+  .me-dims { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .me-id__stats { gap: var(--us-s4); }
+  .me-orders .u-ledger__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+    padding: 18px 0;
   }
-  .nv-index > li:nth-child(2), .nv-plates > *:nth-child(2) { animation-delay: .05s; }
-  .nv-index > li:nth-child(3), .nv-plates > *:nth-child(3) { animation-delay: .1s; }
-  .nv-index > li:nth-child(4), .nv-plates > *:nth-child(4) { animation-delay: .15s; }
-  .nv-index > li:nth-child(5), .nv-plates > *:nth-child(5) { animation-delay: .2s; }
-  .nv-index > li:nth-child(n+6), .nv-plates > *:nth-child(n+6) { animation-delay: .24s; }
+  .me-orders .u-ledger__row:hover { padding-left: 0; }
+  .me-orders .u-ledger__row > * { display: flex; align-items: baseline; gap: 10px; }
+  .me-orders .u-ledger__row > *::before {
+    content: attr(data-k);
+    flex: none;
+    width: 5.4em;
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--us-ink-3);
+  }
+  .nt-letter { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .nt-letter__w { padding-top: 0; }
+  .nt-letter.is-new::before { left: -8px; }
+  .qa-item__q { grid-template-columns: 38px minmax(0, 1fr) 20px; }
+  .qa-item__a p { padding-left: 50px; }
+  .pf-head { grid-template-columns: 84px minmax(0, 1fr); gap: var(--us-s3); }
+  .pf-face { width: 84px; height: 84px; font-size: 30px; }
+  .hp-sec { padding: var(--us-s5) 0 var(--us-s4); }
 }
-@keyframes nvLineIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
-
-/* ───────────────────────── 旧类 → 新原型 的兼容垫片 ─────────────────────────
-   模板里还有一批早期类名（nv-head / nv-idx / nv-toolbar…），
-   这里让它们**自动获得新版式的观感**，避免逐处改名带来的回归风险。 */
-.nv-head { padding: clamp(40px, 8vh, 104px) 0 var(--nv-s3); border-bottom: 1px solid var(--nv-ink); }
-.nv-head__grid { display: grid; grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--nv-s5) clamp(24px, 5vw, 72px); align-items: end; }
-.nv-head .nv-h1 { font-size: clamp(44px, 10.5vw, 148px) !important;
-  line-height: .92 !important; letter-spacing: -.045em !important; }
-.nv-head__lead { font-size: clamp(15px, 1.5vw, 18px); line-height: 1.72;
-  color: var(--nv-ink-2); max-width: 46ch; margin: var(--nv-s4) 0 0; }
-.nv-head__seal { font-family: var(--nv-serif); font-weight: 700; font-size: 19px;
-  letter-spacing: .08em; writing-mode: vertical-rl; color: var(--nv-seal);
-  border: 1px solid var(--nv-seal); padding: 14px 8px; align-self: start; }
-@media (max-width: 900px) { .nv-head__grid { grid-template-columns: 1fr; align-items: start; } }
-
-/* ============================================================================
-   ══════════════════════════════════════════════════════════════════════════
-   NOVA · 页面级版式补丁（第三轮）
-   ══════════════════════════════════════════════════════════════════════════
-   每个页面用它自己的类名，但都遵守上面六个原型。
-   这一节做的是"**改变信息呈现方式**"，不是加装饰：
-     原本横排堆叠的 → 拆成主/副两栏（.nv-lead-hd__row 式）
-     原本卡片流的   → 收成编号清单或海报墙
-     原本卡片描边的 → 改成"章节头 + 发丝线"的印刷结构
-   ============================================================================ */
-
-/* ═════════════════════════ 剧本库（scripts） ═════════════════════════ */
-/* 页头：大标题与"筛选目录"并置，工具条收成一条横向目录带 */
-.nv-shelfbar {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--nv-s3) var(--nv-s5); align-items: end;
-  padding: var(--nv-s4) 0; border-bottom: var(--nv-hair);
-}
-.nv-shelfbar .nv-search { max-width: 460px; }
-.nv-shelfbar__end { display: flex; align-items: center; gap: var(--nv-s3); }
-/* 筛片带：横排 + 底部计数，视觉上像期刊的"栏目索引" */
-.nv-filters { padding: var(--nv-s3) 0; border-bottom: var(--nv-hair); display: grid; gap: 12px; }
-.nv-filters__line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px var(--nv-s3); }
-.nv-filters__line .nv-chips__lab { min-width: 46px; }
-@media (max-width: 760px) { .nv-shelfbar { grid-template-columns: 1fr; align-items: start; } }
-
-/* ═════════════════════════ 剧本详情（script） ═════════════════════════ */
-/* 版式：主栏（正文 + 角色 + 评价）＋ 窄侧栏（封面 + 预约）
-   正文用杂志式首字下沉 + 两栏；规格条用发丝线横排。 */
-.nv-script { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
-  gap: clamp(28px, 5vw, 76px); align-items: start; padding: var(--nv-s5) 0 clamp(48px, 8vh, 100px); }
-.nv-script__bar {
-  display: flex; align-items: baseline; gap: var(--nv-s3); flex-wrap: wrap;
-  padding-bottom: var(--nv-s3); margin-bottom: var(--nv-s4); border-bottom: 1px solid var(--nv-ink);
-}
-.nv-script__bar .nv-kick { flex: 1; }
-.nv-script__title {
-  font-family: var(--nv-serif); font-weight: 700;
-  font-size: clamp(38px, 7.6vw, 96px); line-height: .96;
-  letter-spacing: -.04em; margin: 0 0 var(--nv-s3);
-}
-/* 关键事实三连：价格 / 定金 / 评分 —— 字级拉大，靠字号而非卡片区分 */
-.nv-script__facts { display: flex; flex-wrap: wrap; gap: clamp(20px, 3.6vw, 48px);
-  margin: var(--nv-s4) 0; padding: var(--nv-s3) 0; border-top: 1px solid var(--nv-ink);
-  border-bottom: var(--nv-hair); }
-.nv-script__fact { display: grid; gap: 3px; }
-.nv-script__fact b { font-family: var(--nv-serif); font-weight: 700;
-  font-size: clamp(22px, 3vw, 34px); line-height: 1; letter-spacing: -.028em;
-  font-variant-numeric: tabular-nums; }
-.nv-script__fact b.nv-accent { color: var(--nv-accent); }
-.nv-script__fact span { font-family: var(--nv-mono); font-size: 10px; letter-spacing: .14em;
-  color: var(--nv-ink-3); text-transform: uppercase; }
-/* 角色卡：海报墙（首张宽幅破格） */
-.nv-roles { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--nv-s3); }
-.nv-roles > * { grid-column: span 3; }
-.nv-roles > :first-child { grid-column: span 6; }
-.nv-roles > :first-child .nv-role__face { aspect-ratio: 16/11; }
-.nv-role { display: grid; gap: 10px; }
-.nv-role__face { position: relative; aspect-ratio: 3/4; overflow: hidden; background: var(--nv-paper-3);
-  display: grid; place-items: center; }
-.nv-role__face img { width: 100%; height: 100%; object-fit: cover; transition: transform .8s var(--nv-ease); }
-.nv-role:hover .nv-role__face img { transform: scale(1.06); }
-.nv-role__face .nv-role__ini { font-family: var(--nv-serif); font-size: 44px; color: var(--nv-ink-3); }
-.nv-role__face .nv-role__ix { position: absolute; left: 0; top: 0; padding: 4px 8px;
-  background: var(--nv-ink); color: var(--nv-paper); font-family: var(--nv-mono); font-size: 10px; }
-.nv-role__face.is-taken { opacity: .5; }
-.nv-role__face.is-taken::after { content: "已被选"; position: absolute; inset: auto 0 0 0;
-  padding: 4px 8px; background: var(--nv-seal); color: #FFFDF7;
-  font-family: var(--nv-mono); font-size: 10px; letter-spacing: .1em; text-align: center; }
-.nv-role b { font-family: var(--nv-serif); font-size: 17px; letter-spacing: -.012em; }
-.nv-role em { font-style: normal; font-size: 12.5px; color: var(--nv-ink-3); }
-@media (max-width: 900px) { .nv-roles > * { grid-column: span 6; } .nv-roles > :first-child { grid-column: span 12; }
-  .nv-roles > :first-child .nv-role__face { aspect-ratio: 3/4; } }
-@media (max-width: 480px) { .nv-roles > * { grid-column: span 12; } }
-
-/* 评价：整条通栏流水，不用卡片描边（靠头像列 + 竖线分区） */
-.nv-voices { border-top: 1px solid var(--nv-ink); }
-.nv-voice { display: grid; grid-template-columns: minmax(0, 150px) minmax(0, 1fr);
-  gap: var(--nv-s4); padding: var(--nv-s4) 0; border-bottom: var(--nv-hair); }
-.nv-voice__who { display: grid; gap: 6px; align-content: start; }
-.nv-voice__who b { font-family: var(--nv-serif); font-size: 15.5px; }
-.nv-voice__who em { font-style: normal; font-family: var(--nv-mono); font-size: 11px; color: var(--nv-ink-3); }
-.nv-voice__who .nv-stars { color: var(--nv-accent); font-size: 12px; letter-spacing: 2px; }
-.nv-voice__body { display: grid; gap: var(--nv-s2); }
-.nv-voice__t { margin: 0; font-size: 15.5px; line-height: 1.72; color: var(--nv-ink-2); }
-.nv-voice__foot { display: flex; gap: var(--nv-s3); flex-wrap: wrap; align-items: center; }
-@media (max-width: 680px) { .nv-voice { grid-template-columns: 1fr; gap: var(--nv-s2); } }
-
-/* ═════════════════════════ 拼车（car） ═════════════════════════ */
-/* 版式：左侧"筛选 + 计数"，右侧车队清单体（编号索引），
-   不再是均质卡片流 —— 车队信息在清单里一行读完。 */
-.nv-cars { display: grid; grid-template-columns: minmax(0, 232px) minmax(0, 1fr);
-  gap: clamp(24px, 4vw, 56px); align-items: start; padding: var(--nv-s4) 0 clamp(48px, 8vh, 100px); }
-.nv-cars__side { position: sticky; top: 92px; display: grid; gap: var(--nv-s3); }
-.nv-cars__form { display: grid; gap: var(--nv-s3); }
-.nv-cars__list { border-top: 1px solid var(--nv-ink); }
-.nv-cars__row { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto;
-  gap: var(--nv-s4); align-items: center; padding: clamp(16px, 2.2vw, 24px) 0;
-  border-bottom: var(--nv-hair);
-  transition: padding-left var(--nv-t-fast) var(--nv-ease), background var(--nv-t-fast); }
-.nv-cars__row:hover { padding-left: 12px; background: color-mix(in srgb, var(--nv-paper-2) 55%, transparent); }
-.nv-cars__when { font-family: var(--nv-mono); font-size: 12.5px; color: var(--nv-accent);
-  line-height: 1.5; display: grid; gap: 4px; }
-.nv-cars__when span { color: var(--nv-ink-3); font-size: 11px; }
-.nv-cars__mid { display: grid; gap: 8px; min-width: 0; }
-.nv-cars__mid b { font-family: var(--nv-serif); font-weight: 700;
-  font-size: clamp(18px, 2.2vw, 25px); letter-spacing: -.022em; line-height: 1.16; }
-.nv-cars__mid .nv-cars__meta { display: flex; flex-wrap: wrap; gap: 6px 18px;
-  font-size: 13px; color: var(--nv-ink-3); }
-.nv-cars__mid .nv-cars__meta b { font-family: var(--nv-sans); font-weight: 600;
-  font-size: 13px; color: var(--nv-ink); letter-spacing: 0; }
-.nv-cars__right { display: grid; gap: 10px; justify-items: end; }
-@media (max-width: 980px) {
-  .nv-cars { grid-template-columns: 1fr; }
-  .nv-cars__side { position: static; }
-}
-@media (max-width: 640px) {
-  .nv-cars__row { grid-template-columns: 1fr; gap: var(--nv-s2); }
-  .nv-cars__right { justify-items: start; }
-}
-
-/* ═════════════════════════ 车队详情（car_detail） ═════════════════════════ */
-/* 深色抬头保留（这是全站唯一的一处"暗场"节奏），
-   下面主体改为：左成员名单（清单体）+ 右侧窄栏唠嗑（sticky）。 */
-.nv-carblk { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
-  gap: clamp(28px, 5vw, 72px); align-items: start; padding: var(--nv-s5) 0 clamp(48px, 8vh, 100px); }
-.nv-carblk__side { position: sticky; top: 92px; display: grid; gap: var(--nv-s4); }
-@media (max-width: 980px) { .nv-carblk { grid-template-columns: 1fr; } .nv-carblk__side { position: static; } }
-
-/* ═════════════════════════ 唠嗑区（comm） ═════════════════════════ */
-/* 版式：左侧帖子用"通栏流水"（封面小图 + 标题 + 正文节选），
-   右侧发帖表单 sticky 窄栏 —— 与原型 F 完全一致。 */
-.nv-threads { display: grid; gap: 0; border-top: 1px solid var(--nv-ink); }
-.nv-thread { display: grid; gap: 12px; padding: clamp(18px, 2.6vw, 28px) 0;
-  border-bottom: var(--nv-hair); transition: padding-left var(--nv-t-fast) var(--nv-ease); }
-.nv-thread:hover { padding-left: 12px; }
-.nv-thread__k { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px var(--nv-s3); }
-.nv-thread__k b { font-family: var(--nv-mono); font-size: 12px; font-weight: 400;
-  letter-spacing: .04em; color: var(--nv-ink-2); }
-.nv-thread__k em { font-style: normal; font-family: var(--nv-mono); font-size: 11px; color: var(--nv-ink-3); }
-.nv-thread__t { font-family: var(--nv-serif); font-weight: 700;
-  font-size: clamp(18px, 2.3vw, 26px); line-height: 1.22; letter-spacing: -.022em; margin: 0; }
-.nv-thread__x { margin: 0; font-size: 15px; line-height: 1.78; color: var(--nv-ink-2); white-space: pre-wrap; }
-.nv-thread__f { display: flex; gap: var(--nv-s3); flex-wrap: wrap; align-items: center; }
-.nv-forum { display: grid; grid-template-columns: minmax(0, 1fr) minmax(290px, 370px);
-  gap: clamp(28px, 5vw, 72px); align-items: start; padding: var(--nv-s4) 0 clamp(48px, 8vh, 100px); }
-.nv-forum__side { position: sticky; top: 92px; display: grid; gap: var(--nv-s4); }
-@media (max-width: 980px) { .nv-forum { grid-template-columns: 1fr; } .nv-forum__side { position: static; } }
-
-/* ═════════════════════════ 我的（me） ═════════════════════════ */
-/* 身份条改为"数据带"（大数字）；分段导航保留横排；
-   预约票卡改为"票根"结构：左侧日期栏 + 右侧主体，虚线分割。 */
-.nv-idbar { align-items: flex-end; }
-.nv-idbar__stats b { font-size: clamp(26px, 3.4vw, 40px); }
-/* 票根：左边一条竖排日期，右边主体，中间一条虚线 —— 纸质票的手感 */
-.nv-ticket { display: grid; grid-template-columns: 92px minmax(0, 1fr);
-  gap: 0; padding: 0; overflow: hidden; }
-.nv-ticket__date {
-  display: grid; align-content: center; gap: 4px; justify-items: center;
-  padding: var(--nv-s3) 8px; background: var(--nv-paper-3);
-  border-right: 1px dashed var(--nv-line-2);
-}
-.nv-ticket__date b { font-family: var(--nv-serif); font-size: 26px; line-height: 1;
-  letter-spacing: -.02em; }
-.nv-ticket__date span { font-family: var(--nv-mono); font-size: 11px; letter-spacing: .08em;
-  color: var(--nv-ink-3); }
-.nv-ticket__date i { font-style: normal; font-family: var(--nv-mono); font-size: 12px;
-  color: var(--nv-accent); }
-.nv-ticket__in { padding: clamp(18px, 2.4vw, 26px); min-width: 0; }
-@media (max-width: 560px) { .nv-ticket { grid-template-columns: 1fr; }
-  .nv-ticket__date { grid-auto-flow: column; justify-content: start; gap: 14px;
-    border-right: 0; border-bottom: 1px dashed var(--nv-line-2); } }
-
-/* ═════════════════════════ 登录 / 注册（auth） ═════════════════════════ */
-/* 左半幅补上"编号清单 + 数据带"，让静态页也有印刷品的分量。 */
-.nv-auth__figs { display: flex; gap: clamp(18px, 3vw, 40px); flex-wrap: wrap;
-  padding-top: var(--nv-s3); border-top: var(--nv-hair); }
-.nv-auth__figs > div { display: grid; gap: 2px; }
-.nv-auth__figs b { font-family: var(--nv-serif); font-weight: 700;
-  font-size: clamp(22px, 2.8vw, 32px); line-height: 1; letter-spacing: -.028em; }
-.nv-auth__figs span { font-family: var(--nv-mono); font-size: 10px; letter-spacing: .14em;
-  color: var(--nv-ink-3); text-transform: uppercase; }
-/* 表单卡：给标题加一条编号线，与站内其它页同一套语言 */
-.nv-authcard__title::before {
-  content: "登记 · Sign in"; display: block; margin-bottom: 10px;
-  font-family: var(--nv-mono); font-size: 10.5px; letter-spacing: .22em;
-  color: var(--nv-ink-3); text-transform: uppercase; font-weight: 400;
-}
-
-/* ═════════════════════════ 玩家/DM 主页（profile / dm_profile） ═════════════════════════ */
-/* 评价流水改为"编号 + 通栏"的清单结构，弃用卡片描边。 */
-.nv-profrevs .nv-rev { border-top: var(--nv-hair); }
-.nv-profrevs .nv-rev__hd b { font-size: 16.5px; }
-.nv-profable { border-top: 1px solid var(--nv-ink); margin-top: var(--nv-s5); padding-top: var(--nv-s4); }
-.nv-gmstats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 0; border-top: 1px solid var(--nv-ink); border-bottom: var(--nv-hair); }
-.nv-gmstats > div { padding: var(--nv-s3) var(--nv-s3) var(--nv-s3) 0;
-  border-right: var(--nv-hair); display: grid; gap: 4px; }
-.nv-gmstats > div:last-child { border-right: 0; }
-.nv-gmstats dt { font-family: var(--nv-mono); font-size: 10px; letter-spacing: .12em;
-  color: var(--nv-ink-3); text-transform: uppercase; }
-.nv-gmstats dd { margin: 0; font-family: var(--nv-serif); font-weight: 700;
-  font-size: clamp(20px, 2.6vw, 30px); line-height: 1; letter-spacing: -.024em;
-  font-variant-numeric: tabular-nums; }
-
-/* ═════════════════════════ 消息中心（notice） ═════════════════════════ */
-/* 变成"信件流"：左侧日期列 + 右侧正文，未读用藤黄竖线。 */
-.nv-letters { border-top: 1px solid var(--nv-ink); }
-.nv-letter { display: grid; grid-template-columns: minmax(0, 130px) minmax(0, 1fr);
-  gap: var(--nv-s4); padding: var(--nv-s4) 0; border-bottom: var(--nv-hair);
-  transition: padding-left var(--nv-t-fast) var(--nv-ease); }
-.nv-letter:hover { padding-left: 10px; }
-.nv-letter.is-new { border-left: 2px solid var(--nv-accent); padding-left: var(--nv-s3); }
-.nv-letter__when { display: grid; gap: 4px; align-content: start; }
-.nv-letter__when em { font-style: normal; font-family: var(--nv-mono);
-  font-size: 11px; color: var(--nv-ink-3); }
-.nv-letter__body { display: grid; gap: 8px; }
-.nv-letter__body b { font-family: var(--nv-serif); font-size: clamp(17px, 2vw, 21px);
-  letter-spacing: -.016em; }
-.nv-letter__body p { margin: 0; font-size: 14.5px; line-height: 1.75; color: var(--nv-ink-2); }
-@media (max-width: 680px) { .nv-letter { grid-template-columns: 1fr; gap: var(--nv-s2); } }
-
-/* ═════════════════════════ 组局（group） / 场次表 ═════════════════════════ */
-.nv-sheet { border-top: 1px solid var(--nv-ink); }
-.nv-sheet__row { display: grid; grid-template-columns: 88px minmax(0, 1fr) auto auto;
-  gap: var(--nv-s4); align-items: center; padding: clamp(14px, 2vw, 22px) 0;
-  border-bottom: var(--nv-hair);
-  transition: padding-left var(--nv-t-fast) var(--nv-ease), background var(--nv-t-fast); }
-.nv-sheet__row:hover { padding-left: 10px; background: color-mix(in srgb, var(--nv-paper-2) 55%, transparent); }
-.nv-sheet__t { font-family: var(--nv-serif); font-weight: 700; font-size: clamp(19px, 2.2vw, 26px);
-  letter-spacing: -.024em; color: var(--nv-accent); }
-.nv-sheet__m b { display: block; font-family: var(--nv-serif); font-weight: 700;
-  font-size: clamp(16px, 1.9vw, 20px); letter-spacing: -.018em; }
-.nv-sheet__m span { font-family: var(--nv-mono); font-size: 11.5px; color: var(--nv-ink-3); }
-.nv-sheet__cap { font-family: var(--nv-mono); font-size: 12px; color: var(--nv-ink-3); white-space: nowrap; }
-@media (max-width: 680px) {
-  .nv-sheet__row { grid-template-columns: 56px 1fr; gap: var(--nv-s3); }
-  .nv-sheet__cap, .nv-sheet__act { grid-column: 2; }
-}
-
-/* ═════════════════════════ FAQ（faq） ═════════════════════════ */
-/* 问答改为"目录体"：编号大字 + 问题 + 答案，横向规则线。 */
-.nv-qa { border-top: 1px solid var(--nv-ink); }
-.nv-qa__item { display: grid; grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--nv-s4); padding: clamp(20px, 3vw, 34px) 0; border-bottom: var(--nv-hair); }
-.nv-qa__no { font-family: var(--nv-mono); font-size: 12px; letter-spacing: .1em;
-  color: var(--nv-accent); padding-top: .35em; }
-.nv-qa__q { font-family: var(--nv-serif); font-weight: 700;
-  font-size: clamp(19px, 2.4vw, 27px); line-height: 1.24; letter-spacing: -.022em; margin: 0 0 10px; }
-.nv-qa__a { margin: 0; font-size: 15.5px; line-height: 1.82; color: var(--nv-ink-2); max-width: 62ch; }
-@media (max-width: 560px) { .nv-qa__item { grid-template-columns: 1fr; gap: var(--nv-s2); } }
-
-/* ═════════════════════════ 支付（pay_deposit） ═════════════════════════ */
-/* 金额已经是主角，这里再补一条"付款流程编号带"，把流程从散文变成可扫的步骤。 */
-.nv-paysteps { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 0; border-top: 1px solid var(--nv-ink); margin-top: var(--nv-s5); }
-.nv-paysteps > div { padding: var(--nv-s3) var(--nv-s3) var(--nv-s3) 0;
-  border-right: var(--nv-hair); display: grid; gap: 6px; }
-.nv-paysteps > div:last-child { border-right: 0; }
-.nv-paysteps i { font-style: normal; font-family: var(--nv-mono); font-size: 10.5px;
-  letter-spacing: .14em; color: var(--nv-accent); }
-.nv-paysteps b { font-family: var(--nv-serif); font-size: 15.5px; letter-spacing: -.012em; }
-.nv-paysteps span { font-size: 12.5px; color: var(--nv-ink-3); line-height: 1.6; }
-
-/* ═════════════════════════ 错误页（error） ═════════════════════════ */
-.nv-errpage { min-height: 74vh; display: grid; align-content: center;
-  gap: var(--nv-s3); padding: clamp(40px, 10vh, 120px) 0; }
-.nv-errpage__no { font-family: var(--nv-serif); font-weight: 700;
-  font-size: clamp(88px, 26vw, 300px); line-height: .84; letter-spacing: -.06em; margin: 0; }
-.nv-errpage__k { font-family: var(--nv-mono); font-size: 11px; letter-spacing: .24em;
-  text-transform: uppercase; color: var(--nv-accent); margin: 0; }
-.nv-errpage__d { max-width: 44ch; font-size: clamp(16px, 1.7vw, 19px);
-  line-height: 1.7; color: var(--nv-ink-2); margin: 0; }
-.nv-errpage__act { display: flex; gap: 12px; flex-wrap: wrap; margin-top: var(--nv-s3); }
-
-/* ═════════════════════════ 欢迎页（welcome） ═════════════════════════ */
-.nv-welcome__figs { display: flex; flex-wrap: wrap; gap: clamp(20px, 4vw, 52px);
-  margin-top: var(--nv-s5); padding-top: var(--nv-s3); border-top: var(--nv-hair); }
-
-/* 清单行的收藏按钮：浮在行右侧，不占版式格 */
-.nv-index > li { position: relative; }
-.nv-index__fav { position: absolute; right: -6px; bottom: 10px; }
-@media (max-width: 760px) { .nv-index__fav { display: none; } }
-/* 小尺寸占位：清单里的 64px 缩略图不需要大字号水印 */
-.nv-index__pic .pcard3__ph { padding: 6px; justify-content: center; }
-.nv-index__pic .pcard3__wm { font-size: 26px; opacity: .28; top: 50%; right: -.1em; }
-.nv-index__pic .pcard3__d, .nv-index__pic .pcard3__m { display: none; }
-.nv-plate__cover .pcard3__ph { padding: 18px; }
-/* 海报墙上的占位：字级随格子放大，避免"空盒子"观感 */
-.nv-plate--wide .pcard3__ph, .nv-plate--tall .pcard3__ph { padding: 22px; }
-.nv-plate--wide .pcard3__wm, .nv-plate--tall .pcard3__wm { font-size: clamp(64px, 8vw, 118px); }
-.nv-plate--wide .pcard3__d, .nv-plate--tall .pcard3__d { font-size: 13px; max-width: 34ch; }
-.nv-plate .pcard3__ph { transition: transform .9s var(--nv-ease); }
-.nv-plate:hover .pcard3__ph { transform: scale(1.03); }
-
-/* ═════════════════════════ 海报墙（原型 E）在别的页面上的用法 ═════════════════════════
-   列表页用 .nv-plates；这里补上封面内的角标与 hover 提示条，
-   让"编号索引清单"与"海报墙"两种列表可以任意切换而不掉细节。 */
-.nv-plate__badge {
-  position: absolute; left: 0; top: 0; z-index: 2;
-  padding: 4px 9px; background: var(--nv-ink); color: var(--nv-paper);
-  font-family: var(--nv-mono); font-size: 10px; letter-spacing: .12em;
-}
-.nv-plate__hint {
-  position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 2;
-  padding: 7px 10px; background: color-mix(in srgb, var(--nv-ink) 88%, transparent);
-  color: var(--nv-paper); font-family: var(--nv-mono); font-size: 10.5px;
-  letter-spacing: .16em; text-transform: uppercase;
-  opacity: 0; transform: translateY(8px);
-  transition: opacity var(--nv-t-fast) var(--nv-ease), transform var(--nv-t-fast) var(--nv-ease);
-}
-.nv-plate:hover .nv-plate__hint,
-.nv-plate:focus-visible .nv-plate__hint { opacity: 1; transform: none; }
-.nv-plate:focus-visible { outline: 2px solid var(--nv-accent); outline-offset: 3px; }
-
-/* 带缩略图/海报的网格里，占位块的水印与说明按小尺寸收敛 */
-.nv-plates .pcard3__d, .nv-plates .pcard3__m { font-size: 11px; }
-
-/* 首页的破格配额：两张宽幅 + 一张竖长，其余常规 —— 非对称但不乱 */
-.nv-plates--home > *:nth-child(4) { grid-column: span 5; }
-.nv-plates--home > *:nth-child(5) { grid-column: span 7; }
-@media (max-width: 900px) {
-  .nv-plates--home > *:nth-child(4),
-  .nv-plates--home > *:nth-child(5) { grid-column: span 6; }
-}
-@media (max-width: 560px) {
-  .nv-plates--home > *:nth-child(4),
-  .nv-plates--home > *:nth-child(5) { grid-column: span 12; }
-}
-
-/* 清单里的价格副行（首页副列用） */
-.nv-index__side br + b { font-size: 13px; color: var(--nv-ink-2); }

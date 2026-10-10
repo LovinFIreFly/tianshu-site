@@ -1,8 +1,10 @@
 {# ============================================================================
-   NOVA · 登录/注册/找回 的独立布局（2026-10）
+   NOVA · 登录 / 注册 / 找回 的独立布局（2026-10 重写）
    ----------------------------------------------------------------------------
-   结构：左半幅 —— 巨字宣言 + 编号清单；右半幅 —— 表单卡（窄栏，居中偏上）。
-   手机上退化成单栏，宣言缩成一行小字。与整站零共享 DOM，只共 nova.css。
+   左半幅 —— 巨字宣言 + 编号清单 + 数据题花；右半幅 —— 表单卡（窄栏）。
+   它是整站的"门"，所以场景层（波纹场 / 颗粒 / 浮尘 / 光标 / 转场）一个不少，
+   只是把顶栏简化成「回大厅 + 换光」两颗。
+   手机上塌成单栏：宣言缩成一行小字，表单占满。
    ============================================================================ #}
 {% set _ua = request.headers.get('User-Agent') or '' %}
 {% set _in_app = ('TianshuApp' in _ua) or ('TianshuDesktop' in _ua) or in_shell %}
@@ -23,7 +25,7 @@
     el.setAttribute('data-theme', dark()?'dark':'light');
   })();
   </script>
-  <meta name="theme-color" content="#F5F3EE">
+  <meta name="theme-color" content="#F1F0EC">
   <title>{% block title %}{{ settings.shopName }}{% endblock %}</title>
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
   <link rel="icon" href="{{ url_for('static', filename='icon.svg') }}" type="image/svg+xml">
@@ -31,58 +33,81 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/nova.css', v=static_v('css/nova.css')) }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/nova-pages.css', v=static_v('css/nova-pages.css')) }}">
 </head>
-<body class="nv-body nv-body--auth">
-<div class="nv-grain" aria-hidden="true"></div>
+<body class="u-body">
 
-<div class="nv-auth">
-  <aside class="nv-auth__side">
-    <a class="nv-auth__back" href="{{ url_for('public.home', browse=1) }}">‹ 回大厅</a>
-    <div class="nv-auth__pitch">
-      <p class="nv-kick">{% block side_kick %}{{ settings.shopName }} · 上车登记{% endblock %}</p>
-      <h1 class="nv-auth__big">{% block side_title %}挑一本，<br>今晚就开演。{% endblock %}</h1>
-      <p class="nv-auth__lead">{% block side_lead %}定金锁位，玩完退回。<br>拼车满员即开，退位有人喊你。{% endblock %}</p>
+<div class="u-scene" id="uField" aria-hidden="true"><canvas id="usFieldCv"></canvas></div>
+<div class="u-grain" aria-hidden="true"></div>
+<div class="u-dust" id="uDust" aria-hidden="true"></div>
+<div class="u-veil" id="uVeil" aria-hidden="true"></div>
+
+<header class="u-top">
+  <a class="u-mark" href="{{ url_for('public.home', browse=1) }}" aria-label="回大厅">
+    <span class="u-mark__g" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.3"/>
+        <ellipse cx="12" cy="12" rx="4.1" ry="9.2" stroke="currentColor" stroke-width="1.1"/>
+        <path d="M3 12h18M4.4 7.6h15.2M4.4 16.4h15.2" stroke="currentColor" stroke-width="1.1"/>
+      </svg>
+    </span>
+    <span class="u-mark__name">{{ settings.shopName }}</span>
+    <span class="u-mark__c">©</span>
+  </a>
+  <nav class="u-nav">
+    <a data-scribble href="{{ url_for('public.home', browse=1) }}">先随便逛逛</a>
+    <a data-scribble href="/faq">关于</a>
+  </nav>
+  <a class="u-ic" href="{{ url_for('public.toggle_theme') }}" title="切换深浅色" aria-label="切换深浅色"
+     data-cursor-label="换个光">{% if theme == 'dark' %}☀{% else %}☾{% endif %}</a>
+</header>
+
+{% with msgs = get_flashed_messages(with_categories=true) %}
+  {% if msgs %}<div class="u-flash-wrap">{% for cat, m in msgs %}<div class="u-flash {{ cat }}">{{ m }}</div>{% endfor %}</div>{% endif %}
+{% endwith %}
+
+<main class="au">
+  <aside class="au__left">
+    <div>
+      <p class="u-kick u-kick--ink">{% block side_kick %}{{ settings.shopName }} · 上车登记{% endblock %}</p>
+      <h1 class="au__q" style="margin-top:14px">{% block side_title %}挑一本，<br><em>今晚就开演</em>。{% endblock %}</h1>
+      <p class="u-lede" style="margin-top:16px">{% block side_lead %}定金锁位，玩完退回。拼车满员即开，退位有人喊你。{% endblock %}</p>
     </div>
-    <ul class="nv-auth__list">
-      <li><span>01</span>本本墙按类型 / 人数 / 难度挑</li>
-      <li><span>02</span>拼车大厅找搭子，满员就开</li>
-      <li><span>03</span>到店开演，演完写两句</li>
-    </ul>
-    <div class="nv-auth__figs">
-      <div><b>{{ settings.shopName|length }}<small style="font-size:14px">字</small></b><span>店招</span></div>
-      <div><b>¥{{ settings.carDeposit|int }}</b><span>定金 / 人</span></div>
-      <div><b>{{ settings.inviteCoupon|int }}</b><span>邀请券</span></div>
+
+    <ol class="u-list" style="max-width:420px">
+      <li class="u-item" style="grid-template-columns:40px minmax(0,1fr);pointer-events:none">
+        <span class="u-item__no">01</span><span class="u-item__t" style="font-size:14.5px">本本墙按类型 / 人数 / 难度挑</span>
+      </li>
+      <li class="u-item" style="grid-template-columns:40px minmax(0,1fr);pointer-events:none">
+        <span class="u-item__no">02</span><span class="u-item__t" style="font-size:14.5px">拼车大厅找搭子，满员就开</span>
+      </li>
+      <li class="u-item" style="grid-template-columns:40px minmax(0,1fr);pointer-events:none">
+        <span class="u-item__no">03</span><span class="u-item__t" style="font-size:14.5px">到店开演，演完写两句</span>
+      </li>
+    </ol>
+
+    <div class="au-figs u-figs" style="border-bottom:0;padding-bottom:0">
+      <div class="u-fig"><b>{{ settings.shopName|length }}</b><s>字店招</s></div>
+      <div class="u-fig"><b>¥{{ settings.carDeposit|int }}</b><s>定金 / 人</s></div>
+      <div class="u-fig"><b>{{ settings.inviteCoupon|int }}</b><s>邀请券</s></div>
     </div>
-    <a class="nv-auth__theme" href="{{ url_for('public.toggle_theme') }}" title="切换深浅色" aria-label="切换深浅色">
-      {% if theme == 'dark' %}切到日间{% else %}切到夜间{% endif %}
-    </a>
   </aside>
 
-  <section class="nv-auth__main">
-    {% with msgs = get_flashed_messages(with_categories=true) %}
-      {% if msgs %}<div class="nv-flash-wrap">{% for cat, m in msgs %}<div class="nv-flash {{ cat }}">{{ m }}</div>{% endfor %}</div>{% endif %}
-    {% endwith %}
-    {% block card %}{% endblock %}
-    <p class="nv-auth__foot">© {{ year }} {{ settings.shopName }}・熬夜改本中
-      {% if not _in_app %}
-      <a href="{{ url_for('static', filename='app/tianshu-desktop.exe', v=static_v('app/tianshu-desktop.exe')) }}" download="甜薯剧本杀-电脑版.exe">电脑端</a>
-      <a class="js-install" href="{{ url_for('static', filename='app/tianshu.apk', v=static_v('app/tianshu.apk')) }}" download="甜薯剧本杀.apk">手机端</a>
-      {% endif %}</p>
-  </section>
-</div>
-
-<div class="nv-mask" id="install-mask">
-  <div class="nv-modal">
-    <div class="nv-modal__head">
-      <h2>装到桌面</h2>
-      <button class="nv-modal__close" type="button" id="install-close" aria-label="关闭">✕</button>
+  <section class="au__right">
+    <div class="au-card">
+      {% block card %}{% endblock %}
+      <p class="au-alt" style="margin-top:var(--us-s3)">
+        <span>© {{ year }} {{ settings.shopName }}</span>
+        <span>熬夜改本中 · 好本子只演一次</span>
+        {% if not _in_app %}
+        <a href="{{ url_for('static', filename='app/tianshu-desktop.exe', v=static_v('app/tianshu-desktop.exe')) }}" download="甜薯剧本杀-电脑版.exe">电脑端</a>
+        <a class="js-install" id="install-btn" href="{{ url_for('static', filename='app/tianshu.apk', v=static_v('app/tianshu.apk')) }}" download="甜薯剧本杀.apk">手机端</a>
+        {% endif %}
+      </p>
     </div>
-    <p id="install-steps">…</p>
-    <p class="nv-modal__hint">装完桌面就有甜薯图标，打开是全屏独立窗口，和 App 一样。</p>
-  </div>
-</div>
+  </section>
+</main>
 
 <script src="{{ url_for('static', filename='js/csrf.js') }}"></script>
-{# 获取验证码：与二代同一套 data-code-btn 协议，仅取回 JSON 提示、不刷页面 #}
+{# 获取验证码：与二代同一套 data-code-btn 协议，只回 JSON、不刷页面 #}
 <script>
 (function () {
   var btn = document.querySelector('[data-code-btn]');
@@ -92,7 +117,7 @@
   function say(text, bad) {
     if (!tip) return;
     tip.textContent = text;
-    tip.className = 'nv-code-tip' + (bad ? ' bad' : '');
+    tip.className = 'u-code-tip' + (bad ? ' bad' : '');
     tip.hidden = false;
   }
   function tick() {
@@ -109,44 +134,28 @@
     var fd = new FormData();
     fd.append('email', email);
     fd.append('purpose', btn.getAttribute('data-purpose') || 'reset');
-    fetch(btn.getAttribute('data-url'), {method: 'POST', body: fd,
-          headers: {'X-Requested-With': 'fetch', 'Accept': 'application/json'}})
+    fetch(btn.getAttribute('data-url'), { method: 'POST', body: fd,
+          headers: { 'X-Requested-With': 'fetch', 'Accept': 'application/json' } })
       .then(function (r) { return r.json(); })
       .then(function (d) {
         say(d.msg || (d.ok ? '已发送' : '没发出去'), !d.ok);
         if (d.ok) { left = 60; btn.textContent = left + ' 秒后可重发'; timer = setInterval(tick, 1000); }
-        else { btn.disabled = false; }
+        else btn.disabled = false;
       })
       .catch(function () { say('网络不通，稍后再点一次', true); btn.disabled = false; });
   });
 })();
 </script>
 <script>
-  (function () {
-    var btn = document.getElementById('install-btn');
-    var mask = document.getElementById('install-mask');
-    var steps = document.getElementById('install-steps');
-    if (!btn || !mask || !steps) return;
-    var evt = null;
-    window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); evt = e; });
-    function guide() {
-      var ua = navigator.userAgent;
-      if (/iPhone|iPad|iPod/i.test(ua)) {
-        steps.textContent = 'iPhone：用 Safari 打开本站 → 底部中间「分享」→ 选「添加到主屏幕」。';
-      } else if (/Chrome|SamsungBrowser/i.test(ua)) {
-        steps.textContent = '安卓 Chrome：右上角菜单 →「安装应用 / 添加到主屏幕」。';
-      } else {
-        steps.textContent = '通用做法：浏览器「菜单」→「添加到桌面 / 添加到主屏幕」。';
-      }
-      mask.classList.add('show');
-    }
-    btn.addEventListener('click', function () {
-      if (evt) { evt.prompt(); evt = null; return; }
-      guide();
-    });
-    document.getElementById('install-close').addEventListener('click', function () { mask.classList.remove('show'); });
-    mask.addEventListener('click', function (e) { if (e.target === mask) mask.classList.remove('show'); });
-  })();
+(function () {
+  var btn = document.getElementById('install-btn');
+  if (!btn) return;
+  var evt = null;
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); evt = e; });
+  btn.addEventListener('click', function (e) {
+    if (evt) { e.preventDefault(); evt.prompt(); evt = null; }
+  });
+})();
 </script>
 <script src="{{ url_for('static', filename='js/nova.js', v=static_v('js/nova.js')) }}" defer></script>
 </body>

@@ -1,54 +1,51 @@
 {% extends 'layout.html' %}
-{% block title %}消息中心 · {{ settings.shopName }}{% endblock %}
-{# NOVA 消息中心：编号流水式列表，未读用左侧强调色短线标出。 #}
-{% block body %}
+{# 消息中心：通栏信纸流。未读的左边有一道墨线，日期单独一列。 #}
+{% block title %}消息 · {{ settings.shopName }}{% endblock %}
 
-<header class="nv-lead-hd">
-  <div class="nv-wrap">
-    <p class="nv-lead-hd__k">消息中心 · Notices</p>
-    <div class="nv-lead-hd__row">
+{% block body %}
+<header class="u-lead">
+  <div class="u-wrap">
+    <div class="u-lead__row">
       <div>
-        <h1 class="nv-lead-hd__t">消息中心</h1>
-        <p class="nv-lead-hd__d">预约成功、退款、门店回复、信用分变动 —— 每一条都在这儿留档。</p>
+        <p class="u-kick u-lead__k">Notices · 店里给你的信</p>
+        <h1 class="u-lead__t">消息<br><em>中心</em></h1>
+        <p class="u-lead__d">预约、定金、拼车、评价 —— 每一条都留档，刷不掉也丢不了。</p>
       </div>
-      <dl class="nv-lead-hd__m">
-        <div><dt>全部</dt><dd>{{ rows|length }}</dd></div>
-        <div><dt>未读</dt><dd style="color:var(--nv-accent)">{{ unread }}</dd></div>
-      </dl>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--nv-s4)">
-      {% if unread %}
-      <form method="post" action="{{ url_for('user.notice_read') }}">
-        <button class="nv-btn nv-btn--sm nv-btn--ghost" type="submit">全部标为已读</button>
-      </form>
-      {% endif %}
-      <a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('user.me') }}">← 回我的</a>
+      <div class="u-lead__m">
+        <dl><dt>全部</dt><dd>{{ rows|length }}</dd></dl>
+        <dl><dt>未读</dt><dd>{{ unread }}</dd></dl>
+        <div class="u-seal">店里的信</div>
+      </div>
     </div>
   </div>
 </header>
 
-<div class="nv-wrap">
-  <div class="nv-letters" style="margin:var(--nv-s5) 0 clamp(48px,7vw,90px)">
+<div class="u-wrap u-wrap--nar" style="padding-top:var(--us-s5)">
+  {% if rows %}
+  <div style="display:flex;justify-content:flex-end;margin-bottom:var(--us-s3)">
+    <form method="post" action="{{ url_for('user.notice_read') }}">
+      <button class="u-pill u-pill--ghost" type="submit" data-magnet="5">全部标为已读</button>
+    </form>
+  </div>
+  <div class="nt-letters">
+    {% set _phone = me.phone|string %}
     {% for n in rows %}
-    {% set is_new = (me.phone|string) not in (n.readBy or []) %}
-    <article class="nv-letter {{ 'is-new' if is_new }}">
-      <div class="nv-letter__when">
-        <em>{{ day_label(n.at) }}</em>
-        {% if n.kind %}<span class="nv-tag">{{ n.kind }}</span>{% endif %}
-        {% if is_new %}<span class="nv-st nv-st--on">未读</span>{% endif %}
-      </div>
-      <div class="nv-letter__body">
-        <b>{{ n.title }}</b>
-        <p>{{ n.text }}</p>
+    {% set _read = _phone in ((n.readBy or [])|map('string')|list) %}
+    <article class="nt-letter {{ 'is-new' if not _read }}" data-d="{{ loop.index0 * 45 }}">
+      <p class="nt-letter__w">{{ day_label(n.at) if n.at else '' }}</p>
+      <div>
+        <h2 class="nt-letter__t">{{ n.title }}</h2>
+        <p class="nt-letter__x">{{ n.text }}</p>
       </div>
     </article>
-    {% else %}
-    <div class="nv-blank" style="margin-top:var(--nv-s3)">
-      <p class="nv-blank__k">Empty</p>
-      <b>还没有消息</b>
-      <p>预约成功、退款、门店回复、信用分变动都会发到这里。</p>
-    </div>
     {% endfor %}
   </div>
+  {% else %}
+  <div class="u-blank">
+    <p class="u-blank__k">还空着</p>
+    <p class="u-blank__d">有预约、有定金、有人上你的车 —— 消息才会来。先去挑一本吧。</p>
+    <a class="u-pill" href="{{ url_for('public.scripts') }}" style="margin-top:8px">去本本墙 <span class="u-pill__a" aria-hidden="true">↘</span></a>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

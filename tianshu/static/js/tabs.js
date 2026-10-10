@@ -92,6 +92,8 @@
   }
   function wireAdmMobileNav() {
     each(document.querySelectorAll('.adm'), function (adm) {
+      if (adm.getAttribute('data-admnav-bnd') === '1') return;   // 重复 boot 不重复绑
+      adm.setAttribute('data-admnav-bnd', '1');
       var bar = adm.querySelector('[data-tabs]');
       each(adm.querySelectorAll('#adm-open-drawer, .js-open-drawer'), function (btn) {
         btn.addEventListener('click', function () { openDrawer(adm); });
@@ -224,9 +226,15 @@
 
   function boot() {
     /* [data-tabs] 可能是顶部的胶囊标签条（.tabbar），也可能是后台左侧栏（.adm-side）——
-       两种都走同一套逻辑，所以面板统一从整个文档里找。 */
+       两种都走同一套逻辑，所以面板统一从整个文档里找。
+
+       幂等守卫（2026-10）：Nova 的转场换页是 fetch + 换 DOM，换进来的标签条是**新节点**，
+       得让 boot() 再跑一遍才有人管。所以这里给每根条打 data-tabs-bnd 标记，
+       重复 boot() 时只处理新增的，老节点不会被绑第二次（否则点一下会切两轮）。 */
     wireAdmMobileNav();   // 移动端☰抽屉 + DM 底栏（升级包 v5 漏带的 JS 在这里补）
     each(document.querySelectorAll('[data-tabs]'), function (bar) {
+      if (bar.getAttribute('data-tabs-bnd') === '1') return;
+      bar.setAttribute('data-tabs-bnd', '1');
       var root = document;
       var saved = null;
       try { saved = sessionStorage.getItem('tabs:' + bar.getAttribute('data-tabs')); } catch (e) { }
@@ -249,11 +257,19 @@
       // 同页里点 <a href="/dm#my-pay"> 这类锚点链接只会改 hash、不会重新加载，
       // 所以得自己接一下：不然点在已经在同一页的链接上，什么都不会发生。
       window.addEventListener('hashchange', function () {
+        if (!document.contains(bar)) return;   // 这条已被转场换掉，别再动它
         resolveHash(bar, root, (location.hash || '').slice(1));
       });
     });
-    each(document.querySelectorAll('[data-filter]'), bindFilter);
+    each(document.querySelectorAll('[data-filter]'), function (b) {
+      if (b.getAttribute('data-filter-bnd') === '1') return;
+      b.setAttribute('data-filter-bnd', '1');
+      bindFilter(b);
+    });
   }
+
+  /* 对外：Nova 转场换页后要重新认一遍新的标签条 / 筛选条 */
+  window.TS_TABS = { boot: boot };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);

@@ -1,64 +1,25 @@
 {% extends 'layout.html' %}
-{% block title %}{{ settings.shopName }} · 藏在学校里的剧本杀小店{% endblock %}
-{# ============================================================================
-   NOVA 欢迎页：进站第一屏（2026-10 · 与首页同一套"杂志封面"语言）
-   ----------------------------------------------------------------------------
-   复用首页的 .nv-cover* 版式：页眉横线 + 巨型题词 + 右栏竖印与数据题花 + 目录带。
-   与首页的差别只有内容和色调 —— 没登录的人先看见这屏，点是"上车登记"还是
-   "先随便逛逛"。纯纵向、无横滚、无弹窗。
-   ============================================================================ #}
+{# 欢迎页：没登录的人进站第一眼。和首页同一套封面语言，但只留一个动作。 #}
+{% block title %}{{ settings.shopName }} · 进门先登记{% endblock %}
 {% block body %}
-<section class="nv-cover wc-cover">
-  <div class="nv-wrap nv-cover__in">
-
-    <p class="nv-cover__k">
-      <span>{{ settings.shopName }}</span>
-      <span class="nv-cover__rule" aria-hidden="true"></span>
-      <span>恭候多时</span>
-      <span>进门先看</span>
-    </p>
-
-    <div class="nv-cover__row">
-      <div class="nv-cover__main">
-        <h1 class="nv-cover__t">
-          <span class="mask"><span>推门进来，</span></span>
-          <span class="mask"><span>挑个本，坐下就开始。</span></span>
-        </h1>
-        <p class="nv-cover__d">
-          情感、硬核、恐怖、欢乐都在这儿。<br>
-          <b>一个人来也行</b>，拼车区喊一声就有搭子。
-        </p>
-        <div class="nv-cover__cta">
-          <a class="nv-btn nv-btn--accent" href="{{ url_for('user.login') }}"
-             data-magnet data-cursor="view" data-cursor-label="进站">上车登记 <i>→</i></a>
-          <a class="nv-btn nv-btn--ghost" href="{{ url_for('public.home', browse=1) }}"
-             data-curtain data-magnet>先随便逛逛</a>
-        </div>
-      </div>
-
-      <aside class="nv-cover__side">
-        <span class="nv-seal" aria-hidden="true">欢 迎 进 来</span>
-        <dl class="nv-cover__figs">
-          <div><dt>在架剧本</dt><dd><span class="count" data-to="{{ meta.scripts or 0 }}">0</span></dd></div>
-          <div><dt>今日开场</dt><dd><span class="count" data-to="{{ meta.today or 0 }}">0</span></dd></div>
-          <div><dt>可拼可包</dt><dd>随你挑</dd></div>
-        </dl>
-      </aside>
-    </div>
-
-    <nav class="nv-cover__toc">
-      <a href="{{ url_for('user.login') }}"><i>01</i>上车登记</a>
-      <a href="{{ url_for('public.home', browse=1) }}"><i>02</i>先逛逛</a>
-      <a href="{{ url_for('user.register') }}"><i>03</i>注册一个</a>
-    </nav>
-
-    <p class="nv-mono wc-cover__note">
-      还没登记？<a class="nv-ul" href="{{ url_for('user.register') }}">去登记一个</a>
-    </p>
+<section class="wc">
+  <p class="wc__k u-kick">Tianshu · 藏在学校里的剧本杀小店</p>
+  <h1 class="wc__t">今晚<br><em>演哪一出</em></h1>
+  <p class="wc__d">
+    挑本、拼车、到店开演。定金锁位，玩完由小客服原路退回 ——
+    先登记一下，位子才归你。
+  </p>
+  <div class="wc__act">
+    <a class="u-pill u-pill--ink" href="{{ url_for('user.login') }}" data-magnet="8">
+      上车登记 <span class="u-pill__a" aria-hidden="true">↘</span>
+    </a>
+    <a class="u-pill" href="{{ url_for('user.register') }}">还没有账号</a>
+    <a class="u-pill u-pill--ghost" href="/?browse=1">先随便逛逛</a>
+  </div>
+  <div class="wc-figs u-figs" style="border:0">
+    <div class="u-fig"><b>{{ meta.scripts if meta else 0 }}</b><s>在架本</s></div>
+    <div class="u-fig"><b>{{ meta.today if meta else 0 }}</b><s>今天场次</s></div>
+    <div class="u-fig"><b>¥{{ settings.carDeposit or 50 }}</b><s>一人定金</s></div>
   </div>
 </section>
-{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/nova-home.css', v=static_v('css/nova-home.css')) }}">
 {% endblock %}

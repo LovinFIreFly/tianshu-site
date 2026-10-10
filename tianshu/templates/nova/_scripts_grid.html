@@ -1,65 +1,45 @@
-{# 剧本库清单片段（NOVA · 第三轮）
-   版式从"均质卡片网格"改为**编号索引清单**（原型 B）：
-   一行读完 —— 编号 · 缩略图 · 书名 + 规格 · 价格 · 箭头。
-   前端点标签仍用 fetch 拉这段原地替换；钩子 data-spa-grid / data-count /
-   data-anim / data-ajax-fav 原样保留。
-   `view` 参数：'list' 走清单体（默认），'plate' 走海报墙（首页/精选用）。 #}
-{% if scripts %}
-{% if view == 'plate' %}
-<div class="nv-plates" data-spa-grid data-count="{{ scripts|length }}">
-  {% for s in scripts %}
-  <article class="nv-plate {{ 'nv-plate--wide' if loop.first and scripts|length > 2 else '' }}" data-anim>
-    <a class="nv-plate__cover" href="{{ url_for('public.script_detail', sid=s.id) }}"
-       data-curtain data-cursor="view" data-cursor-label="看本">
-      {% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}" loading="lazy">
-      {% else %}{% include '_script_ph.html' %}{% endif %}
-    </a>
-    <div class="nv-plate__body">
-      <b><a href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.title }}</a></b>
-      <em>{{ s.type or '剧本' }} · {{ s.players or '—' }} · {{ s.dur or '—' }} · ¥{{ s.price|int }}/人</em>
-    </div>
-  </article>
-  {% endfor %}
-</div>
-
-{% else %}
-<ol class="nv-index nv-index--pic" data-spa-grid data-count="{{ scripts|length }}">
-  {% for s in scripts %}
-  <li data-anim>
-    <a class="nv-index__a" href="{{ url_for('public.script_detail', sid=s.id) }}"
-       data-curtain data-cursor="view" data-cursor-label="看本">
-      <span class="nv-index__no">{{ '%02d'|format(loop.index) }}</span>
-      <span class="nv-index__pic">
+{# 剧本库的网格片段（SPA 换页只换这一段）。
+   —— 被两处用：整页渲染（scripts.html include）、前端 fetch 换页（/scripts?partial=1）。
+   契约（library.js 认这些）：
+     · 根节点必须带 data-count，用来更新「N 本」
+     · 卡片带 data-anim，换页时错峰入场
+     · 不要在这里放 <script>，前端只做 innerHTML 替换
+   需要变量：scripts（本页结果）、favs（我的收藏 id 集合）、rating（sid→评分） #}
+<div class="ts-grid" data-count="{{ scripts|length }}">
+  {% if scripts %}
+  <div class="u-grid u-fold" data-fold>
+    {% for s in scripts %}
+    {% set _fav = s.id|string in favs %}
+    <a class="u-card" data-fold-item data-anim
+       href="{{ url_for('public.script_detail', sid=s.id) }}"
+       data-cursor-label="看本">
+      <span class="u-card__fig">
         {% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}" loading="lazy">
         {% else %}{% include '_script_ph.html' %}{% endif %}
       </span>
-      <span class="nv-index__main">
-        <b>{{ s.title }}</b>
-        <em>{{ s.type or '剧本' }} · {{ s.players or '—' }} 人 · {{ s.dur or '—' }} · 难度 {{ s.diff or 3 }}/5</em>
+      <span class="u-card__cap">
+        <span>
+          <span class="u-card__t">
+            {{ s.title or '未命名' }}
+            {% if _fav %}<span class="u-tag u-tag--ink" style="margin-left:8px">想玩</span>{% endif %}
+          </span>
+          <span class="u-card__k">
+            {{ s.type or '盒装' }}
+            {% if s.players %} · {{ s.players }} 人{% endif %}
+            {% if s.dur %} · {{ s.dur }}{% endif %}
+            {% if rating.get(s.id|string) %} · {{ rating.get(s.id|string) }} 分{% endif %}
+            {% if s.tags %} · {{ s.tags|join(' / ') }}{% endif %}
+          </span>
+        </span>
+        <span class="u-card__a" aria-hidden="true">↘</span>
       </span>
-      <span class="nv-index__side">
-        <b>¥{{ s.price|int }}</b><br>/人{% if rating.get(s.id|string) %} · ★{{ rating[s.id|string] }}{% endif %}
-      </span>
-      <span class="nv-index__go">→</span>
     </a>
-    <form class="nv-index__fav" method="post" action="{{ url_for('public.fav', sid=s.id) }}" data-ajax-fav>
-      <button class="fav-btn {{ 'on' if s.id|string in favs }}" type="submit" aria-label="想玩">
-        {{ '❤' if s.id|string in favs else '♡' }}
-      </button>
-    </form>
-  </li>
-  {% endfor %}
-</ol>
-{% endif %}
-
-{% else %}
-<div class="nv-blank" data-anim data-count="0">
-  <p class="nv-blank__k">No Match</p>
-  <b>没找着想冲的本</b>
-  <p>换个词，或者去掉几个类型再试试。类型选得越少，结果越宽。</p>
-  <div class="nv-blank__act">
-    <a class="nv-btn nv-btn--sm nv-btn--solid" href="{{ url_for('public.scripts') }}">清空条件重来</a>
-    <a class="nv-btn nv-btn--sm" href="{{ url_for('public.car') }}">去拼车大厅看看</a>
+    {% endfor %}
   </div>
+  {% else %}
+  <div class="u-blank">
+    <p class="u-blank__k">没找着</p>
+    <p class="u-blank__d">换个词，或者把筛选清掉再看看。也可能这本刚被下架了。</p>
+  </div>
+  {% endif %}
 </div>
-{% endif %}

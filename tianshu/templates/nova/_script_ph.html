@@ -1,0 +1,12 @@
+{# 封面占位：没有剧照时"现印一张海报"，而不是丢一个灰块。
+   两处用：剧本库清单 _scripts_grid.html、首页在演清单 home.html。
+   需要外层有变量 s（当前这本剧本）。 #}
+{% set _d = (s.diff or 3)|int %}
+<div class="u-ph" data-e="{{ s.emoji or '🎭' }}" aria-hidden="true">
+  <div class="u-ph__n">No. {{ '%03d'|format(s.id or 0) }} · {{ s.type or '盒装' }}</div>
+  <div class="u-ph__t">{{ s.title or '未命名' }}</div>
+  <div class="u-ph__m">
+    {% for i in range(5) %}{{ '●' if i < _d else '○' }}{% endfor %}
+    &nbsp;{{ s.players or '—' }} 人 · {{ s.dur or '待定' }}
+  </div>
+</div>

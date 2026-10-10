@@ -1,385 +1,478 @@
 {% extends 'layout.html' %}
+{# 剧本详情：巨字抬头 + 五连事实 → 杂志体两栏正文 / 角色海报墙 / 演绎视频 / 剧友短评；
+   右栏是粘住的预订面板 + 可约场次 + 到店流程。
+   表单字段（一个都不能改名，下单接口按这些名字读）：
+     sid / ts / time / players / mode / car(new|join) / carId / dmPhone / role / use_balance #}
 {% block title %}{{ sc.title }} · {{ settings.shopName }}{% endblock %}
 {% block og_title %}{{ sc.title }} · {{ settings.shopName }}{% endblock %}
-{% block og_description %}{{ (sc.desc or settings.shopName)|truncate(60, True, '…') }}{% endblock %}
-{% block og_image %}{% if sc.img %}{{ sc.img if sc.img.startswith('http') else request.url_root ~ sc.img.lstrip('/') }}{% else %}{{ url_for('static', filename='icon.svg', _external=True) }}{% endif %}{% endblock %}
-{# NOVA 剧本详情（第三轮）：**编辑式书页**。
-   版式 = 通栏书名 + 关键事实三连（原型 D 变体）+ 杂志式正文（首字下沉 / 两栏）
-        + 角色海报墙（原型 E 破格）+ 评价通栏流水 + 右侧 sticky 预约窄栏（原型 F）。
-   与上一版的差别：正文从"一坨散文"变成有节奏的杂志排版；角色从等宽网格变成
-   首发宽幅的破格海报墙；评价从卡片堆变成带作者列的通栏流水。
-   表单字段名 / action / id（mode-sel / car-sel / car-mode-box / car-pick-box /
-   players-in）/ data-ajax-fav / share-btn 全部保留（功能与二代一致）。 #}
+{% block og_description %}{{ sc.desc or (sc.tags|join(' · ') if sc.tags else '来店里玩这一本') }}{% endblock %}
+{% block og_image %}{% if sc.img %}{{ sc.img }}{% else %}{{ super() }}{% endif %}{% endblock %}
+
 {% block body %}
+{% set _fav = sc.id|string in favs %}
+{% set _taken = taken or [] %}
 
-<div class="nv-wrap">
-  <div class="nv-script">
-
-    {# ═══════════════ 左：正文 ═══════════════ #}
-    <div>
-      <div class="nv-script__bar">
-        <a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('public.scripts') }}"
-           data-curtain data-cursor="view" data-cursor-label="返回">← 回本本墙</a>
-        <p class="nv-kick">{{ sc.type or '剧本' }} · Script No.{{ '%03d'|format(sc.id) }}</p>
-      </div>
-
-      <h1 class="nv-script__title">{{ sc.title }}</h1>
-
-      <div class="nv-tags">
-        {% if rating %}<span class="nv-tag nv-tag--accent">★ {{ rating }}{% if rating_n %}（{{ rating_n }} 条）{% endif %}</span>{% endif %}
-        {% if sc.isNew %}<span class="nv-tag nv-tag--accent">上新</span>{% endif %}
-        {% if sc.diff and sc.diff <= 2 %}<span class="nv-tag">新手友好</span>{% endif %}
-        {% for t in sc.tags %}<span class="nv-tag">{{ t }}</span>{% endfor %}
-      </div>
-
-      {# 关键事实：价格 / 定金 / 人数 / 时长 / 难度 —— 靠字级而不是卡片区分 #}
-      <div class="nv-script__facts">
-        <div class="nv-script__fact">
-          <b class="nv-accent">¥{{ sc.price|int }}</b><span>每人游玩费</span>
-        </div>
-        <div class="nv-script__fact">
-          <b>¥{{ car_deposit|int }}</b><span>定金 / 人 · 玩完退</span>
-        </div>
-        <div class="nv-script__fact">
-          <b>{{ sc.players or '—' }}</b><span>开局人数</span>
-        </div>
-        <div class="nv-script__fact">
-          <b>{{ sc.dur or '—' }}</b><span>预计时长</span>
-        </div>
-        <div class="nv-script__fact">
-          <b>{{ sc.diff or 3 }}<small style="font-size:15px;color:var(--nv-ink-3)">/5</small></b><span>推理难度</span>
-        </div>
-      </div>
-
-      <div class="nv-acts">
-        <form method="post" action="{{ url_for('public.fav', sid=sc.id) }}" data-ajax-fav style="display:inline">
-          <button class="nv-btn nv-btn--sm fav-btn {{ 'on' if sc.id|string in favs }}" type="submit">
-            {{ '❤ 已想玩' if sc.id|string in favs else '♡ 想玩' }}</button>
-        </form>
-        <a class="nv-btn nv-btn--sm nv-btn--accent" href="#book" data-cursor="view" data-cursor-label="预约">约这个本 ↓</a>
-        <button class="nv-btn nv-btn--sm nv-btn--ghost" type="button" id="share-btn"
-                data-share-text="甜薯剧本杀｜《{{ sc.title }}》">分享这本</button>
-      </div>
-
-      {# ── 剧情简介：杂志式正文（首字下沉 + 宽屏两栏） ── #}
-      <section class="nv-chapter">
-        <div class="nv-chapter__hd">
-          <span class="nv-chapter__no">01</span>
-          <h2 class="nv-chapter__t">这本讲什么</h2>
-          <span class="nv-chapter__s">Synopsis</span>
-        </div>
-        <div class="nv-article">
-          {% set _paras = (sc.desc or '门店还没写简介。')|nl2p|safe %}
-          <div class="nv-article__cols nv-prose">{{ _paras }}</div>
-        </div>
-        <p class="nv-note" style="margin-top:var(--nv-s4)">
-          ¥{{ sc.price|int }} 是<b>游玩费</b>（玩完再付）；先付定金 ¥{{ car_deposit|int }}/人 占位 ——
-          <b>玩完由小客服退回</b>，没到场 / 中途跳车的不退。
-        </p>
-      </section>
-
-      {# ── 角色：海报墙（首张宽幅破格） ── #}
-      {% if sc.roles or sc.dms %}
-      <section class="nv-chapter">
-        <div class="nv-chapter__hd">
-          <span class="nv-chapter__no">02</span>
-          <h2 class="nv-chapter__t">{% if sc.roles %}角色卡 · {{ sc.roles|length }} 张{% else %}这本谁带{% endif %}</h2>
-          <span class="nv-chapter__s">
-            {% if sc.roles %}{{ '可提前选角' if sc.allowRolePick else '到店随机分配' }}{% endif %}
-          </span>
-        </div>
-
-        {% if sc.roles %}
-        <div class="nv-roles">
-          {% for r in sc.roles %}
-          <article class="nv-role">
-            <div class="nv-role__face {{ 'is-taken' if r.name in taken }}">
-              {% if r.img %}<img src="{{ r.img }}" alt="{{ r.name }}" loading="lazy">
-              {% else %}<span class="nv-role__ini">{{ r.name[0] }}</span>{% endif %}
-              <span class="nv-role__ix">{{ '%02d'|format(loop.index) }}</span>
-            </div>
-            <div>
-              <b>{{ r.name }}</b>
-              {% if r.line %}<br><em>{{ r.line }}</em>{% endif %}
-            </div>
-          </article>
-          {% endfor %}
-        </div>
-        {% endif %}
-
-        {% if sc.dms %}
-        <div style="margin-top:var(--nv-s5)">
-          <p class="nv-sidehead">能带这本的主持人</p>
-          <div class="nv-tags">
-            {% for d in sc.dms %}<a class="nv-tag" href="{{ url_for('public.dm_page', phone=d.phone) }}">{{ d.name }}</a>{% endfor %}
-          </div>
-        </div>
-        {% endif %}
-      </section>
-      {% endif %}
-
-      {# ── 演绎视频 ── #}
-      {% if sc.videoUrl %}
-      <section class="nv-chapter">
-        <div class="nv-chapter__hd">
-          <span class="nv-chapter__no">03</span>
-          <h2 class="nv-chapter__t">演绎视频</h2>
-          <span class="nv-chapter__s">Watch</span>
-        </div>
-        <p class="nv-mute" style="margin-bottom:var(--nv-s3)">看看这车人怎么演 —— 心里先有个底。</p>
-        <a class="nv-btn nv-btn--accent" href="{{ sc.videoUrl }}" target="_blank" rel="noopener nofollow"
-           data-magnet>观看演绎视频 ↗</a>
-      </section>
-      {% endif %}
-
-      {# ── 演后复盘（仅 DM / 管理员） ── #}
-      {% if canSeeReview and sc.reviewDoc %}
-      <section class="nv-chapter">
-        <div class="nv-chapter__hd">
-          <span class="nv-chapter__no">·</span>
-          <h2 class="nv-chapter__t">演后复盘</h2>
-          <span class="nv-chapter__s">DM / 店家可见 · 客人看不到</span>
-        </div>
-        <details class="nv-fold" style="margin-top:0;border-top:0">
-          <summary>点开看复盘记录</summary>
-          <div class="nv-prose" style="margin-top:14px">{{ sc.reviewDoc | nl2p | safe }}</div>
-        </details>
-      </section>
-      {% endif %}
-
-      {# ── 剧友评价：通栏流水 ── #}
-      {% if settings.reviewsEnabled and reviews %}
-      <section class="nv-chapter">
-        <div class="nv-chapter__hd">
-          <span class="nv-chapter__no">{{ '04' if sc.videoUrl else '03' }}</span>
-          <h2 class="nv-chapter__t">剧友评价</h2>
-          <span class="nv-chapter__s">{{ reviews|length }} 条 · 玩过的人怎么说</span>
-        </div>
-        <div class="nv-voices">
-          {% for r in reviews %}
-          <article class="nv-voice">
-            <div class="nv-voice__who">
-              <span class="nv-av nv-av--sm" aria-hidden="true">
-                {% if r.avatar and r.avatar.startswith('/img/') %}<img src="{{ r.avatar }}" alt="">
-                {% else %}{{ r.avatar or (r.nick or r.username or '玩家')[0] }}{% endif %}
-              </span>
-              <b>{% if r.username in user_names %}<a class="nv-lnk" href="{{ url_for('public.user_profile', username=(r.username or '')) }}">{{ r.nick or r.username or '玩家' }}</a>{% else %}{{ r.nick or r.username or '玩家' }}{% endif %}</b>
-              <span class="nv-stars">{% for i in range(r.rating or 5) %}★{% endfor %}</span>
-              <em>{{ day_label(r.createdAt) }}</em>
-            </div>
-            <div class="nv-voice__body">
-              <p class="nv-voice__t">{{ r.text or '（只给了分）' }}</p>
-              {% if r.dims %}
-              <div class="nv-tags">{% for k, v in r.dims.items() %}<span class="nv-tag">{{ k }} {{ v }}/5</span>{% endfor %}</div>
-              {% endif %}
-              {% if r.followUps %}{% for f in r.followUps %}<p class="nv-mute">补两句（{{ day_label(f.at) }}）：{{ f.text }}</p>{% endfor %}{% endif %}
-              {% if r.reply %}<p class="nv-mute">门店回复：{{ r.reply }}</p>{% endif %}
-              <div class="nv-voice__foot">
-                <form method="post" action="{{ url_for('public.review_like', rid=r.id) }}">
-                  <button class="nv-btn nv-btn--sm nv-btn--ghost fav-btn" type="submit">
-                    {{ '❤' if (me and me.phone|string in (r.likes or [])) else '♡' }} {{ (r.likes or [])|length }}</button>
-                </form>
-                {% if r.username in user_names %}
-                <a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('public.user_profile', username=(r.username or '')) }}">看 TA 主页</a>
-                {% endif %}
-              </div>
-              {% if me and r.username == me.username %}
-              <form method="post" action="{{ url_for('public.review_follow', rid=r.id) }}" class="nv-inline">
-                <input class="nv-input nv-input--grow" name="text" placeholder="过几天想补两句？">
-                <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">补两句</button>
-              </form>
-              {% endif %}
-            </div>
-          </article>
-          {% endfor %}
-        </div>
-      </section>
-      {% endif %}
+<header class="dt-hero">
+  <div class="u-wrap">
+    <div class="dt-hero__bar">
+      <a href="{{ url_for('public.scripts') }}">
+        <span aria-hidden="true">←</span> 回本本墙
+      </a>
+      <span class="u-dim">/</span>
+      <span>No. {{ '%03d'|format(sc.id or 0) }}</span>
+      {% if sc.type %}<span class="u-dim">/</span><span>{{ sc.type }}</span>{% endif %}
     </div>
 
-    {# ═══════════════ 右：封面 + 预约窄栏 ═══════════════ #}
-    <aside>
-      <div class="nv-detail__cover rv par" data-par="6" style="margin-bottom:var(--nv-s4)">
+    <h1 class="dt-title">{{ sc.title or '未命名' }}{% if sc.emoji %} <em>{{ sc.emoji }}</em>{% endif %}</h1>
+
+    <div class="dt-facts">
+      <div class="dt-fact dt-fact--hi"><b>¥{{ sc.price or '—' }}</b><s>每位</s></div>
+      <div class="dt-fact"><b>¥{{ dm_fee or 0 }}</b><s>指定 DM 加价</s></div>
+      <div class="dt-fact"><b>{{ lo }}-{{ hi }}</b><s>人数</s></div>
+      <div class="dt-fact"><b>{{ sc.dur or '待定' }}</b><s>时长</s></div>
+      <div class="dt-fact">
+        <b>{% if rating %}{{ rating }}{% else %}—{% endif %}</b>
+        <s>{% if rating_n %}{{ rating_n }} 条评价{% else %}还没人评{% endif %}</s>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="u-wrap" style="padding-top:var(--us-s5)">
+  <div class="u-split">
+
+    <!-- ══════ 主栏 ══════ -->
+    <div>
+
+      <!-- 01 这本讲什么 -->
+      <section data-d="0">
+        <div class="u-chap">
+          <span class="u-chap__no">01</span>
+          <h2 class="u-chap__t">这本讲什么</h2>
+          <span class="u-chap__s">{{ sc.tags|join(' / ') if sc.tags else '' }}</span>
+        </div>
+        {% if sc.desc %}
+        <div class="u-art__cols">
+          <p class="u-art__lede">{{ sc.desc }}</p>
+          <p style="margin-top:1em">
+            到店会先开一次复盘前的"上桌讲规则"，大概十分钟。你不用带任何东西，
+            剧本、道具、灯光我们都摆好 —— 人齐就开演。
+            {% if sc.dur %}这一本大约 {{ sc.dur }}，中途可以出来透气。{% endif %}
+          </p>
+          {% if sc.videoUrl %}
+          <p style="margin-top:1em">下面有一段这家店演这一本的片段，可以先看看氛围对不对胃口。</p>
+          {% endif %}
+        </div>
+        {% else %}
+        <div class="u-blank">
+          <p class="u-blank__k">还没写简介</p>
+          <p class="u-blank__d">这本的简介门店还没补。想来玩的话，直接问一句小客服更省事。</p>
+        </div>
+        {% endif %}
+      </section>
+
+      <!-- 02 角色 -->
+      {% if sc.roles %}
+      <section data-d="0" style="margin-top:var(--us-s6)">
+        <div class="u-chap">
+          <span class="u-chap__no">02</span>
+          <h2 class="u-chap__t">台上这些人</h2>
+          <span class="u-chap__s">
+            {% if sc.allowRolePick %}可以提前选角{% else %}到店现场分角{% endif %}
+          </span>
+        </div>
+        <div class="dt-roles u-fold" data-fold>
+          {% for r in sc.roles %}
+          <div class="dt-role {{ 'is-taken' if r.name in _taken }}" data-fold-item>
+            <div class="dt-role__f">
+              {% if r.img %}<img src="{{ r.img }}" alt="{{ r.name }}" loading="lazy">
+              {% else %}<span aria-hidden="true">{{ (r.name or '角')[0] }}</span>{% endif %}
+            </div>
+            <div>
+              <p class="dt-role__n">{{ r.name }}</p>
+              <p class="dt-role__x">{{ r.line or '人设待补' }}</p>
+            </div>
+            {% if r.name in _taken %}<p class="u-st u-st--off">已被选走</p>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% if not sc.allowRolePick %}
+        <p class="u-dim" style="margin-top:var(--us-s2);font-size:13px">
+          这一本不做提前选角 —— 到店后由 DM 按性格发牌，谁拿到谁演。
+        </p>
+        {% endif %}
+      </section>
+      {% endif %}
+
+      <!-- 03 演绎视频 -->
+      {% if sc.videoUrl %}
+      <section data-d="0" style="margin-top:var(--us-s6)">
+        <div class="u-chap">
+          <span class="u-chap__no">03</span>
+          <h2 class="u-chap__t">演出来的样子</h2>
+        </div>
+        <div style="position:relative;padding-top:56.25%;border-radius:6px;overflow:hidden;background:var(--us-bg-3)">
+          <iframe src="{{ sc.videoUrl }}" title="演绎视频" loading="lazy" allowfullscreen
+                  style="position:absolute;inset:0;width:100%;height:100%;border:0"></iframe>
+        </div>
+      </section>
+      {% endif %}
+
+      <!-- 04 剧友评价 -->
+      <section data-d="0" style="margin-top:var(--us-s6)">
+        <div class="u-chap">
+          <span class="u-chap__no">{{ '04' if sc.videoUrl else '03' }}</span>
+          <h2 class="u-chap__t">玩完的人怎么说</h2>
+          <span class="u-chap__s">{% if reviews %}{{ reviews|length }} 条{% else %}还没有{% endif %}</span>
+        </div>
+        {% if reviews %}
+        <div class="dt-voices">
+          {% for r in reviews %}
+          <div class="dt-voice" data-d="{{ loop.index0 * 45 }}">
+            <div class="dt-voice__k">
+              {% if r.avatar and r.avatar.startswith('/img/') %}<img src="{{ r.avatar }}" alt="">
+              {% else %}<i aria-hidden="true">{{ (r.nick or '玩')[0] }}</i>{% endif %}
+              <p style="font-size:13.5px">{{ r.nick }}</p>
+              <p class="hp-quote__s">{% for _ in range((r.rating or 0)|int) %}★{% endfor %}</p>
+            </div>
+            <div>
+              <p class="dt-voice__x">{{ r.text }}</p>
+              {% for f in r.followUps or [] %}
+              <p class="dt-voice__x u-dim" style="font-size:13.5px;margin-top:8px;padding-left:14px;border-left:var(--us-hair)">
+                追评 · {{ f.text }}
+              </p>
+              {% endfor %}
+            </div>
+            <div class="dt-voice__f">
+              <form method="post" action="{{ url_for('public.review_like', rid=r.id) }}">
+                <button type="submit" title="这条有用">
+                  ♡ {{ (r.likes or [])|length }}
+                </button>
+              </form>
+              {% if r.username in user_names %}
+              <a href="{{ url_for('public.user_profile', username=r.username) }}" data-scribble>看 TA</a>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="u-blank">
+          <p class="u-blank__k">还没人评</p>
+          <p class="u-blank__d">你玩完可以来写第一句 —— 好的坏的都留着，不修图。</p>
+        </div>
+        {% endif %}
+      </section>
+
+      <!-- 演后复盘（仅 DM / 管理员可见） -->
+      {% if canSeeReview and sc.reviewDoc %}
+      <section data-d="0" style="margin-top:var(--us-s6)">
+        <div class="u-chap">
+          <span class="u-chap__no">·</span>
+          <h2 class="u-chap__t">演后复盘</h2>
+          <span class="u-chap__s">仅店内可见</span>
+        </div>
+        <div class="u-art__cols"><p>{{ sc.reviewDoc }}</p></div>
+      </section>
+      {% endif %}
+
+    </div>
+
+    <!-- ══════ 右栏：预订 ══════ -->
+    <aside class="u-split__side dt-side">
+
+      <div class="dt-cover">
         {% if sc.img %}<img src="{{ sc.img }}" alt="{{ sc.title }}">
         {% else %}{% with s = sc %}{% include '_script_ph.html' %}{% endwith %}{% endif %}
       </div>
 
-      <div class="nv-book" id="book">
-        <div class="nv-book__head">
-          <span class="nv-book__price">¥{{ sc.price|int }}<small> /人</small></span>
-          <span class="nv-tag nv-tag--accent">定金 ¥{{ car_deposit|int }}</span>
+      <form class="dt-book" method="post" action="{{ url_for('user.book') }}" data-busy id="bookForm">
+        <input type="hidden" name="sid" value="{{ sc.id }}">
+        <input type="hidden" name="carId" id="carId" value="">
+
+        <div class="dt-price">
+          <b>¥{{ sc.price or '—' }}</b>
+          <s>每位 · 玩完再付<br>定金按人头，玩完由小客服退回</s>
         </div>
-        <div class="nv-book__body">
-          {% if me %}
-          <form method="post" action="{{ url_for('user.book') }}" data-busy>
-            <input type="hidden" name="sid" value="{{ sc.id }}">
-            <div class="nv-book__row">
-              <label>日期</label>
-              <input name="ts_day" type="date" value="{{ day_min }}" min="{{ day_min }}" max="{{ day_max }}" required>
-            </div>
-            <div class="nv-book__row">
-              <label>开场时间</label>
-              <input name="time" type="time" value="{{ request.form.get('time') or '19:00' }}" required>
-            </div>
-            <div class="nv-book__row">
-              <label>人数（{{ lo }}-{{ hi }} 人）</label>
-              <input id="players-in" name="players" type="number" min="{{ lo }}" max="{{ hi }}" value="{{ lo }}"
-                     data-lo="{{ lo }}" data-hi="{{ hi }}">
-            </div>
-            <div class="nv-book__row">
-              <label>玩法</label>
-              <select name="mode" id="mode-sel">
-                <option value="拼车">拼车（跟别人凑一车）· 定金 ¥{{ car_deposit|int }}</option>
-                <option value="包车">包车（自己人一车）</option>
-              </select>
-            </div>
-            <div class="nv-book__row" id="car-mode-box">
-              <label>拼车怎么拼</label>
-              <select name="car" id="car-sel">
-                <option value="new">自己单开一辆车（我来组队）</option>
-                <option value="join"{{ ' disabled' if not open_cars }}>加入已有的车（现在 {{ open_cars|length }} 辆有位）</option>
-              </select>
-              {% if settings.carTags %}
-              <label style="display:block;margin-top:10px">给这车贴标签（可多选）</label>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
-                {% for t in settings.carTags %}
-                <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;border:1px solid var(--nv-line-2);padding:5px 9px">
-                  <input type="checkbox" name="carTags" value="{{ t }}"><span>{{ t }}</span></label>
-                {% endfor %}
-              </div>
-              {% endif %}
-            </div>
-            <div class="nv-book__row" id="car-pick-box" style="display:none">
-              <label>挑一辆车</label>
-              <select name="carId">
-                {% for c in open_cars %}
-                <option value="{{ c.id }}">{{ c.day }} {{ c.time }} · 车主 {{ c.owner }} · 已 {{ c.joined }}/{{ c.cap }} 人{% if c.need %} · 还差 {{ c.need }} 人{% else %} · 人够开局{% endif %}</option>
-                {% else %}<option value="">现在还没有别人开着的车 —— 自己开一辆吧</option>{% endfor %}
-              </select>
-            </div>
-            {% if dms %}
-            <div class="nv-book__row">
-              <label>指定 DM（每人 +¥{{ dm_fee|int }}）</label>
-              <select name="dmPhone">
-                <option value="">不用，店里安排</option>
-                {% for d in dms %}<option value="{{ d.phone }}">{{ d.name }}</option>{% endfor %}
-              </select>
-            </div>
+
+        <div class="u-field">
+          <label class="u-lab">哪一天</label>
+          <div class="u-chips">
+            {% for d in days %}
+            <label class="u-chip {{ 'is-on' if loop.first }}" data-day>
+              <input type="radio" name="ts" value="{{ d.ts }}" {{ 'checked' if loop.first }}
+                     style="position:absolute;opacity:0;pointer-events:none">
+              {{ d.label }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="u-row2">
+          <div class="u-field">
+            <label class="u-lab" for="tmSel">几点开演</label>
+            <select class="u-select" name="time" id="tmSel">
+              {% for t in ['13:00', '15:00', '17:00', '19:00', '20:30', '22:00'] %}
+              <option value="{{ t }}" {{ 'selected' if t == '19:00' }}>{{ t }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="u-field">
+            <label class="u-lab" for="playersIn">几个人</label>
+            <input class="u-in" type="number" name="players" id="playersIn" min="{{ lo }}" max="{{ hi }}"
+                   value="{{ lo }}" inputmode="numeric">
+          </div>
+        </div>
+
+        <div class="u-field">
+          <label class="u-lab">怎么开</label>
+          <div class="u-chips" id="modeChips">
+            <label class="u-chip is-on">
+              <input type="radio" name="mode" value="拼车" checked style="position:absolute;opacity:0;pointer-events:none">拼车
+            </label>
+            <label class="u-chip">
+              <input type="radio" name="mode" value="包车" style="position:absolute;opacity:0;pointer-events:none">整桌包车
+            </label>
+          </div>
+          <p class="u-dim" style="font-size:12.5px">
+            拼车 = 一人 ¥50 定金先占位，别人陆续上车；包车 = 整桌一次付清。
+          </p>
+        </div>
+
+        <div class="u-field" id="carBox">
+          <label class="u-lab">上谁的车</label>
+          <div class="u-chips" id="carChips">
+            <label class="u-chip is-on">
+              <input type="radio" name="car" value="new" checked style="position:absolute;opacity:0;pointer-events:none">自己开一辆
+            </label>
+            {% if open_cars %}
+            <label class="u-chip">
+              <input type="radio" name="car" value="join" style="position:absolute;opacity:0;pointer-events:none">上别人的车
+            </label>
             {% endif %}
-            {% if sc.allowRolePick and sc.roles %}
-            <div class="nv-book__row">
-              <label>想演的角色（可选）</label>
-              <select name="role">
-                <option value="">到店再说</option>
-                {% for r in sc.roles %}{% if r.name not in taken %}<option value="{{ r.name }}">{{ r.name }}</option>{% endif %}{% endfor %}
-              </select>
-            </div>
-            {% endif %}
-            <button class="nv-btn nv-btn--accent nv-btn--block" type="submit" style="margin-top:var(--nv-s2)">提交预约</button>
-            <p class="nv-book__note">定金 ¥{{ car_deposit|int }}/人：付完、小客服确认到账后核销码才显示；<b>玩完由小客服退回</b>，没到场或中途跳车的不退。游玩费玩完再付。</p>
-          </form>
-          {% else %}
-          <a class="nv-btn nv-btn--solid nv-btn--block" href="{{ url_for('user.login', next=request.path) }}"
-             data-curtain data-magnet>登录后预约</a>
+          </div>
+          {% if open_cars %}
+          <div id="carPick" hidden style="margin-top:10px">
+            <select class="u-select" id="carSel">
+              <option value="">—— 挑一辆 ——</option>
+              {% for c in open_cars %}
+              <option value="{{ c.id }}">
+                {{ c.owner }} 的车 · {{ c.day }} {{ c.time }} · {{ c.joined }}/{{ c.cap }}（还差 {{ c.need }}）
+              </option>
+              {% endfor %}
+            </select>
+          </div>
           {% endif %}
         </div>
-      </div>
 
-      {# 店里已排的场次 #}
-      <section style="margin-top:var(--nv-s6)">
-        <div class="nv-chapter__hd" style="padding-top:0">
-          <span class="nv-chapter__no">04</span>
-          <h2 class="nv-chapter__t" style="font-size:clamp(19px,2.4vw,26px)">店里已排的场次</h2>
+        {% if dms %}
+        <div class="u-field">
+          <label class="u-lab" for="dmSel">指定 DM（加 ¥{{ dm_fee or 0 }}）</label>
+          <select class="u-select" name="dmPhone" id="dmSel">
+            <option value="">不指定，店里有谁谁带</option>
+            {% for d in dms %}<option value="{{ d.phone }}">{{ d.name }}</option>{% endfor %}
+          </select>
         </div>
-        {% if sessions %}
-        <div class="nv-sheet">
-          {% for s in sessions %}{% set left = (s.cap or 99) - join.get(s.id|string, 0) %}
-          <div class="nv-sheet__row" style="grid-template-columns:64px 1fr;gap:var(--nv-s3)">
-            <span class="nv-sheet__t" style="font-size:19px">{{ s.time }}</span>
-            <span class="nv-sheet__m"><b>{{ day_label(s.ts) }}</b>
-              <span>{{ s.roomId or '房间待定' }}{% if s.dmName %} · DM {{ s.dmName }}{% endif %}</span>
-              <span class="nv-mono" style="color:var(--nv-ink-3);display:block;margin-top:4px">已报 {{ join.get(s.id|string, 0) }}/{{ s.cap or '—' }} {% if left > 0 %}· 剩 {{ left }} 位{% else %}· 满了{% endif %}</span>
-              {% if me and left > 0 %}
-              <form method="post" action="{{ url_for('user.book') }}" style="margin-top:8px">
-                <input type="hidden" name="sid" value="{{ sc.id }}">
-                <input type="hidden" name="ts" value="{{ s.ts }}">
-                <input type="hidden" name="time" value="{{ s.time }}">
-                <input type="hidden" name="players" value="{{ lo }}">
-                <input type="hidden" name="mode" value="拼车">
-                <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">约这一场</button>
-              </form>
-              {% elif not me %}
-              <a class="nv-btn nv-btn--sm" style="margin-top:8px" href="{{ url_for('user.login', next=request.path) }}">登录后约</a>
+        {% endif %}
+
+        {% if sc.allowRolePick and sc.roles %}
+        <div class="u-field">
+          <label class="u-lab" for="roleSel">想演谁</label>
+          <select class="u-select" name="role" id="roleSel">
+            <option value="">到店再说</option>
+            {% for r in sc.roles %}
+            <option value="{{ r.name }}" {{ 'disabled' if r.name in _taken }}>
+              {{ r.name }}{{ '（已被选走）' if r.name in _taken }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endif %}
+
+        {% if me and (me.balance or 0) > 0 %}
+        <label class="u-check">
+          <input type="checkbox" name="use_balance" value="1">
+          <span>用余额 ¥{{ me.balance }} 顶一部分定金</span>
+        </label>
+        {% endif %}
+
+        <button class="u-pill u-pill--ink u-pill--wide" type="submit" data-magnet="6">
+          锁下这一场 <span class="u-pill__a" aria-hidden="true">↘</span>
+        </button>
+      </form>
+
+      <form method="post" action="{{ url_for('public.fav', sid=sc.id) }}?ajax=1" id="favForm" style="display:none"></form>
+      <button class="u-pill u-pill--ghost u-pill--wide" type="button" id="favBtn"
+              data-group="want" data-on="{{ '1' if _fav else '0' }}" data-cursor-label="想玩">
+        {{ '♥ 已在想玩里' if _fav else '♡ 加进想玩' }}
+      </button>
+
+      {% if coupons %}
+      <p class="u-dim" style="font-size:12.5px">你手上有 {{ coupons|length }} 张券，付款那一步能抵游玩费。</p>
+      {% endif %}
+
+      <!-- 可约场次 -->
+      {% if sessions %}
+      <div>
+        <p class="u-lab" style="margin-bottom:10px">店里已排的场</p>
+        <div class="u-ledger" style="--cols: 1fr auto">
+          {% for s in sessions %}
+          <div class="u-ledger__row" style="padding:11px 0">
+            <span>
+              <span class="u-mono" style="font-size:13px">{{ s.time }}</span>
+              <span class="u-dim" style="display:block;font-size:12px;margin-top:2px">
+                {{ s.dmName or 'DM 待安排' }} · {{ s.roomId or '房间待定' }}
+              </span>
+            </span>
+            <span style="text-align:right">
+              {% set _j = join.get(s.id|string, 0) %}
+              {% if (s.cap or 99) - _j > 0 %}
+              <button class="u-chip" type="button" data-join-time="{{ s.time }}">
+                还差 {{ (s.cap or 99) - _j }} 位
+              </button>
+              {% else %}
+              <span class="u-st u-st--warn">满</span>
               {% endif %}
             </span>
           </div>
           {% endfor %}
         </div>
-        {% else %}
-        <p class="nv-mute">还没排场次。左边自己挑日期和时间下单，我们会按你的时间安排房间和 DM。</p>
-        {% endif %}
-      </section>
-
-      {# 到店流程：编号带 #}
-      <div class="nv-paysteps" style="margin-top:var(--nv-s5)">
-        <div><i>01</i><b>下单锁位</b><span>挑日子与时间，付定金 ¥{{ car_deposit|int }}/人</span></div>
-        <div><i>02</i><b>客服确认</b><span>到账后核销码出现在「我的」</span></div>
-        <div><i>03</i><b>到店报码</b><span>房间与 DM 按你的时间安排</span></div>
-        <div><i>04</i><b>玩完结账</b><span>付游玩费，<b>定金退回</b>，然后打分</span></div>
       </div>
+      {% endif %}
+
+      <!-- 到店流程 -->
+      <div>
+        <p class="u-lab" style="margin-bottom:12px">到店之后</p>
+        <div class="dt-steps">
+          <div class="dt-steps__i"><b>01</b><span>线上下定金锁位，位子就归你了。</span></div>
+          <div class="dt-steps__i"><b>02</b><span>小客服加你微信，把场次和房间确认一遍。</span></div>
+          <div class="dt-steps__i"><b>03</b><span>到店报核销码，DM 带你上桌讲规则。</span></div>
+          <div class="dt-steps__i"><b>04</b><span>玩完付游玩费，定金由小客服原路退回。</span></div>
+        </div>
+      </div>
+
+      <div class="u-blank" style="padding:var(--us-s3) 0">
+        <p class="u-blank__d">第一次来？<a class="u-tlink" href="/faq" data-scribble style="color:var(--us-ink)">先看一眼常见问题</a>。</p>
+      </div>
+
     </aside>
   </div>
 </div>
 
+{# ── Next 衔接（unseen 的 js-footer-next / "Keep Scrolling"）──
+   每个案例的底部都平滑接到下一个，把一页一页的独立详情串成一条能一直逛下去的流。
+   这里整块就是一条通往下一本的巨型链接：编号、两行巨字、一笔右下的箭头。 #}
+{% if next_sc %}
+<a class="dt-next" href="{{ url_for('public.script_detail', sid=next_sc.id) }}"
+   data-cursor-label="下一个本" data-d="60">
+  <div class="u-wrap">
+    <div class="dt-next__row">
+      <div>
+        <p class="u-kick dt-next__k">Next · 接着看下一本</p>
+        <h2 class="dt-next__t">
+          {{ next_sc.title }}
+          {% if next_sc.type %}<em>{{ next_sc.type }}</em>{% endif %}
+        </h2>
+        <p class="dt-next__d">
+          {% if next_sc.players %}{{ next_sc.players }} 人{% endif %}
+          {% if next_sc.dur %} · {{ next_sc.dur }}{% endif %}
+          {% if next_sc.price %} · ¥{{ next_sc.price }}/人{% endif %}
+          {% if next_sc.tags %} · {{ next_sc.tags|join(' / ') }}{% endif %}
+        </p>
+      </div>
+      <span class="dt-next__a" aria-hidden="true">⮡</span>
+    </div>
+    <p class="dt-next__hint">继续往下滑，或者直接点这里</p>
+  </div>
+</a>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
 <script>
 (function () {
-  var mode = document.getElementById('mode-sel');
-  var car = document.getElementById('car-sel');
-  var boxMode = document.getElementById('car-mode-box');
-  var boxPick = document.getElementById('car-pick-box');
-  var pin = document.getElementById('players-in');
-  if (!mode || !car || !boxMode || !boxPick) return;
-  function sync() {
-    var carpool = mode.value === '拼车';
-    boxMode.style.display = carpool ? '' : 'none';
-    boxPick.style.display = (carpool && car.value === 'join') ? '' : 'none';
-    if (pin && carpool && car.value === 'new') {
-      if (!pin.dataset.keep) pin.dataset.keep = pin.value || pin.min || '1';
-      pin.value = 1; pin.min = 1; pin.max = 1; pin.disabled = true;
-    } else if (pin) {
-      pin.disabled = false;
-      pin.min = pin.dataset.lo || pin.min;
-      pin.max = pin.dataset.hi || pin.max;
-      if (pin.dataset.keep) { pin.value = pin.dataset.keep; delete pin.dataset.keep; }
-    }
+  'use strict';
+  function $(s, r) { return (r || document).querySelector(s); }
+  function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+
+  /* chips 里的 radio：点了把整组的 is-on 挪过去 */
+  function syncChips(box) {
+    if (!box) return;
+    $$('.u-chip', box).forEach(function (c) {
+      var r = c.querySelector('input');
+      c.classList.toggle('is-on', !!(r && r.checked));
+    });
   }
-  mode.addEventListener('change', sync);
-  car.addEventListener('change', sync);
-  sync();
-})();
-</script>
-<script>
-(function(){
-  var btn=document.getElementById('share-btn');
-  if(!btn) return;
-  function toast(msg){
-    var t=document.getElementById('nv-share-toast');
-    if(!t){ t=document.createElement('div'); t.id='nv-share-toast';
-      t.style.cssText='position:fixed;left:50%;bottom:80px;transform:translateX(-50%) translateY(20px);background:var(--nv-ink);color:var(--nv-paper);padding:12px 20px;z-index:2000;font-size:14px;opacity:0;transition:.3s';
-      document.body.appendChild(t); }
-    t.textContent=msg; t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)';
-    clearTimeout(t._tm); t._tm=setTimeout(function(){ t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(20px)'; }, 1800);
-  }
-  btn.addEventListener('click', function(){
-    var data={ title: document.title, text: btn.getAttribute('data-share-text') || document.title, url: location.href };
-    if(navigator.share){ navigator.share(data).catch(function(){}); }
-    else {
-      var text=data.text+' '+data.url;
-      if(navigator.clipboard && navigator.clipboard.writeText){
-        navigator.clipboard.writeText(text).then(function(){toast('链接已复制，去粘贴给朋友');}, function(){toast('复制失败，手动复制地址栏');});
-      } else { toast('请手动复制地址栏链接'); }
-    }
+  $$('.u-chips').forEach(function (box) {
+    box.addEventListener('change', function () {
+      syncChips(box);
+      /* 模式 / 上车方式一变，联动显示 */
+      var form = $('#bookForm');
+      if (box.id === 'modeChips') {
+        var m = ($('input[name=mode]:checked', form) || {}).value;
+        var cb = $('#carBox');
+        if (cb) cb.hidden = (m === '包车');
+      }
+      if (box.id === 'carChips') {
+        var v = ($('input[name=car]:checked', form) || {}).value;
+        var pick = $('#carPick');
+        if (pick) pick.hidden = (v !== 'join');
+        var cid = $('#carId');
+        if (cid && v !== 'join') cid.value = '';
+        var sel = $('#carSel');
+        if (sel && v !== 'join') sel.value = '';
+        if (sel && v === 'join') { sel.focus(); }
+      }
+    });
   });
+  /* 点 chip 上任意位置都要能选中里面的 radio */
+  $$('.u-chips .u-chip').forEach(function (c) {
+    c.addEventListener('click', function () {
+      var r = c.querySelector('input');
+      if (r && !r.checked) { r.checked = true; }
+      setTimeout(function () { syncChips(c.parentNode); }, 0);
+    });
+  });
+
+  var carSel = $('#carSel');
+  if (carSel) carSel.addEventListener('change', function () {
+    var cid = $('#carId');
+    if (cid) cid.value = carSel.value;
+  });
+
+  /* 点某一场直接把时间填进去 */
+  $$('[data-join-time]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var tm = $('#tmSel');
+      if (tm) {
+        var v = b.getAttribute('data-join-time');
+        var has = $$('option', tm).some(function (o) { return o.value === v; });
+        if (!has) { var o = document.createElement('option'); o.value = v; o.textContent = v; tm.appendChild(o); }
+        tm.value = v;
+      }
+      if (window.NV) window.NV.ripple(0.5, 0.5);
+    });
+  });
+
+  /* 收藏：走 fetch，成功只改这一颗按钮，不刷整页 */
+  var favBtn = $('#favBtn');
+  if (favBtn && window.fetch) {
+    favBtn.addEventListener('click', function () {
+      var on = favBtn.getAttribute('data-on') === '1';
+      favBtn.disabled = true;
+      fetch('{{ url_for("public.fav", sid=sc.id) }}?ajax=1' +
+            '&group=' + (favBtn.getAttribute('data-group') || 'want'),
+            { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          favBtn.setAttribute('data-on', j.on ? '1' : '0');
+          favBtn.textContent = j.on ? '♥ 已在想玩里' : '♡ 加进想玩';
+          if (window.NV) window.NV.ripple(0.5, 0.5);
+        })
+        .catch(function () { favBtn.textContent = '没成功，再点一次'; })
+        .then(function () { setTimeout(function () { favBtn.disabled = false; }, 400); });
+    });
+  }
 })();
 </script>
 {% endblock %}

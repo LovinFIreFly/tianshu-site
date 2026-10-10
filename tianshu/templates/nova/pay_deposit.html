@@ -1,98 +1,149 @@
 {% extends 'layout.html' %}
+{# 支付页：金额当主角，客服微信 + 群二维码，四步流程写在下面。
+   这里不做在线支付 —— 店里收定金的实际做法就是加小客服微信转账，
+   点「我已完成支付」只是把单子标成"待确认"，核销码等管理员确认到账后才给。 #}
 {% block title %}支付{{ o.dueKind }} · {{ settings.shopName }}{% endblock %}
-{# NOVA 支付页：金额当主角，客服微信 + 群二维码，流程写在下面。 #}
+
 {% block body %}
+<section style="padding:calc(var(--us-nav) + 40px) 0 var(--us-s6)">
+  <div class="u-wrap u-wrap--slim">
 
-<section style="padding:clamp(40px,8vh,110px) 0">
-  <div class="nv-wrap" style="max-width:600px">
+    <p class="u-kick u-lead__k">Payment · 支付{{ o.dueKind }}</p>
+    <h1 class="u-h1" id="due-display" data-amount="{{ o.due }}"
+        style="font-size:clamp(56px,13vw,150px);margin-top:var(--us-s2)">¥{{ o.due }}</h1>
 
-    <p class="nv-kick">支付{{ o.dueKind }} · Payment</p>
-    <h1 class="nv-h1" id="due-display" style="font-size:clamp(52px,12vw,132px);color:var(--nv-accent);margin:var(--nv-s3) 0 0"
-        data-amount="{{ o.due }}">¥{{ o.due }}</h1>
-    <p class="nv-lead" style="margin-top:var(--nv-s4)">《{{ o.title }}》{{ o.day }} {{ o.time }} · {{ o.players }} 人</p>
+    <p class="u-lede" style="margin-top:var(--us-s3)">
+      《{{ o.title }}》{{ o.day }} {{ o.time }} · {{ o.players }} 人
+    </p>
 
     {% if o.dueKind == '定金' %}
-    <p class="nv-mute" style="margin-top:10px">定金 ¥{{ settings.carDeposit }} / 人 —— 押个位子。<b>玩完由小客服退回</b>；没到场或中途跳车的不退。</p>
+    <p class="u-dim" style="font-size:13.5px;margin-top:10px">
+      定金 ¥{{ settings.carDeposit or 50 }} / 人 —— 押个位子。<b style="color:var(--us-ink)">玩完由小客服退回</b>；没到场或中途跳车的不退。
+    </p>
     {% else %}
-    <p class="nv-mute" style="margin-top:10px">玩完这一场再付游玩费（总价 ¥{{ o.amount }}）。定金会另外退回。</p>
+    <p class="u-dim" style="font-size:13.5px;margin-top:10px">
+      玩完这一场再付游玩费（总价 ¥{{ o.amount }}）。定金会另外退回。
+    </p>
     {% endif %}
 
     {% if o.dueKind == '游玩费' %}
       {% if o.couponId %}
-      <p class="nv-mute" style="margin-top:var(--nv-s4)">已使用优惠券抵扣，应付 ¥{{ o.due }}</p>
+      <p class="u-dim" style="margin-top:var(--us-s3)">已使用优惠券抵扣，应付 ¥{{ o.due }}</p>
       {% elif coupons %}
-      <div class="nv-book__row" style="margin-top:var(--nv-s4)">
-        <label>用优惠券抵扣游玩费</label>
-        <select name="couponId" id="coupon-select" form="pay-form">
+      <div class="u-field" style="margin-top:var(--us-s4)">
+        <label class="u-lab" for="coupon-select">用优惠券抵扣游玩费</label>
+        <select class="u-select" name="couponId" id="coupon-select" form="pay-form">
           <option value="0" data-amount="0">不使用优惠券</option>
           {% for c in coupons %}
           <option value="{{ c.id }}" data-amount="{{ c.amount }}">减 ¥{{ c.amount }}{% if c.minAmount %}（满 {{ c.minAmount }} 可用）{% endif %} · {{ c.from or '优惠券' }}</option>
           {% endfor %}
         </select>
-        <p class="nv-code-tip" id="coupon-hint" style="display:none"></p>
+        <p class="u-dim" id="coupon-hint" style="display:none;font-size:13px"></p>
       </div>
       {% endif %}
     {% endif %}
 
-    <div class="nv-card" style="margin-top:var(--nv-s5);padding:var(--nv-s3);border-left:3px solid var(--nv-ink)">
-      <span style="font-size:24px;line-height:1">💬</span>
-      <b class="nv-mono" style="font-size:15px;letter-spacing:.04em;margin-left:10px">{{ settings.serviceWechat }}</b>
+    <div style="margin-top:var(--us-s5);padding:var(--us-s3);border-left:2px solid var(--us-ink);background:color-mix(in srgb, var(--us-paper) 70%, transparent)">
+      <p class="u-kick">小客服微信</p>
+      <p class="u-mono" style="font-size:20px;letter-spacing:.04em;margin-top:8px">{{ settings.serviceWechat or '店里还没配微信' }}</p>
+      {% if settings.serviceWechat %}
+      <button class="u-pill u-pill--ghost" type="button" style="margin-top:12px;padding:10px 18px;font-size:13px" data-copy="{{ settings.serviceWechat }}">复制微信号</button>
+      {% endif %}
     </div>
 
     {% if settings.groupQr %}
-    <div class="nv-card" style="margin-top:var(--nv-s4);padding:var(--nv-s3);display:flex;gap:16px;align-items:flex-start">
-      <img src="{{ settings.groupQr }}" alt="{{ settings.shopName }} 顾客群二维码" style="width:148px;flex:none;border:var(--nv-hair)">
-      <div>
-        <b>{{ settings.shopName }} · 顾客群</b>
-        <p class="nv-mute" style="margin-top:6px">扫码进群：约本、拼车、问进度都在群里。加不上小客服微信的时候，群里也能找到人。</p>
+    <div style="margin-top:var(--us-s4);display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+      <img src="{{ settings.groupQr }}" alt="{{ settings.shopName }} 顾客群二维码" style="width:148px;flex:none;border-radius:6px">
+      <div style="min-width:200px;flex:1">
+        <p class="u-h4">{{ settings.shopName }} · 顾客群</p>
+        <p class="u-dim" style="font-size:13.5px;margin-top:6px;line-height:1.7">
+          扫码进群：约本、拼车、问进度都在群里。加不上小客服微信的时候，群里也能找到人。
+        </p>
       </div>
     </div>
     {% endif %}
 
-    <form id="pay-form" style="margin-top:var(--nv-s5)" method="post" action="{{ url_for('user.order_act', oid=o.id, action=o.dueAct) }}">
-      <button class="nv-btn nv-btn--accent nv-btn--block" type="submit" style="min-height:52px">我已完成支付</button>
+    <form id="pay-form" style="margin-top:var(--us-s5)" method="post"
+          action="{{ url_for('user.order_act', oid=o.id, action=o.dueAct) }}" data-busy>
+      <button class="u-pill u-pill--ink u-pill--wide" type="submit" style="min-height:54px" data-magnet="7">
+        我已完成支付 <span class="u-pill__a" aria-hidden="true">↘</span>
+      </button>
     </form>
 
-    <p class="nv-mute" style="margin-top:14px">
-      {% if o.dueKind == '定金' %}点完这一单会显示「待小客服确认」。小客服确认到账后，核销码才会出现在「我的预约」里。
-      {% else %}点完这一单会显示「待小客服确认」。小客服确认到账后，就能去「我的预约」给剧本和 DM 打分了。{% endif %}
+    <p class="u-dim" style="font-size:13px;margin-top:14px;line-height:1.7">
+      {% if o.dueKind == '定金' %}
+      点完这一单会显示「待小客服确认」。小客服确认到账后，核销码才会出现在「我的预约」里。
+      {% else %}
+      点完这一单会显示「待小客服确认」。确认到账后，就能去「我的预约」给剧本和 DM 打分了。
+      {% endif %}
     </p>
 
-    <div class="nv-paysteps">
-      <div><i>01</i><b>转账给小客服</b><span>加上面的微信，转 ¥{{ o.due }}</span></div>
-      <div><i>02</i><b>点「我已支付」</b><span>订单进入「待确认」</span></div>
-      <div><i>03</i><b>客服核对到账</b><span>确认后核销码就出现在「我的」</span></div>
-      <div><i>04</i><b>到店报码开演</b><span>{% if o.dueKind == '定金' %}玩完定金由客服退回{% else %}到此结清，可以去打分了{% endif %}</span></div>
+    <div style="margin-top:var(--us-s5);border-top:var(--us-hair)">
+      {% set steps = [
+        ('01', '转账给小客服', '加上面的微信，转 ¥' ~ o.due),
+        ('02', '点「我已支付」', '订单进入「待确认」'),
+        ('03', '客服核对到账', '确认后核销码就出现在「我的」'),
+        ('04', '到店报码开演', '玩完定金由客服退回' if o.dueKind == '定金' else '到此结清，可以去打分了')
+      ] %}
+      {% for no, t, d in steps %}
+      <div style="display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;padding:15px 0;border-bottom:var(--us-hair)">
+        <span class="u-mono u-dim" style="font-size:11.5px;padding-top:4px">{{ no }}</span>
+        <span>
+          <span class="u-h4">{{ t }}</span>
+          <span class="u-dim" style="display:block;font-size:13.5px;margin-top:3px">{{ d }}</span>
+        </span>
+      </div>
+      {% endfor %}
     </div>
 
-    <div style="display:flex;gap:8px;margin-top:var(--nv-s5);flex-wrap:wrap">
-      <a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('user.me') }}">← 回我的</a>
+    <div style="display:flex;gap:10px;margin-top:var(--us-s5);flex-wrap:wrap">
+      <a class="u-pill u-pill--ghost" style="padding:11px 20px;font-size:13.5px" href="{{ url_for('user.me') }}">← 回我的</a>
       {% if o.dueKind == '定金' %}
-      <form method="post" action="{{ url_for('user.order_act', oid=o.id, action='refund') }}">
-        <button class="nv-btn nv-btn--sm" type="submit">取消这一单</button></form>
+      <form method="post" action="{{ url_for('user.order_act', oid=o.id, action='refund') }}"
+            onsubmit="return confirm('取消这一单？定金会按规则处理。')">
+        <button class="u-pill u-pill--ghost" style="padding:11px 20px;font-size:13.5px" type="submit">取消这一单</button>
+      </form>
       {% endif %}
     </div>
+
   </div>
 </section>
+{% endblock %}
 
+{% block extra_js %}
 {% if o.dueKind == '游玩费' and coupons %}
 <script>
-(function(){
+(function () {
   var display = document.getElementById('due-display');
   var select = document.getElementById('coupon-select');
   var hint = document.getElementById('coupon-hint');
-  var base = parseInt(display.dataset.amount || '0', 10) || 0;
-  function update(){
+  if (!display || !select) return;
+  var base = parseInt(display.getAttribute('data-amount') || '0', 10) || 0;
+  function update() {
     var opt = select.options[select.selectedIndex];
-    var amt = parseInt(opt.dataset.amount || '0', 10) || 0;
+    var amt = parseInt((opt && opt.getAttribute('data-amount')) || '0', 10) || 0;
     var due = Math.max(0, base - amt);
     display.textContent = '¥' + due;
-    if (amt > 0){ hint.textContent = '原价 ¥' + base + '，用券抵扣 ¥' + amt + '，应付 ¥' + due; hint.style.display = 'block'; }
-    else { hint.style.display = 'none'; }
+    if (hint) {
+      if (amt > 0) { hint.textContent = '原价 ¥' + base + '，用券抵扣 ¥' + amt + '，应付 ¥' + due; hint.style.display = 'block'; }
+      else hint.style.display = 'none';
+    }
   }
   select.addEventListener('change', update);
   update();
 })();
 </script>
 {% endif %}
+<script>
+(function () {
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-copy]');
+    if (!b) return;
+    var v = b.getAttribute('data-copy');
+    var done = function () { var o = b.textContent; b.textContent = '已复制'; setTimeout(function () { b.textContent = o; }, 1400); };
+    if (navigator.clipboard) navigator.clipboard.writeText(v).then(done).catch(done);
+    else done();
+  });
+})();
+</script>
 {% endblock %}

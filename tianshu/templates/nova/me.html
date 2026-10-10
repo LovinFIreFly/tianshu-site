@@ -1,463 +1,493 @@
 {% extends 'layout.html' %}
 {% block title %}我的打本生涯 · {{ settings.shopName }}{% endblock %}
-{# 「我的打本生涯」（nova）：版式为「sticky 身份栏 + 横向分段导航 + 单页签面板」，
-   与二代/三代的竖排导轨、左栏目录完全不同的骨架。
-   面板切换逻辑沿用 data-tabs="me" + .tabpane[data-tab] + .mi[data-tab]，由 tabs.js 接管。 #}
+{# 「我的」：编辑式页头 + 通栏身份条 + 胶囊分段导航 + 单页签面板。
+   面板切换走 tabs.js 的契约（data-tabs / .tabpane[data-tab] / button[data-tab]，
+   当前项挂 .on）—— 所以「我的」页不另造一套，转场换页后 nova.js 会叫 tabs.js 重跑一遍。
+   预约卡用 .me-ticket：左边一条虚线撕口的日期栏，右面是票面，整张卡可参与视角折叠。 #}
 {% block body %}
 {% set av = me.profile.avatar or '' %}
 
-{# ── 页头：左标题，右侧一串账号凭据 ── #}
-<header class="nv-lead-hd">
-  <div class="nv-wrap">
-    <p class="nv-lead-hd__k">我的 · Account</p>
-    <div class="nv-lead-hd__row">
+<header class="u-lead">
+  <div class="u-wrap">
+    <div class="u-lead__row">
       <div>
-        <h1 class="nv-lead-hd__t">我的打本生涯</h1>
-        <p class="nv-lead-hd__d">预约、订单、券、消息、资料，都在这一页。<b>五个抽屉，一页翻完。</b></p>
+        <p class="u-kick u-lead__k">Account · 我的</p>
+        <h1 class="u-lead__t">我的<br><em>打本生涯</em></h1>
+        <p class="u-lead__d">预约、订单、券、消息、资料 —— 五个抽屉，一页翻完。</p>
       </div>
-      <dl class="nv-lead-hd__m">
-        <div><dt>预约</dt><dd>{{ bookings|length }}</dd></div>
-        <div><dt>订单</dt><dd>{{ orders|length }}</dd></div>
-        <div><dt>未读</dt><dd style="color:var(--nv-accent)">{{ unread }}</dd></div>
-      </dl>
+      <div class="u-lead__m">
+        <dl><dt>预约</dt><dd class="u-num">{{ bookings|length }}</dd></dl>
+        <dl><dt>订单</dt><dd class="u-num">{{ orders|length }}</dd></dl>
+        <dl><dt>未读</dt><dd class="u-num">{{ unread }}</dd></dl>
+        <div class="u-seal">我的抽屉</div>
+      </div>
     </div>
   </div>
 </header>
 
-<div class="nv-wrap nv-mewrap">
+<div class="u-wrap" style="padding-top:var(--us-s4)">
 
-  {# ── 身份栏：一整条横贯，左侧身份、右侧信用三数 ── #}
-  <header class="nv-idbar">
-    <div class="nv-idbar__who">
-      <span class="nv-av">
+  {# ── 身份条：左头像 + 昵称手机号，右信用三数 ── #}
+  <header class="me-id">
+    <div class="me-id__who">
+      <span class="u-av">
         {% if av.startswith('/img/') or av.startswith('http') %}<img src="{{ av }}" alt="">
         {% else %}{{ (me.profile.nick or me.username)[0] }}{% endif %}
       </span>
-      <span class="nv-idbar__txt">
+      <span class="me-id__txt">
         <b>{{ me.profile.nick or me.username }}</b>
         <em>{{ me.phone[:3] }}****{{ me.phone[-4:] }}{% if me.invite %} · 邀请码 {{ me.invite }}{% endif %}</em>
       </span>
     </div>
-    <dl class="nv-idbar__stats">
-      <div><dt>信用分</dt><dd><b class="count">{{ me.credit or 100 }}</b></dd></div>
-      <div><dt>可用券</dt><dd><b class="count">{{ coupons|selectattr('used','equalto',false)|list|length }}</b></dd></div>
-      <div><dt>已付定金</dt><dd><b>¥<span class="count">{{ spent }}</span></b></dd></div>
+    <dl class="u-figs me-id__stats">
+      <div class="u-fig"><b>{{ me.credit or 100 }}</b><s>信用分</s></div>
+      <div class="u-fig"><b>{{ coupons|selectattr('used','equalto',false)|list|length }}</b><s>可用券</s></div>
+      <div class="u-fig"><b>¥{{ spent }}</b><s>已付定金</s></div>
     </dl>
   </header>
 
-  {# ── 分段导航：横排编号标签，区别于二代的纵向目录 ── #}
-  <nav class="nv-seg" data-tabs="me" role="tablist">
-    <button type="button" class="mi on" data-tab="bookings"><i>01</i>预约<b>{{ bookings|length }}</b></button>
-    <button type="button" class="mi" data-tab="orders"><i>02</i>订单<b>{{ orders|length }}</b></button>
-    <button type="button" class="mi" data-tab="coupons"><i>03</i>券<span>/</span>心愿单<b>{{ coupons|length }}</b></button>
-    <button type="button" class="mi" data-tab="notices"><i>04</i>消息<b>{{ unread }}</b></button>
-    <button type="button" class="mi" data-tab="profile"><i>05</i>资料</button>
+  {# ── 分段导航：横排胶囊，编号在小字里 ── #}
+  <nav class="me-tabs" data-tabs="me" role="tablist">
+    <button type="button" class="is-on on" data-tab="bookings">01 预约 <s>{{ bookings|length }}</s></button>
+    <button type="button" data-tab="orders">02 订单 <s>{{ orders|length }}</s></button>
+    <button type="button" data-tab="coupons">03 券 · 心愿单 <s>{{ coupons|length }}</s></button>
+    <button type="button" data-tab="notices">04 消息 <s>{{ unread }}</s></button>
+    <button type="button" data-tab="profile">05 资料</button>
   </nav>
 
   {# ════════════════════════ 01 预约 ════════════════════════ #}
-  <div class="tabpane on" data-tab="bookings">
-    {% for b in bookings %}
-    {% set o = order_of.get(b.id) %}
-    <article class="nv-ticket">
-      <div class="nv-ticket__date">
-        <b>{{ (b.day or '—').split('-')[-1] }}</b>
-        <span>{{ (b.day or '').split('-')[1] if b.day and '-' in b.day else '' }}{{'月' if b.day and '-' in b.day else ''}}</span>
-        <i>{{ b.time }}</i>
-      </div>
-      <div class="nv-ticket__in">
-      <div class="nv-ticket__hd">
-        <div class="nv-ticket__ttl">
-          <h3>{{ b.emoji or '🎭' }} {{ b.title }}</h3>
-          <div class="nv-tags">
-            <span class="nv-tag">{{ b.mode or '拼车' }}</span>
-            {% if b.role %}<span class="nv-tag">{{ b.role }}</span>{% endif %}
-            {% if b.status == 'cancelled' %}<span class="nv-tag">已取消</span>
-            {% elif b.status == 'arrived' %}<span class="nv-tag nv-tag--acc">已到店</span>
-            {% else %}<span class="nv-tag nv-tag--acc">已锁定</span>{% endif %}
+  <div class="tabpane me-pane on is-on" data-tab="bookings" style="padding-top:var(--us-s4)">
+    {% if bookings %}
+    <div class="u-fold" data-fold>
+      {% for b in bookings %}
+      {% set o = order_of.get(b.id) %}
+      <article class="me-ticket u-fold__in" data-fold-item>
+        <div class="me-ticket__d">
+          <b>{{ (b.day or '—').split('-')[-1] }}</b>
+          <s>{{ ((b.day or '').split('-')[1] ~ '月') if (b.day and '-' in b.day) else '待定' }}</s>
+          <i>{{ b.time or '—' }}</i>
+        </div>
+        <div class="me-ticket__in">
+          <h3 class="me-ticket__t">{{ b.emoji or '🎭' }} {{ b.title }}</h3>
+
+          <div class="me-ticket__tags">
+            <span class="u-tag">{{ b.mode or '拼车' }}</span>
+            {% if b.role %}<span class="u-tag">{{ b.role }}</span>{% endif %}
+            {% if b.status == 'cancelled' %}<span class="u-tag">已取消</span>
+            {% elif b.status == 'arrived' %}<span class="u-tag u-tag--ink">已到店</span>
+            {% else %}<span class="u-tag u-tag--ink">已锁定</span>{% endif %}
           </div>
-        </div>
-      </div>
 
-      <p class="nv-ticket__meta">
-        {{ b.players }} 人 · 游玩费 ¥{{ b.amount or 0 }} · 定金 ¥{{ b.deposit or 0 }}
-        <em>（一人 ¥{{ settings.carDeposit }}，玩完退回）</em>
-        {% if o %} · {{ '定金不退（未到 / 中途跳车）' if o.forfeitAt else '定金：' + {'unpaid':'待付定金','claimed':'待小客服确认','paid':'已付定金','refunded':'已退款','closed':'已关闭'}.get(o.status, o.status) }}{% endif %}
-      </p>
+          <p class="me-ticket__m">
+            <span>{{ b.players }} 人</span>
+            <span>游玩费 ¥{{ b.amount or 0 }}</span>
+            <span>定金 ¥{{ b.deposit or 0 }}</span>
+            <em>（一人 ¥{{ settings.carDeposit }}，玩完退回）</em>
+            {% if o %}<span>{{ '定金不退（未到 / 中途跳车）' if o.forfeitAt else '定金：' + {'unpaid':'待付定金','claimed':'待小客服确认','paid':'已付定金','refunded':'已退款','closed':'已关闭'}.get(o.status, o.status) }}</span>{% endif %}
+          </p>
 
-      {% if b.status != 'cancelled' %}
-        {% if not o or o.status == 'paid' %}
-        <div class="nv-code">
-          <span class="nv-code__lb">到店报这个码</span>
-          <span class="nv-code__v">{{ b.verifyCode or '—' }}</span>
-        </div>
-        {% elif o.status == 'claimed' %}
-        <p class="nv-note">钱到账、小客服点确认之后，核销码才会显示在这儿。</p>
-        {% else %}
-        <p class="nv-note">付完定金、小客服确认到账后才会显示核销码（在那之前只有店里管理员和 DM 看得到）。</p>
-        {% endif %}
-      {% endif %}
+          {# 核销码：付了定金、客服确认到账之后才亮 #}
+          {% if b.status != 'cancelled' %}
+            {% if not o or o.status == 'paid' %}
+            <div class="me-code">
+              <span class="me-code__lb">到店报这个码</span>
+              <span class="me-code__v">{{ b.verifyCode or '—' }}</span>
+            </div>
+            {% elif o.status == 'claimed' %}
+            <p class="me-note">钱到账、小客服点确认之后，核销码才会显示在这儿。</p>
+            {% else %}
+            <p class="me-note">付完定金、小客服确认到账后才会显示核销码（在那之前只有店里管理员和 DM 看得到）。</p>
+            {% endif %}
+          {% endif %}
 
-      {% if b.status == 'booked' %}
-      <details class="nv-fold">
-        <summary>改时间（定金留着）</summary>
-        <form class="nv-inline" method="post" action="{{ url_for('user.reschedule', bid=b.id) }}">
-          <label class="nv-field nv-field--grow">
-            <span>新日期</span>
-            <select name="ts">{% for d in days %}<option value="{{ d.ts }}">{{ d.label }}</option>{% endfor %}</select>
-          </label>
-          <label class="nv-field nv-field--grow">
-            <span>时间</span>
-            <input name="time" type="time" value="{{ b.time }}" required>
-          </label>
-          <button class="nv-btn nv-btn--sm" type="submit">改期</button>
-        </form>
-      </details>
-      {% endif %}
+          {# 改期：定金留着 #}
+          {% if b.status == 'booked' %}
+          <details class="me-fold">
+            <summary>改时间（定金留着）</summary>
+            <form class="u-row2" method="post" action="{{ url_for('user.reschedule', bid=b.id) }}">
+              <label class="u-field"><span class="u-lab">新日期</span>
+                <select class="u-select" name="ts">{% for d in days %}<option value="{{ d.ts }}">{{ d.label }}</option>{% endfor %}</select>
+              </label>
+              <label class="u-field"><span class="u-lab">时间</span>
+                <input class="u-in" name="time" type="time" value="{{ b.time }}" required>
+              </label>
+              <div><button class="u-pill u-pill--sm" type="submit" data-magnet="4">改期</button></div>
+            </form>
+          </details>
+          {% endif %}
 
-      {# 点评：玩过且游玩费已确认到账才解锁 #}
-      {% if b.status in ('arrived', 'done') and b.id not in reviewed and o and o.balStatus == 'paid' %}
-      <form id="rev-{{ b.id }}" class="nv-review" method="post" action="{{ url_for('user.review', bid=b.id) }}">
-        <div class="nv-review__rate">
-          <span class="nv-lb">打几分</span>
-          <div class="stars">
-            {% for i in range(5, 0, -1) %}
-            <input type="radio" name="rating" value="{{ i }}" id="st{{ b.id }}-{{ i }}" {{ 'checked' if i == 5 }}>
-            <label for="st{{ b.id }}-{{ i }}" title="{{ i }} 星">★</label>
-            {% endfor %}
+          {# 点评：玩过、且游玩费已确认到账才解锁 #}
+          {% if b.status in ('arrived', 'done') and b.id not in reviewed and o and o.balStatus == 'paid' %}
+          <form id="rev-{{ b.id }}" class="u-form" method="post" action="{{ url_for('user.review', bid=b.id) }}">
+            <div class="u-row2">
+              <div class="u-field">
+                <span class="u-lab">打几分</span>
+                <div class="me-stars">
+                  {% for i in range(5, 0, -1) %}
+                  <input type="radio" name="rating" value="{{ i }}" id="st{{ b.id }}-{{ i }}" {{ 'checked' if i == 5 }}>
+                  <label for="st{{ b.id }}-{{ i }}" title="{{ i }} 星">★</label>
+                  {% endfor %}
+                </div>
+              </div>
+              <label class="u-field"><span class="u-lab">说两句（可空）</span>
+                <input class="u-in" name="text" placeholder="剧情 / DM / 房间 都可以聊">
+              </label>
+            </div>
+            <div class="me-dims">
+              <label class="u-field"><span class="u-lab">剧情</span>
+                <select class="u-select" name="plot"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></label>
+              <label class="u-field"><span class="u-lab">DM</span>
+                <select class="u-select" name="dm"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></label>
+              <label class="u-field"><span class="u-lab">氛围</span>
+                <select class="u-select" name="vibe"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></label>
+              <label class="u-field"><span class="u-lab">房间</span>
+                <select class="u-select" name="room"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></label>
+            </div>
+            <div class="me-ticket__act">
+              <label class="u-check"><input type="checkbox" name="anonymous" value="1">匿名</label>
+              <button class="u-pill u-pill--sm u-pill--ink" type="submit" data-magnet="5">提交评价</button>
+            </div>
+          </form>
+          {% endif %}
+
+          {# 行内动作：付定金 / 付游玩费 / 退定金 / 不玩了 #}
+          <div class="me-ticket__act">
+            {% if o and o.status == 'unpaid' %}
+            <a class="u-pill u-pill--sm u-pill--ink" href="{{ url_for('user.pay_deposit', oid=o.id) }}" data-magnet="5">支付定金 ¥{{ o.payable if o.payable is not none else o.deposit }}</a>
+            {% elif o and o.status == 'claimed' %}
+            <a class="u-pill u-pill--sm" href="{{ url_for('user.pay_deposit', oid=o.id) }}">再看支付方式</a>
+            {% endif %}
+
+            {% if b.status in ('arrived', 'done') %}
+              {% set _bal = (o.amount or 0) if o else 0 %}
+              {% if o and o.balStatus == 'paid' %}
+                {% if b.id in reviewed %}<span class="u-tag u-tag--ink">已评价 ✓</span>{% endif %}
+                <span class="u-tag">游玩费已结清</span>
+                {% if o.depositBack %}<span class="u-tag u-tag--ink">定金 ¥{{ o.deposit }} 已退回</span>{% endif %}
+              {% elif o and o.balStatus == 'claimed' %}
+                <span class="u-tag">游玩费待小客服确认</span>
+                <a class="u-pill u-pill--sm" href="{{ url_for('user.pay_deposit', oid=o.id) }}">再看支付方式</a>
+              {% elif o and _bal > 0 %}
+                <a class="u-pill u-pill--sm u-pill--ink" href="{{ url_for('user.pay_deposit', oid=o.id) }}" data-magnet="5">支付游玩费 ¥{{ _bal }}</a>
+              {% endif %}
+            {% elif b.status != 'cancelled' %}
+              {% set _hrs = ((b.ts or 0) - tsnow) / 3600000 %}
+              {% if o and o.status in ('unpaid','paid') and _hrs >= 24 %}
+              <form method="post" action="{{ url_for('user.order_act', oid=o.id, action='refund') }}">
+                <button class="u-pill u-pill--sm" type="submit">临时跳车 / 退定金</button></form>
+              {% elif o and o.status in ('unpaid','paid') %}
+              <span class="u-tag" title="开场前 24 小时内取消，定金不退">距开场不足 24 小时 · 定金不退</span>
+              <form method="post" action="{{ url_for('user.cancel_booking', bid=b.id) }}"
+                    onsubmit="return confirm('开场前 24 小时内取消，定金不退。确定不玩了？')">
+                <button class="u-pill u-pill--sm" type="submit">不玩了</button></form>
+              {% else %}
+              <form method="post" action="{{ url_for('user.cancel_booking', bid=b.id) }}">
+                <button class="u-pill u-pill--sm" type="submit">不玩了</button></form>
+              {% endif %}
+            {% endif %}
+
+            <a class="u-pill u-pill--sm u-pill--ghost" href="{{ url_for('public.script_detail', sid=b.sid) }}">再看一眼本本</a>
           </div>
-        </div>
-        <label class="nv-field nv-field--grow">
-          <span>说两句（可空）</span>
-          <input name="text" placeholder="剧情 / DM / 房间 都可以聊">
-        </label>
-        <div class="nv-review__dims">
-          <label class="nv-field nv-field--tiny"><span>剧情</span>
-            <select name="plot"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></label>
-          <label class="nv-field nv-field--tiny"><span>DM</span>
-            <select name="dm"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></label>
-          <label class="nv-field nv-field--tiny"><span>氛围</span>
-            <select name="vibe"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></label>
-          <label class="nv-field nv-field--tiny"><span>房间</span>
-            <select name="room"><option value="">—</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}</select></label>
-        </div>
-        <label class="nv-check"><input type="checkbox" name="anonymous" value="1"><span></span>匿名</label>
-        <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">提交评价</button>
-      </form>
-      {% endif %}
 
-      <div class="nv-acts">
-        {% if o and o.status == 'unpaid' %}
-        <a class="nv-btn nv-btn--sm nv-btn--acc" href="{{ url_for('user.pay_deposit', oid=o.id) }}">支付定金 ¥{{ o.payable if o.payable is not none else o.deposit }}</a>
-        {% elif o and o.status == 'claimed' %}
-        <a class="nv-btn nv-btn--sm" href="{{ url_for('user.pay_deposit', oid=o.id) }}">再看支付方式</a>
-        {% endif %}
-        {% if b.status in ('arrived', 'done') %}
-          {% set _bal = (o.amount or 0) if o else 0 %}
-          {% if o and o.balStatus == 'paid' %}
-            {% if b.id in reviewed %}<span class="nv-tag nv-tag--ok">已评价 ✓</span>{% endif %}
-            <span class="nv-tag">游玩费已结清</span>
-            {% if o.depositBack %}<span class="nv-tag nv-tag--ok">定金 ¥{{ o.deposit }} 已退回</span>{% endif %}
-          {% elif o and o.balStatus == 'claimed' %}
-            <span class="nv-tag">游玩费待小客服确认</span>
-            <a class="nv-btn nv-btn--sm" href="{{ url_for('user.pay_deposit', oid=o.id) }}">再看支付方式</a>
-          {% elif o and _bal > 0 %}
-            <a class="nv-btn nv-btn--sm nv-btn--acc" href="{{ url_for('user.pay_deposit', oid=o.id) }}">支付游玩费 ¥{{ _bal }}</a>
+          {# 我自己当时写了什么 #}
+          {% set rv = (my_reviews or {}).get(b.id|string) %}
+          {% if rv %}
+          <div class="me-rev">
+            <div class="me-rev__hd">
+              <span class="me-rev__st">{% for i in range(5) %}<i class="{{ 'on' if i < (rv.rating or 0) }}">★</i>{% endfor %}</span>
+              <em>我的评价 · {{ day_label(rv.createdAt) }}{% if rv.anonymous %} · 匿名{% endif %}</em>
+            </div>
+            {% if rv.text %}<p class="me-rev__t">{{ rv.text }}</p>{% endif %}
+            {% if rv.dims %}
+            <div class="me-ticket__tags">
+              {% for k, v in rv.dims.items() %}<span class="u-tag">{{ k }} {{ v }}/5</span>{% endfor %}
+            </div>
+            {% endif %}
+            {% if rv.reply %}<p class="me-rev__r">店长回复：{{ rv.reply }}</p>{% endif %}
+          </div>
           {% endif %}
-        {% elif b.status != 'cancelled' %}
-          {% set _hrs = ((b.ts or 0) - tsnow) / 3600000 %}
-          {% if o and o.status in ('unpaid','paid') and _hrs >= 24 %}
-          <form method="post" action="{{ url_for('user.order_act', oid=o.id, action='refund') }}">
-            <button class="nv-btn nv-btn--sm" type="submit">临时跳车 / 退定金</button></form>
-          {% elif o and o.status in ('unpaid','paid') %}
-          <span class="nv-tag" title="开场前 24 小时内取消，定金不退">距开场不足 24 小时 · 定金不退</span>
-          <form method="post" action="{{ url_for('user.cancel_booking', bid=b.id) }}"
-                onsubmit="return confirm('开场前 24 小时内取消，定金不退。确定不玩了？')">
-            <button class="nv-btn nv-btn--sm" type="submit">不玩了</button></form>
-          {% else %}
-          <form method="post" action="{{ url_for('user.cancel_booking', bid=b.id) }}">
-            <button class="nv-btn nv-btn--sm" type="submit">不玩了</button></form>
-          {% endif %}
-        {% endif %}
-        <a class="nv-btn nv-btn--sm nv-btn--ghost" href="{{ url_for('public.script_detail', sid=b.sid) }}">再看一眼本本</a>
-      </div>
-
-      {% set rv = (my_reviews or {}).get(b.id|string) %}
-      {% if rv %}
-      <div class="nv-myrev">
-        <div class="nv-myrev__hd">
-          <span class="nv-myrev__stars">{% for i in range(5) %}<i class="{{ 'on' if i < (rv.rating or 0) }}">★</i>{% endfor %}</span>
-          <em>我的评价 · {{ day_label(rv.createdAt) }}{% if rv.anonymous %} · 匿名{% endif %}</em>
         </div>
-        {% if rv.text %}<p class="nv-myrev__t">{{ rv.text }}</p>{% endif %}
-        {% if rv.dims %}
-        <div class="nv-tags">
-          {% for k, v in rv.dims.items() %}<span class="nv-tag">{{ k }} {{ v }}/5</span>{% endfor %}
-        </div>
-        {% endif %}
-        {% if rv.reply %}<p class="nv-myrev__r">店长回复：{{ rv.reply }}</p>{% endif %}
-      </div>
-      {% endif %}
-      </div>
-    </article>
-    {% else %}
-    <div class="nv-blank">
-      <p class="nv-blank__k">No Bookings</p>
-      <b>还没上车记录</b>
-      <p>去本本墙挑本、选好时间，定金锁位后就在这。</p>
-      <div class="nv-blank__act">
-        <a class="nv-btn nv-btn--solid" href="{{ url_for('public.scripts') }}">去挑个本子</a>
-        <a class="nv-btn" href="{{ url_for('public.car') }}">看看谁在拼车</a>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-
-  {# ════════════════════════ 02 订单 ════════════════════════ #}
-  <div class="tabpane" data-tab="orders">
-    {% if orders %}
-    <div class="nv-tablewrap">
-      <table class="nv-table">
-        <thead>
-          <tr><th>剧本</th><th>场次</th><th>人数</th><th>总价</th><th>定金</th><th>状态</th><th>下单时间</th></tr>
-        </thead>
-        <tbody>
-          {% for o in orders %}
-          <tr>
-            <td><b>{{ o.title }}</b></td>
-            <td>{{ o.day }} {{ o.time }}</td>
-            <td>{{ o.players }}</td>
-            <td>¥{{ o.amount or 0 }}</td>
-            <td class="nv-mono">¥{{ o.deposit or 0 }}</td>
-            <td>
-              {% set bo = booking_of.get(o.bid) %}
-              {% if o.status == 'paid' and bo and bo.status in ('arrived', 'done') %}
-                {% if o.balStatus == 'paid' %}
-                  <span class="nv-tag nv-tag--ok">游玩费已结清</span>
-                  {% if o.depositBack %}<span class="nv-tag nv-tag--ok">定金 ¥{{ o.deposit }} 已退回</span>{% endif %}
-                  {% if bo.id in reviewed %}<span class="nv-tag nv-tag--ok">已评价 ✓</span>
-                  {% else %}<a class="nv-tag nv-tag--acc" href="{{ url_for('user.me') }}?tab=bookings">去评价 ›</a>{% endif %}
-                {% elif o.balStatus == 'claimed' %}
-                  <span class="nv-tag">游玩费待小客服确认</span>
-                  <a class="nv-tag" href="{{ url_for('user.pay_deposit', oid=o.id) }}">再看支付方式 ›</a>
-                {% elif (o.amount or 0) > 0 %}
-                  <a class="nv-tag nv-tag--acc" href="{{ url_for('user.pay_deposit', oid=o.id) }}">支付游玩费 ¥{{ o.amount }} ›</a>
-                {% else %}
-                  <span class="nv-tag nv-tag--acc">已付定金</span>
-                {% endif %}
-              {% elif o.status == 'paid' %}
-                <span class="nv-tag nv-tag--acc">已付定金</span>
-                {% if bo and bo.verifyCode %}<span class="nv-mono">码 {{ bo.verifyCode }}</span>{% endif %}
-              {% elif o.status == 'claimed' %}
-                <a class="nv-tag" href="{{ url_for('user.pay_deposit', oid=o.id) }}" title="点开再看支付方式">待小客服确认 ›</a>
-              {% elif o.status == 'unpaid' %}
-                <a class="nv-tag nv-tag--acc" href="{{ url_for('user.pay_deposit', oid=o.id) }}" title="点开去付定金">待付定金 · 去支付 ›</a>
-              {% elif o.status == 'refunded' %}<span class="nv-tag">已退款</span>
-              {% else %}<span class="nv-tag">已关闭</span>{% endif %}
-            </td>
-            <td class="nv-cap">{{ day_label(o.createdAt) }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      </article>
+      {% endfor %}
     </div>
     {% else %}
-    <div class="nv-blank">
-      <p class="nv-blank__k">No Orders</p>
-      <b>还没有订单</b>
-      <p>下单、付定金、退款都会在这里留一条记录。</p>
+    <div class="u-blank">
+      <p class="u-blank__k">还没上车</p>
+      <p class="u-blank__d">去本本墙挑一本、选好时间，定金锁位之后就会出现在这儿。</p>
+      <div class="me-ticket__act" style="margin-top:8px">
+        <a class="u-pill u-pill--ink" href="{{ url_for('public.scripts') }}" data-magnet="5">去挑个本子 <span class="u-pill__a" aria-hidden="true">↘</span></a>
+        <a class="u-pill u-pill--ghost" href="{{ url_for('public.car') }}">看看谁在拼车</a>
+      </div>
     </div>
     {% endif %}
   </div>
 
-  {# ════════════════════════ 03 券 / 心愿单 ════════════════════════ #}
-  <div class="tabpane" data-tab="coupons">
-    <div class="nv-two">
+  {# ════════════════════════ 02 订单 ════════════════════════ #}
+  <div class="tabpane me-pane" data-tab="orders" style="padding-top:var(--us-s4)">
+    {% if orders %}
+    <div class="u-ledger me-orders" style="--cols: 1.5fr 1fr .5fr .7fr .7fr 1.5fr .9fr">
+      <div class="u-ledger__hd">
+        <span>剧本</span><span>场次</span><span>人数</span><span>总价</span><span>定金</span><span>状态</span><span>下单时间</span>
+      </div>
+      {% for o in orders %}
+      {% set bo = booking_of.get(o.bid) %}
+      <div class="u-ledger__row">
+        <span data-k="剧本"><b>{{ o.title }}</b></span>
+        <span data-k="场次">{{ o.day }} {{ o.time }}</span>
+        <span data-k="人数" class="u-num">{{ o.players }}</span>
+        <span data-k="总价" class="u-num">¥{{ o.amount or 0 }}</span>
+        <span data-k="定金" class="u-mono">¥{{ o.deposit or 0 }}</span>
+        <span data-k="状态">
+          {% if o.status == 'paid' and bo and bo.status in ('arrived', 'done') %}
+            {% if o.balStatus == 'paid' %}
+              <span class="u-tag u-tag--ink">游玩费已结清</span>
+              {% if o.depositBack %}<span class="u-tag u-tag--ink">定金 ¥{{ o.deposit }} 已退回</span>{% endif %}
+              {% if bo.id in reviewed %}<span class="u-tag u-tag--ink">已评价 ✓</span>
+              {% else %}<a class="u-tlink" href="{{ url_for('user.me') }}#bookings">去评价 ›</a>{% endif %}
+            {% elif o.balStatus == 'claimed' %}
+              <span class="u-tag">游玩费待小客服确认</span>
+              <a class="u-tlink" href="{{ url_for('user.pay_deposit', oid=o.id) }}">再看支付方式 ›</a>
+            {% elif (o.amount or 0) > 0 %}
+              <a class="u-tlink" href="{{ url_for('user.pay_deposit', oid=o.id) }}">支付游玩费 ¥{{ o.amount }} ›</a>
+            {% else %}
+              <span class="u-tag u-tag--ink">已付定金</span>
+            {% endif %}
+          {% elif o.status == 'paid' %}
+            <span class="u-tag u-tag--ink">已付定金</span>
+            {% if bo and bo.verifyCode %}<span class="u-mono">码 {{ bo.verifyCode }}</span>{% endif %}
+          {% elif o.status == 'claimed' %}
+            <a class="u-tlink" href="{{ url_for('user.pay_deposit', oid=o.id) }}" title="点开再看支付方式">待小客服确认 ›</a>
+          {% elif o.status == 'unpaid' %}
+            <a class="u-tlink" href="{{ url_for('user.pay_deposit', oid=o.id) }}" title="点开去付定金">待付定金 · 去支付 ›</a>
+          {% elif o.status == 'refunded' %}<span class="u-tag">已退款</span>
+          {% else %}<span class="u-tag">已关闭</span>{% endif %}
+        </span>
+        <span data-k="下单" class="u-dim">{{ day_label(o.createdAt) }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="u-blank">
+      <p class="u-blank__k">还没有订单</p>
+      <p class="u-blank__d">下单、付定金、退款 —— 每一笔都会在这里留一条记录。</p>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ════════════════════════ 03 券 · 心愿单 ════════════════════════ #}
+  <div class="tabpane me-pane" data-tab="coupons" style="padding-top:var(--us-s4)">
+    <div class="u-split">
       <section>
-        <h2 class="nv-h3">券 <em>{{ coupons|length }}</em></h2>
+        <div class="u-chap">
+          <span class="u-chap__no">03a</span>
+          <h2 class="u-chap__t">券</h2>
+          <span class="u-chap__s">{{ coupons|length }} 张</span>
+        </div>
         {% for c in coupons %}
-        <div class="nv-coupon">
+        <div class="me-coupon {{ 'is-used' if c.used }}" data-d="{{ loop.index0 * 40 }}">
           <div>
-            <b class="nv-coupon__amt">¥{{ c.amount }}</b>
-            <span class="nv-coupon__lb">抵扣券</span>
+            <b class="me-coupon__amt">¥{{ c.amount }}</b><span class="me-coupon__lb">抵扣券</span>
             <em>{{ c.from or '门店活动' }}{% if c.minAmount %} · 满 {{ c.minAmount }} 可用{% endif %}</em>
           </div>
-          <span class="nv-tag {{ 'nv-tag--ok' if not c.used }}">{{ '已用' if c.used else '可用' }}</span>
+          <span class="u-tag {{ 'u-tag--ink' if not c.used }}">{{ '已用' if c.used else '可用' }}</span>
         </div>
         {% else %}
-        <div class="nv-blank" style="margin-top:var(--nv-s3)">
-          <p class="nv-blank__k">No Coupons</p>
-          <b>还没有券</b>
-          <p>店里偶尔会发，邀请朋友注册也送 —— 你俩各得一张。</p>
+        <div class="u-blank" style="margin-top:var(--us-s3)">
+          <p class="u-blank__k">还没有券</p>
+          <p class="u-blank__d">店里偶尔会发；邀请朋友注册也送 —— 你俩各得一张 ¥{{ settings.inviteCoupon }}。</p>
         </div>
         {% endfor %}
       </section>
 
-      <section>
-        <h2 class="nv-h3">心愿单</h2>
-        {% set _fg = favGroups or {} %}
-        {% set _groups = [('want', '想玩'), ('done', '已玩'), ('avoid', '避雷')] %}
-        {% for gkey, glabel in _groups %}
-        <h3 class="nv-h4">{{ glabel }}</h3>
-        <div class="nv-list">
-          {% for s in (_fg.get(gkey) or []) %}
-          <div class="nv-list__row">
-            <a class="nv-lnk" href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.emoji or '' }} {{ s.title }}</a>
-            <span class="nv-list__r">
-              <em>¥{{ (s.get('price') or 0)|int }}</em>
-              <form method="post" action="{{ url_for('public.fav', sid=s.id) }}" class="nv-inline-form">
-                <input type="hidden" name="group" value="{{ gkey }}">
-                <button class="nv-btn nv-btn--sm nv-btn--ghost" type="submit">取消</button>
-              </form>
-            </span>
-          </div>
-          {% else %}
-          <p class="nv-muted">{{ glabel }}还空着。在剧本页点心，选这一组放进去。</p>
-          {% endfor %}
+      <section class="u-split__side">
+        <div class="u-chap">
+          <span class="u-chap__no">03b</span>
+          <h2 class="u-chap__t">心愿单</h2>
         </div>
+        {% set _fg = favGroups or {} %}
+        {% for gkey, glabel in [('want', '想玩'), ('done', '已玩'), ('avoid', '避雷')] %}
+        <h3 class="u-h4" style="margin:var(--us-s3) 0 6px">{{ glabel }}</h3>
+        {% for s in (_fg.get(gkey) or []) %}
+        <div class="me-wish">
+          <span class="me-wish__l">
+            <a class="u-tlink" href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.emoji or '' }} {{ s.title }}</a>
+          </span>
+          <span class="me-wish__r" style="display:flex;align-items:center;gap:10px">
+            <em class="u-dim u-num" style="font-style:normal;font-size:13px">¥{{ (s.get('price') or 0)|int }}</em>
+            <form method="post" action="{{ url_for('public.fav', sid=s.id) }}">
+              <input type="hidden" name="group" value="{{ gkey }}">
+              <button class="u-pill u-pill--sm u-pill--ghost" type="submit">取消</button>
+            </form>
+          </span>
+        </div>
+        {% else %}
+        <p class="me-empty-note">{{ glabel }}还空着。在剧本页点一下心，选这一组放进去。</p>
+        {% endfor %}
         {% endfor %}
       </section>
     </div>
   </div>
 
   {# ════════════════════════ 04 消息 ════════════════════════ #}
-  <div class="tabpane" data-tab="notices">
-    <div class="nv-two">
+  <div class="tabpane me-pane" data-tab="notices" style="padding-top:var(--us-s4)">
+    <div class="u-split">
       <section>
-        <div class="nv-hdrow">
-          <h2 class="nv-h3">消息 <em>{{ unread }} 未读</em></h2>
+        <div class="u-chap">
+          <span class="u-chap__no">04a</span>
+          <h2 class="u-chap__t">消息</h2>
+          <span class="u-chap__s">{{ unread }} 未读</span>
           {% if unread %}
-          <form method="post" action="{{ url_for('user.notice_read') }}">
-            <button class="nv-btn nv-btn--sm nv-btn--ghost" type="submit">全部标为已读</button></form>
+          <form method="post" action="{{ url_for('user.notice_read') }}" style="margin-left:var(--us-s2)">
+            <button class="u-pill u-pill--sm u-pill--ghost" type="submit" data-magnet="4">全部标为已读</button>
+          </form>
           {% endif %}
         </div>
+        {% set _p = me.phone|string %}
         {% for n in notices %}
-        <div class="nv-msg">
-          <div class="nv-msg__hd"><b>{{ n.title }}</b><em>{{ day_label(n.at) }}</em></div>
-          <p>{{ n.text }}</p>
-        </div>
+        <article class="me-msg" data-d="{{ loop.index0 * 35 }}">
+          <div class="me-msg__hd">
+            <b class="me-msg__t">{{ n.title }}</b>
+            <em>{{ day_label(n.at) }}{% if _p not in ((n.readBy or [])|map('string')|list) %} · 未读{% endif %}</em>
+          </div>
+          <p class="me-msg__x">{{ n.text }}</p>
+        </article>
         {% else %}
-        <div class="nv-blank" style="margin-top:var(--nv-s3)">
-          <p class="nv-blank__k">No Notices</p>
-          <b>还没有消息</b>
-          <p>预约、退款、门店回复、信用分变动都会发到这儿。</p>
+        <div class="u-blank" style="margin-top:var(--us-s3)">
+          <p class="u-blank__k">还没有消息</p>
+          <p class="u-blank__d">预约、退款、门店回复、信用分变动 —— 都会发到这儿。</p>
         </div>
         {% endfor %}
       </section>
 
-      <section>
-        <h2 class="nv-h3">给店家留言</h2>
-        <form class="nv-form" method="post" action="{{ url_for('user.msg_create') }}">
-          <label class="nv-field">
-            <span>想说点什么</span>
-            <textarea name="text" rows="3" placeholder="想改时间 / 问价 / 对 DM 有要求…"></textarea>
+      <section class="u-split__side">
+        <div class="u-chap">
+          <span class="u-chap__no">04b</span>
+          <h2 class="u-chap__t">给店家留言</h2>
+        </div>
+        <form class="u-form" method="post" action="{{ url_for('user.msg_create') }}" data-busy>
+          <label class="u-field"><span class="u-lab">想说点什么</span>
+            <textarea class="u-area" name="text" rows="3" placeholder="想改时间 / 问价 / 对 DM 有要求…"></textarea>
           </label>
-          <div class="nv-inline">
-            <label class="nv-field nv-field--mid">
-              <span>类型</span>
-              <select name="cat"><option>建议</option><option>改时间</option><option>问价</option><option>找人</option><option>投诉</option></select>
+          <div class="u-row2">
+            <label class="u-field"><span class="u-lab">类型</span>
+              <select class="u-select" name="cat"><option>建议</option><option>改时间</option><option>问价</option><option>找人</option><option>投诉</option></select>
             </label>
-            <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">发出去</button>
+            <div style="align-self:end"><button class="u-pill u-pill--sm u-pill--ink" type="submit">发出去</button></div>
           </div>
         </form>
 
         {% for m in msgs %}
-        <div class="nv-msg">
-          <div class="nv-msg__hd">
+        <article class="me-msg">
+          <div class="me-msg__hd">
             <em>{{ m.cat }} · {{ day_label(m.createdAt) }}</em>
-            <span class="nv-tag {{ 'nv-tag--ok' if m.reply }}">{{ '店家已回' if m.reply else '等回复' }}</span>
+            <span class="u-tag {{ 'u-tag--ink' if m.reply }}">{{ '店家已回' if m.reply else '等回复' }}</span>
           </div>
-          <p>{{ m.text }}</p>
-          {% if m.reply %}<p class="nv-msg__r">店家：{{ m.reply }}</p>{% endif %}
-        </div>
+          <p class="me-msg__x">{{ m.text }}</p>
+          {% if m.reply %}<p class="me-msg__r">店家：{{ m.reply }}</p>{% endif %}
+        </article>
         {% endfor %}
       </section>
     </div>
   </div>
 
   {# ════════════════════════ 05 资料 ════════════════════════ #}
-  <div class="tabpane" data-tab="profile">
-    <div class="nv-two">
+  <div class="tabpane me-pane" data-tab="profile" style="padding-top:var(--us-s4)">
+    <div class="u-split">
       <section>
-        <h2 class="nv-h3">我的资料</h2>
-        <form class="nv-form" method="post" action="{{ url_for('user.profile_save') }}" enctype="multipart/form-data">
-          <label class="nv-field">
-            <span>昵称</span>
-            <input name="nick" maxlength="16" value="{{ me.profile.nick or '' }}">
+        <div class="u-chap">
+          <span class="u-chap__no">05a</span>
+          <h2 class="u-chap__t">我的资料</h2>
+          <span class="u-chap__s">拼车时别人看到的就是这些</span>
+        </div>
+        <form class="u-form" method="post" action="{{ url_for('user.profile_save') }}" enctype="multipart/form-data" data-busy>
+          <label class="u-field"><span class="u-lab">昵称</span>
+            <input class="u-in" name="nick" maxlength="16" value="{{ me.profile.nick or '' }}">
           </label>
-          <div class="nv-form__grid">
-            <label class="nv-field">
-              <span>性别（拼车时别人能看到）</span>
-              <select name="gender">
+          <div class="u-row2">
+            <label class="u-field"><span class="u-lab">性别</span>
+              <select class="u-select" name="gender">
                 <option value="">保密</option>
                 <option value="男" {{ 'selected' if me.profile.gender == '男' }}>男</option>
                 <option value="女" {{ 'selected' if me.profile.gender == '女' }}>女</option>
               </select>
             </label>
-            <label class="nv-field nv-field--tiny">
-              <span>年龄</span>
-              <input name="age" type="number" min="0" max="99" value="{{ me.profile.age or '' }}">
+            <label class="u-field"><span class="u-lab">年龄</span>
+              <input class="u-in" name="age" type="number" min="0" max="99" value="{{ me.profile.age or '' }}">
             </label>
           </div>
-          <label class="nv-field">
-            <span>头像（png/jpg/webp，≤700KB）</span>
-            <input type="file" name="avatar" accept="image/png,image/jpeg,image/webp">
+          <label class="u-field"><span class="u-lab">头像（png/jpg/webp，≤700KB）</span>
+            <input class="u-in" type="file" name="avatar" accept="image/png,image/jpeg,image/webp">
           </label>
-          <div class="nv-field">
-            <span>打本风格标签（最多 3 个）</span>
+          <div class="u-field">
+            <span class="u-lab">打本风格标签（最多 3 个）</span>
             {% set _mytags = myTags or me.profile.tags or [] %}
-            <div class="nv-chips">
+            <div class="u-chips">
               {% for t in (PLAYER_TAGS or ['菠萝头', '水龙头', '推理机', '戏精', '全类型']) %}
-              <label class="nv-chip">
-                <input type="checkbox" name="tags" value="{{ t }}" {{ 'checked' if t in _mytags }}><span>{{ t }}</span>
+              <label class="u-chip">
+                <input type="checkbox" name="tags" value="{{ t }}" {{ 'checked' if t in _mytags }} style="position:absolute;opacity:0;width:1px;height:1px"><span>{{ t }}</span>
               </label>
               {% endfor %}
             </div>
           </div>
-          <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">保存资料</button>
+          <div><button class="u-pill u-pill--sm u-pill--ink" type="submit" data-magnet="4">保存资料</button></div>
         </form>
 
-        <h2 class="nv-h3">账号信息</h2>
-        <dl class="nv-kv">
+        <div class="u-chap" style="margin-top:var(--us-s5)">
+          <span class="u-chap__no">05b</span>
+          <h2 class="u-chap__t">账号信息</h2>
+        </div>
+        <dl class="me-kv">
           <div><dt>登录手机号</dt><dd>{{ me.phone[:3] }}****{{ me.phone[-4:] }}</dd></div>
           <div><dt>注册时间</dt><dd>{{ day_label(me.first) }}</dd></div>
-          <div><dt>我的邀请码</dt><dd class="nv-mono">{{ me.invite or '—' }}</dd></div>
+          <div><dt>我的邀请码</dt><dd class="u-mono">{{ me.invite or '—' }}</dd></div>
         </dl>
-        <p class="nv-muted">朋友填你的邀请码注册，你俩各得一张 ¥{{ settings.inviteCoupon }} 抵扣券（付游玩费时直接抵掉，90 天内有效）。</p>
+        <p class="me-note" style="margin-top:var(--us-s2)">朋友填你的邀请码注册，你俩各得一张 ¥{{ settings.inviteCoupon }} 抵扣券（付游玩费时直接抵掉，90 天内有效）。</p>
 
-        <h2 class="nv-h3">联系店里</h2>
-        {% if serviceWechat %}
-        <div class="nv-kv nv-kv--act">
-          <div><dt>小客服微信</dt><dd class="nv-mono" id="svc-wechat">{{ serviceWechat }}</dd></div>
-          <button class="nv-btn nv-btn--sm nv-btn--ghost" type="button" id="svc-copy-btn" data-copy="{{ serviceWechat }}">复制</button>
+        <div class="u-chap" style="margin-top:var(--us-s5)">
+          <span class="u-chap__no">05c</span>
+          <h2 class="u-chap__t">联系店里</h2>
         </div>
+        {% if serviceWechat %}
+        <dl class="me-kv">
+          <div>
+            <dt>小客服微信</dt>
+            <dd style="display:flex;align-items:center;gap:12px">
+              <span class="u-mono" id="svc-wechat">{{ serviceWechat }}</span>
+              <button class="u-pill u-pill--sm u-pill--ghost" type="button" id="svc-copy-btn" data-copy="{{ serviceWechat }}">复制</button>
+            </dd>
+          </div>
+        </dl>
         {% else %}
-        <p class="nv-muted">客服微信还没配，先留言给店里。</p>
+        <p class="me-note">客服微信还没配，先留言给店里。</p>
         {% endif %}
-        <div class="nv-acts">
-          <a class="nv-btn nv-btn--sm" href="{{ faqUrl or '/faq' }}">常见问题</a>
-          <a class="nv-btn nv-btn--sm" href="{{ url_for('user.me') }}?tab=notices">给店家留言</a>
+        <div class="me-ticket__act" style="margin-top:var(--us-s3)">
+          <a class="u-pill u-pill--sm" href="{{ faqUrl or '/faq' }}">常见问题</a>
+          <a class="u-pill u-pill--sm" href="{{ url_for('user.me') }}#notices">给店家留言</a>
         </div>
       </section>
 
-      <section>
-        <h2 class="nv-h3">账号安全</h2>
-        <form class="nv-form" method="post" action="{{ url_for('user.account_pwd') }}">
-          <label class="nv-field"><span>现在的密码</span>
-            <input name="old" type="password" autocomplete="current-password"></label>
-          <label class="nv-field"><span>新密码（至少 6 位）</span>
-            <input name="password" type="password" autocomplete="new-password"></label>
-          <button class="nv-btn nv-btn--sm nv-btn--solid" type="submit">改密码</button>
+      <section class="u-split__side">
+        <div class="u-chap">
+          <span class="u-chap__no">05d</span>
+          <h2 class="u-chap__t">账号安全</h2>
+        </div>
+        <form class="u-form" method="post" action="{{ url_for('user.account_pwd') }}" data-busy>
+          <label class="u-field"><span class="u-lab">现在的密码</span>
+            <input class="u-in" name="old" type="password" autocomplete="current-password"></label>
+          <label class="u-field"><span class="u-lab">新密码（至少 6 位）</span>
+            <input class="u-in" name="password" type="password" autocomplete="new-password"></label>
+          <div><button class="u-pill u-pill--sm u-pill--ink" type="submit">改密码</button></div>
         </form>
 
-        <details class="nv-fold nv-fold--danger">
+        <details class="me-fold me-fold--danger" style="margin-top:var(--us-s4)">
           <summary>危险区：注销账号</summary>
           <form method="post" action="{{ url_for('user.account_delete') }}"
                 onsubmit="return confirm('注销后账号和名下数据都会删除，确定？')">
-            <p class="nv-muted">注销 = 账号和名下的预约、券、积分全部删除，<b>不可恢复</b>。
+            <p class="me-note">注销 = 账号和名下的预约、券、积分全部删除，<b>不可恢复</b>。
               输入完整手机号确认（当前账号 {{ me.phone[:3] }}****{{ me.phone[-4:] }}）：</p>
-            <div class="nv-inline">
-              <input name="confirm" placeholder="输入完整手机号" class="nv-input">
-              <button class="nv-btn nv-btn--sm" type="submit">确认注销</button>
+            <div class="u-row2" style="margin-top:var(--us-s2)">
+              <input class="u-in" name="confirm" placeholder="输入完整手机号">
+              <div><button class="u-pill u-pill--sm" type="submit">确认注销</button></div>
             </div>
           </form>
         </details>
@@ -467,10 +497,10 @@
 
 </div>
 
-{# 打分星星：JS 接管（触屏 :hover 粘滞会让纯 CSS 方案卡住） #}
+{# 打分星星：JS 接管。纯 CSS 的 :hover 粘滞在触屏上会卡住，所以点选与高亮都自己算。 #}
 <script>
 (function(){
-  Array.prototype.forEach.call(document.querySelectorAll('.stars'), function(s){
+  Array.prototype.forEach.call(document.querySelectorAll('.me-stars'), function(s){
     var ins = s.querySelectorAll('input'), lbs = s.querySelectorAll('label');
     function sync(){
       var at = -1, k;
@@ -490,18 +520,18 @@
 </script>
 <script>
 (function(){
-  var btn=document.getElementById('svc-copy-btn');
-  if(!btn) return;
+  var btn = document.getElementById('svc-copy-btn');
+  if (!btn) return;
   function toast(msg){
-    var t=document.getElementById('share-toast');
-    if(!t){ t=document.createElement('div'); t.id='share-toast'; t.className='share-toast'; document.body.appendChild(t); }
-    t.textContent=msg; t.classList.add('show');
-    clearTimeout(t._tm); t._tm=setTimeout(function(){ t.classList.remove('show'); }, 1800);
+    var t = document.getElementById('share-toast');
+    if (!t) { t = document.createElement('div'); t.id = 'share-toast'; t.className = 'share-toast'; document.body.appendChild(t); }
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(t._tm); t._tm = setTimeout(function(){ t.classList.remove('show'); }, 1800);
   }
   btn.addEventListener('click', function(){
-    var v=btn.getAttribute('data-copy')||'';
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(v).then(function(){toast('客服微信已复制');}, function(){toast('复制失败，手动选中');});
+    var v = btn.getAttribute('data-copy') || '';
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(v).then(function(){ toast('客服微信已复制'); }, function(){ toast('复制失败，手动选中'); });
     } else { toast('请手动选中复制'); }
   });
 })();
