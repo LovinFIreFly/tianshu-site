@@ -1329,11 +1329,23 @@
   }
 
   /* ---------- Sheet 开关 ---------- */
+  // 2026-10：用一个栈记录打开顺序，二级页（比如从剧本详情里点开预约）关掉后能
+  // 回到上一级，而不是把所有 sheet 一起关掉。
+  var sheetStack = [];
   function openSheet(sheetSel, maskSel) {
     var m = $(maskSel); if (m) m.classList.add('show');
     var s = $(sheetSel); if (s) s.classList.add('show');
+    sheetStack.push(sheetSel + '|' + maskSel);
+  }
+  function closeTop() {
+    if (!sheetStack.length) { closeSheets(); return; }
+    var top = sheetStack.pop().split('|');
+    var s = $(top[0]); if (s) s.classList.remove('show');
+    var m = $(top[1]); if (m) m.classList.remove('show');
+    if (!$$('.sheet.show').length) $$('.mask').forEach(function (x) { x.classList.remove('show'); });
   }
   function closeSheets() {
+    sheetStack = [];
     $$('.sheet').forEach(function (s) { s.classList.remove('show'); });
     $$('.mask').forEach(function (m) { m.classList.remove('show'); });
   }
@@ -1342,8 +1354,8 @@
   document.addEventListener('click', function (e) {
     var t = e.target;
     var mask = t.closest('.mask');
-    if (mask) { closeSheets(); return; }
-    if (t.closest('#sheet-close')) { closeSheets(); return; }
+    if (mask) { closeTop(); return; }
+    if (t.closest('#sheet-close')) { closeTop(); return; }
 
     var tab = t.closest('.tab');
     if (tab) { switchTab(tab.getAttribute('data-tab')); return; }

@@ -972,6 +972,7 @@ def api_car_detail(cid):
     # 从 car_pool 取数据层已算好的扩展字段（倒计时/截止/补满/难度/口味相近）
     enriched = next((c for c in business.car_pool(me_phone) if str(c.get("id")) == str(cid)), {})
     users = {str(x.get("phone")): x for x in db.rows("users")}
+    by_name = {str(x.get("username")): x for x in users.values()}
     owner = users.get(str(booking.get("phone"))) or {}
     op = owner.get("profile") or {}
     msgs = [{"name": m.get("nick") or m.get("username") or "玩家", "text": m.get("text") or ""}
@@ -982,9 +983,19 @@ def api_car_detail(cid):
         "who": op.get("nick") or owner.get("username") or "玩家",
         "tags": booking.get("carTags") or [],
         # 前端读的是 name，这里补上（否则拼车成员一律显示成"玩家"）
-        "members": [{"nick": m.get("nick") or "玩家", "name": m.get("nick") or "玩家",
-                     "tags": list(m.get("tags") or [])}
-                    for m in (enriched.get("members") or booking.get("members") or [])],
+        # 2026-10 修复：模板 car_detail.html 还读 m.avatar（成员头像）、m.gender / m.ageBucket /
+        # m.players（成员详情），原来 members 只传了 nick/name/tags —— 头像永远走首字、
+        # 详情全空。这里把数据层算好的字段都透出来，并用成员昵称（=用户名）查真实头像。
+        "members": [{
+            "nick": m.get("nick") or m.get("username") or "玩家",
+            "name": m.get("nick") or m.get("username") or "玩家",
+            "tags": list(m.get("tags") or []),
+            "gender": m.get("gender") or "",
+            "ageBucket": m.get("ageBucket") or "",
+            "players": m.get("players") or 1,
+            "owner": bool(m.get("owner")),
+            "avatar": (by_name.get(str(m.get("nick") or m.get("username") or "")) or {}).get("avatar") or "",
+        } for m in (enriched.get("members") or booking.get("members") or [])],
         "msgs": msgs,
         "deadline": enriched.get("deadline") or booking.get("carDeadline") or 0,
         "deadlineIn": enriched.get("deadlineIn") or 0,
