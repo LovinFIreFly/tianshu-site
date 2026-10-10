@@ -164,7 +164,11 @@
     }).catch(function () {
       var fb = window.MOBILE_STATIC || {};
       D.scripts = fb.scripts || []; D.sessions = fb.sessions || [];
-      D.cars = fb.cars || []; D.talks = fb.talks || []; D.me = fb.me || { guest: true };
+      D.cars = fb.cars || []; D.talks = fb.talks || [];
+      // 2026-10 修复：接口抖动（网络/超时失败）时**不要**把已登录用户踢成游客 ——
+      // 以前这里无条件 D.me = fb.me || {guest:true}，cookie 还在却弹出登录门页，
+      // 用户以为被踢下线。只在本地确实没登录态时才退回游客。
+      if (!(D.me && D.me.guest === false)) D.me = fb.me || { guest: true };
       renderAll();
     });
   }
@@ -460,6 +464,7 @@
   }
   function submitBook() {
     if (D.me && D.me.guest) { toast('请先登录再预约'); openAuth(); return; }
+    if (window.__busy) return; window.__busy = true;   // 2026-10 防抖：连点会产生重复预约
     if (!bookCtx.day) { $('#bk-err').textContent = '先挑一天'; return; }
     if (!bookCtx.time) { $('#bk-err').textContent = '再挑个时间'; return; }
     var fd = new FormData();
@@ -481,7 +486,8 @@
         closeSheets();
         ensureData(true);
       })
-      .catch(function () { $('#bk-err').textContent = '网络开了小差，待会儿再试'; });
+      .catch(function () { $('#bk-err').textContent = '网络开了小差，待会儿再试'; })
+      .then(function () { window.__busy = false; });   // 释放防抖锁
   }
 
   /* ---------- 拼车 ---------- */
@@ -530,7 +536,7 @@
       return '<div class="ccard">' +
         '<div class="chead">' + avatarHTML('car-av', c.av, c.who) +
         '<div class="chead-main"><b>' + esc(c.script || '剧本') + '</b>' +
-        '<small>' + esc(c.who || '玩家') + ' 发的车 · ' + esc(c.day || '') + ' ' + esc(c.time || '') + '</small></div>' +
+        '<small>' + esc(c.who || '玩家') + ' 发的车 · ' + esc(c.time || c.day || '') + '</small></div>' +
         badge + '</div>' +
         carStatusLine(c) +
         (c.likeMind ? '<div class="likemind">有和你口味相近的玩家在车上</div>' : '') +
@@ -588,6 +594,7 @@
   }
   function submitCar() {
     if (D.me && D.me.guest) { toast('请先登录再发车'); openAuth(); return; }
+    if (window.__busy) return; window.__busy = true;   // 2026-10 防抖：连点会重复发车
     var sid = carCtx.sid || (($('#car-sid') || {}).value || '');
     if (!sid) { $('#car-err').textContent = '先挑个本'; return; }
     if (!carCtx.day) { $('#car-err').textContent = '先挑一天'; return; }
@@ -602,7 +609,8 @@
         if (j.error || j.ok === false) { $('#car-err').textContent = j.msg || j.error || '发车失败'; return; }
         toast(j.msg || '车发出去了');
         closeSheets(); ensureData(true); switchTab('carpool');
-      }).catch(function () { $('#car-err').textContent = '网络开了小差，待会儿再试'; });
+      }).catch(function () { $('#car-err').textContent = '网络开了小差，待会儿再试'; })
+      .then(function () { window.__busy = false; });   // 释放防抖锁
   }
 
   /* ---------- 唠嗑 ---------- */
