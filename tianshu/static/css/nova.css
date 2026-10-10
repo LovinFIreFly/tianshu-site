@@ -77,6 +77,13 @@
   --mx: 0;
   --my: 0;
 
+  /* 滚动总线：JS 把实时滚动位置（px）与进度（0..1）写进来，
+     任何元素想做"随滚动漂移"的视差，只读它们即可（顶栏浮出、英雄球、序号都吃这套）。
+     这是 unseen / blueyard 那种"页面有呼吸"的来源之一 —— 滚动本身带惯性（见 nova.js 的 Smooth），
+     而位移元素跟着滚动位置走，于是整页一起"活"起来。 */
+  --sy: 0;
+  --syp: 0;
+
   --us-round: 999px;
 
   /* 旧名留别名：漏改的地方会落到同一档，不会悄悄回退成浏览器默认 */
@@ -117,6 +124,17 @@ html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
   background: var(--us-bg);
+}
+
+/* 平滑滚动引擎接管后，必须关掉 CSS 的 scroll-behavior:smooth ——
+   否则我们"逐帧 scrollTo"会被浏览器再做一次补间，滚动发滞、和那些站的丝滑差一截。 */
+html.u-smooth { scroll-behavior: auto; }
+
+/* 滚动视差：只给显式标了 data-par 的元素，随实时滚动位置做极轻的纵向漂移。
+   倍率极小（如 0.05），只是让页面"有呼吸"，绝不干扰布局、可读性与可达性。 */
+html.u-on [data-par] {
+  transform: translate3d(0, calc(var(--sy, 0) * var(--par, 0) * -1px), 0);
+  will-change: transform;
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
@@ -1067,6 +1085,9 @@ html[data-theme="dark"] .u-ord--lg { -webkit-text-stroke-color: var(--us-line); 
 
 /* ── 药丸按钮 ── */
 .u-pill {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   display: inline-flex;
   align-items: center;
   gap: 12px;
@@ -1078,11 +1099,26 @@ html[data-theme="dark"] .u-ord--lg { -webkit-text-stroke-color: var(--us-line); 
   letter-spacing: -.01em;
   box-shadow: 0 1px 3px rgba(0, 0, 0, .07), 0 0 0 1px rgba(0, 0, 0, .04);
   transition: transform var(--us-t) var(--us-ease), box-shadow var(--us-t) var(--us-ease), background var(--us-t2);
+  /* 填充线：一条实体色从底部横扫上来（blueyard 的 .button__line 同款），
+     这是"灵动按键"的关键 —— hover 不是变色，而是一记干脆的"刷"过去。 */
+  --sweep: var(--us-ink);
+}
+.u-pill > * { position: relative; z-index: 1; }
+.u-pill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--sweep);
+  transform: translateY(101%);
+  transition: transform var(--us-t) var(--us-ease);
 }
 .u-pill:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 34px rgba(0, 0, 0, .13), 0 0 0 1px rgba(0, 0, 0, .04);
+  color: var(--us-bg);
 }
+.u-pill:hover::before { transform: translateY(0); }
 .u-pill:active { transform: translateY(0) scale(.985); }
 .u-pill__a {
   display: inline-grid;
@@ -1096,14 +1132,16 @@ html[data-theme="dark"] .u-ord--lg { -webkit-text-stroke-color: var(--us-line); 
   background: var(--us-ink);
   color: var(--us-bg);
   box-shadow: none;
+  --sweep: var(--us-bg);
 }
+.u-pill--ink:hover { color: var(--us-ink); }
 .u-pill--ghost {
   background: transparent;
   box-shadow: none;
   border: var(--us-hair);
   padding: 13px 24px;
 }
-.u-pill--ghost:hover { background: var(--us-bg-3); box-shadow: none; }
+.u-pill--ghost:hover { color: var(--us-bg); box-shadow: none; }
 .u-pill--wide { width: 100%; justify-content: center; }
 /* 小号：用在票卡/列表的行内动作上，别把按钮做成主角 */
 .u-pill--sm { padding: 8px 16px; font-size: 13.5px; gap: 8px; }

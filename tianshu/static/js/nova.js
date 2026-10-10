@@ -531,7 +531,7 @@
      而右栏粘住的预订面板是详情页的关键。
      这里保住了原生滚动 —— 键盘、滚动条、锚点、iOS 惯性全都不受影响。 */
   var Smooth = (function () {
-    var target = 0, cur = 0, active = false, ext = false;
+    var target = 0, cur = 0, active = false;
 
     function maxY() {
       var de = D.documentElement;
@@ -553,20 +553,34 @@
       return false;
     }
 
+    /* 把目标位置推进到 y，并唤醒补间。所有入口（滚轮 / 键盘 / 锚点）都走它，
+       保证整站滚动共用一条缓动曲线，不会有"滚轮顺、键盘卡"的分裂感。 */
+    function go(y) {
+      target = clamp(y, 0, maxY());
+      if (!active) { active = true; cur = W.pageYOffset || 0; addTick(step); startLoop(); }
+    }
+
     function init() {
       if (REDUCE || COARSE || !FINE) return;          // 触屏 / 减少动态：一律走原生
       target = cur = W.pageYOffset || 0;
+      /* 关掉 CSS 的 scroll-behavior:smooth（见 nova.css html.u-smooth）—— 这是原来"发滞"的根因：
+         我们本来就在逐帧 scrollTo 做惯性，浏览器再补一次，等于两道缓动叠一起，越滚越黏。 */
+      doc.classList.add('u-smooth');
       on(W, 'wheel', wheel, { passive: false });
-      /* 外部滚动（键盘 / 滚动条 / 锚点 / 转场里的 scrollTo）：对一次表，
-         免得下一次滚轮是从一个过期的位置开始补间 */
+      on(W, 'keydown', keys);
+      on(D, 'click', anchor);
+      /* 外部滚动（滚动条拖拽 / 锚点原生跳转残留 / 转场里的 scrollTo）：对一次表，
+         免得下一次滚轮是从一个过期的位置开始补间；同时把实时位置喂给视差总线。 */
       on(W, 'scroll', function () {
         if (active) return;
         cur = target = W.pageYOffset || 0;
+        doc.style.setProperty('--sy', (W.pageYOffset || 0).toFixed(1));
       }, { passive: true });
     }
 
+    /* 滚轮：拦下 delta，交给补间。横向滚 / 捏合 / 全屏索引开着 / 内部可滚区都放行。 */
     function wheel(e) {
-      if (e.ctrlKey || ext) return;                   // 捏合缩放交给浏览器
+      if (e.ctrlKey) return;                          // 捏合缩放交给浏览器
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
       var lock = doc.style.overflow === 'hidden' || D.body.style.overflow === 'hidden';
       if (lock) return;                               // 全屏索引开着：别动
@@ -574,19 +588,54 @@
       e.preventDefault();
       var d = e.deltaMode === 1 ? e.deltaY * 18
             : (e.deltaMode === 2 ? e.deltaY * W.innerHeight : e.deltaY);
-      target = clamp(target + d, 0, maxY());
-      if (!active) { active = true; cur = W.pageYOffset || 0; addTick(step); startLoop(); }
+      go(target + d);
+    }
+
+    /* 键盘滚动也走同一套补间（输入框里不抢、全屏索引开着不抢） */
+    function keys(e) {
+      var t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+      if (doc.style.overflow === 'hidden') return;
+      var k = 0;
+      switch (e.key) {
+        case 'PageDown': k = W.innerHeight * 0.9; break;
+        case 'PageUp':   k = -W.innerHeight * 0.9; break;
+        case 'ArrowDown': k = 90; break;
+        case 'ArrowUp':   k = -90; break;
+        case ' ':         k = (e.shiftKey ? -1 : 1) * W.innerHeight * 0.9; break;
+        case 'Home': go(0); e.preventDefault(); return;
+        case 'End':  go(maxY()); e.preventDefault(); return;
+        default: return;
+      }
+      e.preventDefault();
+      go(target + k);
+    }
+
+    /* 同页锚点：用我们的补间滚过去（u-smooth 已经关掉了 CSS 的原生平滑） */
+    function anchor(e) {
+      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      var a = e.target.closest && e.target.closest('a[href]');
+      if (!a) return;
+      var href = a.getAttribute('href') || '';
+      if (href.charAt(0) !== '#') return;
+      var id = href.slice(1);
+      var el = id ? D.getElementById(id) : null;
+      if (!el) return;
+      e.preventDefault();
+      var top = el.getBoundingClientRect().top + (W.pageYOffset || 0) - 80;  // 给吸顶栏留位
+      go(Math.max(0, top));
+      try { history.pushState(null, '', href); } catch (er) {}
     }
 
     function step(dt) {
       cur = lerp(cur, target, 1 - Math.pow(0.0006, dt));
       if (Math.abs(target - cur) < 0.35) { cur = target; active = false; }
-      ext = true;
       W.scrollTo(0, Math.round(cur));
-      ext = false;
+      doc.style.setProperty('--sy', cur.toFixed(1));
+      doc.style.setProperty('--syp', (maxY() ? (cur / maxY()).toFixed(4) : 0));
     }
 
-    return { init: init };
+    return { init: init, to: go };
   })();
 
   /* ══════════════════════════ ② 搜索框描边进度环 ══════════════════════════ */
@@ -704,21 +753,30 @@
       });
     }
 
-    /* 磁性：指针靠近时元素朝指针挪一点点（≤8px），离开回弹 */
+    /* 磁性：指针靠近时元素朝指针挪一点点，内部元素反向位移做层次（blueyard 的"活"感来源）。
+       k 越大跟手越明显；离开回弹。 */
     function magnets(root) {
       if (!FINE || REDUCE) return;
       $$('[data-magnet]', root).forEach(function (el) {
         if (el.getAttribute('data-mag') === '1') return;
         el.setAttribute('data-mag', '1');
         var k = num(el.getAttribute('data-magnet'), 6);
+        /* 内部随动元素：显式标了 data-mag-in 的，以及按钮里那枚箭头，都反向轻移做景深 */
+        var inners = $$('[data-mag-in]', el);
+        var arrow = $('.u-pill__a', el);
+        if (arrow && inners.indexOf(arrow) < 0) inners.push(arrow);
         var tx = 0, ty = 0, cx = 0, cy = 0, active = false;
         function st(dt) {
-          var f = 1 - Math.pow(0.002, dt);
+          var f = 1 - Math.pow(0.0016, dt);
           cx = lerp(cx, tx, f); cy = lerp(cy, ty, f);
           el.style.transform = 'translate3d(' + cx.toFixed(2) + 'px,' + cy.toFixed(2) + 'px,0)';
+          for (var i = 0; i < inners.length; i++) {
+            inners[i].style.transform = 'translate3d(' + (-cx * 0.45).toFixed(2) + 'px,' + (-cy * 0.45).toFixed(2) + 'px,0)';
+          }
           if (!active && Math.abs(cx) < 0.05 && Math.abs(cy) < 0.05) {
             el.style.transform = '';
-            var i = tickers.indexOf(st); if (i >= 0) tickers.splice(i, 1);
+            for (var j = 0; j < inners.length; j++) inners[j].style.transform = '';
+            var idx = tickers.indexOf(st); if (idx >= 0) tickers.splice(idx, 1);
           }
         }
         on(el, 'pointermove', function (e) {
@@ -726,7 +784,7 @@
           var dx = e.clientX - (r.left + r.width / 2);
           var dy = e.clientY - (r.top + r.height / 2);
           var d = Math.sqrt(dx * dx + dy * dy) || 1;
-          var pull = clamp(1 - d / (Math.max(r.width, r.height) * 1.5), 0, 1);
+          var pull = clamp(1 - d / (Math.max(r.width, r.height) * 1.6), 0, 1);
           tx = (dx / d) * k * pull; ty = (dy / d) * k * pull;
           active = true;
           if (tickers.indexOf(st) < 0) { addTick(st); startLoop(); }
@@ -1233,6 +1291,7 @@
   W.NV = {
     rebind: function (root) { try { boot(root || D); } catch (e) {} },
     ripple: function (x, y) { Field.emit(typeof x === 'number' ? x : 0.5, typeof y === 'number' ? y : 0.5, 1); },
+    scrollTo: function (y) { try { if (Smooth.to) Smooth.to(y); } catch (e) {} },
     ready: function () { return doc.classList.contains('u-on'); }
   };
 
