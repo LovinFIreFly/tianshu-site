@@ -437,8 +437,8 @@
       var tag = t.tagName;
       if (!c) c = (/^(INPUT|TEXTAREA)$/.test(tag) || t.isContentEditable) ? 'text' : 'link';
       D.body.setAttribute('data-cur', c);
-      var l = t.getAttribute('data-cursor-label');
-      if (l && lab) { lab.textContent = l; D.body.setAttribute('data-cur', 'view'); }
+      /* 列表悬停看大图：光标胀成朱砂圆 + VIEW 标签（unseen 招牌） */
+      if (t.hasAttribute('data-cursor-img') && lab) { lab.textContent = 'VIEW'; D.body.setAttribute('data-cur', 'view'); }
       /* 文字链接：套一圈手绘椭圆 */
       if (t.hasAttribute('data-scribble')) drawScrib(t);
     }
@@ -708,6 +708,191 @@
       }
     }
 
+    return { init: init };
+  })();
+
+  /* ══════════════════════════ ⑦-bis SplitText 分字揭示（unseen 招牌） ══════════════════════════
+     把 [data-split] 标题拆成单词，每张词裹一层 overflow:hidden 遮罩，词从下方 115% 升起。
+     错峰由 CSS 的 --i 控制（每行 38ms）。和底座 reveal 互不干扰：本模块只管"字"，
+     底座只管带 data-d 的容器；标题只挂 data-split 就行。 */
+  var Split = (function () {
+    /* 按模式把一段文本折成"遮罩词/字"：words=按空白切，chars=逐字（中文没空格用它） */
+    function layText(frag, text, mode, idx) {
+      if (mode === 'chars') {
+        for (var i = 0; i < text.length; i++) {
+          var ch = text.charAt(i);
+          if (ch === ' ' || ch === '\n' || ch === '\t') { frag.appendChild(D.createTextNode(ch)); continue; }
+          var ow = D.createElement('span'); ow.className = 'u-split__w';
+          var iw = D.createElement('span'); iw.className = 'u-split__i'; iw.textContent = ch;
+          iw.style.setProperty('--i', String(idx.n++));
+          ow.appendChild(iw); frag.appendChild(ow);
+        }
+      } else {
+        var parts = text.split(/(\s+)/);
+        for (var p = 0; p < parts.length; p++) {
+          var w = parts[p];
+          if (w === '') continue;
+          if (/^\s+$/.test(w)) { frag.appendChild(D.createTextNode(w)); continue; }
+          var o = D.createElement('span'); o.className = 'u-split__w';
+          var ii = D.createElement('span'); ii.className = 'u-split__i'; ii.textContent = w;
+          ii.style.setProperty('--i', String(idx.n++));
+          o.appendChild(ii); frag.appendChild(o);
+        }
+      }
+    }
+    function wrap(el) {
+      if (el.getAttribute('data-split-done') === '1') return;
+      var mode = el.getAttribute('data-split') === 'chars' ? 'chars' : 'words';
+      var idx = { n: 0 };
+      var frag = D.createDocumentFragment();
+      var kids = [];
+      for (var i = 0; i < el.childNodes.length; i++) kids.push(el.childNodes[i]);
+      for (var j = 0; j < kids.length; j++) {
+        var node = kids[j];
+        if (node.nodeType === 3) {
+          layText(frag, node.textContent, mode, idx);
+        } else if (node.nodeName === 'BR') {
+          frag.appendChild(node.cloneNode(true));
+        } else {                                        // <em>/<span>：保留标签，递归拆字
+          var clone = node.cloneNode(false);
+          var sk = [];
+          for (var k = 0; k < node.childNodes.length; k++) sk.push(node.childNodes[k]);
+          for (var m = 0; m < sk.length; m++) {
+            var nn = sk[m];
+            if (nn.nodeType === 3) layText(clone, nn.textContent, mode, idx);
+            else clone.appendChild(nn.cloneNode(true));
+          }
+          frag.appendChild(clone);
+        }
+      }
+      el.innerHTML = '';
+      el.appendChild(frag);
+      el.setAttribute('data-split-done', '1');
+    }
+    function init(root) {
+      if (REDUCE) return;
+      var els = $$('[data-split]', root);
+      if (!els.length) return;
+      els.forEach(function (el) {
+        wrap(el);
+        if (!('IntersectionObserver' in W)) { el.classList.add('is-in'); return; }
+        var io = new IntersectionObserver(function (es) {
+          es.forEach(function (e) {
+            if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
+          });
+        }, { rootMargin: '0px 0px -10% 0px', threshold: 0.01 });
+        io.observe(el);
+      });
+    }
+    return { init: init };
+  })();
+
+  /* ══════════════════════════ ⑦-ter Float 漂浮视差（hubtown 的"活"） ══════════════════════════
+     [data-float="x y"]：元素随指针极轻漂移 + 缓慢正弦呼吸。纯装饰，吃统一 rAF。
+     降级（reduced-motion / 触屏）直接不动。 */
+  var Float = (function () {
+    var items = [];
+    function init(root) {
+      if (REDUCE || COARSE || !FINE) return;
+      $$('[data-float]', root).forEach(function (el) {
+        if (el.getAttribute('data-float-bound') === '1') return;
+        el.setAttribute('data-float-bound', '1');
+        var v = (el.getAttribute('data-float') || '20 14').split(/\s+/);
+        items.push({
+          el: el, ax: parseFloat(v[0]) || 18, ay: parseFloat(v[1]) || 12,
+          ph: Math.random() * 6.28, sp: 0.4 + Math.random() * 0.5, cx: 0, cy: 0
+        });
+      });
+      if (items.length) { addTick(step); startLoop(); }
+    }
+    function step(dt, t) {
+      var mx = parseFloat(doc.style.getPropertyValue('--mx')) || 0;
+      var my = parseFloat(doc.style.getPropertyValue('--my')) || 0;
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        var fx = mx * it.ax + Math.sin(t * it.sp + it.ph) * (it.ax * 0.5);
+        var fy = my * it.ay + Math.cos(t * it.sp * 0.8 + it.ph) * (it.ay * 0.5);
+        it.cx = lerp(it.cx, fx, 1 - Math.pow(0.002, dt));
+        it.cy = lerp(it.cy, fy, 1 - Math.pow(0.002, dt));
+        it.el.style.transform = 'translate3d(' + it.cx.toFixed(2) + 'px,' + it.cy.toFixed(2) + 'px,0)';
+      }
+    }
+    return { init: init };
+  })();
+
+  /* ══════════════════════════ ⑦-quat Pin 钉住段 + 横向滚动（ScrollTrigger pin） ══════════════════════════
+     [data-pin] 外层撑高、内层 .u-pin__stick 用 CSS sticky 钉满一屏；
+     把这段滚动进度写成 --p(0..1)，横向带子 [data-hscroll-track] 据此左移。
+     不引 GSAP：IntersectionObserver 之外的进度用统一 rAF 算，同样丝滑。 */
+  var Pin = (function () {
+    var items = [];
+    function init(root) {
+      if (REDUCE || COARSE) return;                   // 触屏 / 减少动态：钉住段退化成普通横向排布
+      $$('[data-pin]', root).forEach(function (el) {
+        if (el.getAttribute('data-pin-bound') === '1') return;
+        el.setAttribute('data-pin-bound', '1');
+        var stick = $('.u-pin__stick', el) || el;
+        var track = $('[data-hscroll-track]', el);
+        items.push({ el: el, stick: stick, track: track, last: -1 });
+      });
+      if (items.length) { addTick(tick); startLoop(); }
+    }
+    function tick() {
+      var vh = W.innerHeight || 0;
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        var r = it.el.getBoundingClientRect();
+        var total = it.el.offsetHeight - vh;
+        var p = total > 0 ? clamp(-r.top / total, 0, 1) : 0;
+        if (Math.abs(p - it.last) > 0.0008) {
+          it.last = p;
+          it.el.style.setProperty('--p', p.toFixed(4));
+          if (it.track) {
+            var tw = it.track.scrollWidth - W.innerWidth;
+            if (tw > 0) it.track.style.transform = 'translate3d(' + (-tw * p).toFixed(2) + 'px,0,0)';
+          }
+        }
+      }
+    }
+    return { init: init };
+  })();
+
+  /* ══════════════════════════ ⑦-quin 光标跟随图预览（unseen 列表悬停） ══════════════════════════
+     [data-cursor-img="url"] 的列表项：悬停时一张图跟着光标 lerp 飘出来。
+     这就是 unseen 项目列表那个"鼠标移到哪、图就飘到哪"的招牌。 */
+  var CursorImg = (function () {
+    /* 注意：这里的开关叫 act，不能叫 on —— on 是外层的事件绑定助手，遮蔽它会直接炸 */
+    var box = null, mx = 0, my = 0, x = 0, y = 0, vis = 0, act = false;
+    function init(root) {
+      if (!FINE || REDUCE) return;
+      if (!box) {
+        box = D.createElement('div');
+        box.className = 'u-cursorimg';
+        box.setAttribute('aria-hidden', 'true');
+        D.body.appendChild(box);
+        on(D, 'pointermove', function (e) { mx = e.clientX; my = e.clientY; }, { passive: true });
+        addTick(step);
+        startLoop();
+      }
+      $$('[data-cursor-img]', root).forEach(function (t) {
+        if (t.getAttribute('data-ci-bound') === '1') return;
+        t.setAttribute('data-ci-bound', '1');
+        var img = t.getAttribute('data-cursor-img') || '';
+        on(t, 'pointerenter', function () { box.style.backgroundImage = "url('" + img + "')"; act = true; });
+        on(t, 'pointerleave', function () { act = false; });
+      });
+    }
+    function step(dt) {
+      var f = 1 - Math.pow(0.0009, dt);
+      x = lerp(x, mx, f); y = lerp(y, my, f);
+      var tv = act ? 1 : 0;
+      vis = lerp(vis, tv, 1 - Math.pow(0.0001, dt));
+      if (vis < 0.002 && !act) { box.style.opacity = '0'; return; }
+      box.style.opacity = vis.toFixed(3);
+      var s = 0.6 + 0.4 * vis;
+      var w = box.offsetWidth || 230, h = box.offsetHeight || 300;
+      box.style.transform = 'translate3d(' + (x - w / 2).toFixed(1) + 'px,' + (y - h / 2).toFixed(1) + 'px,0) scale(' + s.toFixed(3) + ')';
+    }
     return { init: init };
   })();
 
@@ -1290,6 +1475,10 @@
     Search.init(root);
     Fold.init(root);
     Marq.init(root);
+    Split.init(root);
+    Pin.init(root);
+    Float.init(root);
+    CursorImg.init(root);
     /* tabs.js 只在首屏 DOMContentLoaded 绑一次，转场换进来的新标签条没人管 ——
        叫它重跑一遍（它自己带幂等守卫，只会处理新增的节点）。 */
     if (W.TS_TABS && W.TS_TABS.boot) { try { W.TS_TABS.boot(); } catch (e) {} }

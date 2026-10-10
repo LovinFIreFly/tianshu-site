@@ -88,7 +88,8 @@ html[data-theme="dark"] .hp-sec[data-n]::before { -webkit-text-stroke-color: var
   letter-spacing: -.012em;
   font-weight: 800;
 }
-.hp-hero__t span { display: block; }
+/* 分字揭示接管标题：遮罩词横排流动，不再逐行块状（老规则 display:block 已删） */
+.hp-hero__t .u-split__w { display: inline-block; }
 .hp-hero__t em {
   font-family: var(--us-serif);
   font-style: normal;
@@ -925,4 +926,56 @@ html[data-theme="dark"] .hp-sec[data-n]::before { -webkit-text-stroke-color: var
   .pf-head { grid-template-columns: 84px minmax(0, 1fr); gap: var(--us-s3); }
   .pf-face { width: 84px; height: 84px; font-size: 30px; }
   .hp-sec { padding: var(--us-s5) 0 var(--us-s4); }
+}
+
+/* ───────────────────────── 横向滚动卡片（钉住段内） ───────────────────────── */
+.u-hcard {
+  flex: none;
+  width: clamp(280px, 26vw, 380px);
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: var(--us-ink);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--us-paper);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .07), 0 0 0 1px rgba(0, 0, 0, .04);
+  transition: transform var(--us-t) var(--us-ease), box-shadow var(--us-t) var(--us-ease);
+}
+.u-hcard:hover { transform: translateY(-6px); box-shadow: 0 22px 50px rgba(0, 0, 0, .14); }
+.u-hcard__fig {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background: var(--us-bg-3);
+}
+.u-hcard__fig img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.u-hcard__cap { padding: 18px 20px 22px; }
+.u-hcard__t { font-size: clamp(19px, 1.5vw, 24px); letter-spacing: -.02em; line-height: 1.05; }
+.u-hcard__k {
+  display: block; margin-top: 8px;
+  font-size: 13px; color: var(--us-ink-3); letter-spacing: -.005em;
+}
+.u-hcard__no {
+  display: block; font-family: var(--us-mono); font-size: 12px;
+  letter-spacing: .18em; color: var(--us-cinnabar); margin-bottom: 6px;
+}
+
+/* hero 标题改逐字揭示后，去掉老的 span 布局残留，保证大字号正常流 */
+.hp-hero__t { margin: 0; }
+.hp-hero__t .u-split__w { line-height: 1.0; }
+.hp-hero__t em { font-style: normal; color: var(--us-cinnabar); }
+
+/* hero 角落的漂浮装饰点（hubtown 的"活"）：随指针轻漂 + 呼吸 */
+.hp-float {
+  position: absolute;
+  top: 16%; right: 9%;
+  width: 58px; height: 58px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, var(--us-cinnabar), color-mix(in srgb, var(--us-cinnabar) 70%, transparent));
+  opacity: .55;
+  pointer-events: none;
+  z-index: 1;
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--us-cinnabar) 30%, transparent);
 }

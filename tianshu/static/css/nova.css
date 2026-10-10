@@ -1903,8 +1903,129 @@ html.u-on .u-tick--c { animation-duration: 8s; animation-delay: -5s; }
 }
 html.u-on .u-marq { cursor: default; }
 
+/* ───────────────────────── SplitText 分字揭示（unseen 招牌） ─────────────────────────
+   把标题拆成单词，每个词裹一层 overflow:hidden 的遮罩，词在遮罩里从下方 115% 升起。
+   错峰靠 --i 控制，进场即"一字一字浮出来"。 */
+.u-split__w { display: inline-block; overflow: hidden; vertical-align: top; line-height: 1.04; }
+.u-split__i {
+  display: inline-block;
+  transform: translateY(115%);
+  transition: transform .92s var(--us-ease);
+  transition-delay: calc(var(--i, 0) * 38ms);
+  will-change: transform;
+}
+html.u-on [data-split].is-in .u-split__i { transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) {
+  .u-split__i { transform: none !important; transition: none !important; }
+}
+
+/* ───────────────────────── 钉住段 + 横向滚动（ScrollTrigger pin） ─────────────────────────
+   [data-pin] 外层撑高（如 300vh），内层 .u-pin__stick 用 position:sticky 钉满一屏；
+   JS 把滚动进度写成 --p(0..1)，横向带子 [data-hscroll-track] 据此平移。 */
+.u-pin { position: relative; }
+.u-pin__stick {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+.u-hscroll {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+.u-hscroll__track {
+  display: flex;
+  align-items: stretch;
+  gap: clamp(20px, 3vw, 48px);
+  padding: 0 clamp(20px, 6vw, 120px);
+  height: clamp(360px, 62vh, 640px);
+  will-change: transform;
+}
+.u-hscroll__head {
+  flex: none;
+  align-self: center;
+  width: clamp(260px, 30vw, 440px);
+  padding-right: clamp(20px, 3vw, 56px);
+}
+.u-pin__hint {
+  position: absolute;
+  left: 50%; bottom: 30px;
+  transform: translateX(-50%);
+  font-family: var(--us-mono);
+  font-size: 11px;
+  letter-spacing: .24em;
+  text-transform: uppercase;
+  color: var(--us-ink-3);
+}
+.u-pin__hint i {
+  display: inline-block;
+  width: 1px; height: 22px;
+  margin-left: 10px;
+  background: linear-gradient(to bottom, var(--us-ink-3), transparent);
+  vertical-align: middle;
+  animation: hp-drop 2s var(--us-ease) infinite;
+}
+
+/* ───────────────────────── 光标跟随图预览（unseen 列表悬停） ───────────────────────── */
+.u-cursorimg {
+  position: fixed;
+  top: 0; left: 0;
+  width: clamp(180px, 17vw, 260px);
+  height: clamp(240px, 23vw, 340px);
+  z-index: 58;
+  background-size: cover;
+  background-position: center;
+  pointer-events: none;
+  border-radius: 7px;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, .28);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+/* ───────────────────────── 漂浮视差（hubtown 的"活"） ─────────────────────────
+   元素随指针极轻漂移 + 缓慢正弦呼吸；data-float="幅度X 幅度Y"。 */
+[data-float] { will-change: transform; }
+
+/* ───────────────────────── 光标 view 态 ───────────────────────── */
+.u-cur__lab {
+  position: absolute;
+  left: 0; top: 0;
+  transform: translate(-50%, -50%);
+  font-family: var(--us-mono);
+  font-size: 10px;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--us-bg);
+  opacity: 0;
+  transition: opacity .25s var(--us-ease);
+  white-space: nowrap;
+}
+html.u-on body[data-cur="view"] .u-cur__ring {
+  width: 78px; height: 78px;
+  background: var(--us-cinnabar);
+  border-color: transparent;
+  mix-blend-mode: normal;
+}
+html.u-on body[data-cur="view"] .u-cur__dot { opacity: 0; }
+html.u-on body[data-cur="view"] .u-cur__lab { opacity: 1; }
+
+/* 钉住段降级：触屏 / 减少动态时不钉、不横向滚动，改成正常换行排布，绝不白占 300vh */
+@media (prefers-reduced-motion: reduce), (hover: none) {
+  .u-pin { height: auto !important; }
+  .u-pin__stick { position: static; height: auto; }
+  .u-hscroll { overflow: visible; }
+  .u-hscroll__track { flex-wrap: wrap; transform: none !important; height: auto; }
+  .u-pin__hint { display: none; }
+}
+
 /* 打印：把装饰全撤，只留文字 */
 @media print {
-  .u-scene, .u-grain, .u-cur, .u-top, .u-mobtab, .u-veil, .u-dust, .u-menu, .u-marq { display: none !important; }
+  .u-scene, .u-grain, .u-cur, .u-top, .u-mobtab, .u-veil, .u-dust, .u-menu, .u-marq,
+  .u-cursorimg, .u-split__w { display: none !important; }
   body.u-body { background: #fff; color: #000; }
 }

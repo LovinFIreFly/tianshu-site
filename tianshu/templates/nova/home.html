@@ -11,12 +11,10 @@
 <!-- ═══════════ 首屏：左巨字，右票根 ═══════════ -->
 <section class="hp-hero">
   <div class="hp-hero__in" data-sway="sm">
+    <span class="hp-float" data-float="40 26" aria-hidden="true"></span>
     <div>
       <p class="hp-hero__k" data-par="0.05">甜薯 · 藏在学校里的剧本杀小店</p>
-      <h1 class="hp-hero__t">
-        <span>把每一次</span>
-        <span><em>意外</em>都演出来</span>
-      </h1>
+      <h1 class="hp-hero__t" data-split="chars">把每一次<em>意外</em>都演出来</h1>
       <p class="hp-hero__d">
         挑本、拼车、到店开演，定金锁位，玩完由小客服原路退回。
         今天店里 {{ sessions|length if sessions else 0 }} 场演出、{{ dm_duty|length }} 位 DM 在店 —— 位子先到先得。
@@ -91,35 +89,38 @@
     {% endif %}
   </section>
 
-  <!-- ═══════════ 02 · 本期在演（海报墙） ═══════════ -->
+  <!-- ═══════════ 02 · 本期在演（横向滚动招牌墙，钉住段） ═══════════ -->
   {% if scripts %}
-  <section class="hp-sec" id="playing" data-n="02">
-    <div class="hp-head" data-d="0">
-      <h2 class="hp-head__t">本期<br><em>在演</em></h2>
-      <p class="hp-head__d">老板这个月挑出来的几本。鼠标放上去，它会立起来 —— 像从书架抽出一本。</p>
-    </div>
-
-    <div class="u-grid u-fold" data-fold>
-      {% for s in scripts %}
-      <a class="u-card" data-fold-item href="{{ url_for('public.script_detail', sid=s.id) }}"
-         data-cursor-label="看本" data-d="{{ loop.index0 * 90 }}">
-        <span class="u-card__fig">
-          {% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}" loading="lazy">{% else %}{% with s = s %}{% include '_script_ph.html' %}{% endwith %}{% endif %}
-        </span>
-        <span class="u-card__cap">
-          <span>
-            <span class="u-card__t">{{ s.title or '未命名' }}</span>
-            <span class="u-card__k">
-              {{ s.type or '盒装' }}
-              {% if s.players %} · {{ s.players }} 人{% endif %}
-              {% if s.dur %} · {{ s.dur }}{% endif %}
-              {% if rating.get(s.id|string) %} · {{ rating.get(s.id|string) }} 分{% endif %}
+  <section class="u-pin" data-pin style="height:300vh">
+    <div class="u-pin__stick">
+      <div class="u-hscroll">
+        <div class="u-hscroll__head">
+          <p class="u-kick">本期在演</p>
+          <h2 class="hp-head__t">把整面墙<br><em>横着翻</em></h2>
+          <p class="hp-head__d">滚轮往下，墙往左走 —— 一本本滑过去。鼠标放上去能看大图。</p>
+        </div>
+        <div class="u-hscroll__track" data-hscroll-track>
+          {% for s in scripts %}
+          <a class="u-hcard" href="{{ url_for('public.script_detail', sid=s.id) }}"
+             {% if s.img %}data-cursor-img="{{ s.img }}"{% endif %}>
+            <span class="u-hcard__fig">
+              {% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}" loading="lazy">{% else %}{% with s = s %}{% include '_script_ph.html' %}{% endwith %}{% endif %}
             </span>
-          </span>
-          <span class="u-card__a" aria-hidden="true">↘</span>
-        </span>
-      </a>
-      {% endfor %}
+            <span class="u-hcard__cap">
+              <span class="u-hcard__no">No. {{ '%03d'|format(s.id or 0) }}</span>
+              <span class="u-hcard__t">{{ s.title or '未命名' }}</span>
+              <span class="u-hcard__k">
+                {{ s.type or '盒装' }}
+                {% if s.players %} · {{ s.players }} 人{% endif %}
+                {% if s.dur %} · {{ s.dur }}{% endif %}
+                {% if rating.get(s.id|string) %} · {{ rating.get(s.id|string) }} 分{% endif %}
+              </span>
+            </span>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+      <span class="u-pin__hint">横向浏览 <i aria-hidden="true"></i></span>
     </div>
   </section>
   {% endif %}
@@ -252,7 +253,8 @@
 
     <div class="u-list">
       {% for s in newScripts %}
-      <a class="u-item" href="{{ url_for('public.script_detail', sid=s.id) }}" data-d="{{ loop.index0 * 46 }}">
+      <a class="u-item" href="{{ url_for('public.script_detail', sid=s.id) }}" data-d="{{ loop.index0 * 46 }}"
+         {% if s.img %}data-cursor-img="{{ s.img }}"{% endif %}>
         <span class="u-item__no">{{ '%02d'|format(loop.index) }}</span>
         <span>
           <span class="u-item__t">{{ s.title or '未命名' }}</span>
