@@ -56,16 +56,126 @@ _STUDIO_DIR = _os.path.abspath(_os.path.join(_os.path.dirname(_os.path.dirname(_
 @bp.get('/studio', strict_slashes=False)
 @bp.get('/studio/<path:filename>', strict_slashes=False)
 def studio_site(filename='index.html'):
-    """托管独立站 studio/ —— 四代从零重建的 STUDIO 深色作品集站（含剧本杀展示板块）。"""
+    """托管独立站 studio/ —— 四代从零重建的 STUDIO 深色作品集站（含剧本杀展示板块）。
+
+    纯静态文件托管，脱离 tianshu 模板体系；支持无扩展名漂亮链接
+    （/studio/scripts → scripts.html）。防目录穿越。
+    """
     # 没有尾斜杠时 301 到 /studio/，否则浏览器会把相对路径 css/js 解析到根目录导致 404
     if request.path.rstrip('/') == '/studio' and not request.path.endswith('/'):
         return redirect('/studio/')
     base = _STUDIO_DIR
     full = _os.path.abspath(_os.path.join(base, filename))
-    # 防目录穿越：只允许访问 studio/ 内的文件
-    if not full.startswith(base) or not _os.path.isfile(full):
+    if not full.startswith(base):                 # 目录穿越防护
         full = _os.path.join(base, 'index.html')
+        return send_file(full)
+    if not _os.path.isfile(full):
+        # 无扩展名漂亮链接：/studio/scripts → scripts.html
+        if not _os.path.splitext(filename)[1]:
+            cand = _os.path.abspath(_os.path.join(base, filename + '.html'))
+            if cand.startswith(base) and _os.path.isfile(cand):
+                full = cand
+        if not _os.path.isfile(full):             # 兜底回首页
+            full = _os.path.join(base, 'index.html')
     return send_file(full)
+
+
+# ══ 版式四：STUDIO 独立站用的只读数据接口（同源，给 studio/ 内的静态页面 fetch）══
+def _ser_script(s):
+    """把一个剧本行压成 STUDIO 内页要的轻量字段。"""
+    return {
+        'id': s.get('id'),
+        'title': s.get('title') or '未命名',
+        'type': s.get('type') or '盒装',
+        'players': s.get('players') or '',
+        'diff': s.get('diff') or 0,
+        'price': s.get('price') or 0,
+        'tags': list(s.get('tags') or []),
+        'desc': s.get('desc') or '',
+        'onSale': s.get('onSale') is not False,
+        'hot': bool(s.get('hot')),
+        'isNew': bool(s.get('isNew')),
+    }
+
+
+@bp.get('/studio/api/scripts')
+def studio_api_scripts():
+    """本子库列表（支持 q 关键词 / tag 标签 / diff 难度 筛选），只给在售的。"""
+    q = (request.args.get('q') or '').strip()
+    tag = (request.args.get('tag') or '').strip()
+    diff = (request.args.get('diff') or '').strip()
+    rows = []
+    for s in db.rows('scripts'):
+        if s.get('onSale') is False:
+            continue
+        if q and q not in str(s.get('title', '')) and q not in str(s.get('desc', '')):
+            continue
+        if tag and tag not in (s.get('tags') or []):
+            continue
+        if diff and str(s.get('diff')) != diff:
+            continue
+        rows.append(_ser_script(s))
+    _st = business.stats()['byScript']
+    for r in rows:
+        r['rating'] = (_st.get(str(r['id']), {}) or {}).get('rating') or 0
+    # 推介排序：热门 / 上新 优先
+    rows.sort(key=lambda r: (not r['hot'], not r['isNew'], r['id']))
+    return jsonify({'ok': True, 'scripts': rows})
+
+
+@bp.get('/studio/api/script')
+def studio_api_script():
+    """单个本子详情：基础信息 + DM 列表 + 可约场次数 + 评价数 + 下一个本（串流）。"""
+    sid = request.args.get('id') or request.args.get('sid')
+    sc = db.one('scripts', id=sid) if sid else None
+    if not sc:
+        return jsonify({'ok': False, 'msg': 'not found'}), 404
+    _pool = [x for x in db.rows('scripts') if x.get('onSale') is not False]
+    next_sc = None
+    for _i, _x in enumerate(_pool):
+        if str(_x.get('id')) == str(sid):
+            next_sc = _pool[(_i + 1) % len(_pool)] if len(_pool) > 1 else None
+            break
+    dms = [{'phone': d.get('phone'),
+            'name': (d.get('profile') or {}).get('nick') or d.get('username')}
+           for d in db.rows('users')
+           if business.has_role(d, 'dm') and (d.get('dmProfile') or {}).get('canOpen', True)]
+    ses = [s for s in db.rows('sessions') if str(s.get('sid')) == str(sid) and s.get('status') == 'open']
+    revs = business.reviews_of(sid, only_visible=True)
+    _st = business.stats()['byScript'].get(str(sid), {})
+    return jsonify({
+        'ok': True,
+        'script': _ser_script(sc),
+        'rating': _st.get('rating') or 0,
+        'ratingN': _st.get('n') or 0,
+        'dms': dms,
+        'sessionCount': len(ses),
+        'reviewCount': len(revs),
+        'next': _ser_script(next_sc) if next_sc else None,
+    })
+
+
+@bp.get('/studio/api/cars')
+def studio_api_cars():
+    """拼车大厅：谁开了车、还差几人、能上车还是排候补。"""
+    u = current_user()
+    cars = business.car_pool(u.get('phone') if u else '')
+    out = [{
+        'id': c.get('id'),
+        'title': c.get('title') or '',
+        'time': c.get('time') or '',
+        'day': c.get('day') or '',
+        'joined': c.get('joined') or 0,
+        'cap': c.get('cap') or 0,
+        'need': c.get('need') or 0,
+        'full': bool(c.get('full')),
+        'scriptPlayers': c.get('scriptPlayers') or '',
+        'scriptDiff': c.get('scriptDiff') or 0,
+        'tags': list(c.get('tags') or []),
+        'likeCount': c.get('likeCount') or 0,
+    } for c in cars]
+    return jsonify({'ok': True, 'cars': out})
+
 
 
 @bp.get('/theme')

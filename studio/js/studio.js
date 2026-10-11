@@ -135,7 +135,7 @@
     pos.forEach(function (p, i) {
       var card = document.createElement('a');
       card.className = 'sphere__card';
-      card.href = '/scripts';
+      card.href = '/studio/scripts';
       card.innerHTML = '<div class="img" style="position:absolute;inset:0;background:linear-gradient(135deg,' +
         SCRIPTS[i].g[0] + ',' + SCRIPTS[i].g[1] + ')"></div><b>' + SCRIPTS[i].t + '</b>';
       group.appendChild(card);
@@ -238,7 +238,7 @@
     SCRIPTS.forEach(function (p, i) {
       var a = document.createElement('a');
       a.className = 'card';
-      a.href = '/scripts';
+      a.href = '/studio/scripts';
       a.setAttribute('data-cat', p.c);
       a.setAttribute('data-tilt', '7');
       a.innerHTML =

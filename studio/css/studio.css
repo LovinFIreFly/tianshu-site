@@ -169,6 +169,68 @@ body.cursor-on .cursor-ring.is-hover{width:54px;height:54px;background:rgba(255,
   .about__grid{grid-template-columns:1fr;gap:50px}
   .about__main{max-width:100%}
 }
+
+/* ════════════════════════════════════════════════════════════════
+   内页（本子库 / 详情 / 拼车）—— 沿用同一套 STUDIO 设计语言
+   ════════════════════════════════════════════════════════════════ */
+.sub{padding-top:80px}
+.sub-hero{padding:120px 40px 56px}
+.sub-hero .h2{font-size:clamp(40px,7vw,88px)}
+.sub-hero .lead{margin-top:18px}
+.sub-tools{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:38px}
+.sub-search{flex:1;min-width:220px;font:inherit;font-size:15px;color:var(--fg);background:var(--card);
+  border:1px solid var(--line);border-radius:999px;padding:13px 22px;outline:none;transition:.3s var(--ease)}
+.sub-search::placeholder{color:var(--muted)}
+.sub-search:focus{border-color:var(--accent)}
+.empty{color:var(--muted);text-align:center;padding:60px 0}
+.is-cur{color:var(--accent)}
+.nav__links a.is-cur::after{transform:scaleX(1)}
+
+/* 本子卡片元信息 */
+.card__rating{position:absolute;top:22px;right:22px;z-index:2;font-size:12px;font-weight:700;
+  background:rgba(10,10,10,.6);padding:4px 10px;border-radius:999px;backdrop-filter:blur(4px)}
+.card__meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;color:var(--muted);font-size:13px}
+.card__meta b{color:var(--fg);font-weight:600;font-family:'Space Grotesk',sans-serif}
+.tag-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.tag-row span{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+.fade-in{animation:fadeIn .5s var(--ease) both}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* 详情页 */
+.detail{padding:140px 40px 80px}
+.detail__back{color:var(--muted);font-size:14px;margin-bottom:30px;display:inline-block}
+.detail__back:hover{color:var(--accent)}
+.detail__title{font-family:'Space Grotesk',sans-serif;font-size:clamp(40px,7vw,90px);font-weight:700;line-height:.96;letter-spacing:-.02em}
+.detail__meta{display:flex;gap:34px;flex-wrap:wrap;margin-top:30px}
+.detail__meta div span{display:block;color:var(--muted);font-size:13px;margin-bottom:5px}
+.detail__meta div b{font-family:'Space Grotesk',sans-serif;font-size:23px;font-weight:700}
+.detail__desc{max-width:62ch;margin-top:38px;font-size:clamp(16px,1.6vw,19px);line-height:1.7}
+.detail__sec{margin-top:58px}
+.detail__sec .kick{margin-bottom:18px}
+.dm-list{display:flex;gap:14px;flex-wrap:wrap}
+.dm-chip{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-size:14px}
+.dm-chip i{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block}
+.detail__cta{margin-top:58px;display:flex;gap:16px;flex-wrap:wrap}
+.detail__next{margin-top:70px;border-top:1px solid var(--line);padding-top:34px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+.detail__next a{font-family:'Space Grotesk',sans-serif;font-size:clamp(22px,3vw,30px);font-weight:700}
+.detail__next a:hover{color:var(--accent)}
+
+/* 拼车页 */
+.car-list{margin-top:40px;border-top:1px solid var(--line)}
+.car-row__cta{margin-left:auto}
+.car-row__cta a{font-size:13px;font-weight:600;color:var(--accent);border:1px solid var(--line);
+  border-radius:999px;padding:6px 14px;transition:.3s var(--ease);white-space:nowrap}
+.car-row__cta a:hover{border-color:var(--accent);background:rgba(255,107,53,.12)}
+.car-row__like{color:var(--accent);font-size:13px;font-weight:600;margin-left:14px}
+
+@media (max-width:768px){
+  .sub-hero{padding:100px 20px 40px}
+  .detail{padding:120px 20px 60px}
+  .detail__meta{gap:22px}
+  .car-row__cta{margin-left:0;width:100%}
+  .car-row__cta a{display:inline-block}
+}
+
 @media (max-width:768px){
   .nav{padding:0 20px}
   .nav__links{position:fixed;inset:80px 0 auto 0;flex-direction:column;gap:0;background:rgba(10,10,10,.97);
