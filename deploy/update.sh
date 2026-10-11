@@ -82,16 +82,21 @@ EOF
   systemctl daemon-reload
 fi
 
-# 先把 systemd 自己管的旧实例干净停掉 —— 这步最稳：
-# systemctl stop 是管理员显式动作，systemd 会 SIGTERM 自己的子进程（不会触发 Restart=always 的自动拉起），
-# 不会出现"我们手动 kill 了它、它又被拉起来抢端口"的竞态。
+# 先把 systemd 自己管的旧实例干净停掉。
+# 注意：Restart=always 在反复失败后可能已经排了 pending 的重启 job。
+# 光 stop 不一定能拦住它——stop 之后那个 job 可能又自动拉起一个实例来抢端口。
+# 所以 stop 之后必须再 reset-failed 把排队/计数的重启任务一并取消。
 systemctl stop tianshu 2>/dev/null || true
+systemctl reset-failed tianshu 2>/dev/null || true
 sleep 2
 
-# 现在 $PORT 上还蹲着的，就是**不属于 systemd** 的 stray（比如你手动 python app.py 调试时开的、
-# 或上次没退干净的实例）。STRICT_PORT 模式下 app.py 碰到它会直接 exit，所以必须清掉。
-# 正则同时覆盖 IPv4 的 127.0.0.1:8000 和 IPv6 的 :::8000 —— 老脚本只匹配 ":8000 "（带尾随空格），
-# 会漏掉 :::8000，于是 stray 一直占着端口、服务反复起不来（这次就是这原因）。
+# 现在把 $PORT 上所有可能蹲着的监听一次性清掉：
+#   · fuser 按端口直接杀进程，不依赖解析 ss 的 pid 字段（容器/Docker 转发场景下 ss 常常读不到 pid，
+#     于是只 kill 了 systemd 那个、漏掉了真正占端口的容器前台，新版就是这情况）。
+#   · 再用 ss/netstat 兜底补一遍（正则同时覆盖 IPv4 的 127.0.0.1:8000 和 IPv6 的 :::8000）。
+if command -v fuser >/dev/null 2>&1; then
+  fuser -k "${PORT}/tcp" 2>/dev/null || true
+fi
 _ports_re="[:.]${PORT}([[:space:]]|\$)"
 if command -v ss >/dev/null 2>&1; then
   _holders="$(ss -ltnp 2>/dev/null | grep -E "$_ports_re" | grep -oE 'pid=[0-9]+' | grep -oE '[0-9]+' | sort -u || true)"
@@ -101,12 +106,25 @@ else
   _holders=""
 fi
 for _holder in $_holders; do
-  echo "   ！$PORT 被非 systemd 进程 PID $_holder 占用，收掉它"
+  echo "   ！$PORT 被 PID $_holder 占用，收掉它"
   ps -p "$_holder" -o pid=,args= 2>/dev/null | sed 's/^/      /' || true
   kill "$_holder" 2>/dev/null || true
   sleep 1
   kill -9 "$_holder" 2>/dev/null || true
   echo "   已收掉 PID $_holder"
+done
+
+# 关键：确认端口真的空了再启动。否则 systemd 拉起的 app.py 在 STRICT_PORT 下会立刻 exit，
+# 又陷入「起不来 → 自动重启 → 又被占」的死循环。最多重试 10 次（每次清一遍再等 1s）。
+for _i in $(seq 1 10); do
+  _still="$(ss -ltn 2>/dev/null | grep -E "$_ports_re" || true)"
+  [ -z "$_still" ] && break
+  echo "   端口 $PORT 仍被占（第 $_i 次重试），再清一遍…"
+  fuser -k "${PORT}/tcp" 2>/dev/null || true
+  for _h in $(echo "$_still" | grep -oE 'pid=[0-9]+' | grep -oE '[0-9]+' | sort -u); do
+    kill -9 "$_h" 2>/dev/null || true
+  done
+  sleep 1
 done
 sleep 1
 
