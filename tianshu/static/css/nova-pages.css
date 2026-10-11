@@ -58,7 +58,7 @@ html[data-theme="dark"] .hp-sec[data-n]::before { -webkit-text-stroke-color: var
   max-width: var(--us-wrap);
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(0, 7.2fr) minmax(0, 4.8fr);
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
   gap: clamp(24px, 5vw, 72px);
   align-items: center;
   text-align: left;
@@ -988,4 +988,40 @@ html[data-theme="dark"] .hp-sec[data-n]::before { -webkit-text-stroke-color: var
 }
 @media (prefers-reduced-motion: reduce) {
   .hp-float { animation: none; }
+}
+
+/* ══════════════════════════ 首屏新版：左巨字 + 右 3D 球 + 砖红辉光 ══════════════════════════ */
+.hp-hero__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(58% 52% at 78% 44%,
+      color-mix(in srgb, var(--us-cinnabar) 20%, transparent),
+      transparent 70%);
+}
+.hp-hero__lead { min-width: 0; max-width: 42ch; }
+.hp-hero__ball {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* 球进首屏右栏：压一下高度，给左右都留出呼吸 */
+.hp-hero__ball .nx-sphere {
+  height: min(56vh, 540px);
+  margin: 0 auto;
+  max-width: 540px;
+  width: 100%;
+}
+.hp-hero__ball .nx-card { box-shadow: 0 18px 42px rgba(0,0,0,.45), 0 6px 14px rgba(0,0,0,.25); }
+
+@media (max-width: 860px) {
+  .hp-hero__in { grid-template-columns: 1fr; gap: 0; }
+  .hp-hero__ball { margin-top: var(--us-s4); }
+  .hp-hero__ball .nx-sphere { height: min(52vh, 420px); }
+  .hp-hero__bg { background: radial-gradient(62% 40% at 50% 28%, color-mix(in srgb, var(--us-cinnabar) 16%, transparent), transparent 72%); }
 }

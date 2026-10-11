@@ -44,7 +44,7 @@
   <script>
   (function(){
     function gc(n){var m=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return m?decodeURIComponent(m.pop()):'';}
-    var t=gc('theme')||'auto', el=document.documentElement;
+    var t=gc('theme')||'dark', el=document.documentElement;
     function dark(){
       if(t==='dark') return true;
       if(t==='light') return false;
@@ -86,6 +86,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="甜薯">
   <title>{% block title %}{{ settings.shopName }}{% endblock %}</title>
+  {# 字体：标题 Space Grotesk / 正文 Inter（拉丁）+ 中文回退。
+     走 Google 中国镜像 fonts.googleapis.cn，确保国内服务器/访客也能加载。 #}
+  <link rel="preconnect" href="https://fonts.googleapis.cn" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.cn" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.cn/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
   {# 只加载自己的两份样式表：不引 style.css / design2 / design3，
      彻底断掉二代令牌与观感的继承链（连变量名都换了一套 --us-*）。 #}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/nova.css', v=static_v('css/nova.css')) }}">
@@ -187,7 +192,7 @@
   <div class="u-wrap">
     <div class="u-foot__grid">
       <div>
-        <p class="u-foot__slogan">把每一次<br><em style="font-family:var(--us-serif);font-style:italic">意外</em>都演出来。</p>
+        <p class="u-foot__slogan">今晚，<em style="font-family:var(--us-serif);color:var(--us-cinnabar)">开一局</em>。</p>
       </div>
       <div>
         <h4>目录</h4>

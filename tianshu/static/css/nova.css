@@ -17,39 +17,39 @@
 
 /* ══════════════════════════ 0 · 令牌 ══════════════════════════ */
 :root {
-  /* 面：戏台纸面。七个参照站（cosmos/blueyard/unseen/hubtown…）的共同点：
+  /* 面：深灰黑。深色天然有高级感；浅米色+橙色太"AI 治愈系"了。
      一屏一色、纯平无渐变 —— 颜色的克制正是"高级"的第一来源。 */
-  --us-bg: #F3F0E9;
-  --us-bg-2: #FAF8F3;
-  --us-bg-3: #E9E4D8;
-  --us-paper: #FFFFFF;
+  --us-bg: #1a1a1a;
+  --us-bg-2: #1f1f1f;
+  --us-bg-3: #242424;
+  --us-paper: #242424;
 
   /* 墨：near-black，四档灰承担全部层级 */
-  --us-ink: #16130E;
-  --us-ink-2: #4E4A41;
-  --us-ink-3: #8A8478;
-  --us-ink-4: #B9B3A6;
+  --us-ink: #ffffff;
+  --us-ink-2: rgba(255,255,255,0.72);
+  --us-ink-3: rgba(255,255,255,0.5);
+  --us-ink-4: rgba(255,255,255,0.32);
 
   /* 线 */
-  --us-line: #DDD7C9;
-  --us-line-2: #C8C1B0;
+  --us-line: rgba(255,255,255,0.08);
+  --us-line-2: rgba(255,255,255,0.16);
 
-  /* 朱砂：全站唯一强调色。只落在"印章 / 编号 / 现在时"上，
-     用量越少越贵 —— 这是戏台海报的规矩，也是 unseen 只用一朵玫瑰底色的规矩。 */
-  --us-accent: #C2470E;
-  --us-accent-2: #A63B0C;
+  /* 砖红：全站唯一强调色（低饱和 #e8794a），用量压在 5% 以内。
+     只落在"印章 / 编号 / 现在时"上 —— 用量越少越贵。 */
+  --us-accent: #e8794a;
+  --us-accent-2: #c8643a;
   /* 朱砂印泥：印章 / 编号 / 现在时。比 --us-accent 更红一档，
      只在"该被记住的那一笔"上出现 —— 用量越少越贵（戏台海报的规矩）。 */
-  --us-cinnabar: #D23B1A;
+  --us-cinnabar: #e8794a;
 
   /* 语义色：只在状态里出现，不参与装饰 */
-  --us-ok: #2F6B45;
-  --us-warn: #9A6A12;
-  --us-stop: #A8341F;
+  --us-ok: #7FC79B;
+  --us-warn: #D8B063;
+  --us-stop: #E0796A;
 
   /* 字体：正文黑体系；display 用同一族的 heavy；
      楷体只做"情绪词"的竖点 —— 正体，绝不 italic（假斜体中文是排版大忌） */
-  --us-sans: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Hiragino Sans GB",
+  --us-sans: "Space Grotesk", "Inter", "PingFang SC", "Hiragino Sans GB",
              "Microsoft YaHei", "Noto Sans SC", sans-serif;
   --us-serif: "Kaiti SC", "STKaiti", KaiTi, "Songti SC", "SimSun", Georgia, serif;
   --us-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
@@ -58,8 +58,8 @@
   --us-wrap: 1360px;
   --us-gut: 34px;
   --us-read: 62ch;
-  --us-s1: 8px;  --us-s2: 16px; --us-s3: 24px; --us-s4: 34px;
-  --us-s5: 52px; --us-s6: 78px; --us-s7: 118px; --us-s8: 168px;
+  --us-s1: 8px;  --us-s2: 16px; --us-s3: 24px; --us-s4: 48px;
+  --us-s5: 72px; --us-s6: 96px; --us-s7: 120px; --us-s8: 168px;
 
   /* ══════════════════════════ 运动系统 ══════════════════════════
      这套站（hubtown / unseen / blueyard / cosmos）看着"灵动"，根因不是配色，
@@ -69,7 +69,8 @@
      所以这里把时值定成"半拍 / 一拍 / 两拍"三档，别处一律引用，不写字面量。 */
   --us-t2: .3s;      /* 半拍：光标、按下、悬停 —— 必须感觉"立刻" */
   --us-t: .5s;       /* 一拍：默认。hover / 展开 / 变色都用它 */
-  --us-t4: 1s;       /* 两拍：入场、揭示、转场 —— 需要"有仪式感"的地方 */
+  --us-t4: 1s;
+  --us-t3: .8s;       /* 两拍：入场、揭示、转场 —— 需要"有仪式感"的地方 */
 
   /* 曲线分工：进场收得快；退场对称；收尾回弹一下（有生命感） */
   --us-ease: cubic-bezier(.22, 1, .36, 1);
@@ -89,6 +90,8 @@
   --syp: 0;
 
   --us-round: 999px;
+  --us-r-card: 12px;
+  --us-r-tag: 4px;
 
   /* 旧名留别名：漏改的地方会落到同一档，不会悄悄回退成浏览器默认 */
   --us-t-fast: var(--us-t2);
@@ -102,19 +105,19 @@
 
 /* 深色：不是反相，是另一套面。墨白互换，纸变夜幕，朱砂提亮一档 */
 html[data-theme="dark"] {
-  --us-bg: #12100C;
-  --us-bg-2: #191712;
-  --us-bg-3: #221F18;
-  --us-paper: #1B1914;
-  --us-ink: #F0EDE4;
-  --us-ink-2: #B9B4A6;
-  --us-ink-3: #7E7970;
-  --us-ink-4: #55514A;
-  --us-line: #28251E;
-  --us-line-2: #3C382F;
-  --us-accent: #E05A1C;
-  --us-accent-2: #F07A3E;
-  --us-cinnabar: #FF6E4A;
+  --us-bg: #1a1a1a;
+  --us-bg-2: #1f1f1f;
+  --us-bg-3: #242424;
+  --us-paper: #242424;
+  --us-ink: #ffffff;
+  --us-ink-2: rgba(255,255,255,0.72);
+  --us-ink-3: rgba(255,255,255,0.5);
+  --us-ink-4: rgba(255,255,255,0.32);
+  --us-line: rgba(255,255,255,0.08);
+  --us-line-2: rgba(255,255,255,0.16);
+  --us-accent: #e8794a;
+  --us-accent-2: #c8643a;
+  --us-cinnabar: #e8794a;
   --us-ok: #7FC79B;
   --us-warn: #D8B063;
   --us-stop: #E0796A;
@@ -217,13 +220,13 @@ html:not(.u-on) .u-scene > canvas { display: none; }
   inset: -50%;
   z-index: 3;
   pointer-events: none;
-  opacity: .30;
-  mix-blend-mode: multiply;
+  opacity: .04;
+  mix-blend-mode: screen;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='.42'/%3E%3C/svg%3E");
   background-repeat: repeat;
   animation: us-grain 6s steps(6) infinite;
 }
-html[data-theme="dark"] .u-grain { mix-blend-mode: screen; opacity: .16; }
+html[data-theme="dark"] .u-grain { mix-blend-mode: screen; opacity: .04; }
 @keyframes us-grain {
   0%   { transform: translate(0, 0); }
   16%  { transform: translate(-3%, -2%); }
@@ -1713,15 +1716,15 @@ html.u-on .u-card:hover .u-card__fig { clip-path: inset(0 0 0 0); }
 html.u-on [data-d]:not([data-fold-item]),
 html.u-on [data-anim]:not([data-fold-item]) {
   opacity: 0;
-  transform: translateY(16px);
+  transform: translateY(40px);
 }
 html.u-on [data-d]:not([data-fold-item]).is-in,
 html.u-on [data-anim]:not([data-fold-item]).is-in {
   opacity: 1;
   transform: none;
   transition:
-    opacity var(--us-t4) var(--us-ease) var(--d, 0ms),
-    transform var(--us-t4) var(--us-ease) var(--d, 0ms);
+    opacity var(--us-t3) var(--us-ease) var(--d, 0ms),
+    transform var(--us-t3) var(--us-ease) var(--d, 0ms);
 }
 
 /* 整页入场：JS 接管时给 main 的内容一个轻微的落位 */

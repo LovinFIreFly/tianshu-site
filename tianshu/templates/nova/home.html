@@ -1,84 +1,59 @@
 {% extends 'layout.html' %}
-{# 首页 = 整站的一张封面。
-   首屏：巨字混排（衬线斜体 + 无衬线重音）、背后是波纹场、跟着指针做视角晃动。
-   往下：今日排期（发丝线数据表）→ 本期在演（海报墙，hover 视角折叠）
-        → 老板推荐（7/5 破格）→ 剧友短评（杂志体）→ 拼车局（清单）
-        → 新本首车（编号索引）→ 巨型题词收束。 #}
-{% block title %}{{ settings.shopName }} · 把每一次意外演出来{% endblock %}
+{# 首页 = 一屏只讲一件事：我是谁 + 两个入口。其余（本子 / 拼车 / 排期）都放内页。 #}
+{% block title %}{{ settings.shopName }} · 挑本、拼车、开演{% endblock %}
 
 {% block body %}
 
-<!-- ═══════════ 首屏：左巨字，右票根 ═══════════ -->
+<!-- ═══════════ 首屏：左巨字 + 右 3D 本本球 + 身后砖红辉光 ═══════════ -->
 <section class="hp-hero">
+  <div class="hp-hero__bg" aria-hidden="true"></div>
   <div class="hp-hero__in" data-sway="sm">
-    <span class="hp-float" data-float="40 26" aria-hidden="true"></span>
-    <div>
-      <p class="hp-hero__k" data-par="0.05">甜薯 · 藏在学校里的剧本杀小店</p>
-      <h1 class="hp-hero__t" data-split="chars">把每一次<em>意外</em>都演出来</h1>
-      <p class="hp-hero__d">
-        挑本、拼车、到店开演，定金锁位，玩完由小客服原路退回。
-        今天店里 {{ sessions|length if sessions else 0 }} 场演出、{{ dm_duty|length }} 位 DM 在店 —— 位子先到先得。
-      </p>
-      <div class="hp-hero__act">
-        <a class="u-pill" href="{{ url_for('public.scripts') }}" data-magnet="8">
+    <div class="hp-hero__lead">
+      <p class="hp-hero__k" data-d="0">学校边上的剧本杀店</p>
+      <h1 class="hp-hero__t" data-split="chars" data-d="0">{{ settings.shopName }}</h1>
+      <p class="hp-hero__d" data-d="120">挑本、拼车、到店开演。定金锁位，玩完原路退。</p>
+      <div class="hp-hero__act" data-d="220">
+        <a class="u-pill u-pill--ink" href="{{ url_for('public.scripts') }}" data-magnet="8">
           看看有哪些本 <span class="u-pill__a" aria-hidden="true">↘</span>
         </a>
         <a class="u-pill u-pill--ghost" href="{{ url_for('public.car') }}">直接上车拼一局</a>
       </div>
     </div>
-    {% include '_tickets.html' %}
-  </div>
 
-  <div class="hp-hero__foot">
-    <span class="hp-hero__scroll"><i aria-hidden="true"></i> 往下翻</span>
-    <span class="hp-hero__nums">
-      <span><b><span data-to="{{ served }}">0</span></b> 位玩过</span>
-      <span><b><span data-to="{{ stat.plays }}">0</span></b> 场演出</span>
-      <span><b><span data-to="{{ dm_duty|length }}">0</span></b> 位 DM 今天在店</span>
-    </span>
+    <div class="hp-hero__ball" data-d="80">
+      <div class="nx-sphere" data-sphere>
+        <div class="nx-sphere__group">
+          {% set _grad = [('#e07a5f','#3d405b'),('#3d405b','#81b29a'),('#81b29a','#f2cc8f'),('#f2cc8f','#b56576'),('#6d597a','#468faf'),('#468faf','#2a9d8f'),('#b56576','#e07a5f'),('#2a9d8f','#3d405b')] %}
+          {% set _sphere = sphere_scripts if sphere_scripts else scripts %}
+          {% if _sphere %}
+          {% for s in _sphere[:8] %}
+          <a class="nx-card" href="{{ url_for('public.script_detail', sid=s.id) }}"
+             style="--c1:{{ _grad[loop.index0 % 8][0] }};--c2:{{ _grad[loop.index0 % 8][1] }}">
+            <span class="nx-card__media" style="background:linear-gradient(135deg, var(--c1), var(--c2))"></span>
+            <span class="nx-card__no">No. {{ '%03d'|format(s.id or 0) }}</span>
+            <span class="nx-card__t">{{ s.title or '未命名' }}</span>
+            <span class="nx-card__k">{{ s.type or '盒装' }}{% if s.players %} · {{ s.players }} 人{% endif %}</span>
+          </a>
+          {% endfor %}
+          {% else %}
+          {% for i in range(8) %}
+          <a class="nx-card" href="{{ url_for('public.scripts') }}"
+             style="--c1:{{ _grad[i % 8][0] }};--c2:{{ _grad[i % 8][1] }}">
+            <span class="nx-card__media" style="background:linear-gradient(135deg, var(--c1), var(--c2))"></span>
+            <span class="nx-card__no">No. {{ '%03d'|format(i + 1) }}</span>
+            <span class="nx-card__t">待定本子</span>
+            <span class="nx-card__k">盒装 · 6 人</span>
+          </a>
+          {% endfor %}
+          {% endif %}
+        </div>
+        <p class="nx-sphere__hint">拖拽旋转 · 松手惯性滑行</p>
+      </div>
+    </div>
   </div>
 </section>
 
-<!-- ═══════════ 本本宇宙：3D 线框球形画廊（逆向文档第九章 · Unseen 首页） ═══════════ -->
-<section class="nx-uni" id="universe">
-  <div class="u-wrap">
-    <div class="hp-head" data-d="0">
-      <p class="u-kick">本本宇宙</p>
-      <h2 class="hp-head__t">转一转<br><em>今天在演的</em></h2>
-      <p class="hp-head__d">按住拖拽，看今天店里挂着哪些本子。松手它自己慢慢转——越靠前的越清楚，背面的会糊掉。</p>
-    </div>
-  </div>
-  <div class="nx-sphere" data-sphere>
-    <div class="nx-sphere__group">
-      {% set _grad = [('#e07a5f','#3d405b'),('#3d405b','#81b29a'),('#81b29a','#f2cc8f'),('#f2cc8f','#b56576'),('#6d597a','#468faf'),('#468faf','#2a9d8f'),('#b56576','#e07a5f'),('#2a9d8f','#3d405b')] %}
-      {% set _sphere = sphere_scripts if sphere_scripts else scripts %}
-      {% if _sphere %}
-      {% for s in _sphere[:8] %}
-      <a class="nx-card" href="{{ url_for('public.script_detail', sid=s.id) }}"
-         style="--c1:{{ _grad[loop.index0 % 8][0] }};--c2:{{ _grad[loop.index0 % 8][1] }}">
-        <span class="nx-card__media" style="background:linear-gradient(135deg, var(--c1), var(--c2))"></span>
-        <span class="nx-card__no">No. {{ '%03d'|format(s.id or 0) }}</span>
-        <span class="nx-card__t">{{ s.title or '未命名' }}</span>
-        <span class="nx-card__k">{{ s.type or '盒装' }}{% if s.players %} · {{ s.players }} 人{% endif %}</span>
-      </a>
-      {% endfor %}
-      {% else %}
-      {% for i in range(8) %}
-      <a class="nx-card" href="{{ url_for('public.scripts') }}"
-         style="--c1:{{ _grad[i % 8][0] }};--c2:{{ _grad[i % 8][1] }}">
-        <span class="nx-card__media" style="background:linear-gradient(135deg, var(--c1), var(--c2))"></span>
-        <span class="nx-card__no">No. {{ '%03d'|format(i + 1) }}</span>
-        <span class="nx-card__t">待定本子</span>
-        <span class="nx-card__k">盒装 · 6 人</span>
-      </a>
-      {% endfor %}
-      {% endif %}
-    </div>
-    <p class="nx-sphere__hint">拖拽旋转 · 松手惯性滑行</p>
-  </div>
-</section>
-
-<!-- ═══════════ 跑马灯带（cosmos 招牌：横滚 + 随滚动变速） ═══════════ -->
+<!-- ═══════════ 标签带：只做氛围分隔，不放内容 ═══════════ -->
 <div class="u-marq" data-marq aria-hidden="true">
   <div class="u-marq__track">
     <span>本格推理<span class="u-marq__dot"></span>情感本<span class="u-marq__dot"></span>欢乐本<span class="u-marq__dot"></span>硬核还原<span class="u-marq__dot"></span>新手友好<span class="u-marq__dot"></span>定金锁位<span class="u-marq__dot"></span>玩完原路退<span class="u-marq__dot"></span></span>
@@ -86,242 +61,6 @@
   </div>
 </div>
 
-<div class="u-wrap">
-
-  <!-- ═══════════ 01 · 今日排期 ═══════════ -->
-  <section class="hp-sec" id="today" data-n="01">
-    <div class="hp-head" data-d="0">
-      <h2 class="hp-head__t">今天店里<br><em>在演什么</em></h2>
-      <p class="hp-head__d">
-        {% if sessions %}一共 {{ sessions|length }} 场，位次先到先得。点一场直接锁位，定金到店玩完退回。
-        {% else %}今天还没排场次。想开一局的话，去拼车局挂个车，凑齐人就发车。{% endif %}
-      </p>
-    </div>
-
-    {% if sessions %}
-    <div class="u-ledger" style="--cols: 90px minmax(0,1fr) 160px 120px 110px">
-      <div class="u-ledger__hd">
-        <span>时间</span><span>剧本</span><span>DM</span><span>房间</span><span>位次</span>
-      </div>
-      {% for s in sessions %}
-      <div class="u-ledger__row" data-d="{{ loop.index0 * 50 }}">
-        <span class="u-mono">{{ s.time or '—' }}</span>
-        <span class="u-h4">{{ s.title or '待定' }}</span>
-        <span class="u-dim">{{ s.dmName or '待安排' }}</span>
-        <span class="u-dim u-mono">{{ s.roomId or '—' }}</span>
-        <span>
-          {% if s.left and s.left > 0 %}
-            <span class="u-st u-st--on">{{ s.joined or 0 }}/{{ s.cap or 8 }} 还差 {{ s.left }}</span>
-          {% else %}
-            <span class="u-st u-st--warn">已满 · 可排候补</span>
-          {% endif %}
-        </span>
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="u-blank" data-d="0">
-      <p class="u-blank__k">今天还没开演</p>
-      <p class="u-blank__d">排期是空的。去拼车局挂个车，或者直接挑一本自己组局。</p>
-      <a class="u-pill" href="{{ url_for('public.car') }}" style="margin-top:8px">去拼车局看看 <span class="u-pill__a" aria-hidden="true">↘</span></a>
-    </div>
-    {% endif %}
-  </section>
-
-  <!-- ═══════════ 02 · 本期在演（横向滚动招牌墙，钉住段） ═══════════ -->
-  {% if scripts %}
-  <section class="u-pin" data-pin style="height:300vh">
-    <div class="u-pin__stick">
-      <div class="u-hscroll">
-        <div class="u-hscroll__head">
-          <p class="u-kick">本期在演</p>
-          <h2 class="hp-head__t">把整面墙<br><em>横着翻</em></h2>
-          <p class="hp-head__d">滚轮往下，墙往左走 —— 一本本滑过去。鼠标放上去能看大图。</p>
-        </div>
-        <div class="u-hscroll__track" data-hscroll-track>
-          {% for s in scripts %}
-          <a class="u-hcard" href="{{ url_for('public.script_detail', sid=s.id) }}"
-             {% if s.img %}data-cursor-img="{{ s.img }}"{% endif %}>
-            <span class="u-hcard__fig" data-tilt="9">
-              {% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}" loading="lazy">{% else %}{% with s = s %}{% include '_script_ph.html' %}{% endwith %}{% endif %}
-            </span>
-            <span class="u-hcard__cap">
-              <span class="u-hcard__no">No. {{ '%03d'|format(s.id or 0) }}</span>
-              <span class="u-hcard__t">{{ s.title or '未命名' }}</span>
-              <span class="u-hcard__k">
-                {{ s.type or '盒装' }}
-                {% if s.players %} · {{ s.players }} 人{% endif %}
-                {% if s.dur %} · {{ s.dur }}{% endif %}
-                {% if rating.get(s.id|string) %} · {{ rating.get(s.id|string) }} 分{% endif %}
-              </span>
-            </span>
-          </a>
-          {% endfor %}
-        </div>
-      </div>
-      <span class="u-pin__hint">横向浏览 <i aria-hidden="true"></i></span>
-    </div>
-  </section>
-  {% endif %}
-
-  {# ── 跑马灯：不是装饰，是"分界"。把上面那批本子和下面那本推荐隔开，
-       顺便把一整晚的流程念一遍（unseen 每页都有一条这样的横流字）。 ── #}
-  {% set _words = [('01', '挑一个本子', 0), ('02', '凑一车人', 0), ('03', '到店开演', 1),
-                   ('04', '定金锁位', 0), ('05', '玩完就退', 0)] %}
-  <div class="u-marq" aria-hidden="true">
-    <div class="u-marq__bd">
-      {% for _c in range(2) %}
-      <div class="u-marq__row">
-        {% for _no, _w, _it in _words %}
-        <span class="u-marq__i"><s>{{ _no }}</s>{% if _it %}<em>{{ _w }}</em>{% else %}{{ _w }}{% endif %}</span>
-        {% endfor %}
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-
-  <!-- ═══════════ 03 · 老板推荐（7/5 破格） ═══════════ -->
-  {% if boss_pick %}
-  <section class="hp-sec" id="pick" data-n="03">
-    <div class="hp-head" data-d="0">
-      <h2 class="hp-head__t">老板<br><em>押一本</em></h2>
-      <p class="hp-head__d">如果只挑一本，今年就推它。</p>
-    </div>
-
-    <div class="hp-spot" data-d="60">
-      <a class="hp-spot__fig" href="{{ url_for('public.script_detail', sid=boss_pick.id) }}" data-cursor-label="看本" data-tilt="8">
-        {% if boss_pick.img %}<img src="{{ boss_pick.img }}" alt="{{ boss_pick.title }}" loading="lazy">
-        {% else %}{% with s = boss_pick %}{% include '_script_ph.html' %}{% endwith %}{% endif %}
-      </a>
-      <div class="hp-spot__bd">
-        <p class="u-kick">No. {{ '%03d'|format(boss_pick.id or 0) }}</p>
-        <h3 class="hp-spot__t">{{ boss_pick.title or '未命名' }}</h3>
-        <p class="hp-spot__x">{{ boss_pick.desc or '门店还没写简介 —— 但你来了就知道值。' }}</p>
-        <div class="hp-spot__m">
-          <div><b>¥{{ boss_pick.price or '—' }}</b><s>每位</s></div>
-          <div><b>{{ boss_pick.players or '—' }}</b><s>人数</s></div>
-          <div><b>{{ boss_pick.dur or '待定' }}</b><s>时长</s></div>
-          <div><b>{{ '★' * ((boss_pick.diff or 3)|int) }}</b><s>难度</s></div>
-        </div>
-        <div style="margin-top:var(--us-s2)">
-          <a class="u-pill u-pill--ink" href="{{ url_for('public.script_detail', sid=boss_pick.id) }}" data-magnet="6">
-            看这本的详情 <span class="u-pill__a" aria-hidden="true">↘</span>
-          </a>
-        </div>
-      </div>
-    </div>
-  </section>
-  {% endif %}
-
-  <!-- ═══════════ 04 · 剧友短评（杂志体） ═══════════ -->
-  {% if reviews %}
-  <section class="hp-sec" id="voices" data-n="04">
-    <div class="hp-head" data-d="0">
-      <h2 class="hp-head__t">他们玩完<br><em>说了什么</em></h2>
-      <p class="hp-head__d">不修图的评价，好的坏的都留着。</p>
-    </div>
-
-    <div class="hp-note">
-      <div data-d="40">
-        <p class="u-art__lede">
-          {{ reviews[0].text }}
-        </p>
-        <div class="u-figs" style="margin-top:var(--us-s4)">
-          <div class="u-fig"><b>{{ stat.plays }}</b><s>累计场次</s></div>
-          <div class="u-fig"><b>{{ served }}</b><s>玩过的人</s></div>
-          <div class="u-fig"><b>{{ dm_duty|length }}</b><s>今天在店 DM</s></div>
-        </div>
-      </div>
-
-      <div class="hp-quotes" data-d="120">
-        {% for r in reviews %}
-        {% if loop.index0 > 0 %}
-        <div class="hp-quote">
-          <p class="hp-quote__x">{{ r.text }}</p>
-          <p class="hp-quote__k">
-            {% if r.avatar and r.avatar.startswith('/img/') %}<img src="{{ r.avatar }}" alt="">{% endif %}
-            <span>{{ r.nick }}{% if r.title %} · 玩的《{{ r.title }}》{% endif %}</span>
-            <span class="hp-quote__s">{% for _ in range(r.stars|int) %}★{% endfor %}</span>
-          </p>
-        </div>
-        {% endif %}
-        {% endfor %}
-      </div>
-    </div>
-  </section>
-  {% endif %}
-
-  <!-- ═══════════ 05 · 拼车局 ═══════════ -->
-  {% if cars %}
-  <section class="hp-sec" id="pool" data-n="05">
-    <div class="hp-head" data-d="0">
-      <h2 class="hp-head__t">差几个人<br><em>就能发车</em></h2>
-      <p class="hp-head__d">下面这些是别人开好的车。人够了直接开演，不用你自己凑。</p>
-    </div>
-
-    <div class="u-ledger" style="--cols: 84px minmax(0,1fr) 200px 120px">
-      <div class="u-ledger__hd"><span>时间</span><span>剧本 / 车主</span><span>座位</span><span>状态</span></div>
-      {% for c in cars %}
-      <div class="u-ledger__row" data-d="{{ loop.index0 * 60 }}">
-        <span class="hp-cars__t">{{ c.time or '—' }}<br><span class="u-dim u-mono" style="font-size:11px">{{ c.day or '' }}</span></span>
-        <span>
-          <a href="{{ url_for('public.car_detail', cid=c.id) }}" class="u-tlink" data-scribble>{{ c.title or '拼车' }}</a>
-          <span class="u-dim" style="display:block;font-size:12.5px;margin-top:3px">{{ c.owner }} 开的车 · 最少 {{ c.min or 4 }} 人</span>
-        </span>
-        <span class="hp-cars" style="grid-template-columns:92px auto">
-          <span class="cr-seat"><i style="width:{{ ((c.joined or 0) * 100 / (c.cap or 8))|round|int }}%"></i></span>
-          <span class="u-mono u-dim" style="font-size:12.5px">{{ c.joined or 0 }}/{{ c.cap or 8 }}</span>
-        </span>
-        <span>
-          {% if c.full %}<span class="u-st u-st--off">已满</span>
-          {% else %}<span class="u-st u-st--on">还差 {{ c.need or 0 }} 人</span>{% endif %}
-        </span>
-      </div>
-      {% endfor %}
-    </div>
-  </section>
-  {% endif %}
-
-  <!-- ═══════════ 06 · 新本首车（编号索引） ═══════════ -->
-  {% if newScripts %}
-  <section class="hp-sec" id="fresh" data-n="06">
-    <div class="hp-head" data-d="0">
-      <h2 class="hp-head__t">刚上架的<br><em>新本</em></h2>
-      <p class="hp-head__d">新本往往最容易凑到人 —— 因为大家都还没玩过。</p>
-    </div>
-
-    <div class="u-list">
-      {% for s in newScripts %}
-      <a class="u-item" href="{{ url_for('public.script_detail', sid=s.id) }}" data-d="{{ loop.index0 * 46 }}"
-         {% if s.img %}data-cursor-img="{{ s.img }}"{% endif %}>
-        <span class="u-item__no">{{ '%02d'|format(loop.index) }}</span>
-        <span>
-          <span class="u-item__t">{{ s.title or '未命名' }}</span>
-          <span class="u-item__x" style="display:block;margin-top:3px">
-            {{ s.type or '盒装' }}{% if s.players %} · {{ s.players }} 人{% endif %}{% if s.dur %} · {{ s.dur }}{% endif %}
-            {% if s.tags %} · {{ s.tags|join(' / ') }}{% endif %}
-          </span>
-        </span>
-        <span class="u-item__x u-mono">¥{{ s.price or '—' }}</span>
-        <span class="u-item__a" aria-hidden="true">↘</span>
-      </a>
-      {% endfor %}
-    </div>
-  </section>
-  {% endif %}
-
-  <!-- ═══════════ 收束 ═══════════ -->
-  <section class="hp-coda">
-    <h2 class="hp-coda__q" data-d="0">一晚上<br><em>换一次人生</em></h2>
-    <div class="hp-coda__act" data-d="120">
-      <a class="u-pill u-pill--ink" href="{{ url_for('public.scripts') }}" data-magnet="8">
-        挑一本 <span class="u-pill__a" aria-hidden="true">↘</span>
-      </a>
-      <a class="u-pill u-pill--ghost" href="/faq">第一次来？看这里</a>
-    </div>
-  </section>
-
-</div>
 {% endblock %}
 
 {% block extra_css %}
