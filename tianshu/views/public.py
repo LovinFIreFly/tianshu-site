@@ -5,6 +5,7 @@
 （这几个页面是客人第一眼看到的，改样式主要改 templates/ 里对应的 html）
 """
 import os
+import time as _time
 
 from flask import (Blueprint, flash, jsonify, make_response, redirect,
                    render_template, request, send_file, session, url_for)
@@ -80,9 +81,9 @@ def studio_site(filename='index.html'):
     return send_file(full)
 
 
-# ══ 版式四：STUDIO 独立站用的只读数据接口（同源，给 studio/ 内的静态页面 fetch）══
+# ══ 版式四：STUDIO 独立站数据接口 —— 全部读写天枢共享库 db（与二代/三代同一数据库，数据互通）══
 def _ser_script(s):
-    """把一个剧本行压成 STUDIO 内页要的轻量字段。"""
+    """把一个本子压成 STUDIO 内页要的轻量字段。"""
     return {
         'id': s.get('id'),
         'title': s.get('title') or '未命名',
@@ -95,12 +96,13 @@ def _ser_script(s):
         'onSale': s.get('onSale') is not False,
         'hot': bool(s.get('hot')),
         'isNew': bool(s.get('isNew')),
+        'dms': list(s.get('dms') or []),
     }
 
 
 @bp.get('/studio/api/scripts')
 def studio_api_scripts():
-    """本子库列表（支持 q 关键词 / tag 标签 / diff 难度 筛选），只给在售的。"""
+    """本子库列表（支持 q 关键词 / tag 标签 / diff 难度 筛选），只给在售的。数据来自共享库 db。"""
     q = (request.args.get('q') or '').strip()
     tag = (request.args.get('tag') or '').strip()
     diff = (request.args.get('diff') or '').strip()
@@ -125,7 +127,7 @@ def studio_api_scripts():
 
 @bp.get('/studio/api/script')
 def studio_api_script():
-    """单个本子详情：基础信息 + DM 列表 + 可约场次数 + 评价数 + 下一个本（串流）。"""
+    """单个本子详情：基础信息 + DM 列表 + 可约场次数 + 评价数 + 下一个本（串流）。数据来自共享库 db。"""
     sid = request.args.get('id') or request.args.get('sid')
     sc = db.one('scripts', id=sid) if sid else None
     if not sc:
@@ -157,7 +159,7 @@ def studio_api_script():
 
 @bp.get('/studio/api/cars')
 def studio_api_cars():
-    """拼车大厅：谁开了车、还差几人、能上车还是排候补。"""
+    """拼车大厅：谁开了车、还差几人、能上车还是排候补。数据来自共享库 db。"""
     u = current_user()
     cars = business.car_pool(u.get('phone') if u else '')
     out = [{
@@ -169,12 +171,77 @@ def studio_api_cars():
         'cap': c.get('cap') or 0,
         'need': c.get('need') or 0,
         'full': bool(c.get('full')),
+        'owner': c.get('owner') or '',
         'scriptPlayers': c.get('scriptPlayers') or '',
         'scriptDiff': c.get('scriptDiff') or 0,
         'tags': list(c.get('tags') or []),
-        'likeCount': c.get('likeCount') or 0,
     } for c in cars]
     return jsonify({'ok': True, 'cars': out})
+
+
+@bp.post('/studio/api/book')
+def studio_api_book():
+    """约场下单：把一局预约写进共享库 db（与全站同一数据库，数据互通）。"""
+    try:
+        body = request.get_json(force=True, silent=True) or {}
+    except Exception:
+        body = {}
+    sid = body.get('sid') or request.args.get('id') or ''
+    name = (body.get('name') or '').strip()
+    phone = (body.get('phone') or '').strip()
+    day = (body.get('day') or '').strip()
+    t = (body.get('time') or '').strip()
+    players = (body.get('players') or '').strip()
+    dm = (body.get('dm') or '').strip()
+    note = (body.get('note') or '').strip()
+    if not sid or not name or not phone:
+        return jsonify({'ok': False, 'msg': '请填好本子、称呼和手机号'}), 400
+    sc = db.one('scripts', id=sid)
+    if not sc:
+        return jsonify({'ok': False, 'msg': '本子不存在'}), 404
+    rec = {
+        'id': 'sb' + str(int(_time.time() * 1000)),
+        'sid': sid, 'title': sc.get('title'),
+        'name': name, 'phone': phone, 'day': day, 'time': t,
+        'players': players, 'dm': dm, 'note': note,
+        'at': _time.strftime('%Y-%m-%d %H:%M:%S'),
+    }
+    db.update('studio_bookings', lambda rows: rows + [rec])
+    return jsonify({'ok': True, 'booking': rec})
+
+
+@bp.post('/studio/api/car/join')
+def studio_api_car_join():
+    """拼车上车：把意向写进共享库 db（studio_joins 集合，与全站同一数据库）。
+
+    说明：天枢的拼车池(car_pool)底层是 bookings 里 carNew 记录 + 真实上车 mate，
+    需要登录态才能落真实订单；STUDIO 是公开浏览站，这里把上车意向落进共享库的
+    studio_joins 集合（所有人同一库），并据此给四代页面算最新人数。
+    """
+    try:
+        body = request.get_json(force=True, silent=True) or {}
+    except Exception:
+        body = {}
+    cid = body.get('cid') or request.args.get('id') or ''
+    name = (body.get('name') or '').strip() or '匿名玩家'
+    if not cid:
+        return jsonify({'ok': False, 'msg': '缺少拼车 id'}), 400
+    cars = business.car_pool('')
+    car = next((c for c in cars if str(c.get('id')) == str(cid)), None)
+    if not car:
+        return jsonify({'ok': False, 'msg': '这局拼车不在了'}), 404
+    db.update('studio_joins', lambda rows: rows + [{'cid': cid, 'name': name,
+                                                    'at': _time.strftime('%Y-%m-%d %H:%M:%S')}])
+    joins_for = [j for j in db.rows('studio_joins') if str(j.get('cid')) == str(cid)]
+    joined = (car.get('joined') or 0) + len(joins_for)
+    cap = car.get('cap') or 0
+    need = max(0, cap - joined)
+    full = joined >= cap
+    try:
+        business.invalidate('car_pool')
+    except Exception:
+        pass
+    return jsonify({'ok': True, 'joined': joined, 'cap': cap, 'need': need, 'full': full})
 
 
 

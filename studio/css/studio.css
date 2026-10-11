@@ -217,11 +217,35 @@ body.cursor-on .cursor-ring.is-hover{width:54px;height:54px;background:rgba(255,
 
 /* 拼车页 */
 .car-list{margin-top:40px;border-top:1px solid var(--line)}
-.car-row__cta{margin-left:auto}
-.car-row__cta a{font-size:13px;font-weight:600;color:var(--accent);border:1px solid var(--line);
-  border-radius:999px;padding:6px 14px;transition:.3s var(--ease);white-space:nowrap}
-.car-row__cta a:hover{border-color:var(--accent);background:rgba(255,107,53,.12)}
+.car-row__cta{margin-left:14px;flex:none;font:inherit;font-size:13px;font-weight:600;color:var(--accent);
+  background:transparent;border:1px solid var(--accent);border-radius:999px;padding:7px 16px;cursor:pointer;
+  transition:.3s var(--ease);white-space:nowrap}
+.car-row__cta:hover:not(:disabled){background:rgba(255,107,53,.14)}
+.car-row__cta.is-done{color:#0a0a0a;background:var(--accent);border-color:var(--accent)}
+.car-row__cta.is-off,.car-row__cta:disabled{opacity:.5;cursor:not-allowed;border-color:var(--line);color:var(--muted)}
 .car-row__like{color:var(--accent);font-size:13px;font-weight:600;margin-left:14px}
+
+/* ══ 约场下单（第四章 表单页规范：大标题半屏左对齐 / 底部边框输入框 / 橙色 focus / 胶囊提交）══ */
+.book{padding:var(--pad) 40px;border-top:1px solid var(--line)}
+.book__wrap{max-width:780px}
+.book .h2{font-size:clamp(34px,5vw,64px)}
+.book__form{margin-top:46px;display:flex;flex-direction:column;gap:30px}
+.book__row{display:flex;gap:24px;flex-wrap:wrap}
+.book__row .field{flex:1;min-width:180px}
+.field{display:flex;flex-direction:column;gap:10px}
+.field>span{font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+.field input,.field select,.field textarea{font:inherit;font-size:16px;color:var(--fg);background:transparent;
+  border:none;border-bottom:1px solid var(--line);padding:12px 2px;outline:none;border-radius:0;width:100%;
+  transition:border-color .3s var(--ease)}
+.field input::placeholder,.field textarea::placeholder{color:rgba(255,255,255,.32)}
+.field input:focus,.field select:focus,.field textarea:focus{border-bottom-color:var(--accent)}
+.field select{appearance:none;cursor:pointer}
+.field select option{background:#161616;color:var(--fg)}
+.field textarea{resize:vertical;min-height:58px}
+.book__submit{align-self:flex-start;margin-top:4px}
+.book__ok{margin-top:16px;font-size:14px;line-height:1.5;padding:14px 18px;border-radius:8px;border:1px solid var(--line)}
+.book__ok.is-ok{color:#9be8b0;border-color:rgba(155,232,176,.4);background:rgba(155,232,176,.07)}
+.book__ok.is-err{color:#ff9c8a;border-color:rgba(255,156,138,.4);background:rgba(255,156,138,.07)}
 
 @media (max-width:768px){
   .sub-hero{padding:100px 20px 40px}

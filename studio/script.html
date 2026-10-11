@@ -31,6 +31,56 @@
   <section class="detail">
     <div class="wrap" id="detail"><!-- JS 注入 --></div>
   </section>
+
+  <!-- ══ 约场下单（第四章表单页规范：大标题占半屏、左对齐、底部边框输入框、橙色 focus、胶囊提交）══ -->
+  <section class="book" id="book">
+    <div class="wrap book__wrap">
+      <p class="kick" data-reveal>约一场 / Book a seat</p>
+      <h2 class="h2" data-reveal>把这局<em>定下来</em></h2>
+      <p class="lead" data-reveal>留个称呼和手机号，选好日子我们小客服就跟你确认。定金锁位、玩完原路退回——在四代里一步搞定，不用跳回老站。</p>
+
+      <form class="book__form" id="bookForm" data-reveal>
+        <div class="book__row">
+          <label class="field">
+            <span>称呼</span>
+            <input name="name" type="text" placeholder="怎么称呼你" required>
+          </label>
+          <label class="field">
+            <span>手机号</span>
+            <input name="phone" type="tel" placeholder="11 位手机号" required>
+          </label>
+        </div>
+        <div class="book__row">
+          <label class="field">
+            <span>日期</span>
+            <input name="day" type="text" placeholder="如 本周六 / 10-18">
+          </label>
+          <label class="field">
+            <span>时间</span>
+            <input name="time" type="text" placeholder="如 19:30">
+          </label>
+          <label class="field field--sm">
+            <span>人数</span>
+            <input name="players" type="text" placeholder="几人局">
+          </label>
+        </div>
+        <div class="book__row">
+          <label class="field">
+            <span>想跟的 DM</span>
+            <select name="dm" id="dmSelect">
+              <option value="">不挑，听安排</option>
+            </select>
+          </label>
+        </div>
+        <label class="field">
+          <span>备注</span>
+          <textarea name="note" rows="2" placeholder="特殊需求、忌口、小秘密…"></textarea>
+        </label>
+        <button class="pill book__submit" type="submit">提交约场 →</button>
+        <p class="book__ok" id="bookOk" hidden></p>
+      </form>
+    </div>
+  </section>
 </main>
 
 <footer class="foot">

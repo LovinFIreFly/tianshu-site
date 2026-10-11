@@ -1,6 +1,8 @@
 /* ════════════════════════════════════════════════════════════════
    天枢 · STUDIO（四代）引擎 —— 原生 JS，遵循 CodeBuddy-hy3 九轮法
    性能红线：只用 transform / opacity；ScrollTrigger 接管滚动；rAF 缓存
+   数据：首页 3D 球 / 本子卡 / 今日拼车 全部走 /studio/api/*（共享库），
+        拉取失败才退回本地兜底，绝不使用独立/自带数据库
    ════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
@@ -9,15 +11,28 @@
   var HOVER  = window.matchMedia && matchMedia('(hover: hover)').matches;
   var MOBILE = window.matchMedia && matchMedia('(max-width: 768px)').matches;
 
-  /* ════════ 本子数据（前端展示用，真实下单/拼车跳回天枢 /car、/scripts）════════ */
-  var SCRIPTS = [
-    { t: '雾起双龙',   c: '硬核', g: ['#e07a5f', '#3d405b'] },
-    { t: '盛夏的蝉鸣', c: '情感', g: ['#81b29a', '#f2cc8f'] },
-    { t: '欢乐撕逼局', c: '欢乐', g: ['#f2cc8f', '#b56576'] },
-    { t: '血色晚宴',   c: '恐怖', g: ['#6d597a', '#b56576'] },
-    { t: '孤岛回声',   c: '恐怖', g: ['#468faf', '#2a9d8f'] },
-    { t: '机械之心',   c: '硬核', g: ['#3d405b', '#81b29a'] }
+  /* 兜底数据（仅当共享库接口不可达时，避免白屏；不是独立数据库） */
+  var GRADS = [
+    ['#e07a5f', '#3d405b'], ['#81b29a', '#f2cc8f'], ['#f2cc8f', '#b56576'],
+    ['#6d597a', '#b56576'], ['#468faf', '#2a9d8f'], ['#3d405b', '#81b29a'],
+    ['#ff6b35', '#b56576'], ['#2a9d8f', '#e07a5f']
   ];
+  function grad(i) { return GRADS[(((i || 0) % GRADS.length) + GRADS.length) % GRADS.length]; }
+  var FALLBACK = [
+    { t: '雾起双龙',   c: '硬核', g: grad(0) },
+    { t: '盛夏的蝉鸣', c: '情感', g: grad(1) },
+    { t: '欢乐撕逼局', c: '欢乐', g: grad(2) },
+    { t: '血色晚宴',   c: '恐怖', g: grad(3) },
+    { t: '孤岛回声',   c: '恐怖', g: grad(4) },
+    { t: '机械之心',   c: '硬核', g: grad(5) },
+    { t: '长安笛声',   c: '情感', g: grad(6) },
+    { t: '赌局',       c: '欢乐', g: grad(7) }
+  ];
+  function norm(list) {
+    return (list || []).map(function (s, i) {
+      return { id: s.id, t: s.title || s.t || '未命名', c: s.type || s.c || '盒装', g: grad(i) };
+    });
+  }
 
   /* ════════ 平滑滚动 + ScrollTrigger 桥接（第五章）════════ */
   var lenis = null;
@@ -53,6 +68,7 @@
   /* ════════ 导航：滚动加深 + 汉堡菜单（第五章 / 第九章）════════ */
   var nav = document.getElementById('nav');
   function onScrollNav() {
+    if (!nav) return;
     if (window.scrollY > 50) nav.classList.add('is-scrolled');
     else nav.classList.remove('is-scrolled');
   }
@@ -118,11 +134,12 @@
   }
 
   /* ════════ 3D 线框球画廊（unseen 签名，纯 CSS 3D + 原生 JS）════════ */
-  function buildSphere() {
+  function buildSphere(list) {
     var scope = document.getElementById('sphere');
     var group = document.getElementById('sphereGroup');
     if (!scope || !group) return;
-    var n = SCRIPTS.length;
+    group.innerHTML = '';
+    var n = list.length || 1;
     var R = Math.min(200, scope.clientWidth * 0.46);
     var golden = Math.PI * (3 - Math.sqrt(5));
     var pos = [];
@@ -135,9 +152,9 @@
     pos.forEach(function (p, i) {
       var card = document.createElement('a');
       card.className = 'sphere__card';
-      card.href = '/studio/scripts';
+      card.href = '/studio/script?id=' + encodeURIComponent(list[i].id || '');
       card.innerHTML = '<div class="img" style="position:absolute;inset:0;background:linear-gradient(135deg,' +
-        SCRIPTS[i].g[0] + ',' + SCRIPTS[i].g[1] + ')"></div><b>' + SCRIPTS[i].t + '</b>';
+        list[i].g[0] + ',' + list[i].g[1] + ')"></div><b>' + (list[i].t) + '</b>';
       group.appendChild(card);
     });
     var cards = [].slice.call(group.querySelectorAll('.sphere__card'));
@@ -203,7 +220,6 @@
       group.style.transform = 'rotateX(' + st.RX + 'rad) rotateY(' + st.RY + 'rad)';
       for (var i = 0; i < cards.length; i++) {
         var p = pos[i];
-        // 绕 Y 再绕 X 旋转（billboarding 反向令卡片始终朝向相机）
         var cy = Math.cos(st.RY), sy = Math.sin(st.RY);
         var x1 = p.x * cy + p.z * sy, z1 = -p.x * sy + p.z * cy;
         var cx = Math.cos(st.RX), sx = Math.sin(st.RX);
@@ -219,26 +235,16 @@
     }
     if (!REDUCE) frame();
   }
-  if (MOBILE) {
-    var fb = document.getElementById('sphereFallback');
-    if (fb) SCRIPTS.forEach(function (p, i) {
-      var c = document.createElement('div');
-      c.className = 'sphere__card';
-      c.innerHTML = '<div class="img" style="position:absolute;inset:0;background:linear-gradient(135deg,' +
-        p.g[0] + ',' + p.g[1] + ')"></div><b>' + p.t + '</b>';
-      fb.appendChild(c);
-    });
-  } else {
-    buildSphere();
-  }
 
   /* ════════ 本子卡片注入 + 筛选（第三章 hubtown，第八章流畅过渡）════════ */
-  var grid = document.getElementById('grid');
-  if (grid) {
-    SCRIPTS.forEach(function (p, i) {
+  function buildGrid(list) {
+    var grid = document.getElementById('grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    list.forEach(function (p, i) {
       var a = document.createElement('a');
       a.className = 'card';
-      a.href = '/studio/scripts';
+      a.href = '/studio/script?id=' + encodeURIComponent(p.id || '');
       a.setAttribute('data-cat', p.c);
       a.setAttribute('data-tilt', '7');
       a.innerHTML =
@@ -249,16 +255,29 @@
     });
 
     var filter = document.getElementById('filter');
-    filter.addEventListener('click', function (e) {
-      var b = e.target.closest('button'); if (!b) return;
-      filter.querySelectorAll('button').forEach(function (x) { x.classList.remove('is-on'); });
-      b.classList.add('is-on');
-      var f = b.getAttribute('data-f');
-      grid.querySelectorAll('.card').forEach(function (c) {
-        var show = f === 'all' || c.getAttribute('data-cat') === f;
-        c.classList.toggle('is-hide', !show);
+    if (filter) {
+      // 按真实类型生成筛选按钮（去重、保持顺序）
+      var seen = {};
+      list.forEach(function (p) {
+        if (p.c && !seen[p.c]) {
+          seen[p.c] = true;
+          var b = document.createElement('button');
+          b.setAttribute('data-f', p.c);
+          b.textContent = p.c;
+          filter.appendChild(b);
+        }
       });
-    });
+      filter.addEventListener('click', function (e) {
+        var b = e.target.closest('button'); if (!b) return;
+        filter.querySelectorAll('button').forEach(function (x) { x.classList.remove('is-on'); });
+        b.classList.add('is-on');
+        var f = b.getAttribute('data-f');
+        grid.querySelectorAll('.card').forEach(function (c) {
+          var show = f === 'all' || c.getAttribute('data-cat') === f;
+          c.classList.toggle('is-hide', !show);
+        });
+      });
+    }
 
     /* ════════ 鼠标跟随倾斜卡片（第八章 unseen，最大 8°）════════ */
     if (HOVER && !REDUCE) {
@@ -270,12 +289,64 @@
           var py = (e.clientY - r.top) / r.height - 0.5;
           card.style.transform = 'perspective(820px) rotateY(' + (px * max) + 'deg) rotateX(' + (-py * max) + 'deg) translateZ(6px)';
         });
-        card.addEventListener('pointerleave', function () {
-          card.style.transform = '';
-        });
+        card.addEventListener('pointerleave', function () { card.style.transform = ''; });
       });
     }
   }
+
+  /* ════════ 移动端静态网格兜底（球禁用时）════════ */
+  function buildMobile(list) {
+    var fb = document.getElementById('sphereFallback');
+    if (!fb) return;
+    fb.innerHTML = '';
+    list.forEach(function (p) {
+      var c = document.createElement('div');
+      c.className = 'sphere__card';
+      c.innerHTML = '<div class="img" style="position:absolute;inset:0;background:linear-gradient(135deg,' +
+        p.g[0] + ',' + p.g[1] + ')"></div><b>' + p.t + '</b>';
+      fb.appendChild(c);
+    });
+  }
+
+  /* ════════ 首页「今日拼车」从共享库拉真实数据（失败退回静态兜底）════════ */
+  function buildHomeCars() {
+    var box = document.getElementById('cars');
+    if (!box) return;
+    fetch('/studio/api/cars', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (res) {
+      var cars = (res && res.cars) || [];
+      if (!cars.length) return;
+      box.innerHTML = '';
+      cars.forEach(function (c) {
+        var row = document.createElement('div');
+        row.className = 'car-row';
+        row.innerHTML =
+          '<span class="car-row__t">' + (c.title || '') + '</span>' +
+          '<span class="car-row__m">' + (c.day || '') + ' ' + (c.time || '') +
+            (c.scriptPlayers ? ' · ' + c.scriptPlayers + ' 人' : '') +
+            (c.owner ? ' · 车主 ' + c.owner : '') + '</span>' +
+          '<span class="car-row__s ' + (c.full ? 'full' : 'on') + '">' +
+            (c.full ? '已满 ' + c.joined + '/' + c.cap : '还差 ' + (c.need || 0) + ' 人') + '</span>';
+        box.appendChild(row);
+      });
+    }).catch(function () {});
+  }
+
+  /* ════════ 启动：先拉共享库的真实本子，再建球/卡片（含兜底）════════ */
+  // 仅首页有 #sphere / #grid，内页不必发这次请求（已在各自页用 /studio/api/* 取数）
+  if (document.getElementById('sphere') || document.getElementById('grid')) {
+    fetch('/studio/api/scripts', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        return (res && res.scripts && res.scripts.length) ? norm(res.scripts) : FALLBACK;
+      })
+      .catch(function () { return FALLBACK; })
+      .then(function (list) {
+        if (MOBILE) buildMobile(list); else buildSphere(list);
+        buildGrid(list);
+        if (window.ScrollTrigger) ScrollTrigger.refresh();
+      });
+  }
+  buildHomeCars();
 
   /* ════════ Reveal 动画（第五章：y40→0, opacity, stagger）════════ */
   if (window.gsap && window.ScrollTrigger) {

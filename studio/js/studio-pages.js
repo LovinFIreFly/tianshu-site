@@ -1,6 +1,6 @@
 /* ════════════════════════════════════════════════════════════════
-   天枢 · STUDIO 内页引擎 —— 拉真实数据（/studio/api/*）渲染
-   纯静态站：列表/详情/拼车都从天枢后端取真实本子 & 拼车
+   天枢 · STUDIO 内页引擎 —— 全部数据走 /studio/api/*（天枢共享库 db，与全站同源互通）
+   功能：本子库列表 / 详情 / 约场下单 / 拼车大厅 / 上车占座
    ════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
@@ -14,6 +14,19 @@
 
   function getJSON(url) {
     return fetch(url, { credentials: 'same-origin' }).then(function (r) { return r.json(); });
+  }
+  // 读站点发的 CSRF 令牌（double-submit cookie）：所有 POST 都要带上，否则被 csrf_guard 拦成 403
+  function csrfToken() {
+    var m = document.cookie.match(/(?:^|;\s*)csrf=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function postJSON(url, payload) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF': csrfToken() },
+      credentials: 'same-origin',
+      body: JSON.stringify(payload || {})
+    }).then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); });
   }
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
@@ -36,6 +49,15 @@
       card.style.transform = 'perspective(820px) rotateY(' + (px * max) + 'deg) rotateX(' + (-py * max) + 'deg) translateZ(6px)';
     });
     card.addEventListener('pointerleave', function () { card.style.transform = ''; });
+  }
+  function revealIn(node) {
+    if (window.gsap && window.ScrollTrigger) {
+      gsap.utils.toArray(node.querySelectorAll('[data-reveal]')).forEach(function (n) {
+        gsap.from(n, { opacity: 0, y: 40, duration: 0.8, ease: 'power3.out',
+          scrollTrigger: { trigger: n, start: 'top 88%' } });
+      });
+      ScrollTrigger.refresh();
+    }
   }
 
   /* ════════ 本子库列表 ════════ */
@@ -107,7 +129,7 @@
         }
       });
       render();
-    }).catch(function (e) { if (emptyEl) { emptyEl.hidden = false; emptyEl.textContent = '数据加载失败，请刷新重试。'; } });
+    }).catch(function () { if (emptyEl) { emptyEl.hidden = false; emptyEl.textContent = '数据加载失败，请刷新重试。'; } });
 
     if (qInput) qInput.addEventListener('input', render);
     [typeFilter, diffFilter].forEach(function (f) {
@@ -121,7 +143,7 @@
     });
   }
 
-  /* ════════ 拼车大厅 ════════ */
+  /* ════════ 拼车大厅（上车占座）════════ */
   var carList = document.getElementById('carList');
   if (carList) {
     getJSON('/studio/api/cars').then(function (res) {
@@ -129,23 +151,47 @@
       if (!cars.length) { var e = document.getElementById('empty'); if (e) e.hidden = false; return; }
       cars.forEach(function (c) {
         var row = el('' +
-          '<div class="car-row fade-in">' +
+          '<div class="car-row fade-in" data-cid="' + esc(c.id) + '">' +
             '<span class="car-row__t">' + esc(c.title) + '</span>' +
             '<span class="car-row__m">' + esc(c.day) + ' ' + esc(c.time) +
               (c.scriptPlayers ? ' · ' + esc(c.scriptPlayers) + ' 人' : '') +
-              (c.scriptDiff ? ' · 难度 ' + '★'.repeat(Math.min(5, c.scriptDiff)) : '') + '</span>' +
-            (c.likeCount ? '<span class="car-row__like">口味相投 ' + c.likeCount + '</span>' : '') +
+              (c.scriptDiff ? ' · 难度 ' + '★'.repeat(Math.min(5, c.scriptDiff)) : '') +
+              (c.owner ? ' · 车主 ' + esc(c.owner) : '') + '</span>' +
             '<span class="car-row__s ' + (c.full ? 'full' : 'on') + '">' +
               (c.full ? '已满 ' + c.joined + '/' + c.cap : '还差 ' + (c.need || 0) + ' 人') + '</span>' +
-            '<span class="car-row__cta"><a href="/car">上车 →</a></span>' +
+            '<button class="car-row__cta' + (c.full ? ' is-off' : '') + '" data-cid="' + esc(c.id) + '"' +
+              (c.full ? ' disabled' : '') + '>' + (c.full ? '已满' : '上车 →') + '</button>' +
           '</div>');
         carList.appendChild(row);
       });
       if (window.ScrollTrigger) ScrollTrigger.refresh();
+
+      // 事件委托：点「上车」→ POST /studio/api/car/join
+      carList.addEventListener('click', function (e) {
+        var btn = e.target.closest('.car-row__cta'); if (!btn || btn.disabled) return;
+        var cid = btn.getAttribute('data-cid');
+        var row = btn.closest('.car-row');
+        btn.disabled = true; btn.textContent = '占座中…';
+        postJSON('/studio/api/car/join', { cid: cid }).then(function (r) {
+          if (r.status === 200 && r.body.ok) {
+            row.querySelector('.car-row__s').className = 'car-row__s ' + (r.body.full ? 'full' : 'on');
+            row.querySelector('.car-row__s').textContent = r.body.full
+              ? '已满 ' + r.body.joined + '/' + r.body.cap
+              : '还差 ' + r.body.need + ' 人';
+            btn.textContent = '已上车 ✓'; btn.classList.add('is-done');
+          } else {
+            btn.disabled = false; btn.textContent = '上车 →';
+            var m = (r.body && r.body.msg) || '上车失败，稍后再试';
+            var tip = row.querySelector('.car-row__s'); if (tip) tip.textContent = m;
+          }
+        }).catch(function () {
+          btn.disabled = false; btn.textContent = '上车 →';
+        });
+      });
     }).catch(function () { var e = document.getElementById('empty'); if (e) { e.hidden = false; e.textContent = '数据加载失败，请刷新重试。'; } });
   }
 
-  /* ════════ 本子详情 ════════ */
+  /* ════════ 本子详情（含约场下单）════════ */
   var detail = document.getElementById('detail');
   if (detail) {
     var id = new URLSearchParams(location.search).get('id') || new URLSearchParams(location.search).get('sid');
@@ -157,7 +203,8 @@
       }
       var s = res.script;
       var dms = (res.dms || []).map(function (d) {
-        return '<span class="dm-chip"><i></i>' + esc(d.name || d.phone || 'DM') + '</span>';
+        return '<span class="dm-chip"><i></i>' + esc(d.name || 'DM') +
+          (d.style ? ' · ' + esc(d.style) : '') + '</span>';
       }).join('');
       var tags = (s.tags || []).map(function (t) { return '<span>' + esc(t) + '</span>'; }).join('');
       var next = res.next
@@ -178,19 +225,61 @@
         (s.desc ? '<p class="detail__desc" data-reveal>' + esc(s.desc) + '</p>' : '') +
         (tags ? '<div class="tag-row" data-reveal>' + tags + '</div>' : '') +
         (dms ? '<div class="detail__sec" data-reveal><p class="kick">可选 DM</p><div class="dm-list">' + dms + '</div></div>' : '') +
-        '<div class="detail__cta" data-reveal>' +
-          '<a class="pill" href="/scripts/' + encodeURIComponent(s.id) + '">去天枢下单 / 约场 →</a>' +
-          '<a class="pill pill--ghost" href="/car">看看拼车</a>' +
-        '</div>' +
         '<div class="detail__next" data-reveal><span class="kick" style="margin:0">下一卷</span>' + next + '</div>';
-      // 详情里动态注入的内容让 ScrollTrigger 重新扫描 reveal
-      if (window.gsap && window.ScrollTrigger) {
-        gsap.utils.toArray(detail.querySelectorAll('[data-reveal]')).forEach(function (n) {
-          gsap.from(n, { opacity: 0, y: 40, duration: 0.8, ease: 'power3.out',
-            scrollTrigger: { trigger: n, start: 'top 88%' } });
+
+      // 把本子 id 与 DM 列表喂给下方的约场表单
+      var form = document.getElementById('bookForm');
+      if (form) {
+        form.setAttribute('data-sid', s.id);
+        var sel = document.getElementById('dmSelect');
+        if (sel) {
+          sel.innerHTML = '<option value="">不挑，听安排</option>' +
+            (res.dms || []).map(function (d) {
+              return '<option value="' + esc(d.name || 'DM') + '">' + esc(d.name || 'DM') +
+                (d.style ? '（' + esc(d.style) + '）' : '') + '</option>';
+            }).join('');
+        }
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var ok = document.getElementById('bookOk');
+          var btn = form.querySelector('.book__submit');
+          var payload = {
+            sid: form.getAttribute('data-sid'),
+            name: form.name.value.trim(),
+            phone: form.phone.value.trim(),
+            day: form.day.value.trim(),
+            time: form.time.value.trim(),
+            players: form.players.value.trim(),
+            dm: form.dm.value,
+            note: form.note.value.trim()
+          };
+          if (!payload.name || !payload.phone) {
+            if (ok) { ok.hidden = false; ok.className = 'book__ok is-err'; ok.textContent = '请把称呼和手机号填好。'; }
+            return;
+          }
+          btn.disabled = true; btn.textContent = '提交中…';
+          postJSON('/studio/api/book', payload).then(function (r) {
+            if (r.status === 200 && r.body.ok) {
+              if (ok) { ok.hidden = false; ok.className = 'book__ok is-ok';
+                ok.textContent = '约场已收到 ✓ 小客服会尽快用 ' + payload.phone + ' 联系你确认「' + esc(s.title) + '」。'; }
+              form.reset();
+              if (sel) sel.innerHTML = '<option value="">不挑，听安排</option>' +
+                (res.dms || []).map(function (d) {
+                  return '<option value="' + esc(d.name || 'DM') + '">' + esc(d.name || 'DM') + '</option>';
+                }).join('');
+            } else {
+              if (ok) { ok.hidden = false; ok.className = 'book__ok is-err';
+                ok.textContent = (r.body && r.body.msg) || '提交失败，稍后再试。'; }
+            }
+            btn.disabled = false; btn.textContent = '提交约场 →';
+          }).catch(function () {
+            btn.disabled = false; btn.textContent = '提交约场 →';
+            if (ok) { ok.hidden = false; ok.className = 'book__ok is-err'; ok.textContent = '网络异常，稍后再试。'; }
+          });
         });
-        ScrollTrigger.refresh();
       }
+
+      revealIn(detail);
     }).catch(function () { detail.innerHTML = '<p class="empty">加载失败，请刷新重试。</p>'; });
   }
 })();
