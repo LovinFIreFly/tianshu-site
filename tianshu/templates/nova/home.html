@@ -32,10 +32,49 @@
   <div class="hp-hero__foot">
     <span class="hp-hero__scroll"><i aria-hidden="true"></i> 往下翻</span>
     <span class="hp-hero__nums">
-      <span><b>{{ served }}</b> 位玩过</span>
-      <span><b>{{ stat.plays }}</b> 场演出</span>
-      <span><b>{{ dm_duty|length }}</b> 位 DM 今天在店</span>
+      <span><b><span data-to="{{ served }}">0</span></b> 位玩过</span>
+      <span><b><span data-to="{{ stat.plays }}">0</span></b> 场演出</span>
+      <span><b><span data-to="{{ dm_duty|length }}">0</span></b> 位 DM 今天在店</span>
     </span>
+  </div>
+</section>
+
+<!-- ═══════════ 本本宇宙：3D 线框球形画廊（逆向文档第九章 · Unseen 首页） ═══════════ -->
+<section class="nx-uni" id="universe">
+  <div class="u-wrap">
+    <div class="hp-head" data-d="0">
+      <p class="u-kick">本本宇宙</p>
+      <h2 class="hp-head__t">转一转<br><em>今天在演的</em></h2>
+      <p class="hp-head__d">按住拖拽，看今天店里挂着哪些本子。松手它自己慢慢转——越靠前的越清楚，背面的会糊掉。</p>
+    </div>
+  </div>
+  <div class="nx-sphere" data-sphere>
+    <div class="nx-sphere__group">
+      {% set _grad = [('#e07a5f','#3d405b'),('#3d405b','#81b29a'),('#81b29a','#f2cc8f'),('#f2cc8f','#b56576'),('#6d597a','#468faf'),('#468faf','#2a9d8f'),('#b56576','#e07a5f'),('#2a9d8f','#3d405b')] %}
+      {% set _sphere = sphere_scripts if sphere_scripts else scripts %}
+      {% if _sphere %}
+      {% for s in _sphere[:8] %}
+      <a class="nx-card" href="{{ url_for('public.script_detail', sid=s.id) }}"
+         style="--c1:{{ _grad[loop.index0 % 8][0] }};--c2:{{ _grad[loop.index0 % 8][1] }}">
+        <span class="nx-card__media" style="background:linear-gradient(135deg, var(--c1), var(--c2))"></span>
+        <span class="nx-card__no">No. {{ '%03d'|format(s.id or 0) }}</span>
+        <span class="nx-card__t">{{ s.title or '未命名' }}</span>
+        <span class="nx-card__k">{{ s.type or '盒装' }}{% if s.players %} · {{ s.players }} 人{% endif %}</span>
+      </a>
+      {% endfor %}
+      {% else %}
+      {% for i in range(8) %}
+      <a class="nx-card" href="{{ url_for('public.scripts') }}"
+         style="--c1:{{ _grad[i % 8][0] }};--c2:{{ _grad[i % 8][1] }}">
+        <span class="nx-card__media" style="background:linear-gradient(135deg, var(--c1), var(--c2))"></span>
+        <span class="nx-card__no">No. {{ '%03d'|format(i + 1) }}</span>
+        <span class="nx-card__t">待定本子</span>
+        <span class="nx-card__k">盒装 · 6 人</span>
+      </a>
+      {% endfor %}
+      {% endif %}
+    </div>
+    <p class="nx-sphere__hint">拖拽旋转 · 松手惯性滑行</p>
   </div>
 </section>
 
@@ -103,7 +142,7 @@
           {% for s in scripts %}
           <a class="u-hcard" href="{{ url_for('public.script_detail', sid=s.id) }}"
              {% if s.img %}data-cursor-img="{{ s.img }}"{% endif %}>
-            <span class="u-hcard__fig">
+            <span class="u-hcard__fig" data-tilt="9">
               {% if s.img %}<img src="{{ s.img }}" alt="{{ s.title }}" loading="lazy">{% else %}{% with s = s %}{% include '_script_ph.html' %}{% endwith %}{% endif %}
             </span>
             <span class="u-hcard__cap">
@@ -150,7 +189,7 @@
     </div>
 
     <div class="hp-spot" data-d="60">
-      <a class="hp-spot__fig" href="{{ url_for('public.script_detail', sid=boss_pick.id) }}" data-cursor-label="看本">
+      <a class="hp-spot__fig" href="{{ url_for('public.script_detail', sid=boss_pick.id) }}" data-cursor-label="看本" data-tilt="8">
         {% if boss_pick.img %}<img src="{{ boss_pick.img }}" alt="{{ boss_pick.title }}" loading="lazy">
         {% else %}{% with s = boss_pick %}{% include '_script_ph.html' %}{% endwith %}{% endif %}
       </a>
@@ -283,4 +322,12 @@
   </section>
 
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/nova3.css') }}">
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/nova3.js') }}" defer></script>
 {% endblock %}

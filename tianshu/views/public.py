@@ -112,11 +112,14 @@ def home():
     # 新本首车：上架剧本按 id 倒序 top6
     on_sale = [s for s in scripts if s.get('onSale') is not False]
     newScripts = sorted(on_sale, key=lambda s: -(s.get('id') or 0))[:6]
+    # 本本宇宙球：上架剧本前 8 个（按热度/上新），给球画廊足够的"星球"
+    sphere_scripts = sorted(on_sale, key=lambda s: -(int(s.get('hot') or 0) + (10 if s.get('isNew') else 0)))[:8]
     return render_template('home.html', scripts=feat, stat=st, rating=rating,
                            banners=business.banners(), served=served,
                            sessions=sessions, cars=business.car_pool()[:3],
                            dm_duty=dm_duty, reviews=reviews, boss_pick=boss_pick,
-                           hotScripts=hotScripts, newScripts=newScripts)
+                           hotScripts=hotScripts, newScripts=newScripts,
+                           sphere_scripts=sphere_scripts)
 
 
 @bp.get('/scripts')
