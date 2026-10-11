@@ -978,4 +978,14 @@ html[data-theme="dark"] .hp-sec[data-n]::before { -webkit-text-stroke-color: var
   pointer-events: none;
   z-index: 1;
   box-shadow: 0 10px 30px color-mix(in srgb, var(--us-cinnabar) 30%, transparent);
+  /* 朱砂光晕：极慢的呼吸，给首屏一层"活"的质感（awwwards 清单里的微妙光晕）。
+     只动 opacity / box-shadow，绝不碰 transform —— 避免和 JS 的指针漂浮打架。 */
+  animation: hp-float-glow 4.6s var(--us-ease-io) infinite;
+}
+@keyframes hp-float-glow {
+  0%, 100% { opacity: .5;  box-shadow: 0 10px 30px color-mix(in srgb, var(--us-cinnabar) 26%, transparent); }
+  50%      { opacity: .74; box-shadow: 0 15px 48px color-mix(in srgb, var(--us-cinnabar) 44%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hp-float { animation: none; }
 }

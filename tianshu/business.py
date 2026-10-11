@@ -1053,7 +1053,6 @@ def skin_css(st=None):
 UI_VERSIONS = {
     'nova': 'Nova · 全新独立版式（2026-10 结构层重写）',
     '3': '三代 · 竖排导轨（2026-10 全新骨架）',
-    '4': 'STUDIO · 深色作品集版式（2026-10 新增，源自独立站 studio/）',
     '5': '三代 · 剧幕（黑场节目单 / 幕布升起 / 场次为主角）',
     '6': '三代 · 卷宗（证据墙 / 红线推理 / 档案袋拉出）',
     '7': '三代 · 分镜（齿孔胶片 / 逐格走片 / 一屏一帧）',
@@ -1061,14 +1060,14 @@ UI_VERSIONS = {
     '2': '二代 · 新骨架（推荐）',
     '1': '一代 · 老版式（改版前那套）',
 }
-# 三代家族（4-8）：选了它们就不再叠皮肤 —— 骨架自己带完整观感，
+# 三代家族（3,5-8）：选了它们就不再叠皮肤 —— 骨架自己带完整观感，
 # 皮肤下拉框在后台会隐藏（见 panel_dash.html），避免两套观感互相打架。
-UI_GEN3 = ('3', '5', '6', '7', '8')  # '4' 现为独立站 STUDIO（托管在 studio/，经 /studio 路由访问），不再属三代家族
+UI_GEN3 = ('3', '5', '6', '7', '8')
 # Nova（2026-10）：与二代/三代**零共享**的一整套独立模板 + CSS + JS。
 # 它不复用 v3 的 DOM 骨架（这正是"三代五套只是换皮"的根因），
 # 而是自带 layout.html / nova.css / nova-pages.css / nova.js，自成一套体系。
 UI_NOVA = 'nova'
-DEFAULT_UI = '2'
+DEFAULT_UI = 'nova'
 
 
 def is_gen3(v=None):
@@ -1082,7 +1081,7 @@ def is_nova(v=None):
 
 
 def current_ui(st=None):
-    """现在用哪一代界面（永远返回白名单内的值：没配/配错就用二代）"""
+    """现在用哪一代界面（永远返回白名单内的值：没配/配错就用 DEFAULT_UI，现为 nova）"""
     st = st or get_settings()
     v = str(st.get('uiVer') or '').strip()
     return v if v in UI_VERSIONS else DEFAULT_UI

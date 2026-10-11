@@ -38,6 +38,9 @@
      用量越少越贵 —— 这是戏台海报的规矩，也是 unseen 只用一朵玫瑰底色的规矩。 */
   --us-accent: #C2470E;
   --us-accent-2: #A63B0C;
+  /* 朱砂印泥：印章 / 编号 / 现在时。比 --us-accent 更红一档，
+     只在"该被记住的那一笔"上出现 —— 用量越少越贵（戏台海报的规矩）。 */
+  --us-cinnabar: #D23B1A;
 
   /* 语义色：只在状态里出现，不参与装饰 */
   --us-ok: #2F6B45;
@@ -111,6 +114,7 @@ html[data-theme="dark"] {
   --us-line-2: #3C382F;
   --us-accent: #E05A1C;
   --us-accent-2: #F07A3E;
+  --us-cinnabar: #FF6E4A;
   --us-ok: #7FC79B;
   --us-warn: #D8B063;
   --us-stop: #E0796A;
