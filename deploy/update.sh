@@ -82,26 +82,35 @@ EOF
   systemctl daemon-reload
 fi
 
-# 重启之前先看一眼：$PORT 上是不是蹲着**不属于 systemd** 的旧进程？
-# 有的话 app.py 的 pick_port() 会静默换到 8001，看起来"重启成功了"其实端口错了。
-# 这里把它点出来（不自动杀：万一是你自己开着的调试进程，杀了会莫名）。
+# 先把 systemd 自己管的旧实例干净停掉 —— 这步最稳：
+# systemctl stop 是管理员显式动作，systemd 会 SIGTERM 自己的子进程（不会触发 Restart=always 的自动拉起），
+# 不会出现"我们手动 kill 了它、它又被拉起来抢端口"的竞态。
+systemctl stop tianshu 2>/dev/null || true
+sleep 2
+
+# 现在 $PORT 上还蹲着的，就是**不属于 systemd** 的 stray（比如你手动 python app.py 调试时开的、
+# 或上次没退干净的实例）。STRICT_PORT 模式下 app.py 碰到它会直接 exit，所以必须清掉。
+# 正则同时覆盖 IPv4 的 127.0.0.1:8000 和 IPv6 的 :::8000 —— 老脚本只匹配 ":8000 "（带尾随空格），
+# 会漏掉 :::8000，于是 stray 一直占着端口、服务反复起不来（这次就是这原因）。
+_ports_re="[:.]${PORT}([[:space:]]|\$)"
 if command -v ss >/dev/null 2>&1; then
-  _holder="$(ss -ltnp 2>/dev/null | grep ":$PORT " | grep -oE 'pid=[0-9]+' | grep -oE '[0-9]+' | head -1 || true)"
+  _holders="$(ss -ltnp 2>/dev/null | grep -E "$_ports_re" | grep -oE 'pid=[0-9]+' | grep -oE '[0-9]+' | sort -u || true)"
 elif command -v netstat >/dev/null 2>&1; then
-  _holder="$(netstat -ltnp 2>/dev/null | grep ":$PORT " | grep -oE '[0-9]+/' | grep -oE '[0-9]+' | head -1 || true)"
+  _holders="$(netstat -ltnp 2>/dev/null | grep -E "$_ports_re" | grep -oE '[0-9]+/' | grep -oE '[0-9]+' | sort -u || true)"
 else
-  _holder=""
+  _holders=""
 fi
-if [ -n "$_holder" ]; then
-  echo "   ！$PORT 已被 PID $_holder 占用，先把它收掉再重启"
+for _holder in $_holders; do
+  echo "   ！$PORT 被非 systemd 进程 PID $_holder 占用，收掉它"
   ps -p "$_holder" -o pid=,args= 2>/dev/null | sed 's/^/      /' || true
   kill "$_holder" 2>/dev/null || true
   sleep 1
   kill -9 "$_holder" 2>/dev/null || true
   echo "   已收掉 PID $_holder"
-fi
+done
+sleep 1
 
-systemctl restart tianshu
+systemctl start tianshu
 sleep 3
 if ! systemctl is-active --quiet tianshu; then
   echo "   [X] 服务没起来，看这里："
