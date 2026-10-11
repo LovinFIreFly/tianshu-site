@@ -1063,12 +1063,11 @@ UI_VERSIONS = {
 }
 # 三代家族（4-8）：选了它们就不再叠皮肤 —— 骨架自己带完整观感，
 # 皮肤下拉框在后台会隐藏（见 panel_dash.html），避免两套观感互相打架。
-UI_GEN3 = ('3', '5', '6', '7', '8')  # '4' 已改为 STUDIO 独立版式（见 UI_STUDIO），不再属三代家族
+UI_GEN3 = ('3', '5', '6', '7', '8')  # '4' 现为独立站 STUDIO（托管在 studio/，经 /studio 路由访问），不再属三代家族
 # Nova（2026-10）：与二代/三代**零共享**的一整套独立模板 + CSS + JS。
 # 它不复用 v3 的 DOM 骨架（这正是"三代五套只是换皮"的根因），
 # 而是自带 layout.html / nova.css / nova-pages.css / nova.js，自成一套体系。
 UI_NOVA = 'nova'
-UI_STUDIO = '4'   # STUDIO 深色作品集版式：结构层独立模板（templates/studio/），与 Nova 同机制
 DEFAULT_UI = '2'
 
 
@@ -1080,11 +1079,6 @@ def is_gen3(v=None):
 def is_nova(v=None):
     """这次渲染的是不是 Nova 独立版式。Nova 自带完整观感，不叠皮肤、不叠设计令牌。"""
     return (v or ui_ver()) == UI_NOVA
-
-
-def is_studio(v=None):
-    """这次渲染的是不是 STUDIO 独立版式（uiVer='4'）。与 Nova 同机制：自带完整观感，不叠皮肤。"""
-    return (v or ui_ver()) == UI_STUDIO
 
 
 def current_ui(st=None):

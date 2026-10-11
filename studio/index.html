@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>天枢 · STUDIO — 剧本杀作品集</title>
+<meta name="description" content="天枢剧本杀 · STUDIO 版式：把每一局剧本杀做成一场值得记住的戏。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/studio.css">
+</head>
+<body>
+
+<!-- ══ 加载遮罩（第五章）══ -->
+<div class="loader" id="loader">
+  <div class="loader__t">天枢 STUDIO</div>
+  <div class="loader__n"><span id="loadNum">0</span><i>%</i></div>
+  <div class="loader__bar"><i id="loadBar"></i></div>
+</div>
+
+<!-- ══ 胶片颗粒（第二章）══ -->
+<div class="grain" aria-hidden="true"></div>
+<!-- ══ 自定义光标（第七章）══ -->
+<div class="cursor-dot" id="curDot" aria-hidden="true"></div>
+<div class="cursor-ring" id="curRing" aria-hidden="true"></div>
+
+<!-- ══ 导航（第二章：固定 80px / 半透明 / 模糊）══ -->
+<header class="nav" id="nav">
+  <a class="nav__logo" href="#top">天枢<span>·</span>STUDIO</a>
+  <nav class="nav__links" id="navLinks">
+    <a href="#about">关于</a>
+    <a href="#works">本子</a>
+    <a href="#jubensha">拼车</a>
+    <a href="#contact">联系</a>
+  </nav>
+  <button class="nav__burger" id="burger" aria-label="菜单"><span></span><span></span></button>
+</header>
+
+<main id="top">
+
+  <!-- ══ Hero（第三章：不居中堆叠，左对齐大标题 + 右下 3D 球）══ -->
+  <section class="hero" id="hero">
+    <div class="hero__glow" id="glow" aria-hidden="true"></div>
+    <div class="hero__inner">
+      <p class="kick" data-reveal>天枢剧本杀 · 作品集</p>
+      <h1 class="hero__title" data-hero>把每一局<br>做成一场<em>值得记住</em>的戏</h1>
+      <p class="hero__sub" data-hero>一家只演剧本杀的小店。六个代表本子挂在一颗会转的球上——拖一下，看看今天店里在演什么。</p>
+    </div>
+
+    <!-- unseen 3D 线框球画廊（签名元素） -->
+    <div class="sphere" id="sphere" aria-label="本子球画廊，可拖拽旋转">
+      <div class="sphere__group" id="sphereGroup"></div>
+    </div>
+    <p class="sphere__hint" data-reveal>拖拽旋转 · 松手惯性滑行</p>
+
+    <!-- 移动端静态网格替代 -->
+    <div class="sphere-fallback" id="sphereFallback" aria-hidden="true"></div>
+
+    <a class="hero__scroll" href="#about" data-reveal>向下看戏 <span>↓</span></a>
+  </section>
+
+  <!-- ══ About（第三章：左对齐 60%）══ -->
+  <section class="about" id="about">
+    <div class="wrap about__grid">
+      <div class="about__main">
+        <p class="kick" data-reveal>01 / About</p>
+        <h2 class="h2" data-reveal>七年来，我们只做一件事：<em>让一局戏被记住</em>。</h2>
+        <p class="lead" data-reveal>不追潮流、不堆特效。我们相信好的本子像好戏——先被看见，然后被记住。从选本、主持到一场会呼吸的沉浸，我们亲手把每一寸做完。</p>
+      </div>
+      <div class="stats" id="stats">
+        <div class="stat" data-reveal><b data-count="320">0</b><span>在演本子</span></div>
+        <div class="stat" data-reveal><b data-count="58">0</b><span>每月拼车局</span></div>
+        <div class="stat" data-reveal><b data-count="7">0</b><span>合作年限</span></div>
+        <div class="stat" data-reveal><b data-count="99">0</b><span>玩家好评 %</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ Works / 本子精选（第三章：hubtown 斜切卡 + 不对称 + 筛选）══ -->
+  <section class="works" id="works">
+    <div class="wrap">
+      <p class="kick" data-reveal>02 / Selected Scripts</p>
+      <h2 class="h2" data-reveal>六个代表本子</h2>
+      <p class="lead" data-reveal>从恐怖到欢乐，从硬核推理到情感沉浸。点筛选挑你今天的胃口。</p>
+
+      <div class="filter" id="filter" data-reveal>
+        <button class="is-on" data-f="all">全部</button>
+        <button data-f="恐怖">恐怖</button>
+        <button data-f="欢乐">欢乐</button>
+        <button data-f="硬核">硬核</button>
+        <button data-f="情感">情感</button>
+      </div>
+
+      <div class="grid" id="grid"><!-- JS 注入卡片 --></div>
+    </div>
+  </section>
+
+  <!-- ══ 剧本杀 / 今日拼车（真实下单跳回天枢）══ -->
+  <section class="jubensha" id="jubensha">
+    <div class="wrap jubensha__wrap">
+      <p class="kick" data-reveal>03 / 今日拼车</p>
+      <h2 class="h2" data-reveal>今天店里，<em>正在拼的车</em>。</h2>
+      <p class="lead" data-reveal>挑本、拼车、到店开演，定金锁位，玩完小客服原路退回。下面是今天在拼的几局——想真上车，点一下跳去天枢站。</p>
+
+      <div class="cars" id="cars" data-reveal>
+        <!-- 展示用静态样例（真实数据在天枢站 /car） -->
+        <div class="car-row">
+          <span class="car-row__t">雾起双龙</span>
+          <span class="car-row__m">今晚 19:30 · 车主 阿乐 · 硬核推理</span>
+          <span class="car-row__s on">拼车中 · 还差 2 人</span>
+        </div>
+        <div class="car-row">
+          <span class="car-row__t">盛夏的蝉鸣</span>
+          <span class="car-row__m">周六 14:00 · 车主 柚子 · 情感沉浸</span>
+          <span class="car-row__s on">拼车中 · 还差 1 人</span>
+        </div>
+        <div class="car-row">
+          <span class="car-row__t">欢乐撕逼局</span>
+          <span class="car-row__m">周日 20:00 · 车主 胖虎 · 欢乐</span>
+          <span class="car-row__s full">已满 · 6/6</span>
+        </div>
+      </div>
+
+      <div class="cta-row" data-reveal>
+        <a class="pill" href="/car">直接上车拼一局 →</a>
+        <a class="pill pill--ghost" href="/scripts">看看全部本子</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ Contact（第三章：超大 LET'S TALK）══ -->
+  <section class="contact" id="contact">
+    <div class="wrap contact__wrap">
+      <p class="kick" data-reveal>04 / Let's talk</p>
+      <h2 class="h2" data-reveal>想来一局？<em>聊一聊</em></h2>
+      <a class="mail" href="mailto:hello@tianshu.example" data-reveal>hello@tianshu.example</a>
+      <div class="contact__row" data-reveal>
+        <span>上海 · 静安</span>
+        <a href="/scripts">本子库</a>
+        <a href="/car">拼车</a>
+        <a href="#">微信</a>
+        <a href="#">小红书</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <span>© 2026 天枢剧本杀 · STUDIO 版式</span>
+  <span>Lenis · GSAP · 纯 CSS 3D 搭起来的一颗球</span>
+</footer>
+
+<!-- ══ 库（CDN）══ -->
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+<script src="js/studio.js" defer></script>
+</body>
+</html>

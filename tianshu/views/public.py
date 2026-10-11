@@ -7,7 +7,8 @@
 import os
 
 from flask import (Blueprint, flash, jsonify, make_response, redirect,
-                   render_template, request, session, url_for)
+                   render_template, request, send_file, session, url_for)
+import os as _os
 
 from tianshu import business
 from tianshu.db import db
@@ -42,7 +43,29 @@ def welcome():
 
     正常从 / 进来就会看到它；这个网址单独留着，方便直接发给别人看。
     """
+    if business.ui_ver() == '4':
+        return redirect('/studio')
     return render_template('welcome.html', **_welcome_ctx())
+
+
+# ══ 版式四：STUDIO 独立站（纯静态站，脱离 tianshu 模板体系，从 studio/ 直接托管）══
+# 后台「网站版式」选 STUDIO（uiVer='4'）即整体切到这套；管理员 ?ui=4 也能预览。
+_STUDIO_DIR = _os.path.abspath(_os.path.join(_os.path.dirname(_os.path.dirname(__file__)), '..', 'studio'))
+
+
+@bp.get('/studio', strict_slashes=False)
+@bp.get('/studio/<path:filename>', strict_slashes=False)
+def studio_site(filename='index.html'):
+    """托管独立站 studio/ —— 四代从零重建的 STUDIO 深色作品集站（含剧本杀展示板块）。"""
+    # 没有尾斜杠时 301 到 /studio/，否则浏览器会把相对路径 css/js 解析到根目录导致 404
+    if request.path.rstrip('/') == '/studio' and not request.path.endswith('/'):
+        return redirect('/studio/')
+    base = _STUDIO_DIR
+    full = _os.path.abspath(_os.path.join(base, filename))
+    # 防目录穿越：只允许访问 studio/ 内的文件
+    if not full.startswith(base) or not _os.path.isfile(full):
+        full = _os.path.join(base, 'index.html')
+    return send_file(full)
 
 
 @bp.get('/theme')
@@ -67,6 +90,8 @@ def home():
     不是一进来就是登录表单）：点「登 录」才去登录页，想先看看的走「先随便逛逛」。
     登录之后这页就不再出现，/ 直接是门店首页。
     """
+    if business.ui_ver() == '4':
+        return redirect('/studio')
     if not current_user() and not (request.args.get('browse') or session.get('entered')):
         return render_template('welcome.html', **_welcome_ctx())
     if request.args.get('browse'):
