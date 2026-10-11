@@ -116,7 +116,7 @@ def home():
     sphere_scripts = sorted(on_sale, key=lambda s: -(int(s.get('hot') or 0) + (10 if s.get('isNew') else 0)))[:8]
     return render_template('home.html', scripts=feat, stat=st, rating=rating,
                            banners=business.banners(), served=served,
-                           sessions=sessions, cars=business.car_pool()[:3],
+                           sessions=sessions, cars=business.car_pool()[:6],
                            dm_duty=dm_duty, reviews=reviews, boss_pick=boss_pick,
                            hotScripts=hotScripts, newScripts=newScripts,
                            sphere_scripts=sphere_scripts)
