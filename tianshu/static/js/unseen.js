@@ -1,153 +1,394 @@
 /* ============================================================================
-   Unseen 风格 · 前端引擎（零依赖）
-   软光标 / 滚动揭示 / 导航态 / 移动菜单 / 暗场光标流场 / 换页 veil
+   Unseen 风格 · 暗场运动引擎（v2 · 零依赖）
+   Smooth 惯量滚动 / Split 逐字揭示 / Spotlight 追光照亮 / Gallery 钉住横滚
+   Night 时间轴 / Float 视差 / Magnetic 磁吸 / Cursor 情境光标 / Transit 换页
+   参考 nova 的运动语法，全部带降级保护（触摸 / 减弱动效 / 无 IO 时不动）。
    ========================================================================== */
 (function () {
   'use strict';
   var REDUCE = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var FINE = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  var COARSE = window.matchMedia && window.matchMedia('(hover: none), (pointer: coarse)').matches;
+  function $(s, c) { return (c || document).querySelector(s); }
+  function $$(s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); }
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
 
-  /* ---------- 软光标 ---------- */
+  /* ---------------- 情境软光标 ---------------- */
   function initCursor() {
-    if (!FINE || REDUCE) return;
-    var dot = document.querySelector('.cursor');
-    var ring = document.querySelector('.cursor-ring');
+    if (COARSE || REDUCE) return;
+    var dot = $('.cursor'), ring = $('.cursor-ring');
     if (!dot || !ring) return;
+    var lb = $('.lb', ring);
     document.body.classList.add('has-cursor');
     var mx = innerWidth / 2, my = innerHeight / 2, rx = mx, ry = my;
     addEventListener('mousemove', function (e) { mx = e.clientX; my = e.clientY; }, { passive: true });
-    function loop() {
-      rx += (mx - rx) * 0.18; ry += (my - ry) * 0.18;
+    (function loop() {
+      rx = lerp(rx, mx, 0.18); ry = lerp(ry, my, 0.18);
       dot.style.transform = 'translate(' + mx + 'px,' + my + 'px) translate(-50%,-50%)';
       ring.style.transform = 'translate(' + rx + 'px,' + ry + 'px) translate(-50%,-50%)';
       requestAnimationFrame(loop);
+    })();
+    function over(e) {
+      var t = e.target.closest('a,button,[data-cursor],input,textarea,select,label');
+      if (!t) return;
+      ring.classList.add('big');
+      var label = t.getAttribute && t.getAttribute('data-cursor');
+      if (lb) lb.textContent = label || '';
+      if (label) ring.classList.add('tagged'); else ring.classList.remove('tagged');
     }
-    loop();
-    document.addEventListener('mouseover', function (e) {
-      if (e.target.closest('a,button,[data-cursor],input,textarea,select')) ring.classList.add('big');
-    });
-    document.addEventListener('mouseout', function (e) {
-      if (e.target.closest('a,button,[data-cursor],input,textarea,select')) ring.classList.remove('big');
-    });
-    document.addEventListener('mousedown', function () { ring.style.opacity = '.5'; });
-    document.addEventListener('mouseup', function () { ring.style.opacity = ''; });
+    function out(e) {
+      var t = e.target.closest('a,button,[data-cursor],input,textarea,select,label');
+      if (t) { ring.classList.remove('big'); ring.classList.remove('tagged'); if (lb) lb.textContent = ''; }
+    }
+    document.addEventListener('mouseover', over);
+    document.addEventListener('mouseout', out);
+    document.addEventListener('mousedown', function () { dot.style.opacity = '.4'; });
+    document.addEventListener('mouseup', function () { dot.style.opacity = ''; });
   }
 
-  /* ---------- 滚动揭示 ---------- */
+  /* ---------------- Smooth 惯量滚动（Lenis 式：驱动原生 scrollTo，保留 sticky/锚点）---------------- */
+  function initSmooth() {
+    if (REDUCE || COARSE) return;
+    var doc = document.documentElement;
+    function maxY() { return Math.max(0, doc.scrollHeight - innerHeight); }
+    var target = window.scrollY, current = target, running = false;
+    doc.classList.add('smooth');
+    function raf() {
+      current = lerp(current, target, 0.14);
+      if (Math.abs(target - current) < 0.5) { current = target; running = false; window.scrollTo(0, current); return; }
+      window.scrollTo(0, current);
+      requestAnimationFrame(raf);
+    }
+    addEventListener('wheel', function (e) {
+      if (e.ctrlKey) return;                                   // 保留浏览器缩放
+      if (e.target.closest && e.target.closest('textarea,select,[data-nosmooth]')) return;
+      if (Math.abs(e.deltaY) < 0.5 && !e.deltaX) return;
+      e.preventDefault();
+      target = clamp(target + e.deltaY, 0, maxY());
+      if (!running) { running = true; requestAnimationFrame(raf); }
+    }, { passive: false });
+    addEventListener('scroll', function () {                   // 键盘/拖滚动条/锚点：交给原生，随后同步
+      if (!running) { target = current = window.scrollY; }
+    }, { passive: true });
+    addEventListener('resize', function () { if (!running) target = current = window.scrollY; }, { passive: true });
+  }
+
+  /* ---------------- 揭示（淡入上浮）---------------- */
   function initReveal() {
-    if (REDUCE) { return; }
-    var els = document.querySelectorAll('[data-reveal]');
-    if (!('IntersectionObserver' in window) || !els.length) return;
+    var els = $$('[data-reveal]');
+    if (!els.length) return;
+    if (REDUCE || !('IntersectionObserver' in window)) { els.forEach(function (el) { el.classList.add('in'); }); return; }
     var io = new IntersectionObserver(function (ents) {
-      ents.forEach(function (en) {
-        if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
-      });
+      ents.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
     }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
     els.forEach(function (el) { io.observe(el); });
   }
 
-  /* ---------- 导航态 + 移动菜单 ---------- */
-  function initNav() {
-    var nav = document.getElementById('nav');
-    if (nav) {
-      var onScroll = function () { nav.classList.toggle('scrolled', window.scrollY > 24); };
-      onScroll(); addEventListener('scroll', onScroll, { passive: true });
-    }
-    var burger = document.getElementById('burger');
-    var links = document.getElementById('navLinks');
-    if (burger && links) {
-      burger.addEventListener('click', function () { links.classList.toggle('open'); });
-      links.addEventListener('click', function (e) { if (e.target.tagName === 'A') links.classList.remove('open'); });
-    }
+  /* ---------------- Split 逐字遮罩揭示 ---------------- */
+  function initSplit() {
+    var els = $$('[data-split]');
+    if (!els.length) return;
+    els.forEach(function (el) {
+      var lines = (el.textContent || '').split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+      if (!lines.length) lines = [el.textContent || ''];
+      el.textContent = '';
+      el.classList.add('split');
+      lines.forEach(function (line, li) {
+        var ln = document.createElement('span'); ln.className = 'ln';
+        Array.prototype.forEach.call(line, function (ch, ci) {
+          if (ch === ' ') { ln.appendChild(document.createTextNode(' ')); return; }
+          var s = document.createElement('span'); s.className = 'ch';
+          s.style.setProperty('--i', ci); s.textContent = ch;
+          ln.appendChild(s);
+        });
+        el.appendChild(ln);
+      });
+    });
+    if (REDUCE || !('IntersectionObserver' in window)) { els.forEach(function (el) { el.classList.add('in'); }); return; }
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
+    }, { threshold: 0.4 });
+    els.forEach(function (el) { io.observe(el); });
   }
 
-  /* ---------- 暗场光标流场（2D canvas，稳健） ---------- */
-  function initField() {
-    var cv = document.querySelector('.band__canvas');
-    if (!cv || REDUCE) return;
-    var ctx = cv.getContext('2d');
-    var dpr = Math.min(2, window.devicePixelRatio || 1);
-    var W, H, pts;
-    function resize() {
-      var r = cv.getBoundingClientRect();
-      W = cv.width = Math.max(1, r.width * dpr); H = cv.height = Math.max(1, r.height * dpr);
-      var n = Math.min(120, Math.round(W * H / 16000));
-      pts = [];
-      for (var i = 0; i < n; i++) pts.push({ x: Math.random() * W, y: Math.random() * H, vx: 0, vy: 0, a: .15 + Math.random() * .5 });
+  /* ---------------- Spotlight 追光照亮 ---------------- */
+  function initSpotlight() {
+    var stage = $('[data-spot]');
+    if (!stage) return;
+    var type = $('.stage__type', stage);
+    if (COARSE || REDUCE) {
+      // 无光标环境：把光固定在标题右下，仍有"被照亮"的层次
+      stage.style.setProperty('--mx', '64%'); stage.style.setProperty('--my', '46%');
+      if (type) { type.style.setProperty('--mx', '70%'); type.style.setProperty('--my', '60%'); }
+      return;
     }
-    resize(); addEventListener('resize', resize, { passive: true });
-    var mx = -9999, my = -9999;
-    cv.parentElement.addEventListener('mousemove', function (e) {
-      var r = cv.getBoundingClientRect(); mx = (e.clientX - r.left) * dpr; my = (e.clientY - r.top) * dpr;
-    }, { passive: true });
-    cv.parentElement.addEventListener('mouseleave', function () { mx = -9999; my = -9999; });
-    var t = 0;
-    function step() {
-      t += 0.006;
-      ctx.clearRect(0, 0, W, H);
-      for (var i = 0; i < pts.length; i++) {
-        var p = pts[i];
-        var ang = (Math.sin(p.x * 0.0016 + t) + Math.cos(p.y * 0.0016 - t)) * 1.7;
-        p.vx += Math.cos(ang) * 0.06; p.vy += Math.sin(ang) * 0.06;
-        var dx = mx - p.x, dy = my - p.y, d2 = dx * dx + dy * dy;
-        if (d2 < 260 * 260 * dpr * dpr) {
-          var f = (1 - Math.sqrt(d2) / (260 * dpr)) * 0.9;
-          p.vx -= (dx / (Math.sqrt(d2) + 1)) * f; p.vy -= (dy / (Math.sqrt(d2) + 1)) * f;
-        }
-        p.vx *= 0.94; p.vy *= 0.94;
-        p.x += p.vx; p.y += p.vy;
-        if (p.x < 0) p.x += W; if (p.x > W) p.x -= W; if (p.y < 0) p.y += H; if (p.y > H) p.y -= H;
-        var accent = (i % 5 === 0);
-        ctx.beginPath();
-        ctx.fillStyle = accent ? 'rgba(217,119,46,' + p.a + ')' : 'rgba(241,234,223,' + (p.a * 0.5) + ')';
-        ctx.arc(p.x, p.y, (accent ? 1.6 : 1.1) * dpr, 0, 6.283);
-        ctx.fill();
+    var sr = stage.getBoundingClientRect(), tr = type ? type.getBoundingClientRect() : null;
+    var mxs = sr.left + sr.width * 0.62, mys = sr.top + sr.height * 0.42;
+    var cx = mxs, cy = mys;
+    function relayout() { sr = stage.getBoundingClientRect(); tr = type ? type.getBoundingClientRect() : null; }
+    addEventListener('resize', relayout, { passive: true });
+    addEventListener('scroll', relayout, { passive: true });
+    stage.addEventListener('mousemove', function (e) { mxs = e.clientX; mys = e.clientY; }, { passive: true });
+    (function loop() {
+      cx = lerp(cx, mxs, 0.13); cy = lerp(cy, mys, 0.13);
+      stage.style.setProperty('--mx', ((cx - sr.left) / (sr.width || 1) * 100) + '%');
+      stage.style.setProperty('--my', ((cy - sr.top) / (sr.height || 1) * 100) + '%');
+      if (type && tr) {
+        type.style.setProperty('--mx', (cx - tr.left) + 'px');
+        type.style.setProperty('--my', (cy - tr.top) + 'px');
       }
-      requestAnimationFrame(step);
-    }
-    step();
+      requestAnimationFrame(loop);
+    })();
   }
 
-  /* ---------- 换页 veil ---------- */
+  /* ---------------- Gallery 钉住横滚（滚动驱动 + 拖拽）---------------- */
+  function initGallery() {
+    var sec = $('[data-gallery]');
+    var track = sec && $('[data-gallery-track]', sec);
+    if (!sec || !track) return;
+    var sticky = $('.gallery__sticky', sec);
+    var posters = $$('.poster', sec);
+    var overflow = 0;
+    function measure() {
+      overflow = Math.max(0, track.scrollWidth - (sticky ? sticky.clientWidth : innerWidth));
+      sec.style.height = (innerHeight + overflow) + 'px';
+    }
+    function render() {
+      var r = sec.getBoundingClientRect();
+      var total = sec.offsetHeight - innerHeight;
+      var p = total > 0 ? clamp(-r.top / total, 0, 1) : 0;
+      track.style.transform = 'translate3d(' + (-p * overflow) + 'px,0,0)';
+      // 居中者点亮，其余压暗
+      var mid = innerWidth / 2, best = null, bestD = Infinity;
+      posters.forEach(function (po) {
+        var b = po.getBoundingClientRect(), d = Math.abs((b.left + b.right) / 2 - mid);
+        po.classList.toggle('dim', true);
+        if (d < bestD) { bestD = d; best = po; }
+      });
+      if (best) { best.classList.remove('dim'); best.classList.add('on'); }
+      posters.forEach(function (po) { if (po !== best) po.classList.remove('on'); });
+    }
+    measure(); render();
+    addEventListener('resize', function () { measure(); render(); }, { passive: true });
+    addEventListener('scroll', render, { passive: true });
+
+    // 拖拽 = 直接改写页面滚动位置（pin 随之推进，干净）
+    var down = false, sx = 0, sy = 0, moved = 0;
+    track.addEventListener('pointerdown', function (e) {
+      if (COARSE) return;
+      down = true; sx = e.clientX; sy = window.scrollY; moved = 0;
+      sec.classList.add('dragging'); track.setPointerCapture && track.setPointerCapture(e.pointerId);
+    });
+    track.addEventListener('pointermove', function (e) {
+      if (!down) return;
+      var dx = e.clientX - sx; moved = Math.abs(dx);
+      window.scrollTo(0, sy - dx * 1.15);
+    });
+    function up(e) {
+      if (!down) return; down = false; sec.classList.remove('dragging');
+      if (moved < 6) {                     // 视为点击：交给链接
+        var a = e.target.closest && e.target.closest('.poster');
+        if (a && a.href) location.href = a.href;
+      }
+    }
+    track.addEventListener('pointerup', up);
+    track.addEventListener('pointercancel', up);
+    track.addEventListener('click', function (e) { if (moved > 6) { e.preventDefault(); e.stopPropagation(); } }, true);
+  }
+
+  /* ---------------- Night 时间轴定位 ---------------- */
+  function parseMin(t) {
+    var m = /(\d{1,2})\s*[:：]\s*(\d{1,2})/.exec(t || '');
+    if (!m) return null; var h = +m[1], mi = +m[2];
+    if (h < 6) h += 24;                    // 凌晨场归到深夜
+    return h * 60 + mi;
+  }
+  function fmtMin(v) {
+    var h = Math.floor(v / 60) % 24, m = Math.round(v % 60);
+    return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+  }
+  function initNight() {
+    var axis = $('[data-night]');
+    if (!axis) return;
+    var marks = $$('.night__mark', axis);
+    var times = marks.map(function (m) { return parseMin(m.getAttribute('data-time')); }).filter(function (v) { return v != null; });
+    if (!times.length) return;
+    var lo = Math.min.apply(null, times), hi = Math.max.apply(null, times);
+    if (hi - lo < 90) { var c = (lo + hi) / 2; lo = c - 60; hi = c + 60; }
+    var pad = (hi - lo) * 0.1; lo -= pad; hi += pad;
+    for (var i = 0; i <= 5; i++) {
+      var tick = document.createElement('div'); tick.className = 'night__tick';
+      tick.style.left = (i / 5 * 88 + 6) + '%';
+      var sp = document.createElement('span'); sp.textContent = fmtMin(lo + (hi - lo) * i / 5);
+      tick.appendChild(sp); axis.appendChild(tick);
+    }
+    marks.forEach(function (m, i) {
+      var t = parseMin(m.getAttribute('data-time'));
+      if (t == null) { m.style.display = 'none'; return; }
+      m.style.left = (6 + (t - lo) / (hi - lo) * 88) + '%';
+      m.style.bottom = (22 + (i % 2) * 54) + 'px';
+    });
+    axis.style.minHeight = '256px';
+  }
+
+  /* ---------------- Float 视差 ---------------- */
+  var floats = [];
+  function initFloat() {
+    floats = $$('[data-float]').map(function (el) {
+      return { el: el, sp: parseFloat(el.getAttribute('data-float')) || -0.06 };
+    });
+  }
+  function renderFloat() {
+    for (var i = 0; i < floats.length; i++) {
+      var f = floats[i], r = f.el.getBoundingClientRect();
+      var c = r.top + r.height / 2 - innerHeight / 2;
+      f.el.style.transform = 'translate3d(0,' + (c * f.sp).toFixed(2) + 'px,0)';
+    }
+  }
+
+  /* ---------------- Magnetic 磁吸 ---------------- */
+  function initMagnetic() {
+    if (COARSE || REDUCE) return;
+    $$('.btn').forEach(function (b) {
+      var raf = null, tx = 0, ty = 0, cx = 0, cy = 0;
+      b.addEventListener('mousemove', function (e) {
+        var r = b.getBoundingClientRect();
+        tx = (e.clientX - (r.left + r.width / 2)) * 0.28;
+        ty = (e.clientY - (r.top + r.height / 2)) * 0.4;
+        if (!raf) raf = requestAnimationFrame(tick);
+      });
+      b.addEventListener('mouseleave', function () { tx = 0; ty = 0; if (!raf) raf = requestAnimationFrame(tick); });
+      function tick() {
+        cx = lerp(cx, tx, 0.2); cy = lerp(cy, ty, 0.2);
+        b.style.transform = 'translate(' + cx.toFixed(1) + 'px,' + cy.toFixed(1) + 'px)';
+        if (Math.abs(cx - tx) > 0.1 || Math.abs(cy - ty) > 0.1) { raf = requestAnimationFrame(tick); } else { raf = null; }
+      }
+    });
+  }
+
+  /* ---------------- 幕次导轨 scroll-spy ---------------- */
+  function initRail() {
+    var rail = $('[data-rail]');
+    if (!rail) return;
+    var links = $$('a', rail);
+    var secs = links.map(function (a) { return $(a.getAttribute('href')); }).filter(Boolean);
+    if (!secs.length || !('IntersectionObserver' in window)) return;
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (en) {
+        if (en.isIntersecting) {
+          links.forEach(function (a) { a.classList.toggle('on', a.getAttribute('href') === '#' + en.target.id); });
+        }
+      });
+    }, { threshold: 0.4, rootMargin: '-20% 0px -40% 0px' });
+    secs.forEach(function (s) { io.observe(s); });
+  }
+
+  /* ---------------- 引言轮播 ---------------- */
+  function initVoices() {
+    var box = $('[data-voices]');
+    if (!box) return;
+    var qs = $$('.voices__q', box), dots = $$('[data-voice-dots] button', box);
+    if (qs.length < 2) return;
+    var cur = 0, timer = null;
+    function go(i) {
+      cur = (i + qs.length) % qs.length;
+      qs.forEach(function (q, k) { q.classList.toggle('on', k === cur); });
+      dots.forEach(function (d, k) { d.classList.toggle('on', k === cur); });
+    }
+    dots.forEach(function (d) { d.addEventListener('click', function () { go(+d.getAttribute('data-voice')); restart(); }); });
+    function restart() { if (timer) clearInterval(timer); if (!REDUCE) timer = setInterval(function () { go(cur + 1); }, 5200); }
+    restart();
+  }
+
+  /* ---------------- 换页 veil ---------------- */
   function initVeil() {
     if (REDUCE) return;
-    var veil = document.querySelector('.veil');
+    var veil = $('.veil');
     if (!veil) return;
     document.addEventListener('click', function (e) {
-      var a = e.target.closest('a');
+      var a = e.target.closest && e.target.closest('a');
       if (!a) return;
       var href = a.getAttribute('href') || '';
-      if (a.target === '_blank' || a.hasAttribute('download') || href.charAt(0) === '#' || href.indexOf('mailto:') === 0) return;
+      if (a.target === '_blank' || a.hasAttribute('download')) return;
+      if (href.charAt(0) === '#' || href.indexOf('mailto:') === 0 || href.indexOf('javascript:') === 0) return;
       if (href.indexOf('http') === 0 && href.indexOf(location.host) === -1) return;
       if (a.hasAttribute('data-noveil')) return;
       e.preventDefault();
       veil.classList.add('show');
-      setTimeout(function () { location.href = a.href; }, 460);
+      setTimeout(function () { location.href = a.href; }, 420);
     });
   }
 
-  /* ---------- 数字滚动（hero 统计） ---------- */
+  /* ---------------- 数字滚动 ---------------- */
   function initCount() {
-    if (REDUCE) return;
-    var els = document.querySelectorAll('[data-count]');
-    if (!els.length || !('IntersectionObserver' in window)) return;
-    var io = new IntersectionObserver(function (ents) {
-      ents.forEach(function (en) {
-        if (!en.isIntersecting) return;
-        var el = en.target, to = parseFloat(el.getAttribute('data-count')) || 0, s = 0, st = +new Date();
-        (function tick() {
-          var k = Math.min(1, (+new Date() - st) / 900);
-          el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))).toLocaleString();
-          if (k < 1) requestAnimationFrame(tick);
-        })();
-        io.unobserve(el);
+    var els = $$('[data-count]');
+    if (!els.length) return;
+    els.forEach(function (el) {
+      var to = parseFloat(el.getAttribute('data-count')) || 0;
+      if (REDUCE) { el.textContent = to.toLocaleString(); return; }
+      var st = null;
+      (function tick(now) {
+        if (st === null) st = now || performance.now();
+        var k = Math.min(1, ((now || performance.now()) - st) / 1000);
+        el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))).toLocaleString();
+        if (k < 1) requestAnimationFrame(tick);
+      })();
+    });
+  }
+
+  /* ---------------- 今日日期 ---------------- */
+  function initToday() {
+    var els = $$('[data-today]');
+    if (!els.length) return;
+    var d = new Date(), W = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    var s = (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日 · ' + W[d.getDay()];
+    els.forEach(function (el) { el.textContent = s; });
+  }
+
+  /* ---------------- 统一滚动帧（pin / 视差）---------------- */
+  function wireScroll() {
+    var pending = false;
+    function on() {
+      if (pending) return; pending = true;
+      requestAnimationFrame(function () {
+        pending = false;
+        renderFloat();
+        var g = $('[data-gallery]');
+        if (g && g.__render) g.__render();
       });
-    }, { threshold: 0.6 });
-    els.forEach(function (el) { io.observe(el); });
+    }
+    addEventListener('scroll', on, { passive: true });
+    addEventListener('resize', on, { passive: true });
+  }
+
+  /* ---------------- 导航滚动收缩 ---------------- */
+  function initNav() {
+    var nav = $('#nav');
+    if (!nav) return;
+    function upd() { nav.classList.toggle('scrolled', window.scrollY > 40); }
+    addEventListener('scroll', upd, { passive: true });
+    upd();
   }
 
   function init() {
-    initCursor(); initReveal(); initNav(); initField(); initVeil(); initCount();
+    initCursor();
+    initSmooth();
+    initReveal();
+    initSplit();
+    initSpotlight();
+    initGallery();
+    initNight();
+    initFloat();
+    initMagnetic();
+    initRail();
+    initVoices();
+    initNav();
+    initVeil();
+    initCount();
+    initToday();
+    wireScroll();
+    renderFloat();
+    document.documentElement.classList.add('js-on');
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

@@ -1,19 +1,47 @@
 {% extends 'layout.html' %}
-{% block title %}甜薯剧本杀 · 约局工作室{% endblock %}
+{% block title %}甜薯剧本杀 · 今晚，你演谁{% endblock %}
+{% block desc %}推门进来，挑个本，坐下就开始。挑本、拼车、组局、唠嗑，一条线索串到底。{% endblock %}
 {% block content %}
 
-<section class="hero" style="min-height:88vh;display:grid;align-items:center">
-  <div class="wrap" style="text-align:center">
-    <span class="eyebrow" data-reveal style="justify-content:center">甜薯剧本杀 · 约局工作室</span>
-    <h1 class="display" data-reveal data-d="1" style="margin:22px auto 0;max-width:18ch">把一晚上的<em>悬念</em>，交给一群对的人。</h1>
-    <p class="lede" data-reveal data-d="2" style="margin:24px auto 0">挑本、拼车、组局、唠嗑——一个入口约齐。先随便逛逛，看对眼了再进门。</p>
-    <div class="hero__sub" data-reveal data-d="3" style="justify-content:center;margin-top:32px">
-      <a class="btn btn--accent" href="{{ url_for('public.home', browse=1) }}">先随便逛逛 <span class="arr">→</span></a>
-      <a class="btn btn--ghost" href="{{ url_for('user.login') }}">登录</a>
+{# 进站闸门：与首页同属「暗场聚光灯」语言——巨字由随光标的暖色追光照亮，
+   底部编辑式对齐、编号入口，不再是居中对称的模板脸。 #}
+<section class="stage" data-spot>
+  <div class="stage__glow" aria-hidden="true"></div>
+  <div class="stage__slits" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="stage__grain" aria-hidden="true"></div>
+  <div class="wrap stage__body">
+    <div class="stage__top">
+      <span class="eyebrow" data-reveal>甜薯剧本杀 · 约局工作室</span>
+      <div class="stage__clock" data-reveal>
+        <span data-today>—</span> · 今晚<br>
+        <b>{{ meta.today if meta else 0 }}</b> 场在开
+      </div>
     </div>
-    <p class="note" data-reveal data-d="4" style="margin-top:28px">
-      在演 <b>{{ meta.scripts if meta else 0 }}</b> 部 · 今日 <b>{{ meta.today if meta else 0 }}</b> 场
+
+    <div class="stage__type">
+      <div class="base">
+        <span class="t">推门进来，</span>
+        <span class="t">今晚你演<em>谁</em>？</span>
+      </div>
+      <div class="litwrap" aria-hidden="true">
+        <span class="t">推门进来，</span>
+        <span class="t">今晚你演<em>谁</em>？</span>
+      </div>
+    </div>
+
+    <p class="stage__sub" data-reveal>
+      不是又一家剧本杀店。挑本、拼车、组局、唠嗑，一条线索串到底。
+      把光标挪到字上，光就跟着你走。
     </p>
+
+    <div class="stage__foot">
+      <div class="stage__acts" data-reveal data-d="1">
+        <a class="act" href="{{ url_for('public.home', browse=1) }}" data-cursor="入场">01 先瞅瞅有啥本<span class="ct">{{ meta.scripts if meta else 0 }}</span></a>
+        <a class="act" href="{{ url_for('user.login') }}" data-cursor="登记">02 登录</a>
+        <a class="act" href="{{ url_for('user.register') }}" data-cursor="登记">03 去登记</a>
+      </div>
+      <span class="stage__scroll" data-reveal data-d="2">在演 {{ meta.scripts if meta else 0 }} 部 · 今日 {{ meta.today if meta else 0 }} 场</span>
+    </div>
   </div>
 </section>
 

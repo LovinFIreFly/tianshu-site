@@ -7,18 +7,18 @@
   <meta name="description" content="{% block desc %}甜薯剧本杀 —— 把一晚上的悬念，交给一群对的人。本本墙、拼车、唠嗑、组局，一个入口约齐。{% endblock %}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;600;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/unseen.css', v=static_v('css/unseen.css')) }}">
   {% block extra_head %}{% endblock %}
 </head>
 <body>
   <div class="cursor" aria-hidden="true"></div>
-  <div class="cursor-ring" aria-hidden="true"></div>
-  <div class="veil" aria-hidden="true"><span class="mark">🍠</span></div>
+  <div class="cursor-ring" aria-hidden="true"><span class="lb"></span></div>
+  <div class="veil" aria-hidden="true"><span class="mark">甜薯</span></div>
 
   <header class="nav" id="nav">
     <a class="nav__brand" href="{{ url_for('public.home') }}" data-cursor>
-      <span class="mark">🍠</span><span>甜薯</span>
+      <span class="mark">薯</span><span class="brand-word">甜薯</span>
     </a>
     <nav class="nav__links" id="navLinks">
       <a href="{{ url_for('public.scripts') }}" class="{{ 'on' if request.path.startswith('/scripts') }}">本本墙</a>

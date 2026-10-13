@@ -1,115 +1,94 @@
 {% extends 'layout.html' %}
-{% block title %}甜薯剧本杀 · 约局工作室{% endblock %}
+{% block title %}甜薯剧本杀 · 今晚，你演谁{% endblock %}
+{% block desc %}甜薯剧本杀 —— 挑本、拼车、组局、唠嗑，一个入口约齐。看今晚谁在开场，或者自己开一桌。{% endblock %}
 {% block content %}
 
-<section class="hero">
-  <div class="wrap hero__grid">
-    <div>
+<nav class="rail" data-rail aria-hidden="true">
+  <a href="#a1" class="on"><span class="d"></span><span class="lb">幕一 · 光缝</span></a>
+  <a href="#a2"><span class="d"></span><span class="lb">幕二 · 剧目</span></a>
+  <a href="#a3"><span class="d"></span><span class="lb">幕三 · 今晚</span></a>
+  <a href="#a4"><span class="d"></span><span class="lb">幕四 · 路径</span></a>
+  <a href="#a5"><span class="d"></span><span class="lb">幕五 · 声音</span></a>
+</nav>
+
+<!-- 幕一 · 光缝 -->
+<section class="stage" id="a1" data-spot>
+  <div class="stage__glow" aria-hidden="true"></div>
+  <div class="stage__slits" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="stage__grain" aria-hidden="true"></div>
+  <div class="wrap stage__body">
+    <div class="stage__top">
       <span class="eyebrow" data-reveal>甜薯剧本杀 · 约局工作室</span>
-      <h1 class="display" data-reveal data-d="1">把一晚上的<em>悬念</em>，<br>交给一群对的人。</h1>
-      <p class="lede" data-reveal data-d="2">不是又一家剧本杀店。我们做的是「约本」这件事本身——挑本、拼车、组局、唠嗑，一条线索串到底。你只管来，剩下的交给暗场里的那束光。</p>
-      <div class="hero__sub" data-reveal data-d="3">
-        <a class="btn btn--accent" href="{{ url_for('public.scripts') }}">先逛本本墙 <span class="arr">→</span></a>
-        <a class="btn btn--ghost" href="{{ url_for('user.register') }}">注册一个号</a>
-      </div>
-      <div class="hero__meta" data-reveal data-d="4">
-        <div class="stat"><div class="n" data-count="{{ served or 0 }}">0</div><div class="l">累计陪同场次</div></div>
-        <div class="stat"><div class="n" data-count="{{ scripts|length }}">0</div><div class="l">在演剧目</div></div>
-        <div class="stat"><div class="n" data-count="{{ sessions|length }}">0</div><div class="l">今日组局</div></div>
+      <div class="stage__clock" data-reveal data-d="1">
+        <span data-today>—</span> · 今晚<br>
+        <b>{{ sessions|length }}</b> 场在开 · 已陪同 <b data-count="{{ served or 0 }}">0</b> 场
       </div>
     </div>
+
+    <div class="stage__type">
+      <div class="base">
+        <span class="t">灯一灭，</span>
+        <span class="t">你就成了<em>别人</em>。</span>
+      </div>
+      <div class="litwrap" aria-hidden="true">
+        <span class="t">灯一灭，</span>
+        <span class="t">你就成了<em>别人</em>。</span>
+      </div>
+    </div>
+
+    <p class="stage__sub" data-reveal data-d="2">
+      不是又一家剧本杀店。我们做的是「<b>约本</b>」这件事本身 —— 挑本、拼车、组局、唠嗑，一条线索串到底。
+      把光标挪到字上，光就跟到哪儿；剩下的，交给暗场。
+    </p>
+
+    <div class="stage__foot">
+      <div class="stage__acts" data-reveal data-d="3">
+        <a class="act" href="{{ url_for('public.scripts') }}" data-cursor="入场"><span class="no">01</span>本本墙<span class="ct">{{ scripts|length }}</span></a>
+        <a class="act" href="{{ url_for('public.car') }}" data-cursor="入场"><span class="no">02</span>拼车<span class="ct">{{ cars|length }}</span></a>
+        <a class="act" href="{{ url_for('public.comm') }}" data-cursor="入场"><span class="no">03</span>唠嗑</a>
+        <a class="act" href="{{ url_for('public.group') }}" data-cursor="入场"><span class="no">04</span>组局<span class="ct">{{ sessions|length }}</span></a>
+      </div>
+      <span class="stage__scroll" data-reveal data-d="4"><span class="ln"></span>往下，开幕</span>
+    </div>
   </div>
-  <div class="scroll-cue">SCROLL ↓</div>
 </section>
 
 {% if scripts %}
-<div class="marquee" aria-hidden="true">
-  <div class="marquee__track">
+<div class="ticker" aria-hidden="true">
+  <div class="ticker__track">
     {% for s in scripts %}<span>{{ s.title }}</span>{% endfor %}
     {% for s in scripts %}<span>{{ s.title }}</span>{% endfor %}
   </div>
 </div>
 {% endif %}
 
-<section class="band">
-  <canvas class="band__canvas"></canvas>
-  <div class="band__grain"></div>
-  <div class="wrap band__inner">
-    <span class="eyebrow eyebrow--dark" data-reveal>暗场 · The Stage</span>
-    <h2 class="h2" data-reveal data-d="1" style="margin-top:18px">灯灭之后，故事才真正开始。</h2>
-    <p class="lede" data-reveal data-d="2" style="margin-top:18px">每一局都是一次小型演出：有人藏，有人找，有人演到忘了自己。把光标放进这片暗场，划出今晚的轨迹——然后，去本本墙挑一个属于你们的本。</p>
-    <div class="band__hint" data-reveal data-d="3">把光标移入暗场 · <b>划出光痕</b></div>
-    <div style="margin-top:30px" data-reveal data-d="4">
-      <a class="btn btn--dark" href="{{ url_for('public.scripts') }}">去本本墙挑本 <span class="arr">→</span></a>
-    </div>
-  </div>
-</section>
-
-<section class="sec">
-  <div class="wrap">
-    <div class="sec__head">
-      <div>
-        <span class="eyebrow" data-reveal>四件事，一个入口</span>
-        <h2 class="h2" data-reveal data-d="1" style="margin-top:14px">怎么约，都在这儿。</h2>
-      </div>
-      <a class="link-underline" href="{{ url_for('public.scripts') }}" data-reveal>看全部 →</a>
-    </div>
-    <div class="idx">
-      <a class="idx__row" href="{{ url_for('public.scripts') }}" data-reveal data-cursor>
-        <span class="idx__no">01</span>
-        <span class="idx__title">本本墙</span>
-        <span class="idx__desc">在演剧目一墙摆开。按情绪、按难度、按人数挑，热门与新本永远在最前。</span>
-        <span class="idx__go">{{ scripts|length }} 部 →</span>
-      </a>
-      <a class="idx__row" href="{{ url_for('public.car') }}" data-reveal data-d="1" data-cursor>
-        <span class="idx__no">02</span>
-        <span class="idx__title">拼车</span>
-        <span class="idx__desc">没凑齐人？进拼车大厅，差几位、什么时段、走哪条线，一眼看清，上车即发。</span>
-        <span class="idx__go">{{ cars|length }} 车 →</span>
-      </a>
-      <a class="idx__row" href="{{ url_for('public.comm') }}" data-reveal data-d="2" data-cursor>
-        <span class="idx__no">03</span>
-        <span class="idx__title">唠嗑</span>
-        <span class="idx__desc">玩前玩后都想说两句？社区里找队友、发招募、晒复盘，气味相投的人自然凑到一起。</span>
-        <span class="idx__go">进去看看 →</span>
-      </a>
-      <a class="idx__row" href="{{ url_for('public.group') }}" data-reveal data-d="3" data-cursor>
-        <span class="idx__no">04</span>
-        <span class="idx__title">组局</span>
-        <span class="idx__desc">今天在开的局一览无余。看中哪场，直接约；没合适的，自己开一桌。</span>
-        <span class="idx__go">{{ sessions|length }} 局 →</span>
-      </a>
-    </div>
-  </div>
-</section>
-
+<!-- 幕二 · 剧目（钉住横滚海报廊） -->
 {% if scripts %}
-<section class="sec" style="padding-top:0">
-  <div class="wrap">
-    <div class="sec__head">
+<section class="gallery" id="a2" data-gallery>
+  <div class="gallery__sticky">
+    <div class="gallery__head">
       <div>
         <span class="eyebrow" data-reveal>本本墙 · The Catalogue</span>
-        <h2 class="h2" data-reveal data-d="1" style="margin-top:14px">这几部，正在上演。</h2>
+        <h2 class="h2" style="margin-top:14px" data-reveal data-d="1">这几部，正在上演。</h2>
       </div>
-      <a class="link-underline" href="{{ url_for('public.scripts') }}" data-reveal>全部剧目 →</a>
+      <span class="gallery__hint" data-reveal data-d="2">横向拖拽 / 滚动 → 全部剧目 {{ scripts|length }} 部</span>
     </div>
-    <div class="cards">
+    <div class="gallery__track" data-gallery-track>
       {% for s in scripts %}
-      <a class="card" href="{{ url_for('public.script_detail', sid=s.id) }}" data-reveal data-d="{{ loop.index0 % 4 }}" data-cursor>
-        <div class="card__cover">
-          <div class="ov"></div>
-          <div class="emo">{{ s.emoji or '🎭' }}</div>
+      <a class="poster" href="{{ url_for('public.script_detail', sid=s.id) }}" data-poster data-cursor="看这个本">
+        <div class="poster__face">
+          <span class="poster__idx">{{ '%02d' % loop.index }}</span>
+          {% if s.tags and ('热门' in s.tags or '上新' in s.tags or '新本' in s.tags) %}<span class="poster__ribbon">热门</span>{% endif %}
+          <span class="poster__glyph">{{ (s.title or '本')[:1] }}</span>
         </div>
-        <div class="card__body">
-          <div class="card__title">{{ s.title }}</div>
-          <div class="card__tags">
-            {% for t in (s.tags or [])[:3] %}<span class="tag{% if t in ['热门','上新','新本'] %} tag--hot{% endif %}">{{ t }}</span>{% endfor %}
+        <div class="poster__body">
+          <div>
+            <div class="poster__title">{{ s.title }}</div>
+            <div class="poster__meta">{{ (s.tags or [])[:3]|join(' · ') }}{% if s.players %} · {{ s.players }} 人{% endif %}</div>
           </div>
-          <div class="card__foot">
-            <span class="card__price">¥{{ s.price or 0 }}</span>
-            <span class="card__diff">{% for i in range(5) %}{% if loop.index <= (s.diff or 0) %}●{% else %}<i>○</i>{% endif %}{% endfor %}</span>
-          </div>
+          <div class="poster__price">¥{{ s.price or 0 }}</div>
         </div>
+        <span class="poster__cta">入场 →</span>
       </a>
       {% endfor %}
     </div>
@@ -117,63 +96,106 @@
 </section>
 {% endif %}
 
-{% if sessions %}
-<section class="sec" style="padding-top:0">
+<!-- 幕三 · 今晚（时间轴排期） -->
+<section class="night" id="a3">
   <div class="wrap">
-    <div class="sec__head">
+    <div class="sec__head" style="margin-bottom:0">
       <div>
         <span class="eyebrow" data-reveal>今日组局 · Tonight</span>
-        <h2 class="h2" data-reveal data-d="1" style="margin-top:14px">今晚，谁在开场。</h2>
+        <h2 class="h2" style="margin-top:14px" data-reveal data-d="1">今晚，谁在开场。</h2>
       </div>
       <a class="link-underline" href="{{ url_for('public.group') }}" data-reveal>组局一览 →</a>
     </div>
-    <div class="rows">
-      {% for se in sessions[:6] %}
-      <a class="row" href="{{ url_for('public.group') }}" data-reveal data-cursor>
-        <span class="row__when">{{ se.time or '' }}</span>
-        <span>
-          <span class="row__title">{{ se.title or '一场组局' }}</span><br>
-          <span class="row__sub">DM {{ se.dmName or '待安排' }} · {{ se.players or '' }} 人</span>
-        </span>
-        <span class="row__pill">{{ se.status or 'open' }}</span>
-        <span class="idx__go">→</span>
+    {% if sessions %}
+    <div class="night__axis" data-night>
+      {% for se in sessions[:8] %}
+      <a class="night__mark" href="{{ url_for('public.group') }}" data-time="{{ se.time or '' }}" data-cursor="看这场">
+        <span class="night__dot"></span>
+        <span class="night__card"><b>{{ se.title or '一场组局' }}</b>{{ se.time or '' }}{% if se.dmName %} · DM {{ se.dmName }}{% endif %}</span>
       </a>
       {% endfor %}
     </div>
+    {% else %}
+    <div class="night__axis" style="display:grid;place-items:center;border-top:1px solid var(--line)">
+      <p class="lede" style="text-align:center;padding:40px 0">今晚还没有开局的戏。<br>要不，自己开一桌？<br><a class="link-underline" href="{{ url_for('public.group') }}" style="color:var(--accent-2);margin-top:14px;display:inline-block">去组局 →</a></p>
+    </div>
+    {% endif %}
   </div>
 </section>
-{% endif %}
 
-{% if reviews %}
-<section class="sec" style="padding-top:0">
-  <div class="wrap">
-    <div class="sec__head">
-      <div>
-        <span class="eyebrow" data-reveal>玩家之声 · Voices</span>
-        <h2 class="h2" data-reveal data-d="1" style="margin-top:14px">他们昨晚说了什么。</h2>
-      </div>
+<!-- 幕四 · 路径（四件事） -->
+<section class="paths" id="a4">
+  <div class="wrap paths__grid">
+    <div>
+      <div class="paths__huge" data-float="-0.06">四<br><em>件</em>事</div>
+      <p class="paths__note" data-reveal>怎么约，都在这儿。从挑本到散场，一条线索串到底。</p>
     </div>
-    <div class="quotes">
+    <div class="p-list">
+      <a class="p" href="{{ url_for('public.scripts') }}" data-reveal data-cursor="入场">
+        <span class="p__no">01</span>
+        <span class="p__t">本本墙</span>
+        <span class="p__go">{{ scripts|length }} 部 →</span>
+        <span class="p__d">在演剧目一墙摆开。按情绪、按难度、按人数挑，热门与新本永远在最前。</span>
+      </a>
+      <a class="p" href="{{ url_for('public.car') }}" data-reveal data-d="1" data-cursor="入场">
+        <span class="p__no">02</span>
+        <span class="p__t">拼车</span>
+        <span class="p__go">{{ cars|length }} 车 →</span>
+        <span class="p__d">没凑齐人？进拼车大厅，差几位、什么时段、走哪条线，一眼看清，上车即发。</span>
+      </a>
+      <a class="p" href="{{ url_for('public.comm') }}" data-reveal data-d="2" data-cursor="入场">
+        <span class="p__no">03</span>
+        <span class="p__t">唠嗑</span>
+        <span class="p__go">进去看看 →</span>
+        <span class="p__d">玩前玩后都想说两句？社区里找队友、发招募、晒复盘，气味相投的人自然凑到一起。</span>
+      </a>
+      <a class="p" href="{{ url_for('public.group') }}" data-reveal data-d="3" data-cursor="入场">
+        <span class="p__no">04</span>
+        <span class="p__t">组局</span>
+        <span class="p__go">{{ sessions|length }} 局 →</span>
+        <span class="p__d">今天在开的局一览无余。看中哪场，直接约；没合适的，自己开一桌。</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- 幕五 · 声音 -->
+{% if reviews %}
+<section class="voices" id="a5" data-voices>
+  <div class="wrap">
+    <span class="eyebrow" data-reveal>玩家之声 · Voices</span>
+    <div class="voices__stage">
       {% for r in reviews[:3] %}
-      <figure class="quote" data-reveal data-d="{{ loop.index0 }}">
-        <blockquote class="quote__text">“{{ r.text }}”</blockquote>
-        <figcaption class="quote__by"><span class="quote__av">{{ r.avatar or '🗣' }}</span>{{ r.nick }}{% if r.title %} · 《{{ r.title }}》{% endif %}</figcaption>
-      </figure>
+      <blockquote class="voices__q{% if loop.first %} on{% endif %}" data-voice="{{ loop.index0 }}">
+        “{{ r.text }}”
+        <span class="by"><b>{{ r.nick or '一位玩家' }}</b>{% if r.title %} · 《{{ r.title }}》{% endif %}</span>
+      </blockquote>
       {% endfor %}
     </div>
+    <div class="voices__dots" data-voice-dots>
+      {% for r in reviews[:3] %}<button class="{% if loop.first %}on{% endif %}" data-voice="{{ loop.index0 }}" aria-label="第 {{ loop.index }} 条"></button>{% endfor %}
+    </div>
   </div>
 </section>
 {% endif %}
 
-<section class="band">
-  <canvas class="band__canvas"></canvas>
-  <div class="band__grain"></div>
-  <div class="wrap band__inner" style="text-align:center">
-    <h2 class="h2" data-reveal style="margin:0 auto;max-width:22ch">今晚，约一局？</h2>
-    <p class="lede" data-reveal data-d="1" style="margin:18px auto 0">挑本、拼人、组局——三分钟，把一晚上的悬念排进日程。</p>
-    <div style="margin-top:28px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap" data-reveal data-d="2">
-      <a class="btn btn--dark" href="{{ url_for('public.scripts') }}">去本本墙 <span class="arr">→</span></a>
-      <a class="btn btn--accent" href="{{ url_for('user.register') }}">注册约本</a>
+<!-- 谢幕 -->
+<section class="curtain">
+  <div class="curtain__glow" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="curtain__grid">
+      <h2 class="curtain__big" data-reveal>散场了，<br>故事<em>还没完</em>。</h2>
+      <div class="curtain__side" data-reveal data-d="1">
+        <p>挑本、拼人、组局——三分钟，把一晚上的悬念排进日程。</p>
+        <div class="curtain__row">
+          <a class="btn btn--accent" href="{{ url_for('public.scripts') }}"><span>去本本墙</span><span class="arr">→</span></a>
+          <a class="btn btn--dark" href="{{ url_for('user.register') if not me else url_for('public.scripts') }}"><span>{{ '挑个本' if me else '注册约本' }}</span></a>
+        </div>
+      </div>
+    </div>
+    <div class="curtain__meta">
+      <span>甜薯剧本杀 · 约局工作室</span>
+      <span>营业 14:00 – 02:00 · 全年无休</span>
     </div>
   </div>
 </section>
