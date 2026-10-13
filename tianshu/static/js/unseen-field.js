@@ -11,6 +11,9 @@
   var canvas = document.querySelector('[data-field]');
   if (!canvas) return;
   var REDUCE = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* 渲染分辨率系数：这是块「软噪声背景」，不需要满分辨率——0.55 倍靠 CSS 放大后肉眼几乎无差，
+     但填充率省约 3 倍。它曾经是整站掉帧的头号原因（满分辨率 × 每像素 6 次 fbm × 5 层）。*/
+  var RENDER_SCALE = REDUCE ? 1 : 0.55;
 
   function noField() { document.documentElement.classList.add('no-field'); canvas.style.display = 'none'; }
 
@@ -23,7 +26,7 @@
   var FBM_BLOCK = [
     'float hash(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }',
     'float noise(vec2 p){ vec2 i=floor(p), f=fract(p); float a=hash(i),b=hash(i+vec2(1.,0.)),c=hash(i+vec2(0.,1.)),d=hash(i+vec2(1.,1.)); vec2 u=f*f*(3.-2.*f); return mix(mix(a,b,u.x),mix(c,d,u.x),u.y); }',
-    'float fbm(vec2 p){ float v=0.0,a=0.5; for(int i=0;i<5;i++){ v+=a*noise(p); p=p*2.02+vec2(1.7,9.2); a*=0.5; } return v; }'
+    'float fbm(vec2 p){ float v=0.0,a=0.5; for(int i=0;i<4;i++){ v+=a*noise(p); p=p*2.02+vec2(1.7,9.2); a*=0.5; } return v; }'
   ].join('\n');
 
   /* ======================================================================
@@ -92,27 +95,32 @@
       '  q += clamp(vel,-0.10,0.10) * 0.009;',                  // 流体位移限幅
       '  float t = uFlow, ch = uChapter;',                       // ★ 相位只跟"用户移动量"走：不动就不动
       '  vec2 w = q*1.5 + vec2(t*0.55,-t*0.40);',
-      '  w += vec2(fbm(w*0.8+t*0.30), fbm(w*0.8-t*0.30+3.1))*0.85;',
-      '  float nR=fbm(w*1.1+vec2(0.010,0.0)+ch*2.0), nG=fbm(w*1.1+ch*2.0), nB=fbm(w*1.1-vec2(0.010,0.0)+ch*2.0);',
-      '  float n2=fbm(w*2.35-ch*3.0+7.0);',
+      '  w += fbm(w*0.8 + t*0.30) * vec2(0.86, 0.62);',              // 1 次 fbm 完成域扭曲（原 2 次）
+      '  float nG = fbm(w*1.1 + ch*2.0);',                            // 主结构（原 nR/nG/nB 三次，现一次）
+      '  float n2 = fbm(w*2.35 - ch*3.0 + 7.0);',                     // 细节（原 n2）
       '  float smoke = smoothstep(0.50,1.26, nG*0.70 + n2*0.40);',   // 结构更少、更淡
       '  vec2 p = vec2((vUv.x-0.5)*asp, vUv.y-0.5); vec2 m = vec2((uMouse.x-0.5)*asp, uMouse.y-0.5);',
-      '  float lit = exp(-length(p-m)*3.2);',                        // "被照亮"的宽域（决定哪里允许暖）
-      '  float gl0 = exp(-length(p-m)*9.5) * (0.04 + uMouseAmt*0.11);',   // 收紧的光核
+      '  float lit = exp(-length(p-m)*(3.2 - ch*0.6));',             // "被照亮"的宽域（决定哪里允许暖）
+      '  float gl0 = exp(-length(p-m)*(9.5 - ch*1.4)) * (0.04 + uMouseAmt*0.11);',   // 收紧的光核
       '  float carve = 0.0;',
       '  for(int i=0;i<16;i++){ if(i>=uTrailN) break; vec3 tp=uTrail[i]; vec2 tv=vec2((tp.x-0.5)*asp, tp.y-0.5);',
       '    carve += exp(-length(p-tv)*18.0)*(1.0-tp.z); }',
       '  carve = clamp(carve*0.20*(0.5+ch*0.7),0.0,0.7);',
       '  vec3 base=vec3(0.012,0.013,0.018);',                       // 冷近黑
       '  vec3 cool=vec3(0.034,0.046,0.076);',                       // 冷调烟雾
-      '  vec3 warm=vec3(0.60,0.28,0.13);',                          // 暖色：只在被照亮处
+      // 光色随"叙事进度"变：幕一朱砂橙 → 中段琥珀 → 末幕偏玫瑰（仍留在暖色家族内）
+      '  vec3 warmA=vec3(0.62,0.27,0.11);',
+      '  vec3 warmB=vec3(0.60,0.40,0.16);',
+      '  vec3 warmC=vec3(0.46,0.20,0.22);',
+      '  vec3 warm=mix(mix(warmA,warmB,smoothstep(0.0,0.55,ch)), warmC, smoothstep(0.55,1.0,ch));',
       '  vec3 col = base;',
       '  col += smoke * mix(cool, warm*0.55, lit*0.60) * 0.26;',    // 越靠近光才越暖
-      '  col.r += (nR-nG)*0.07; col.b += (nB-nG)*0.07;',            // 微弱色散
+      '  float disp = sin(w.x*53.0 + w.y*29.0);',                    // 廉价色散（原要 2 次 fbm）
+      '  col.r += disp*0.022; col.b -= disp*0.022;',
       '  col += gl0 * warm * 0.55;',
       '  col += carve * vec3(0.90,0.58,0.30) * 0.26;',
       '  float vig = smoothstep(1.18,0.16, length(vUv-0.5)*1.5); col *= 0.26 + 0.82*vig;',
-      '  col += (hash(vUv*uRes*1.7+11.0)-0.5)*0.028;',              // 静态颗粒（不闪烁）
+      '  col += (hash(vUv*vec2(1600.0,900.0)*1.7+11.0)-0.5)*0.028;', // 静态颗粒（按屏幕尺度，与渲染分辨率解耦）
       '  gl_FragColor = vec4(max(col,0.0),1.0);',
       '}'
     ].join('\n');
@@ -166,7 +174,7 @@
     }
 
     function resize() {
-      var dpr = Math.min(1.5, window.devicePixelRatio || 1);
+      var dpr = Math.min(1, window.devicePixelRatio || 1) * RENDER_SCALE;
       canvas.width = Math.max(1, Math.floor(innerWidth * dpr));
       canvas.height = Math.max(1, Math.floor(innerHeight * dpr));
       canvas.style.width = innerWidth + 'px'; canvas.style.height = innerHeight + 'px';
@@ -286,19 +294,21 @@
       'void main(){ vec2 uv=vec2(gl_FragCoord.x/uRes.x, 1.0-gl_FragCoord.y/uRes.y); float asp=uRes.x/uRes.y;',
       ' vec2 p=vec2((uv.x-0.5)*asp,uv.y-0.5); vec2 m=vec2((uMouse.x/uRes.x-0.5)*asp, uMouse.y/uRes.y-0.5);',
       ' float t=uFlow, ch=uChapter; vec2 q=p*1.5+vec2(t*0.55,-t*0.40);',
-      ' q+=vec2(fbm(q*0.8+t*0.30), fbm(q*0.8-t*0.30+3.1))*0.85;',
-      ' float nR=fbm(q*1.1+vec2(0.010,0.0)+ch*2.0), nG=fbm(q*1.1+ch*2.0), nB=fbm(q*1.1-vec2(0.010,0.0)+ch*2.0), n2=fbm(q*2.35-ch*3.0+7.0);',
+      ' q+=fbm(q*0.8+t*0.30)*vec2(0.86,0.62);',
+      ' float nG=fbm(q*1.1+ch*2.0), n2=fbm(q*2.35-ch*3.0+7.0);',
       ' float smoke=smoothstep(0.50,1.26,nG*0.70+n2*0.40);',
-      ' float lit=exp(-length(p-m)*3.2); float gl0=exp(-length(p-m)*9.5)*(0.04+uMouseAmt*0.11); float carve=0.0;',
+      ' float lit=exp(-length(p-m)*(3.2-ch*0.6)); float gl0=exp(-length(p-m)*(9.5-ch*1.4))*(0.04+uMouseAmt*0.11); float carve=0.0;',
       ' for(int i=0;i<16;i++){ if(i>=uTrailN) break; vec3 tp=uTrail[i]; vec2 tv=vec2((tp.x/uRes.x-0.5)*asp,(tp.y/uRes.y-0.5));',
       '   carve+=exp(-length(p-tv)*18.0)*(1.0-tp.z); }',
       ' carve=clamp(carve*0.20*(0.5+ch*0.7),0.0,0.7);',
-      ' vec3 base=vec3(0.012,0.013,0.018), cool=vec3(0.034,0.046,0.076), warm=vec3(0.60,0.28,0.13);',
+      ' vec3 base=vec3(0.012,0.013,0.018), cool=vec3(0.034,0.046,0.076);',
+      ' vec3 warmA=vec3(0.62,0.27,0.11), warmB=vec3(0.60,0.40,0.16), warmC=vec3(0.46,0.20,0.22);',
+      ' vec3 warm=mix(mix(warmA,warmB,smoothstep(0.0,0.55,ch)), warmC, smoothstep(0.55,1.0,ch));',
       ' vec3 col=base; col+=smoke*mix(cool,warm*0.55,lit*0.60)*0.26;',
-      ' col.r+=(nR-nG)*0.07; col.b+=(nB-nG)*0.07;',
+      ' float disp=sin(q.x*53.0+q.y*29.0); col.r+=disp*0.022; col.b-=disp*0.022;',
       ' col+=gl0*warm*0.55; col+=carve*vec3(0.90,0.58,0.30)*0.26;',
       ' float vig=smoothstep(1.18,0.16,length(uv-0.5)*1.5); col*=0.26+0.82*vig;',
-      ' col+=(hash(uv*uRes*1.7+11.0)-0.5)*0.028;',
+      ' col+=(hash(uv*vec2(1600.0,900.0)*1.7+11.0)-0.5)*0.028;',
       ' gl_FragColor=vec4(max(col,0.0),1.0); }'
     ].join('\n');
     var fs = sh(gl.FRAGMENT_SHADER, frag); if (!vs || !fs) return false;
@@ -318,7 +328,7 @@
     var chapter = 0, chapterTarget = 0;
     function onScroll() { var max = Math.max(1, document.documentElement.scrollHeight - innerHeight); chapterTarget = Math.min(1, Math.max(0, scrollY / max)); }
     window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
-    function resize() { dpr = Math.min(1.5, window.devicePixelRatio || 1); canvas.width = Math.max(1, Math.floor(innerWidth * dpr)); canvas.height = Math.max(1, Math.floor(innerHeight * dpr)); canvas.style.width = innerWidth + 'px'; canvas.style.height = innerHeight + 'px'; gl.viewport(0, 0, canvas.width, canvas.height); if (L.res) gl.uniform2f(L.res, canvas.width, canvas.height); }
+    function resize() { dpr = Math.min(1, window.devicePixelRatio || 1) * RENDER_SCALE; canvas.width = Math.max(1, Math.floor(innerWidth * dpr)); canvas.height = Math.max(1, Math.floor(innerHeight * dpr)); canvas.style.width = innerWidth + 'px'; canvas.style.height = innerHeight + 'px'; gl.viewport(0, 0, canvas.width, canvas.height); if (L.res) gl.uniform2f(L.res, canvas.width, canvas.height); }
     window.addEventListener('resize', resize, { passive: true });
     var td = new Float32Array(TR_MAX * 3), running = true;
     function render(now) { if (!running) return; mx += (tmx - mx) * 0.12; my += (tmy - my) * 0.12; amt += (tamt - amt) * 0.05; tamt *= 0.96; chapter += (chapterTarget - chapter) * 0.06;

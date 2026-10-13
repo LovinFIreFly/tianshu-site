@@ -51,6 +51,7 @@
         <a class="act" href="{{ url_for('public.comm') }}" data-cursor="入场"><span class="no">03</span>唠嗑</a>
         <a class="act" href="{{ url_for('public.group') }}" data-cursor="入场"><span class="no">04</span>组局<span class="ct">{{ sessions|length }}</span></a>
       </div>
+      {% if scripts %}<span class="stage__keys" data-reveal data-d="4"><b>S</b>随机挑一本</span>{% endif %}
       <span class="stage__scroll" data-reveal data-d="4"><span class="ln"></span>往下，开幕</span>
     </div>
   </div>

@@ -140,9 +140,10 @@ h1,h2,h3,h4 { font-family: var(--font-display); font-weight: 400; line-height: 1
   position: fixed; top: 0; left: 0; right: 0; z-index: 90;
   display: flex; align-items: center; justify-content: space-between; gap: 20px;
   padding: 15px var(--gut);
-  background: rgba(14,12,10,.72);
-  background: color-mix(in srgb, var(--paper) 72%, transparent);
-  backdrop-filter: blur(13px) saturate(1.1); -webkit-backdrop-filter: blur(13px) saturate(1.1);
+  background: rgba(14,12,10,.86);
+  background: color-mix(in srgb, var(--paper) 86%, transparent);
+  /* ⚠️ 不要在这上面用 backdrop-filter：它下面是一块每帧都在变的 WebGL 画布，
+     浏览器必须每帧重新做一次全宽模糊，是最典型的掉帧元凶。用不透明度换性能。*/
   border-bottom: 1px solid var(--line-2);
   transition: background .4s, padding .4s, border-color .4s, transform .5s var(--ease);
 }
@@ -184,8 +185,8 @@ body.is-idle .stage__glow { opacity: 0; }
 .stage__slits { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
 .stage__slits i {
   position: absolute; top: -30%; width: 1px; height: 160%;
-  background: linear-gradient(180deg, transparent, rgba(255,214,178,.34), transparent);
-  filter: blur(.4px); opacity: .34; transform: rotate(6deg);
+  background: linear-gradient(180deg, transparent, rgba(255,214,178,.30), transparent);
+  opacity: .34; transform: rotate(6deg);
 }
 .stage__slits i:nth-child(1) { left: 22%; }
 .stage__slits i:nth-child(2) { left: 61%; height: 120%; opacity: .20; }
@@ -194,7 +195,7 @@ body.is-idle .stage__glow { opacity: 0; }
 .stage__media-host { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
 .stage__media-host > img, .stage__media-host > video {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-  filter: saturate(.80) brightness(.56) contrast(1.08);
+  /* 调色已经在 tools/media_grade.py 里烘焙进素材了，这里不再挂全屏 filter（那是整屏一次额外栅格化） */
 }
 .stage__media-host::after {   /* 压暗幕布：保证巨字始终压得住画面 */
   content: ""; position: absolute; inset: 0;
@@ -206,7 +207,8 @@ html.has-media .stage__type .base { color: rgba(242,236,225,.32); }
 html.has-media .stage__slits { opacity: .5; }
 html.has-media .field { opacity: .45; transition: opacity 1.2s var(--ease); }
 .stage__grain {
-  position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: .16; mix-blend-mode: overlay;
+  position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: .055;
+  /* 不用 mix-blend-mode：它会让整屏进入离屏合成，每帧都要重算一遍混合 */
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
 }
 .stage__body { position: relative; z-index: 3; }
@@ -218,12 +220,15 @@ html.has-media .field { opacity: .45; transition: opacity 1.2s var(--ease); }
 .stage__clock b { color: var(--accent-2); font-weight: 400; }
 
 /* 巨字 + 追光照亮（双图层）*/
-.stage__type { position: relative; font-family: var(--font-display); font-weight: 900; }
+.stage__type { position: relative; font-family: var(--font-display); font-weight: 900; font-synthesis: none; }
 .stage__type .t {
   display: block; font-size: clamp(2.9rem, 10.4vw, 9.6rem); line-height: .98;
   letter-spacing: -.025em; margin: 0;
 }
 .stage__type .t em { font-style: italic; }
+/* 中日韩字没有真斜体，禁止浏览器合成倾斜（合成斜体是"廉价 AI 味"的典型）：
+   西文用 Fraunces 真斜体，中文保持正体。 */
+.stage__type, .h2, .h3, .poster__title, .card__title { font-synthesis: none; }
 .stage__type .base { color: var(--ink-dim); }
 .stage__type .litwrap { position: absolute; inset: 0; pointer-events: none; color: var(--lit); }
 .stage__type .litwrap {
@@ -256,14 +261,22 @@ html.has-media .field { opacity: .45; transition: opacity 1.2s var(--ease); }
 .act:hover { color: var(--lit); border-color: var(--accent); transform: translateY(-3px); }
 .act:hover .ct { color: var(--accent-2); }
 .stage__scroll { font-family: var(--font-mono); font-size: 11px; letter-spacing: .22em; color: var(--ink-3); display: inline-flex; align-items: center; gap: 10px; }
-.stage__scroll .ln { display: inline-block; width: 40px; height: 1px; background: linear-gradient(90deg, var(--accent), transparent); animation: sln 2.4s var(--ease) infinite; }
-@keyframes sln { 0%,100% { opacity: .3; } 50% { opacity: 1; } }
+.stage__scroll .ln { display: inline-block; width: 40px; height: 1px; background: linear-gradient(90deg, var(--accent), transparent); opacity: .55; }
+/* 键盘入口：静态、克制，不自己闪（"你不动它就不动"）*/
+.stage__keys { font-family: var(--font-mono); font-size: 11px; letter-spacing: .16em; color: var(--ink-3); display: inline-flex; align-items: center; gap: 9px; }
+.stage__keys b {
+  display: inline-grid; place-items: center; min-width: 21px; height: 21px; padding: 0 6px;
+  border: 1px solid var(--line); border-radius: 5px; color: var(--accent-2); font-weight: 400;
+  transition: border-color .4s, color .4s;
+}
+.stage__keys:hover b { border-color: rgba(207,90,50,.55); }
 
 /* ============================================================================
    滚动字幕条（细，克制，仅一处）
    ========================================================================== */
 .ticker { overflow: hidden; border-block: 1px solid var(--line); padding-block: 15px; background: var(--paper-2); }
 .ticker__track { display: flex; white-space: nowrap; animation: marq 42s linear infinite; width: max-content; }
+.ticker:hover .ticker__track { animation-play-state: paused; }
 .ticker__track span { font-family: var(--font-display); font-size: clamp(1.1rem, 2.1vw, 1.7rem); color: var(--ink-3); padding-inline: 26px; display: inline-flex; align-items: center; gap: 26px; }
 .ticker__track span::after { content: "✳"; color: var(--accent); font-size: .55em; }
 @keyframes marq { to { transform: translateX(-50%); } }

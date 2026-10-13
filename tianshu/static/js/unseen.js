@@ -487,6 +487,32 @@
     } else { tryImage(); }
   }
 
+  /* ---------------- 键盘彩蛋：S = 随机挑一本 ----------------
+     （对标 whiteboard.is 首屏的 "PRESS S TO START A PROJECT" —— 一个不用点按钮的入口，
+       让站点看起来"有人在用"，而不是一张静态海报。）*/
+  function initShortcut() {
+    var links = $$('.poster, .card');
+    if (!links.length) return;
+    function typing(el) {
+      if (!el) return false;
+      var t = (el.tagName || '').toLowerCase();
+      return t === 'input' || t === 'textarea' || t === 'select' || el.isContentEditable;
+    }
+    addEventListener('keydown', function (e) {
+      if (e.key !== 's' && e.key !== 'S') return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (typing(document.activeElement)) return;
+      var a = links[Math.floor(Math.random() * links.length)];
+      var href = a.getAttribute('href');
+      if (!href) return;
+      e.preventDefault();
+      a.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      $$('.poster, .card').forEach(function (p) { p.classList.remove('on'); });
+      a.classList.add('on');
+      setTimeout(function () { window.location.href = href; }, 480);
+    });
+  }
+
   function init() {
     initCursor();
     initSmooth();
@@ -506,6 +532,7 @@
     initToday();
     initIdle();
     initHeroMedia();
+    initShortcut();
     wireScroll();
     renderFloat();
     document.documentElement.classList.add('js-on');
