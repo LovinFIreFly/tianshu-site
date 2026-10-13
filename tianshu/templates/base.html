@@ -11,9 +11,9 @@
 {% set cur_skin = (_q_skin if (_admin and _q_skin in _skins)
                    else (_skin_for_device if _skin_for_device in _skins else 'playbill')) %}
 {# 后台 / DM 工作台永远走二代骨架（新整套版式只换客人界面，店里干活的地方不动）。
-   nova 模式下 ui_ver == 'nova'，但这份模板仍是二代壳 —— 如实标成 '2'，
-   免得 gen3-fx.js / 皮肤选择器等按 data-ui 路由的脚本读到不存在的代次。 #}
-{% set _shell_ui = '2' if ui_ver == 'nova' else ui_ver %}
+   nova / unseen 模式下 ui_ver 是对应标识，但这份模板仍是二代壳 —— 如实标成 '2'，
+   免得皮肤选择器等按 data-ui 路由的脚本读到不存在的代次。 #}
+{% set _shell_ui = '2' if (ui_ver == 'nova' or ui_ver == 'unseen') else ui_ver %}
 <!DOCTYPE html>
 <html lang="zh-CN" data-ui="{{ _shell_ui }}" data-skin="{{ cur_skin }}" data-device="{{ _device }}" {% if theme == 'dark' %}data-theme="dark"{% endif %}>
 <head>
@@ -218,16 +218,11 @@
       {% if _admin and not in_app %}
       <div class="skin-bar">
         <span>版式预览：</span>
-        <a href="{{ request.path }}?ui=5" class="{{ 'on' if ui_ver == '5' }}">三代 · 剧幕</a>
-        <a href="{{ request.path }}?ui=6" class="{{ 'on' if ui_ver == '6' }}">三代 · 卷宗</a>
-        <a href="{{ request.path }}?ui=7" class="{{ 'on' if ui_ver == '7' }}">三代 · 分镜</a>
-        <a href="{{ request.path }}?ui=8" class="{{ 'on' if ui_ver == '8' }}">三代 · 站牌</a>
-        <a href="{{ request.path }}?ui=3" class="{{ 'on' if ui_ver == '3' }}">三代 · 竖排导轨</a>
         <a href="{{ request.path }}?ui=2" class="{{ 'on' if ui_ver == '2' }}">二代</a>
         <a href="{{ request.path }}?ui=1" class="{{ 'on' if ui_ver == '1' }}">一代</a>
       </div>
       {% endif %}
-      {% if _admin and _skins and not in_app and not is_gen3 %}
+      {% if _admin and _skins and not in_app and not is_nova and not is_unseen %}
       <div class="skin-bar">
         <span>款式预览：</span>
         <a href="{{ request.path }}" class="{{ 'on' if cur_skin == 'playbill' }}">默认</a>
@@ -269,9 +264,6 @@
 <script src="{{ url_for('static', filename='js/upload.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/tabs.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/emojisvg.js', v=static_v('js/emojisvg.js')) }}" defer></script>
-{# 三代骨架动效层：自己按 <html data-ui> 路由（开本卷曲 / 剧幕幕布 / 卷宗红线 / 分镜走片 / 站牌飘纸）。
-   二代及以下进来读一下 data-ui 就退出，空转。 #}
-<script src="{{ url_for('static', filename='js/gen3-fx.js', v=static_v('js/gen3-fx.js')) }}" defer></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     // 2026-10 修复：注册到站点根路径（/sw.js），SW 才能拿到全站 scope。

@@ -57,13 +57,12 @@ class UiLoader(BaseLoader):
         # 三代家族（3~8）**共用同一个模板目录**：五套新版式（开本/剧幕/卷宗/分镜/站牌）
         # 的内容结构完全一致，差异全在 CSS 里按 <html data-ui> 切开（design-t4~t8.css）。
         # 共用目录 = 零复制、零漂移 —— 改一处结构，六套同时生效，绝不会出现
-        # "改了 A 忘了 B"这种多份拷贝必然带来的分歧。
-        self.v3 = FileSystemLoader([os.path.join(p, 'v3') for p in paths])
         # Nova（2026-10）：templates/nova/ —— 一整套结构层独立的模板。
-        # 它**不继承** v3 的骨架（那是"三代只是换皮"的根因），自带 layout.html。
-        # 同样"nova 优先、缺的落回二代"：后台面板 / DM 工作台在 nova 模式下
-        # 继续用二代模板（店里干活的地方，不跟着客人界面切）。
+        # 自带 layout.html，nova 优先、缺的（后台/DM 等）落回二代。
         self.nova = FileSystemLoader([os.path.join(p, 'nova') for p in paths])
+        # Unseen（2026-10）：templates/unseen/ —— 另一套结构层独立的模板，
+        # 参考 unseen.co / blueyard 的设计语言，同样不继承二代骨架。
+        self.unseen = FileSystemLoader([os.path.join(p, 'unseen') for p in paths])
 
     def _pick(self, environment, template, loaders):
         for loader in loaders:
@@ -80,9 +79,9 @@ class UiLoader(BaseLoader):
             return self._pick(environment, template, (self.nova, self.v2))
         if v == '1':
             return self._pick(environment, template, (self.v1, self.v2))
-        if v in business.UI_GEN3:
-            # 3~8（三代家族）共用 templates/v3/ —— 版式差异在 CSS，不在模板
-            return self._pick(environment, template, (self.v3, self.v2))
+        if v == business.UI_UNSEEN:
+            # Unseen：先找 unseen/，缺的（后台/DM 等）落回二代
+            return self._pick(environment, template, (self.unseen, self.v2))
         return self.v2.get_source(environment, template)
 
 
@@ -173,10 +172,10 @@ def create_app():
                 'in_shell': bool(session.get('shell')),
                 'ui_ver': business.ui_ver(),               # 这次渲染的是"一代"还是"二代"界面
                 'ui_versions': business.UI_VERSIONS,
-                # 三代家族（ui=3~8）：骨架自带完整观感，不再叠皮肤（后台也会把款式下拉藏起来）
-                'is_gen3': business.is_gen3(),
-                # Nova（ui=nova）：结构层独立的整套版式，同样不叠皮肤、不叠二代设计令牌
+                # Nova（ui=nova）：结构层独立的整套版式，不叠皮肤、不叠二代设计令牌
                 'is_nova': business.is_nova(),
+                # Unseen（ui=unseen）：另一套结构层独立的版式，同样不叠皮肤、不叠二代设计令牌
+                'is_unseen': business.is_unseen(),
                 'day_label': business.day_label, 'year': time.strftime('%Y'),
                 'theme': request.cookies.get('theme') or 'light',     # 深浅色（存在 cookie 里；2026-09 起默认浅色）
                 'static_v': static_v,
