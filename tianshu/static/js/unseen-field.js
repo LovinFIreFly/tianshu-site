@@ -4,7 +4,8 @@
       + 半拉格朗日平流 + 光标力注入），拼进 fbm 暗场 → 光标划过的"水一样"流动。
    —— 兜底：无 WebGL2/浮点渲染时退回 WebGL1 的 fbm 域扭曲噪声场。
    —— 再兜底：都不可用 → html.no-field（CSS 渐变）。
-   纯零依赖。挂载：<canvas class="field" data-field>
+   纯零依赖。挂载：<canvas class="field-canvas" data-field>
+   （类名别叫 .field —— 表单字段占着这个名字，见 unseen.css 的 forms 段）
    ========================================================================== */
 (function () {
   'use strict';

@@ -1,0 +1,126 @@
+{% extends 'layout.html' %}
+{% block title %}支付{{ o.dueKind }} · 甜薯剧本杀{% endblock %}
+{% block desc %}支付{{ o.dueKind }}：{{ o.title }} · {{ o.day }} {{ o.time }}。{% endblock %}
+{% block content %}
+
+{# 支付页（定金 / 游玩费共用）：金额当主角，右侧是客服微信 + 顾客群二维码。
+   字段与 action 全部与二代一致 —— o.dueKind / due / dueAct / order_act / refund / couponId。
+   优惠券下拉框在 <form> 外面，靠 form="pay-form" 关联（HTML5 外部表单关联），别挪进去。 #}
+<section class="sec" style="padding-top:120px">
+  <div class="wrap">
+    <div class="pay">
+
+      {# —— 左：金额 + 说明 + 按钮 —— #}
+      <div>
+        <span class="eyebrow" data-reveal>支付{{ o.dueKind }} · Payment</span>
+
+        <h1 class="amount" id="due-display" data-amount="{{ o.due }}" data-reveal data-d="1">
+          <i>¥</i>{{ o.due }}
+        </h1>
+
+        <p class="lede" data-reveal data-d="2" style="margin-top:22px">
+          《{{ o.title }}》{{ o.day }} {{ o.time }} · {{ o.players }} 人
+        </p>
+
+        {% if o.dueKind == '定金' %}
+        <p class="note" data-reveal data-d="2" style="max-width:52ch">
+          定金 ¥{{ settings.carDeposit }} / 人 —— 押个位子。<b>玩完由小客服退回</b>；没到场或中途跳车的不退。
+        </p>
+        {% else %}
+        <p class="note" data-reveal data-d="2" style="max-width:52ch">
+          玩完这一场再付游玩费（总价 ¥{{ o.amount }}）。定金会另外退回。
+        </p>
+        {% endif %}
+
+        {% if o.dueKind == '游玩费' %}
+          {% if o.couponId %}
+          <p class="note" data-reveal style="margin-top:18px;color:var(--accent-2)">已使用优惠券抵扣，应付 ¥{{ o.due }}</p>
+          {% elif coupons %}
+          <div class="field" data-reveal style="margin-top:20px;max-width:420px">
+            <label>用优惠券抵扣游玩费</label>
+            <select name="couponId" id="coupon-select" form="pay-form">
+              <option value="0" data-amount="0">不使用优惠券</option>
+              {% for c in coupons %}
+              <option value="{{ c.id }}" data-amount="{{ c.amount }}">减 ¥{{ c.amount }}{% if c.minAmount %}（满 {{ c.minAmount }} 可用）{% endif %} · {{ c.from or '优惠券' }}</option>
+              {% endfor %}
+            </select>
+            <p class="note" id="coupon-hint" style="display:none"></p>
+          </div>
+          {% endif %}
+        {% endif %}
+
+        <form id="pay-form" method="post" style="margin-top:clamp(22px,3vw,32px);max-width:420px"
+              action="{{ url_for('user.order_act', oid=o.id, action=o.dueAct) }}">
+          <button class="btn btn--accent" type="submit" style="width:100%;justify-content:center">我已完成支付 <span class="arr">→</span></button>
+        </form>
+
+        <p class="note" data-reveal style="max-width:52ch">
+          {% if o.dueKind == '定金' %}
+          点完这一单会显示「待小客服确认」。小客服确认到账后，核销码才会出现在「我的预约」里。
+          {% else %}
+          点完这一单会显示「待小客服确认」。小客服确认到账后，就能去「我的预约」给剧本和 DM 打分了。
+          {% endif %}
+        </p>
+
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:26px" data-reveal>
+          <a class="btn btn--ghost" href="{{ url_for('user.me') }}">← 回我的</a>
+          {% if o.dueKind == '定金' %}
+          <form method="post" action="{{ url_for('user.order_act', oid=o.id, action='refund') }}">
+            <button class="btn btn--ghost" type="submit">取消这一单</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+
+      {# —— 右：怎么付 —— #}
+      <aside class="pay__side" data-reveal data-d="2">
+        <h4>怎么付 · How to pay</h4>
+
+        <p class="note" style="margin:0 0 8px">加小客服微信转账，备注里写上你的手机号</p>
+        <p class="wechat">{{ settings.serviceWechat or '见首页门店信息' }}</p>
+
+        {% if settings.groupQr %}
+        <div style="margin-top:26px;padding-top:24px;border-top:1px solid var(--line)">
+          <p class="note" style="margin:0 0 14px">或者扫码进顾客群 —— 约本、拼车、问进度都在群里</p>
+          <img class="qr" src="{{ settings.groupQr }}" alt="{{ settings.shopName }} 顾客群二维码">
+        </div>
+        {% endif %}
+
+        <div style="margin-top:26px;padding-top:24px;border-top:1px solid var(--line)">
+          <p class="note" style="margin:0">付完在这一页点「我已完成支付」，小客服核对到账后就给你确认。</p>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+</section>
+
+{% if o.dueKind == '游玩费' and coupons %}
+<script>
+(function () {
+  var display = document.getElementById('due-display');
+  var select = document.getElementById('coupon-select');
+  var hint = document.getElementById('coupon-hint');
+  if (!display || !select || !hint) return;
+  var base = parseInt(display.dataset.amount || '0', 10) || 0;
+  function fmt(n) { return '¥' + n; }
+  function update() {
+    var opt = select.options[select.selectedIndex];
+    var amt = parseInt(opt.dataset.amount || '0', 10) || 0;
+    var due = Math.max(0, base - amt);
+    // 金额是这一页的主角，换券要让它当场变 —— 只改数字，不动布局（避免 <i>¥</i> 被冲掉）
+    display.innerHTML = '<i>¥</i>' + due;
+    if (amt > 0) {
+      hint.textContent = '原价 ' + fmt(base) + '，用券抵扣 ' + fmt(amt) + '，应付 ' + fmt(due);
+      hint.style.display = 'block';
+    } else {
+      hint.style.display = 'none';
+    }
+  }
+  select.addEventListener('change', update);
+  update();
+})();
+</script>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends 'layout.html' %}
+{% block title %}{{ nickname }} · 主持人 · 甜薯剧本杀{% endblock %}
+{% block desc %}{{ nickname }} —— 甜薯剧本杀的主持人。段位、风格、带过的本、最近的评价都在这儿。{% endblock %}
+{% block content %}
+{% set pf = u.dmProfile or {} %}
+
+{# DM 公开主页：暗场身份卡开场（形象照 + 段位），接一条数据带，再分两栏
+   （左：他自己怎么说 / 擅长的类型 / 带过的本；右：最近评价）。
+   字段沿用 dm_page() 传进来的 u / st / titles / reviews / nickname。 #}
+<section class="band">
+  <div class="band__glow"></div>
+  <div class="wrap band__in">
+    <a class="link-underline" href="{{ url_for('public.scripts') }}" style="color:var(--dark-2-ink)">← 回本本墙</a>
+
+    <div class="band__row" style="margin-top:clamp(20px,3vw,34px)">
+      {% if pf.photo %}
+      <img class="band__photo" src="{{ pf.photo }}" alt="{{ nickname }}" data-reveal>
+      {% endif %}
+      <div style="min-width:0;flex:1">
+        <span class="eyebrow eyebrow--dark" data-reveal>主持人 · Game Master</span>
+        <h1 class="band__t" data-reveal data-d="1">{{ nickname }}</h1>
+        {% if pf.style %}<p class="band__sub" data-reveal data-d="2">{{ pf.style }}</p>{% endif %}
+        <div class="band__meta" data-reveal data-d="3">
+          <span class="tag tag--hot">{{ st.tier.icon }} {{ st.tier.name }}</span>
+          {% if st.rating %}<span class="tag">★ {{ st.rating }}（{{ st.ratingCount }} 条评价）</span>{% endif %}
+          {% if st.assigned %}<span class="tag">被点名 {{ st.assigned }} 次</span>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:0">
+  <div class="wrap">
+    <div class="stats">
+      <div><b data-count="{{ st.done or 0 }}">0</b><span>带本量</span></div>
+      <div><b>{{ st.rating or '—' }}</b><span>平均评分</span></div>
+      <div><b>{{ st.goodRate or 0 }}<i>%</i></b><span>好评率</span></div>
+      <div><b data-count="{{ st.players or 0 }}">0</b><span>接待人次</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="wrap">
+    <div class="two">
+      {# —— 左：他自己怎么说 + 擅长 + 带过的本 —— #}
+      <div>
+        {% if pf.bio %}
+        <span class="eyebrow" data-reveal>他自己怎么说</span>
+        <p class="lede" data-reveal style="margin-top:16px;max-width:52ch">{{ pf.bio }}</p>
+        {% endif %}
+
+        {% if st.topTags %}
+        <div style="margin-top:clamp(28px,4vw,46px)" data-reveal>
+          <span class="eyebrow">擅长的类型</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
+            {% for t in st.topTags %}<span class="tag">{{ t }}</span>{% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if titles %}
+        <div style="margin-top:clamp(28px,4vw,46px)" data-reveal>
+          <span class="eyebrow">带过的本</span>
+          <p class="lede" style="margin-top:16px;max-width:54ch">{{ titles|join(' · ') }}</p>
+        </div>
+        {% endif %}
+
+        <div style="margin-top:clamp(28px,4vw,46px)" data-reveal>
+          <a class="btn btn--accent" href="{{ url_for('public.scripts') }}">找个本，约他开场 <span class="arr">→</span></a>
+        </div>
+      </div>
+
+      {# —— 右：最近评价 —— #}
+      <div>
+        <span class="eyebrow" data-reveal>最近的评价</span>
+        <div class="feed" style="margin-top:20px">
+          {% for r in reviews %}
+          <article class="feed__item" data-reveal data-d="{{ loop.index0 % 4 }}">
+            <div class="feed__when">{{ day_label(r.createdAt) }}</div>
+            <div>
+              <div class="feed__h">
+                <span class="feed__t">{{ r.username or '玩家' }}</span>
+                <span class="stars">{{ '★' * ((r.rating or 0)|int) }}</span>
+              </div>
+              {% if r.text %}<p class="feed__x">{{ r.text }}</p>{% endif %}
+            </div>
+          </article>
+          {% else %}
+          <div style="padding:clamp(32px,6vh,64px) 0">
+            <p class="note" style="margin:0">还没有评价。</p>
+            <p class="note" style="margin-top:8px">玩过他的本，可以在「我的 → 预约」里给一句评价。</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

@@ -499,7 +499,10 @@ def pay_deposit(oid):
 def notice_center():
     """消息中心（顶栏那个 🔔 点进来就是这儿）"""
     u = current_user()
-    return render_template('notice.html', rows=business.my_notices(u, 100))
+    # unread 之前没传：模板里 `{% if unread %}` 永远为假，于是"全部标为已读"
+    # 那颗按钮从来没出现过，页头的"未读 N"也永远不显示（2026-10 修）。
+    return render_template('notice.html', rows=business.my_notices(u, 100),
+                           unread=business.unread_count(u))
 
 
 @bp.post('/notice/read')

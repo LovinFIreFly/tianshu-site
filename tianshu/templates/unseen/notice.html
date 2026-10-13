@@ -1,0 +1,52 @@
+{% extends 'layout.html' %}
+{% block title %}消息中心 · 甜薯剧本杀{% endblock %}
+{% block desc %}预约、退款、门店回复、信用分变动 —— 一条不落地留在这里。{% endblock %}
+{% block content %}
+
+{# 消息中心：细线流水。未读的左侧留一道朱砂短线（"光只在该亮处"）。
+   rows 来自 business.my_notices(u, 100)；已读判定沿用二代的 readBy 写法。 #}
+<section class="sec" style="padding-top:120px">
+  <div class="wrap">
+    <div class="sec__head">
+      <div>
+        <span class="eyebrow" data-reveal>消息中心 · Notices</span>
+        <h2 class="h2" data-reveal data-d="1" style="margin-top:14px">都在这儿了。</h2>
+        <p class="note" data-reveal data-d="2" style="margin-top:12px">
+          共 {{ rows|length }} 条{% if unread %} · 未读 <b style="color:var(--accent-2)">{{ unread }}</b>{% endif %}
+        </p>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap" data-reveal data-d="2">
+        {% if unread %}
+        <form method="post" action="{{ url_for('user.notice_read') }}">
+          <button class="btn btn--ghost" type="submit">全部标为已读</button>
+        </form>
+        {% endif %}
+        <a class="btn btn--ghost" href="{{ url_for('user.me') }}">回我的 <span class="arr">→</span></a>
+      </div>
+    </div>
+
+    <div class="feed">
+      {% for n in rows %}
+      {% set is_new = me and (me.phone|string) not in (n.readBy or []) %}
+      <article class="feed__item{{ ' is-new' if is_new }}" data-reveal data-d="{{ loop.index0 % 4 }}">
+        <div class="feed__when">{{ day_label(n.at) }}</div>
+        <div>
+          <div class="feed__h">
+            <span class="feed__t">{{ n.title }}</span>
+            {% if n.kind %}<span class="tag">{{ n.kind }}</span>{% endif %}
+            {% if is_new %}<span class="tag tag--hot">未读</span>{% endif %}
+          </div>
+          <p class="feed__x">{{ n.text }}</p>
+        </div>
+      </article>
+      {% else %}
+      <div style="padding:clamp(40px,7vh,80px) 0">
+        <p class="note" style="margin:0">还没有消息。</p>
+        <p class="note" style="margin-top:8px">预约成功、退款、门店回复、信用分变动都会发到这里。</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% endblock %}
