@@ -117,16 +117,14 @@
     var MAXR = 8, ripples = [];   // {x,y,t} 归一化坐标 + 注入时刻
     var px = 0.5, py = 0.5, tpx = 0.5, tpy = 0.5;
     var dpr = 1, w = 0, h = 0, alive = false, t0 = 0;
-    var dv = 0, dvT = 0;   // 转场潜入进度（0..1，平滑过渡）
 
     var VS = [
       'attribute vec2 p;',
       'void main(){ gl_Position = vec4(p, 0.0, 1.0); }'
     ].join('\n');
 
-    /* 片元：墨滴入水 → 电影化后处理（色散 + 暗角 + 颗粒）→ 鼠标噪声毛边遮罩。
-       颜色刻意压得很淡：它是"场景"，不是"图形"，绝不能抢正文。
-       后处理链对标 hubtown/oceanx/unseen：画面从"干净"升级到"有味道"。 */
+    /* 片元：四团缓慢游走的柔光 → 叠加涟漪扰动 → 最后撒一层颗粒。
+       颜色刻意压得很淡：它是"场景"，不是"图形"，绝不能抢正文。 */
     var FS = [
       'precision mediump float;',
       'uniform vec2 uRes;',
@@ -135,12 +133,6 @@
       'uniform vec3 uR[' + MAXR + '];',   // xy=位置(0..1) z=年龄(秒)
       'uniform vec3 uG[4];',              // 三团光晕色 + 底色
       'uniform float uDark;',
-      'uniform float uChroma;',           // 色散强度
-      'uniform float uVig;',              // 暗角强度
-      'uniform float uMaskR;',            // 鼠标遮罩半径
-      'uniform float uMaskN;',            // 遮罩边缘噪声振幅（毛边）
-      'uniform float uMaskA;',            // 遮罩强度
-      'uniform float uDive;',             // 转场潜入 0..1
       '',
       'float hash(vec2 p){ p = fract(p*vec2(123.34, 345.45)); p += dot(p, p+34.345); return fract(p.x*p.y); }',
       'float noise(vec2 p){',
@@ -149,39 +141,9 @@
       '  return mix(mix(hash(i), hash(i+vec2(1.,0.)), f.x),',
       '             mix(hash(i+vec2(0.,1.)), hash(i+vec2(1.,1.)), f.x), f.y);',
       '}',
-      '',
-      '/* 涟漪位移：把采样坐标往外推，形成水面环形扰动（流体感来自这里） */',
-      'vec2 rippleAt(vec2 c, vec2 asp){',
-      '  vec2 ripple = vec2(0.0);',
-      '  for(int i=0;i<' + MAXR + ';i++){',
-      '    vec3 R = uR[i];',
-      '    if(R.z < 0.0 || R.z > 2.6) continue;',
-      '    vec2 d = (c - R.xy) * asp;',
-      '    float dist = length(d);',
-      '    float age  = R.z;',
-      '    float front = age * 0.42;',
-      '    float ring  = sin((dist - front) * 46.0) * exp(-abs(dist - front) * 13.0);',
-      '    float fad   = exp(-age * 1.35) * smoothstep(0.75, 0.0, dist);',
-      '    ripple += normalize(d + 1e-5) * ring * fad * 0.017;',
-      '  }',
-      '  vec2 pd = (c - uP) * asp;',
-      '  float pdist = length(pd);',
-      '  float breath = sin(pdist * 34.0 - uT * 2.4) * exp(-pdist * 7.5) * 0.006;',
-      '  ripple += normalize(pd + 1e-5) * breath;',
-      '  return ripple;',
-      '}',
-      '',
-      '/* 单点场景色：纸面 + 墨沉 + 朱砂点水 + 颗粒 */',
-      'vec3 sceneColor(vec2 q, vec2 rp, vec2 asp){',
-      '  vec3 col = uG[3];',
-      '  float ink = clamp(length(rp) * 26.0, 0.0, 1.0);',
-      '  col = mix(col, uG[0], ink * (uDark > 0.5 ? 0.10 : 0.15));',
-      '  vec2 pd = (q - uP) * asp;',
-      '  float pdist = length(pd);',
-      '  col = mix(col, uG[1], exp(-pdist * 6.5) * 0.055);',
-      '  float g = noise(gl_FragCoord.xy * 0.85 + vec2(uT*13.0, uT*7.0));',
-      '  col += (g - 0.5) * (uDark > 0.5 ? 0.030 : 0.020);',
-      '  return col;',
+      'float blob(vec2 uv, vec2 c, float r){',
+      '  float d = length((uv-c) * vec2(uRes.x/uRes.y, 1.0));',
+      '  return smoothstep(r, 0.0, d);',
       '}',
       '',
       'void main(){',
@@ -189,31 +151,41 @@
       '  vec2 asp = vec2(uRes.x/uRes.y, 1.0);',
       '  float t = uT;',
       '',
-      '  /* 转场潜入：向中心推近 + 色散增强（M6 dive） */',
-      '  vec2 cuv = mix(uv, vec2(0.5), uDive * 0.16);',
-      '  vec2 rp = rippleAt(cuv, asp);',
+      '  /* 涟漪：把采样坐标往外推，形成水面的环形扰动 */',
+      '  vec2 ripple = vec2(0.0);',
+      '  for(int i=0;i<' + MAXR + ';i++){',
+      '    vec3 R = uR[i];',
+      '    if(R.z < 0.0 || R.z > 2.6) continue;',
+      '    vec2 d = (uv - R.xy) * asp;',
+      '    float dist = length(d);',
+      '    float age  = R.z;',
+      '    float front = age * 0.42;',                 // 波前半径随时间扩散
+      '    float ring  = sin((dist - front) * 46.0) * exp(-abs(dist - front) * 13.0);',
+      '    float fad   = exp(-age * 1.35) * smoothstep(0.75, 0.0, dist);',
+      '    ripple += normalize(d + 1e-5) * ring * fad * 0.017;',
+      '  }',
       '',
-      '  /* 缓慢流体位移：整片"墨"像在水里漂（M5-lite） */',
-      '  vec2 flow = 0.006 * vec2(noise(uv*3.0 + t*0.20), noise(uv*3.0 - t*0.17));',
-      '  vec2 q = cuv + rp + flow;',
+      '  /* 指针处持续的微弱"体温"扰动，让画面一直活着 */',
+      '  vec2 pd = (uv - uP) * asp;',
+      '  float pdist = length(pd);',
+      '  float breath = sin(pdist * 34.0 - t * 2.4) * exp(-pdist * 7.5) * 0.006;',
+      '  ripple += normalize(pd + 1e-5) * breath;',
       '',
-      '  /* 色散：沿径向把 R/B 错开一点（M3） */',
-      '  vec2 dir = normalize((uv - 0.5) + 1e-5);',
-      '  float ca = uChroma * 0.006 * (1.0 + uDive * 2.5);',
-      '  vec3 col;',
-      '  col.r = sceneColor(q + dir*ca, rp, asp).r;',
-      '  col.g = sceneColor(q,           rp, asp).g;',
-      '  col.b = sceneColor(q - dir*ca, rp, asp).b;',
+      '  vec2 q = uv + ripple;',
       '',
-      '  /* 暗角（M3） */',
-      '  float vig = smoothstep(1.28, 0.32, length((uv - 0.5) * vec2(asp.x, asp.y * 1.04)));',
-      '  col *= mix(1.0 - uVig, 1.0, vig);',
+      '  /* 纸面：一整块平色。涟漪处墨轻轻沉下去（夜幕则浮起来）——',
+      '     这是"墨滴入水"，不是"彩色洗底"。七个参照站全是一屏一色。 */',
+      '  vec3 col = uG[3];',
+      '  float ink = clamp(length(ripple) * 26.0, 0.0, 1.0);',
+      '  col = mix(col, uG[0], ink * (uDark > 0.5 ? 0.10 : 0.15));',
       '',
-      '  /* 鼠标噪声毛边圆形遮罩：光标处微微提亮 + 一点朱砂（hubtown M4） */',
-      '  float dm = distance((uv - uP) * asp, vec2(0.0));',
-      '  float nz = (noise(uv * 9.0 + t * 0.25) - 0.5) * uMaskN;',
-      '  float m = smoothstep(uMaskR + uMaskN, uMaskR - uMaskN, dm + nz);',
-      '  col = mix(col, col * 1.08 + uG[1] * 0.05, m * uMaskA);',
+      '  /* 指针周围一丝朱砂"点水"：全站唯一的颜色，只跟着手走 */',
+      '  float pdA = exp(-pdist * 6.5) * 0.055;',
+      '  col = mix(col, uG[1], pdA);',
+      '',
+      '  /* 颗粒：动态噪点，压掉数码的塑料感 */',
+      '  float g = noise(gl_FragCoord.xy * 0.85 + vec2(t*13.0, t*7.0));',
+      '  col += (g - 0.5) * (uDark > 0.5 ? 0.030 : 0.020);',
       '',
       '  gl_FragColor = vec4(col, 1.0);',
       '}'
@@ -271,12 +243,6 @@
       uni.r = gl.getUniformLocation(prog, 'uR[0]');
       uni.g = gl.getUniformLocation(prog, 'uG[0]');
       uni.dark = gl.getUniformLocation(prog, 'uDark');
-      uni.chroma = gl.getUniformLocation(prog, 'uChroma');
-      uni.vig = gl.getUniformLocation(prog, 'uVig');
-      uni.maskR = gl.getUniformLocation(prog, 'uMaskR');
-      uni.maskN = gl.getUniformLocation(prog, 'uMaskN');
-      uni.maskA = gl.getUniformLocation(prog, 'uMaskA');
-      uni.dive = gl.getUniformLocation(prog, 'uDive');
 
       var dark = doc.getAttribute('data-theme') === 'dark';
       var cols = [
@@ -289,13 +255,6 @@
       for (var i = 0; i < 4; i++) flat.push(cols[i][0], cols[i][1], cols[i][2]);
       gl.uniform3fv(uni.g, new Float32Array(flat));
       gl.uniform1f(uni.dark, dark ? 1 : 0);
-      /* 电影化后处理默认值（M3/M4） */
-      gl.uniform1f(uni.chroma, 1.0);
-      gl.uniform1f(uni.vig, 0.22);
-      gl.uniform1f(uni.maskR, 0.24);
-      gl.uniform1f(uni.maskN, 0.05);
-      gl.uniform1f(uni.maskA, 0.6);
-      gl.uniform1f(uni.dive, 0.0);
 
       for (var k = 0; k < MAXR; k++) ripples.push({ x: 0, y: 0, a: -1 });
       var rv = new Float32Array(MAXR * 3);
@@ -341,7 +300,7 @@
 
       /* 没人动 7 秒就自己打一发，画面不会"死" */
       if (tsec - idleAt > 7) {
-        emit(0.22 + Math.random() * 0.56, 0.18 + Math.random() * 0.64, 0.55, true);
+        emit(0.22 + Math.random() * 0.56, 0.18 + Math.random() * 0.64, 0.55);
         idleAt = tsec;
       }
 
@@ -365,16 +324,13 @@
       lastDraw = tsec;
 
       gl.uniform1f(uni.t, tsec);
-      dv = lerp(dv, dvT, 1 - Math.pow(0.02, dt));
-      gl.uniform1f(uni.dive, dv);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
 
-    /* 往池子里塞一发涟漪（满了就顶掉最老的那发）。soft=true 表示静默（不触发音效，如待机自播） */
-    function emit(x, y, power, soft) {
+    /* 往池子里塞一发涟漪（满了就顶掉最老的那发） */
+    function emit(x, y, power) {
       if (!alive) return;
       power = power || 1;
-      if (!soft && W.NV_SOUND && W.NV_SOUND.blip) { try { W.NV_SOUND.blip(); } catch (e) {} }
       var slot = -1, oldest = 1e9;
       for (var i = 0; i < MAXR; i++) {
         if (ripples[i].a < 0) { slot = i; break; }
@@ -405,10 +361,7 @@
       gl.uniform1f(uni.dark, dark ? 1 : 0);
     }
 
-    /* 转场潜入：v=1 时整片向中心推近、色散炸开（Transit 在换页时调用） */
-    function dive(v) { dvT = (v ? 1 : 0); }
-
-    return { init: init, emit: emit, pointer: pointer, repaint: repaint, dive: dive, ok: function () { return alive; } };
+    return { init: init, emit: emit, pointer: pointer, repaint: repaint, ok: function () { return alive; } };
   })();
 
   /* 视角晃动没有 JS 模块了 —— 整套位移/旋转由 CSS 直接读 Pointer 总线的
@@ -821,18 +774,7 @@
       var els = $$('[data-split]', root);
       if (!els.length) return;
       els.forEach(function (el) {
-        if (el.getAttribute('data-split-gx') === '1') return;   // 已经揭示过（换页重绑）就别重演
         wrap(el);
-        el.setAttribute('data-split-gx', '1');
-        var ws = $$('.u-split__i', el);
-        /* GSAP 在场：用时间轴把字逐枚升起（M2/unseen 招牌），缓动比 CSS 更"被编排" */
-        if (W.gsap && W.ScrollTrigger && ws.length) {
-          gsap.from(ws, {
-            yPercent: 115, duration: 0.9, ease: 'power4.out', stagger: 0.035,
-            scrollTrigger: { trigger: el, start: 'top 90%', once: true }
-          });
-          return;
-        }
         if (!('IntersectionObserver' in W)) { el.classList.add('is-in'); return; }
         var io = new IntersectionObserver(function (es) {
           es.forEach(function (e) {
@@ -959,9 +901,6 @@
     var io = null, countIo = null;
 
     function reveal(root) {
-      /* GSAP 在场时，把揭示交给 ScrollTrigger 编排（M2）：错峰、遮罩、缓动一次到位。
-         没有 GSAP（CDN 被墙/离线）就退回下方的 IntersectionObserver 老路，绝不空窗。 */
-      if (!REDUCE && W.gsap && W.ScrollTrigger) { gsapReveal(root); return; }
       /* data-d 是我们自己的揭示标记；data-anim 是剧本库网格里卡片自带的契约标记。
          两者都要认：卡片图现在靠 .is-in 做遮罩擦开（见 nova.css .u-card__fig）。 */
       var els = $$('[data-d]', root).concat($$('[data-anim]', root));
@@ -996,36 +935,6 @@
             if (r.top < vh * 0.99 && r.bottom > 0) el.classList.add('is-in');
           } catch (e) {}
         });
-      });
-    }
-
-    /* GSAP 揭示编排（M2）：同父节点成组 → stagger 一起落位；
-       单个带 data-d 的元素用 data-d 当延迟。already-done 的元素跳过，避免重复触发。 */
-    function gsapReveal(root) {
-      var els = $$('[data-d]', root).concat($$('[data-anim]', root));
-      if (!els.length) return;
-      var byParent = {};
-      els.forEach(function (el) {
-        if (el.getAttribute('data-gx') === '1') return;
-        el.setAttribute('data-gx', '1');
-        var p = el.parentNode || root;
-        (byParent[p] = byParent[p] || []).push(el);
-      });
-      Object.keys(byParent).forEach(function (k) {
-        var arr = byParent[k];
-        if (!arr || !arr.length) return;
-        if (arr.length > 1) {
-          gsap.from(arr, {
-            autoAlpha: 0, y: 28, duration: 0.8, ease: 'power3.out', stagger: 0.06,
-            scrollTrigger: { trigger: arr[0], start: 'top 88%', once: true }
-          });
-        } else {
-          var d = num(arr[0].getAttribute('data-d'), -1);
-          gsap.from(arr[0], {
-            autoAlpha: 0, y: 28, duration: 0.85, ease: 'power3.out', delay: d >= 0 ? d / 1000 : 0,
-            scrollTrigger: { trigger: arr[0], start: 'top 88%', once: true }
-          });
-        }
       });
     }
 
@@ -1442,7 +1351,7 @@
         el.style.setProperty('--us-delay', Math.min(i * 45, 260) + 'ms');
       });
       if (dust) dust.classList.add('is-on');
-      if (Field.ok()) { Field.emit(0.5, 0.5, 0.8); Field.emit(0.35, 0.4, 0.6); Field.dive(1); }
+      if (Field.ok()) { Field.emit(0.5, 0.5, 0.8); Field.emit(0.35, 0.4, 0.6); }
 
       /* ② 纸幕盖上来（配合 fetch 并行跑，谁慢等谁） */
       var fetched = null, failed = false;
@@ -1510,7 +1419,6 @@
 
       /* ③ 纸幕撤掉，新内容错峰落位 */
       if (veil) veil.classList.remove('is-on');
-      if (Field.ok()) Field.dive(0);
       W.setTimeout(function () {
         main.classList.remove('u-enter-page');
         if (dust) dust.classList.remove('is-on');
@@ -1551,59 +1459,6 @@
 
     return { init: init };
   })();
-
-  /* ══════════════════════════ ⑧ 环境音（oceanx / unseen 的"心理质感"） ══════════════════════════
-     默认关。必须用户点一下才起（浏览器自动播放策略）。低音 pad + 涟漪时的轻响。 */
-  var Sound = (function () {
-    var ctx = null, gain = null, on = false;
-    function ensure() {
-      if (ctx) return true;
-      try {
-        var AC = W.AudioContext || W.webkitAudioContext;
-        if (!AC) return false;
-        ctx = new AC();
-        gain = ctx.createGain(); gain.gain.value = 0.0;
-        var lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420;
-        gain.connect(lp); lp.connect(ctx.destination);
-        [110, 110.4, 55].forEach(function (f, i) {
-          var o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f;
-          var g = ctx.createGain(); g.gain.value = i === 2 ? 0.5 : 0.35;
-          o.connect(g); g.connect(gain); o.start();
-        });
-        var lfo = ctx.createOscillator(); lfo.frequency.value = 0.07;
-        var lg = ctx.createGain(); lg.gain.value = 160;
-        lfo.connect(lg); lg.connect(lp.frequency); lfo.start();
-        return true;
-      } catch (e) { return false; }
-    }
-    function set(v) {
-      if (!ensure()) return false;
-      if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) {} }
-      on = v;
-      var t = ctx.currentTime;
-      gain.gain.cancelScheduledValues(t);
-      gain.gain.setTargetAtTime(v ? 0.05 : 0.0, t, 0.4);
-      return true;
-    }
-    function blip() {
-      if (!on || !ctx) return;
-      try {
-        var t = ctx.currentTime;
-        var o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = 520;
-        var g = ctx.createGain();
-        g.gain.setValueAtTime(0.0, t);
-        g.gain.linearRampToValueAtTime(0.06, t + 0.01);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
-        o.connect(g); g.connect(gain); o.start(t); o.stop(t + 0.3);
-      } catch (e) {}
-    }
-    return { toggle: function () { return set(!on); }, isOn: function () { return on; }, blip: blip };
-  })();
-  W.NV_SOUND = {
-    blip: function () { try { Sound.blip(); } catch (e) {} },
-    toggle: function () { return Sound.toggle(); },
-    isOn: function () { return Sound.isOn(); }
-  };
 
   /* ══════════════════════════ 启动 ══════════════════════════ */
   var setMenu = null;
@@ -1656,16 +1511,6 @@
     on(D, 'click', function (e) {
       var a = e.target.closest && e.target.closest('a[href*="/theme"]');
       if (a) W.setTimeout(function () { doc.setAttribute('data-theme', doc.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); Field.repaint(); }, 40);
-      /* 环境音开关（oceanx 的"心理质感"）：默认关，点一下才起 */
-      var b = e.target.closest && e.target.closest('.u-snd');
-      if (b) {
-        var ok = W.NV_SOUND.toggle();
-        var on = ok && W.NV_SOUND.isOn();
-        b.classList.toggle('is-on', on);
-        b.setAttribute('aria-pressed', on ? 'true' : 'false');
-        b.title = on ? '静音' : '环境音';
-        b.setAttribute('aria-label', on ? '关闭环境音' : '开启环境音');
-      }
     });
   }
 
