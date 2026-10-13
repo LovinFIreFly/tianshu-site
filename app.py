@@ -106,8 +106,24 @@ def lan_ip():
 
 
 def port_in_use(host, port):
-    """这个 (host, port) 已经被占了吗？"""
+    """这个 (host, port) 已经被占了吗？
+
+    ★ 探测必须**和真正监听的 waitress 用同一套语义**，否则会出现"假占用"：
+
+      · waitress 给它的监听套接字设了 SO_REUSEADDR（见 waitress/wasyncore.py），
+        所以当端口上只剩 TIME_WAIT 连接时，waitress **照样能绑上** —— 那是可以启动的。
+      · 这个探测如果不设 SO_REUSEADDR，TIME_WAIT 会让 bind 直接报 EADDRINUSE，
+        于是 STRICT_PORT 下服务明明起得来却 exit(1)，systemd 反复重启、日志刷屏。
+        （2026-10 线上踩过：部署脚本 `ss -ltn` 看不到 TIME_WAIT，以为端口空了，
+          重启时旧连接的 TIME_WAIT 还没到 60 秒，服务就起不来。）
+      · 在 Linux/POSIX 上，SO_REUSEADDR **不允许**绑上别人正在 LISTEN 的同一端口，
+        所以加上它依然是准确的占用判断，只把 TIME_WAIT 这一种"假占用"排除掉。
+      · Windows 例外：那边 SO_REUSEADDR 会真的"抢到"别人正在 LISTEN 的端口
+        （看着空闲其实不是），所以只在非 Windows 上加。
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        if os.name != 'nt':
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             s.bind((host, port))
             return False
@@ -116,16 +132,19 @@ def port_in_use(host, port):
 
 
 def pick_port(host, start):
-    """端口被占就往后找。注意别加 SO_REUSEADDR —— Windows 上它会"抢到"别人的端口，
-    看着像空闲其实不是（踩过）
+    """端口被占就往后找。
 
     config.STRICT_PORT=1 时**不往后找**：线上端口被占就直接抛错退出。
     理由见 config.py 里 STRICT_PORT 那段 —— 悄悄挪端口会让 caddy 反代 502，
     而 systemd 还报 running，是最难查的一类故障。"""
     if config.STRICT_PORT and port_in_use(host, start):
         raise RuntimeError(
-            '端口 %d 已被占用，且当前是 STRICT_PORT 模式（线上）。'
-            '请先找出占用进程再重启：ss -ltnp | grep :%d' % (start, start))
+            '端口 %d 已被占用，且当前是 STRICT_PORT 模式（线上）。\n'
+            '    查占用：ss -ltnp | grep :%d\n'
+            '    收掉它：fuser -k %d/tcp ; sleep 1 ; systemctl restart tianshu\n'
+            '    如果上面 ss 查不到任何进程，那是旧连接还在 TIME_WAIT（Linux 默认 60 秒）。\n'
+            '    正常情况等一会儿或直接重启即可；若反复如此，说明是别的进程在抢这个端口。'
+            % (start, start, start))
     for p in range(start, start + 10):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             try:

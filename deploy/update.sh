@@ -36,6 +36,13 @@ echo "=============================================="
 echo " 甜薯剧本杀 · 更新线上（$DIR）"
 echo "=============================================="
 
+# ② 里要 git pull，而 pull 可能把**这个脚本自己**也更新掉。
+# bash 是按字节偏移边读边执行的：脚本在运行途中被改写，后面就可能读到错位内容、行为完全不可预期。
+# 所以先记下自己的指纹，pull 后若变了就重新执行一遍新版本（下面这一段本身是幂等的）。
+_SELF="${BASH_SOURCE[0]:-$0}"
+_self_hash() { [ -r "$_SELF" ] && md5sum "$_SELF" 2>/dev/null | cut -d' ' -f1 || echo ""; }
+_SELF_HASH_BEFORE="$(_self_hash)"
+
 echo "① 更新前备份 data/…"
 if [ -x "$DIR/.venv/bin/python" ]; then
   (cd "$DIR" && "$DIR/.venv/bin/python" app.py --backup) || echo "   （备份没成功，先继续；data/ 本来也不会被这次更新动到）"
@@ -54,6 +61,13 @@ if [ "$BEFORE" = "$AFTER" ]; then
 else
   echo "   更新前：$BEFORE"
   echo "   更新后：$AFTER"
+fi
+
+# 这次 pull 有没有把这个脚本自己改掉？改了就重新执行新版本（避免边读边执行读到错位内容）。
+if [ "${TS_REEXECED:-0}" != "1" ] && [ -n "${_SELF_HASH_BEFORE:-}" ] && [ "$_SELF_HASH_BEFORE" != "$(_self_hash)" ]; then
+  echo "   ！这次更新也改到了 update.sh 本身，用新版本重新执行一遍（幂等，可以放心）…"
+  export TS_REEXECED=1
+  exec bash "$_SELF" "$@"
 fi
 
 echo "③ 装依赖…"
@@ -114,14 +128,41 @@ for _holder in $_holders; do
   echo "   已收掉 PID $_holder"
 done
 
-# 关键：确认端口真的空了再启动。否则 systemd 拉起的 app.py 在 STRICT_PORT 下会立刻 exit，
-# 又陷入「起不来 → 自动重启 → 又被占」的死循环。最多重试 10 次（每次清一遍再等 1s）。
+# 关键：确认端口**真的能绑上**再启动，而不是"没看到 LISTEN"就以为空了。
+#   ⚠️ `ss -ltn` 只列 LISTEN，看不到 TIME_WAIT。旧进程被杀掉后，它留下的连接会进入
+#      TIME_WAIT（Linux 默认 60 秒）——此时什么进程都没在监听，但直接 bind 仍会失败。
+#      2026-10 线上就是这样：脚本判断"端口空了"，systemd 拉起 app.py，
+#      app.py 的探测报 EADDRINUSE → STRICT_PORT 下 exit(1) → 反复重启。
+#   这里用**和 app.py / port_in_use() 完全相同的判断**（带 SO_REUSEADDR），
+#   两边语义一致，才不会互相骗。
+_port_bindable() {  # $1=端口 → 能绑上返回 0
+  # 线上是 127.0.0.1 监听（LAN_MODE 关），这里按同一地址探测才有可比性。
+  if [ -x "$DIR/.venv/bin/python" ]; then
+    "$DIR/.venv/bin/python" - "$1" <<'PY' 2>/dev/null
+import socket, sys
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+try:
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+except OSError:
+    pass
+try:
+    s.bind(('127.0.0.1', int(sys.argv[1])))
+except OSError:
+    sys.exit(1)
+finally:
+    s.close()
+PY
+    return $?
+  fi
+  # 没有 venv（极端情况）→ 退回旧的"看 LISTEN 列表"判断，至少不空转 10 秒。
+  ! ss -ltn 2>/dev/null | grep -qE "$_ports_re"
+}
+
 for _i in $(seq 1 10); do
-  _still="$(ss -ltn 2>/dev/null | grep -E "$_ports_re" || true)"
-  [ -z "$_still" ] && break
-  echo "   端口 $PORT 仍被占（第 $_i 次重试），再清一遍…"
+  if _port_bindable "$PORT"; then break; fi
+  echo "   端口 $PORT 还不能绑（第 $_i 次重试），再清一遍…"
   fuser -k "${PORT}/tcp" 2>/dev/null || true
-  for _h in $(echo "$_still" | grep -oE 'pid=[0-9]+' | grep -oE '[0-9]+' | sort -u); do
+  for _h in $(ss -ltnp 2>/dev/null | grep -E "$_ports_re" | grep -oE 'pid=[0-9]+' | grep -oE '[0-9]+' | sort -u || true); do
     kill -9 "$_h" 2>/dev/null || true
   done
   sleep 1
@@ -135,6 +176,15 @@ if ! systemctl is-active --quiet tianshu; then
   systemctl --no-pager -l status tianshu | head -20 || true
   echo "   ---- 最近的日志 ----"
   journalctl -u tianshu -n 30 --no-pager || true
+  echo
+  echo "   ---- 常见原因 & 手动救法 ----"
+  echo "   · 端口被占：ss -ltnp | grep :$PORT"
+  echo "     查不到任何进程 = 旧连接还在 TIME_WAIT（Linux 默认 60 秒），等一会儿或："
+  echo "       fuser -k $PORT/tcp ; sleep 2 ; systemctl restart tianshu"
+  echo "   · 代码本身报错，看真实 traceback："
+  echo "       cd $DIR && $DIR/.venv/bin/python -c 'import app'"
+  echo "   · 一键重来："
+  echo "       fuser -k $PORT/tcp ; sleep 2 ; systemctl restart tianshu ; systemctl status tianshu --no-pager"
   exit 1
 fi
 echo "   服务在跑 [OK]"
