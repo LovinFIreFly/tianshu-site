@@ -9,7 +9,7 @@
     <div class="detail" style="margin-top:24px">
       <div class="detail__cover" data-reveal>
         <div class="ov"></div>
-        <div class="emo">{{ sc.emoji or '🎭' }}</div>
+        <div class="emo">{{ (sc.title or '本')[:1] }}</div>
       </div>
       <div data-reveal data-d="1">
         <span class="eyebrow">{{ sc.tags[0] if sc.tags else '剧目' }}</span>
@@ -78,7 +78,7 @@
       {% for r in reviews[:6] %}
       <figure class="quote" data-reveal data-d="{{ loop.index0 % 4 }}">
         <blockquote class="quote__text">“{{ r.text }}”</blockquote>
-        <figcaption class="quote__by"><span class="quote__av">{{ '🗣' }}</span>{{ r.nick or '玩家' }}{% if r.title %} · 《{{ r.title }}》{% endif %}{% if r.rating %} · {{ r.rating }}★{% endif %}</figcaption>
+        <figcaption class="quote__by"><span class="quote__av">{{ (r.nick or '玩')[:1] }}</span>{{ r.nick or '玩家' }}{% if r.title %} · 《{{ r.title }}》{% endif %}{% if r.rating %} · {{ r.rating }} 分{% endif %}</figcaption>
       </figure>
       {% endfor %}
     </div>

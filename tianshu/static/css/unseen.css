@@ -59,6 +59,17 @@ body.has-cursor { cursor: none; }
 /* 换页 / 滚动期间锁住原生定位不受影响（走 window.scrollTo，不用 transform 包裹）*/
 html.smooth, html.smooth body { scroll-behavior: auto; }
 
+/* ---------- 全局 WebGL 暗场（canvas 在内容之下，实时噪声/追光/雕刻）---------- */
+.field { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; pointer-events: none; }
+main, .foot { position: relative; z-index: 1; }
+html.no-field .field { display: none; }
+html.no-field body {
+  background:
+    radial-gradient(90% 70% at 74% -10%, #201811 0%, rgba(32,24,17,0) 58%),
+    radial-gradient(80% 60% at 12% 108%, #1a120d 0%, rgba(26,18,13,0) 60%),
+    var(--paper);
+}
+
 a { color: inherit; text-decoration: none; }
 img { max-width: 100%; display: block; }
 button { font: inherit; color: inherit; cursor: pointer; }
@@ -148,6 +159,8 @@ h1,h2,h3,h4 { font-family: var(--font-display); font-weight: 400; line-height: 1
 .nav__links a:hover, .nav__links a.on { color: var(--ink); }
 .nav__links a.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 2px; background: var(--accent); border-radius: 2px; }
 .nav__cta { display: flex; align-items: center; gap: 14px; }
+.nav__work { color: var(--accent-2); }
+.nav__work::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; margin-right: 7px; vertical-align: middle; box-shadow: 0 0 0 3px rgba(207,90,50,.18); }
 .nav__burger { display: none; background: none; border: 0; padding: 8px; }
 .nav__burger span { display: block; width: 22px; height: 2px; background: var(--ink); margin: 4px 0; transition: .3s; }
 
@@ -158,16 +171,13 @@ h1,h2,h3,h4 { font-family: var(--font-display); font-weight: 400; line-height: 1
   position: relative; min-height: 100svh; display: flex; flex-direction: column;
   justify-content: flex-end; padding: 128px 0 clamp(28px, 5vh, 56px);
   overflow: hidden; isolation: isolate;
-  background:
-    radial-gradient(130% 90% at 74% -14%, #201811 0%, rgba(32,24,17,0) 58%),
-    radial-gradient(90% 70% at 12% 108%, #1a120d 0%, rgba(26,18,13,0) 60%),
-    var(--paper);
+  background: transparent;   /* 让全局 WebGL 暗场透出（无 WebGL 时由 html.no-field body 兜底） */
 }
 .stage__glow {
   position: absolute; inset: -10%; z-index: 0; pointer-events: none;
   background: radial-gradient(circle clamp(240px, 26vw, 420px) at var(--mx, 60%) var(--my, 40%),
               var(--glow), rgba(207,90,50,0) 68%);
-  opacity: .9; transition: opacity .6s;
+  opacity: .42; transition: opacity .6s;   /* WebGL 已负责主光，CSS 光仅作叠加 */
 }
 .stage__slits { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
 .stage__slits i {
@@ -180,7 +190,7 @@ h1,h2,h3,h4 { font-family: var(--font-display); font-weight: 400; line-height: 1
 .stage__slits i:nth-child(3) { left: 84%; opacity: .22; animation-duration: 19s; }
 @keyframes drift { from { transform: translateY(-6%) rotate(6deg); } to { transform: translateY(6%) rotate(6deg); } }
 .stage__grain {
-  position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: .4; mix-blend-mode: overlay;
+  position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: .16; mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
 }
 .stage__body { position: relative; z-index: 3; }
@@ -396,6 +406,7 @@ h1,h2,h3,h4 { font-family: var(--font-display); font-weight: 400; line-height: 1
 .card__cover { aspect-ratio: 4/5; background: var(--paper-3); display: grid; place-items: center; position: relative; overflow: hidden; }
 .card__cover .emo { font-family: var(--font-display); font-weight: 900; font-size: clamp(2.8rem,5vw,4rem); color: rgba(242,236,225,.9); }
 .card__cover .ov { position: absolute; inset: 0; background: radial-gradient(120% 90% at 30% 10%, rgba(207,90,50,.32), transparent 60%); }
+.card__idx { position: absolute; z-index: 2; top: 12px; left: 14px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .14em; color: var(--ink-3); }
 .card__body { padding: 18px 18px 20px; }
 .card__title { font-family: var(--font-display); font-size: 1.32rem; line-height: 1.1; }
 .card__tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }

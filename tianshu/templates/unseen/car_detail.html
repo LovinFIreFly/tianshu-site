@@ -6,7 +6,7 @@
   <div class="wrap">
     <a class="link-underline" href="{{ url_for('public.car') }}" data-reveal>← 拼车大厅</a>
     <div class="detail" style="margin-top:24px">
-      <div class="detail__cover" data-reveal><div class="ov"></div><div class="emo">🚗</div></div>
+      <div class="detail__cover" data-reveal><div class="ov"></div><div class="emo">{{ (car.scriptTitle or car.title or '车')[:1] }}</div></div>
       <div data-reveal data-d="1">
         <span class="eyebrow">{{ car.scriptTitle or '拼车' }}</span>
         <h1 class="h2" style="margin-top:14px">{{ car.title or '一辆车' }}</h1>
@@ -41,7 +41,7 @@
     <div style="display:grid;gap:10px;margin-bottom:20px">
       {% for m in msgs %}
       <div style="display:flex;gap:12px;align-items:flex-start">
-        <span class="post__av">{{ '🧑' }}</span>
+        <span class="post__av">{{ (m.nick or m.username or '队')[:1] }}</span>
         <div style="background:var(--paper-2);border:1px solid var(--line);border-radius:12px;padding:10px 14px">
           <div class="post__name" style="font-size:.85rem">{{ m.nick or m.username or '队友' }}</div>
           <div style="font-size:.98rem">{{ m.text }}</div>

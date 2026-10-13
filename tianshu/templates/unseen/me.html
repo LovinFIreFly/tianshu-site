@@ -9,9 +9,9 @@
 
     <div class="me-grid" style="margin-top:30px">
       <aside class="me-card" data-reveal>
-        <div class="me-av">{{ (u.profile.avatar if u.profile else '🎭') or '🎭' }}</div>
+        <div class="me-av">{{ ((u.profile.nick if u.profile else '') or u.username or '我')[:1] }}</div>
         <div style="font-family:var(--font-display);font-size:1.4rem">{{ (u.profile.nick if u.profile else u.username) or u.username }}</div>
-        <div class="note">📱 {{ u.phone }}</div>
+        <div class="note">手机 · {{ u.phone }}</div>
         <div class="me-stat">
           <div><div class="n">{{ bookings|length }}</div><div class="l">预约</div></div>
           <div><div class="n">{{ coupons|length }}</div><div class="l">券</div></div>

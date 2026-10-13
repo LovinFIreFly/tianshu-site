@@ -196,6 +196,43 @@
     track.addEventListener('click', function (e) { if (moved > 6) { e.preventDefault(); e.stopPropagation(); } }, true);
   }
 
+  /* ---------------- 触摸端横滚海报廊：惯性甩动 ---------------- */
+  function initTouchGallery() {
+    var track = $('[data-gallery-track]');
+    if (!track || !COARSE) return;
+    var sx = 0, sy = 0, lx = 0, lt = 0, v = 0, mode = 0, id = null;
+    track.addEventListener('touchstart', function (e) {
+      var t = e.touches[0]; if (!t) return;
+      sx = lx = t.clientX; sy = t.clientY; lt = performance.now(); v = 0; mode = 0;
+      if (id) { cancelAnimationFrame(id); id = null; }
+    }, { passive: true });
+    track.addEventListener('touchmove', function (e) {
+      var t = e.touches[0]; if (!t) return;
+      var dx = t.clientX - sx, dy = t.clientY - sy;
+      if (mode === 0) {
+        if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) mode = 1;   // 横向意图
+        else if (Math.abs(dy) > 8) mode = 2;                             // 纵向：交给页面滚动
+      }
+      if (mode !== 1) return;
+      e.preventDefault();
+      var now = performance.now(), mx = t.clientX;
+      track.scrollLeft -= (mx - lx);
+      if (now > lt) v = -(mx - lx) / (now - lt) * 16;
+      lx = mx; lt = now;
+      track.style.scrollSnapType = 'none';
+    }, { passive: false });
+    function end() {
+      if (mode !== 1) return; mode = 0;
+      (function decay() {
+        v *= 0.95;
+        if (Math.abs(v) < 0.5) { track.style.scrollSnapType = ''; return; }
+        track.scrollLeft += v; id = requestAnimationFrame(decay);
+      })();
+    }
+    track.addEventListener('touchend', end, { passive: true });
+    track.addEventListener('touchcancel', end, { passive: true });
+  }
+
   /* ---------------- Night 时间轴定位 ---------------- */
   function parseMin(t) {
     var m = /(\d{1,2})\s*[:：]\s*(\d{1,2})/.exec(t || '');
@@ -377,6 +414,7 @@
     initSplit();
     initSpotlight();
     initGallery();
+    initTouchGallery();
     initNight();
     initFloat();
     initMagnetic();
