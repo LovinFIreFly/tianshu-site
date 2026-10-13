@@ -441,6 +441,52 @@
     upd();
   }
 
+  /* ---------------- 静止即退场（用户驱动：不自动表演）---------------- */
+  function initIdle() {
+    if (COARSE || REDUCE) return;
+    var t = null, body = document.body;
+    function active() {
+      if (body.classList.contains('is-idle')) body.classList.remove('is-idle');
+      clearTimeout(t);
+      t = setTimeout(function () { body.classList.add('is-idle'); }, 2400);
+    }
+    addEventListener('mousemove', active, { passive: true });
+    addEventListener('touchstart', active, { passive: true });
+    addEventListener('keydown', active);
+    t = setTimeout(function () { body.classList.add('is-idle'); }, 2400);
+  }
+
+  /* ---------------- 首屏实测素材位（有就启用，没有就退回纯 WebGL 暗场）---------------- */
+  function initHeroMedia() {
+    var host = $('[data-hero]');
+    if (!host) return;
+    var vSrc = host.getAttribute('data-hero-video');
+    var iSrc = host.getAttribute('data-hero-img');
+    function attach(el) {
+      el.className = 'stage__media';
+      host.appendChild(el);
+      document.documentElement.classList.add('has-media');
+    }
+    function tryImage() {
+      if (!iSrc) return;
+      var img = new Image();
+      img.onload = function () { attach(img); };
+      img.src = iSrc;
+    }
+    if (vSrc && window.fetch) {
+      fetch(vSrc, { method: 'HEAD' }).then(function (r) {
+        if (!r || !r.ok) { tryImage(); return; }
+        var v = document.createElement('video');
+        v.src = vSrc; v.muted = true; v.loop = true; v.playsInline = true;
+        v.setAttribute('autoplay', ''); v.setAttribute('muted', ''); v.setAttribute('preload', 'auto');
+        v.setAttribute('tabindex', '-1');
+        v.addEventListener('error', tryImage, { once: true });
+        v.addEventListener('loadeddata', function () { attach(v); if (v.play) v.play().catch(function () {}); }, { once: true });
+        v.load();
+      }).catch(tryImage);
+    } else { tryImage(); }
+  }
+
   function init() {
     initCursor();
     initSmooth();
@@ -458,6 +504,8 @@
     initVeil();
     initCount();
     initToday();
+    initIdle();
+    initHeroMedia();
     wireScroll();
     renderFloat();
     document.documentElement.classList.add('js-on');

@@ -82,39 +82,37 @@
     var F_DISPLAY = [
       '#ifdef GL_FRAGMENT_PRECISION_HIGH', 'precision highp float;', '#else', 'precision mediump float;', '#endif',
       'varying vec2 vUv;',
-      'uniform sampler2D uVelocity; uniform vec2 uRes; uniform float uTime; uniform float uChapter;',
+      'uniform sampler2D uVelocity; uniform vec2 uRes; uniform float uFlow; uniform float uChapter;',
       'uniform vec2 uMouse; uniform float uMouseAmt; uniform vec3 uTrail[16]; uniform int uTrailN;',
       FBM_BLOCK,
       'void main(){',
       '  float asp = uRes.x/uRes.y;',
       '  vec2 vel = texture2D(uVelocity, vUv).xy;',
       '  vec2 q = vec2((vUv.x-0.5)*asp, (vUv.y-0.5));',
-      '  q += vel * 0.030;',                                  // ← 流体位移：整片烟雾随速度场流动
-      '  float t = uTime*0.05, ch = uChapter;',
-      '  vec2 w = q*1.5 + vec2(t,-t*0.7);',
-      '  w += vec2(fbm(w*0.8+t*0.6), fbm(w*0.8-t*0.6+3.1))*0.85;',
+      '  q += clamp(vel,-0.10,0.10) * 0.009;',                  // 流体位移限幅
+      '  float t = uFlow, ch = uChapter;',                       // ★ 相位只跟"用户移动量"走：不动就不动
+      '  vec2 w = q*1.5 + vec2(t*0.55,-t*0.40);',
+      '  w += vec2(fbm(w*0.8+t*0.30), fbm(w*0.8-t*0.30+3.1))*0.85;',
       '  float nR=fbm(w*1.1+vec2(0.010,0.0)+ch*2.0), nG=fbm(w*1.1+ch*2.0), nB=fbm(w*1.1-vec2(0.010,0.0)+ch*2.0);',
       '  float n2=fbm(w*2.35-ch*3.0+7.0);',
-      '  float smoke = smoothstep(0.18,0.98, nG*0.72 + n2*0.45);',
-      '  float speed = length(vel);',                          // 速度快的地方微微发亮（流动的光泽）
+      '  float smoke = smoothstep(0.50,1.26, nG*0.70 + n2*0.40);',   // 结构更少、更淡
       '  vec2 p = vec2((vUv.x-0.5)*asp, vUv.y-0.5); vec2 m = vec2((uMouse.x-0.5)*asp, uMouse.y-0.5);',
-      '  float gl0 = exp(-length(p-m)*3.9) * (0.10 + uMouseAmt*0.22);',
+      '  float lit = exp(-length(p-m)*3.2);',                        // "被照亮"的宽域（决定哪里允许暖）
+      '  float gl0 = exp(-length(p-m)*9.5) * (0.04 + uMouseAmt*0.11);',   // 收紧的光核
       '  float carve = 0.0;',
       '  for(int i=0;i<16;i++){ if(i>=uTrailN) break; vec3 tp=uTrail[i]; vec2 tv=vec2((tp.x-0.5)*asp, tp.y-0.5);',
-      '    carve += exp(-length(p-tv)*15.0)*(1.0-tp.z); }',
-      '  carve = clamp(carve*0.40*(0.6+ch*0.8),0.0,1.5);',
-      '  vec3 base=vec3(0.030,0.026,0.022), ember=vec3(0.812,0.353,0.196), amber=vec3(0.886,0.580,0.278), cool=vec3(0.16,0.19,0.30);',
+      '    carve += exp(-length(p-tv)*18.0)*(1.0-tp.z); }',
+      '  carve = clamp(carve*0.20*(0.5+ch*0.7),0.0,0.7);',
+      '  vec3 base=vec3(0.012,0.013,0.018);',                       // 冷近黑
+      '  vec3 cool=vec3(0.034,0.046,0.076);',                       // 冷调烟雾
+      '  vec3 warm=vec3(0.60,0.28,0.13);',                          // 暖色：只在被照亮处
       '  vec3 col = base;',
-      '  col.r += smoke*0.34*mix(cool.r,ember.r,ch) + (nR-nG)*0.26;',
-      '  col.g += smoke*0.34*mix(cool.g,ember.g,ch);',
-      '  col.b += smoke*0.34*mix(cool.b,ember.b,ch) + (nB-nG)*0.26;',
-      '  col += smoothstep(0.02,0.22,speed) * ember * 0.30;',   // 流速光泽
-      '  col += gl0 * mix(amber,ember,0.45) * 0.30;',
-      '  col += carve * vec3(1.0,0.86,0.66) * 0.42;',
-      '  col += vec3(0.10,0.075,0.055)*smoothstep(0.42,0.0,vUv.y)*(0.6+0.4*ch);',
-      '  float vig = smoothstep(1.30,0.32, length(vUv-0.5)*1.42); col *= 0.5 + 0.66*vig;',
-      '  col += (hash(vUv*uRes + fract(uTime))-0.5)*0.045;',
-      '  col *= 1.0 - 0.03*step(0.5, fract(vUv.y*uRes.y*0.5));',
+      '  col += smoke * mix(cool, warm*0.55, lit*0.60) * 0.26;',    // 越靠近光才越暖
+      '  col.r += (nR-nG)*0.07; col.b += (nB-nG)*0.07;',            // 微弱色散
+      '  col += gl0 * warm * 0.55;',
+      '  col += carve * vec3(0.90,0.58,0.30) * 0.26;',
+      '  float vig = smoothstep(1.18,0.16, length(vUv-0.5)*1.5); col *= 0.26 + 0.82*vig;',
+      '  col += (hash(vUv*uRes*1.7+11.0)-0.5)*0.028;',              // 静态颗粒（不闪烁）
       '  gl_FragColor = vec4(max(col,0.0),1.0);',
       '}'
     ].join('\n');
@@ -128,7 +126,7 @@
     var uDiv = U(pDiv, ['uVelocity', 'uTexel']);
     var uPress = U(pPress, ['uPressure', 'uDivergence', 'uTexel']);
     var uGrad = U(pGrad, ['uPressure', 'uVelocity', 'uTexel']);
-    var uDisp = U(pDisp, ['uVelocity', 'uRes', 'uTime', 'uChapter', 'uMouse', 'uMouseAmt', 'uTrail', 'uTrailN']);
+    var uDisp = U(pDisp, ['uVelocity', 'uRes', 'uFlow', 'uChapter', 'uMouse', 'uMouseAmt', 'uTrail', 'uTrailN']);
 
     // 全屏四边形
     var buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
@@ -191,7 +189,7 @@
     window.addEventListener('mousemove', function (e) { onMove(e.clientX, e.clientY); }, { passive: true });
     window.addEventListener('touchmove', function (e) { if (e.touches[0]) onMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
 
-    var chapter = 0, chapterTarget = 0;
+    var chapter = 0, chapterTarget = 0, flow = 0;
     function onScroll() { var max = Math.max(1, document.documentElement.scrollHeight - innerHeight); chapterTarget = Math.min(1, Math.max(0, scrollY / max)); }
     window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
 
@@ -200,7 +198,9 @@
     var aspect = 1;
 
     function step(dt, now) {
-      var dx = (mx - pmx) * SPLAT_FORCE, dy = (my - pmy) * SPLAT_FORCE;
+      var mdx = mx - pmx, mdy = my - pmy;
+      flow += Math.hypot(mdx, mdy) * 0.42;   // ★ 噪声相位由用户移动量累积；鼠标静止 → 画面完全静止
+      var dx = mdx * SPLAT_FORCE, dy = mdy * SPLAT_FORCE;
       pmx = mx; pmy = my;
       if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) {
         gl.useProgram(pSplat); gl.uniform1i(uSplat.uTarget, 0); gl.uniform1f(uSplat.uAspect, aspect);
@@ -245,7 +245,7 @@
       gl.useProgram(pDisp);
       gl.uniform1i(uDisp.uVelocity, 0); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, velocity.read.tex);
       gl.uniform2f(uDisp.uRes, canvas.width, canvas.height);
-      gl.uniform1f(uDisp.uTime, now / 1000);
+      gl.uniform1f(uDisp.uFlow, flow);
       gl.uniform1f(uDisp.uChapter, chapter);
       gl.uniform2f(uDisp.uMouse, mx, my);
       gl.uniform1f(uDisp.uMouseAmt, Math.min(1, amt));
@@ -280,26 +280,25 @@
     var vs = sh(gl.VERTEX_SHADER, 'attribute vec2 aPos; void main(){ gl_Position=vec4(aPos,0.,1.); }');
     var frag = [
       '#ifdef GL_FRAGMENT_PRECISION_HIGH', 'precision highp float;', '#else', 'precision mediump float;', '#endif',
-      'uniform vec2 uRes; uniform float uTime; uniform vec2 uMouse; uniform float uMouseAmt; uniform float uChapter;',
+      'uniform vec2 uRes; uniform float uFlow; uniform vec2 uMouse; uniform float uMouseAmt; uniform float uChapter;',
       'uniform vec3 uTrail[16]; uniform int uTrailN;',
       FBM_BLOCK,
       'void main(){ vec2 uv=vec2(gl_FragCoord.x/uRes.x, 1.0-gl_FragCoord.y/uRes.y); float asp=uRes.x/uRes.y;',
       ' vec2 p=vec2((uv.x-0.5)*asp,uv.y-0.5); vec2 m=vec2((uMouse.x/uRes.x-0.5)*asp, uMouse.y/uRes.y-0.5);',
-      ' float t=uTime*0.055, ch=uChapter; vec2 q=p*1.55+vec2(t,-t*0.72);',
-      ' q+=vec2(fbm(q*0.8+t*0.6), fbm(q*0.8-t*0.6+3.1))*0.85;',
+      ' float t=uFlow, ch=uChapter; vec2 q=p*1.5+vec2(t*0.55,-t*0.40);',
+      ' q+=vec2(fbm(q*0.8+t*0.30), fbm(q*0.8-t*0.30+3.1))*0.85;',
       ' float nR=fbm(q*1.1+vec2(0.010,0.0)+ch*2.0), nG=fbm(q*1.1+ch*2.0), nB=fbm(q*1.1-vec2(0.010,0.0)+ch*2.0), n2=fbm(q*2.35-ch*3.0+7.0);',
-      ' float smoke=smoothstep(0.18,0.98,nG*0.72+n2*0.45);',
-      ' float gl0=exp(-length(p-m)*3.9)*(0.10+uMouseAmt*0.22); float carve=0.0;',
+      ' float smoke=smoothstep(0.50,1.26,nG*0.70+n2*0.40);',
+      ' float lit=exp(-length(p-m)*3.2); float gl0=exp(-length(p-m)*9.5)*(0.04+uMouseAmt*0.11); float carve=0.0;',
       ' for(int i=0;i<16;i++){ if(i>=uTrailN) break; vec3 tp=uTrail[i]; vec2 tv=vec2((tp.x/uRes.x-0.5)*asp,(tp.y/uRes.y-0.5));',
-      '   carve+=exp(-length(p-tv)*15.0)*(1.0-tp.z); }',
-      ' carve=clamp(carve*0.40*(0.6+ch*0.8),0.0,1.5);',
-      ' vec3 base=vec3(0.030,0.026,0.022), ember=vec3(0.812,0.353,0.196), amber=vec3(0.886,0.580,0.278), cool=vec3(0.16,0.19,0.30);',
-      ' vec3 col=base; col.r+=smoke*0.34*mix(cool.r,ember.r,ch)+(nR-nG)*0.26; col.g+=smoke*0.34*mix(cool.g,ember.g,ch);',
-      ' col.b+=smoke*0.34*mix(cool.b,ember.b,ch)+(nB-nG)*0.26;',
-      ' col+=gl0*mix(amber,ember,0.45)*0.30; col+=carve*vec3(1.0,0.86,0.66)*0.42;',
-      ' col+=vec3(0.10,0.075,0.055)*smoothstep(0.42,0.0,uv.y)*(0.6+0.4*ch);',
-      ' float vig=smoothstep(1.30,0.32,length(uv-0.5)*1.42); col*=0.5+0.66*vig;',
-      ' col+=(hash(uv*uRes+fract(uTime))-0.5)*0.045; col*=1.0-0.03*step(0.5,fract(uv.y*uRes.y*0.5));',
+      '   carve+=exp(-length(p-tv)*18.0)*(1.0-tp.z); }',
+      ' carve=clamp(carve*0.20*(0.5+ch*0.7),0.0,0.7);',
+      ' vec3 base=vec3(0.012,0.013,0.018), cool=vec3(0.034,0.046,0.076), warm=vec3(0.60,0.28,0.13);',
+      ' vec3 col=base; col+=smoke*mix(cool,warm*0.55,lit*0.60)*0.26;',
+      ' col.r+=(nR-nG)*0.07; col.b+=(nB-nG)*0.07;',
+      ' col+=gl0*warm*0.55; col+=carve*vec3(0.90,0.58,0.30)*0.26;',
+      ' float vig=smoothstep(1.18,0.16,length(uv-0.5)*1.5); col*=0.26+0.82*vig;',
+      ' col+=(hash(uv*uRes*1.7+11.0)-0.5)*0.028;',
       ' gl_FragColor=vec4(max(col,0.0),1.0); }'
     ].join('\n');
     var fs = sh(gl.FRAGMENT_SHADER, frag); if (!vs || !fs) return false;
@@ -309,8 +308,8 @@
     var buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
     var a = gl.getAttribLocation(p, 'aPos'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
-    var L = { res: gl.getUniformLocation(p, 'uRes'), time: gl.getUniformLocation(p, 'uTime'), mouse: gl.getUniformLocation(p, 'uMouse'), amt: gl.getUniformLocation(p, 'uMouseAmt'), chapter: gl.getUniformLocation(p, 'uChapter'), trail: gl.getUniformLocation(p, 'uTrail'), trailN: gl.getUniformLocation(p, 'uTrailN') };
-    var dpr = 1, mx = innerWidth * 0.62, my = innerHeight * 0.42, tmx = mx, tmy = my, amt = 0, tamt = 0;
+    var L = { res: gl.getUniformLocation(p, 'uRes'), flow: gl.getUniformLocation(p, 'uFlow'), mouse: gl.getUniformLocation(p, 'uMouse'), amt: gl.getUniformLocation(p, 'uMouseAmt'), chapter: gl.getUniformLocation(p, 'uChapter'), trail: gl.getUniformLocation(p, 'uTrail'), trailN: gl.getUniformLocation(p, 'uTrailN') };
+    var dpr = 1, mx = innerWidth * 0.62, my = innerHeight * 0.42, tmx = mx, tmy = my, amt = 0, tamt = 0, flow = 0, fmx = mx, fmy = my;
     var trail = [], TR_MAX = 16, TR_LIFE = 1300, t0 = performance.now();
     function push(x, y) { var l = trail[trail.length - 1]; if (l && Math.hypot(x - l.x, y - l.y) < 14) return; trail.push({ x: x, y: y, t0: performance.now() }); if (trail.length > TR_MAX) trail.shift(); }
     function mv(x, y) { tmx = x; tmy = y; tamt = 1; push(x, y); }
@@ -323,12 +322,13 @@
     window.addEventListener('resize', resize, { passive: true });
     var td = new Float32Array(TR_MAX * 3), running = true;
     function render(now) { if (!running) return; mx += (tmx - mx) * 0.12; my += (tmy - my) * 0.12; amt += (tamt - amt) * 0.05; tamt *= 0.96; chapter += (chapterTarget - chapter) * 0.06;
+      flow += Math.hypot(mx - fmx, my - fmy) / Math.max(1, innerWidth) * 0.42; fmx = mx; fmy = my;   // ★ 只跟用户移动走
       var k = 0; for (var i = 0; i < trail.length; i++) { var age = (now - trail[i].t0) / TR_LIFE; if (age >= 1) continue; td[k * 3] = trail[i].x * dpr; td[k * 3 + 1] = trail[i].y * dpr; td[k * 3 + 2] = age; k++; }
-      if (L.mouse) gl.uniform2f(L.mouse, mx * dpr, my * dpr); if (L.amt) gl.uniform1f(L.amt, Math.min(1, amt)); if (L.time) gl.uniform1f(L.time, (now - t0) / 1000); if (L.chapter) gl.uniform1f(L.chapter, chapter);
+      if (L.mouse) gl.uniform2f(L.mouse, mx * dpr, my * dpr); if (L.amt) gl.uniform1f(L.amt, Math.min(1, amt)); if (L.flow) gl.uniform1f(L.flow, flow); if (L.chapter) gl.uniform1f(L.chapter, chapter);
       if (L.trail) gl.uniform3fv(L.trail, td); if (L.trailN) gl.uniform1i(L.trailN, k);
       gl.drawArrays(gl.TRIANGLES, 0, 3); requestAnimationFrame(render); }
     resize();
-    if (REDUCE) { if (L.time) gl.uniform1f(L.time, 0.5); if (L.trailN) gl.uniform1i(L.trailN, 0); gl.drawArrays(gl.TRIANGLES, 0, 3); running = false; }
+    if (REDUCE) { if (L.flow) gl.uniform1f(L.flow, 0.0); if (L.trailN) gl.uniform1i(L.trailN, 0); gl.drawArrays(gl.TRIANGLES, 0, 3); running = false; }
     else requestAnimationFrame(render);
     return true;
   }

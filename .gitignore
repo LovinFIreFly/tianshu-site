@@ -61,3 +61,4 @@ _nv*.log
 # 工作区/助手数据 + 小程序私有配置（含 AppID 等本机信息，不入库）
 .workbuddy/
 miniprogram/project.private.config.json
+_research/
