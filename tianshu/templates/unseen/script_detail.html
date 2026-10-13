@@ -1,0 +1,102 @@
+{% extends 'layout.html' %}
+{% block title %}{{ sc.title }} · 甜薯剧本杀{% endblock %}
+{% block desc %}{{ sc.desc or (sc.title + ' —— 甜薯剧本杀在演剧目') }}{% endblock %}
+{% block content %}
+
+<section class="sec" style="padding-top:120px">
+  <div class="wrap">
+    <a class="link-underline" href="{{ url_for('public.scripts') }}" data-reveal>← 返回本本墙</a>
+    <div class="detail" style="margin-top:24px">
+      <div class="detail__cover" data-reveal>
+        <div class="ov"></div>
+        <div class="emo">{{ sc.emoji or '🎭' }}</div>
+      </div>
+      <div data-reveal data-d="1">
+        <span class="eyebrow">{{ sc.tags[0] if sc.tags else '剧目' }}</span>
+        <h1 class="h2" style="margin-top:14px">{{ sc.title }}</h1>
+        <p class="lede" style="margin-top:16px">{{ sc.desc or '' }}</p>
+        <dl class="kv">
+          <dt>难度</dt><dd class="card__diff">{% for i in range(5) %}{% if loop.index <= (sc.diff or 0) %}●{% else %}<i>○</i>{% endif %}{% endfor %}</dd>
+          <dt>单人价</dt><dd>¥{{ sc.price or 0 }}</dd>
+          <dt>适合人数</dt><dd>{{ lo }}–{{ hi }} 人</dd>
+          <dt>评分</dt><dd>{% if rating %}{{ '%.1f'|format(rating) }} / 5（{{ rating_n or 0 }} 评）{% else %}—{% endif %}</dd>
+        </dl>
+        <div class="card__tags" style="margin-bottom:18px">
+          {% for t in (sc.tags or []) %}<span class="tag">{{ t }}</span>{% endfor %}
+        </div>
+
+        {% if me %}
+        <form method="post" action="{{ url_for('user.book') }}" class="book">
+          <h3 class="h3" style="margin-bottom:4px">约这一本</h3>
+          <p class="note">填好日期和场次，定金线下转小客服微信，到店核销。</p>
+          <input type="hidden" name="sid" value="{{ sc.id }}">
+          <div class="field"><label>日期</label><input type="date" name="ts_day" value="{{ day_min }}" min="{{ day_min }}" max="{{ day_max }}" required></div>
+          <div class="field"><label>时间</label><input type="time" name="time" value="19:00" required></div>
+          <div class="field"><label>人数</label><input type="number" name="players" min="{{ lo }}" max="{{ hi }}" value="{{ lo }}" required></div>
+          <div class="field"><label>方式</label>
+            <select name="mode">
+              <option value="拼车">拼车（凑人发车）</option>
+              <option value="包车">包车（整场独享）</option>
+            </select>
+          </div>
+          {% if dms %}
+          <div class="field"><label>指定 DM</label>
+            <select name="dmPhone">
+              <option value="">不指定，随机排</option>
+              {% for d in dms %}<option value="{{ d.phone }}">{{ d.name }}</option>{% endfor %}
+            </select>
+          </div>
+          {% endif %}
+          {% if open_cars %}
+          <div class="field"><label>加入已有拼车</label>
+            <select name="carId">
+              <option value="">不拼，我自己开</option>
+              {% for c in open_cars %}<option value="{{ c.id }}">{{ c.title }}（还差 {{ c.need }} 人）</option>{% endfor %}
+            </select>
+          </div>
+          {% endif %}
+          <button class="btn btn--accent" type="submit" style="width:100%;justify-content:center">提交预约 <span class="arr">→</span></button>
+        </form>
+        {% else %}
+        <div class="book">
+          <h3 class="h3" style="margin-bottom:8px">约这一本</h3>
+          <p class="note">登录后才能约本、拼车、组局。</p>
+          <a class="btn btn--accent" href="{{ url_for('user.login', next=url_for('public.script_detail', sid=sc.id)) }}" style="width:100%;justify-content:center">登录后约本</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+{% if reviews %}
+<section class="sec" style="padding-top:0">
+  <div class="wrap">
+    <span class="eyebrow" data-reveal>玩家复盘 · Reviews</span>
+    <h2 class="h2" data-reveal data-d="1" style="margin:14px 0 30px">玩过的人怎么说。</h2>
+    <div class="quotes">
+      {% for r in reviews[:6] %}
+      <figure class="quote" data-reveal data-d="{{ loop.index0 % 4 }}">
+        <blockquote class="quote__text">“{{ r.text }}”</blockquote>
+        <figcaption class="quote__by"><span class="quote__av">{{ '🗣' }}</span>{{ r.nick or '玩家' }}{% if r.title %} · 《{{ r.title }}》{% endif %}{% if r.rating %} · {{ r.rating }}★{% endif %}</figcaption>
+      </figure>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% if next_sc %}
+<section class="band">
+  <div class="band__grain"></div>
+  <div class="wrap band__inner">
+    <span class="eyebrow eyebrow--dark" data-reveal>下一部 · Next</span>
+    <a href="{{ url_for('public.script_detail', sid=next_sc.id) }}" data-reveal data-d="1" style="display:block;margin-top:14px">
+      <h2 class="h2" style="color:var(--dark-ink)">{{ next_sc.title }} <span class="arr" style="display:inline-block">→</span></h2>
+    </a>
+    <p class="lede" data-reveal data-d="2" style="margin-top:12px">Unseen 每个案例都平滑接到下一个——把散页串成一条一直能逛的流。</p>
+  </div>
+</section>
+{% endif %}
+
+{% endblock %}

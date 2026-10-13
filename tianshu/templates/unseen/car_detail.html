@@ -1,0 +1,65 @@
+{% extends 'layout.html' %}
+{% block title %}车队 · 甜薯剧本杀{% endblock %}
+{% block content %}
+
+<section class="sec" style="padding-top:120px">
+  <div class="wrap">
+    <a class="link-underline" href="{{ url_for('public.car') }}" data-reveal>← 拼车大厅</a>
+    <div class="detail" style="margin-top:24px">
+      <div class="detail__cover" data-reveal><div class="ov"></div><div class="emo">🚗</div></div>
+      <div data-reveal data-d="1">
+        <span class="eyebrow">{{ car.scriptTitle or '拼车' }}</span>
+        <h1 class="h2" style="margin-top:14px">{{ car.title or '一辆车' }}</h1>
+        <dl class="kv">
+          <dt>时间</dt><dd>{{ car.time or '待定' }}</dd>
+          <dt>还差</dt><dd>{{ car.need if car.need is defined else car.min }} 人</dd>
+          <dt>车主</dt><dd>{{ car.ownerNick or '—' }}</dd>
+        </dl>
+        {% if me %}
+          {% if is_owner %}
+            <form method="post" action="{{ url_for('public.car_action', cid=car.id, action='close') }}" style="display:inline">
+              <button class="btn btn--ghost" type="submit">收车</button>
+            </form>
+          {% elif car.joined %}
+            <form method="post" action="{{ url_for('public.car_action', cid=car.id, action='quit') }}" style="display:inline">
+              <button class="btn btn--ghost" type="submit">退出这辆车</button>
+            </form>
+          {% else %}
+            <form method="post" action="{{ url_for('public.car_action', cid=car.id, action='join') }}" style="display:inline">
+              <button class="btn btn--accent" type="submit">上车 <span class="arr">→</span></button>
+            </form>
+          {% endif %}
+        {% else %}
+          <a class="btn btn--accent" href="{{ url_for('user.login', next=request.url) }}">登录后上车</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="sec__head" style="margin-top:48px">
+      <h3 class="h3" data-reveal>车里聊两句</h3>
+    </div>
+    <div style="display:grid;gap:10px;margin-bottom:20px">
+      {% for m in msgs %}
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <span class="post__av">{{ '🧑' }}</span>
+        <div style="background:var(--paper-2);border:1px solid var(--line);border-radius:12px;padding:10px 14px">
+          <div class="post__name" style="font-size:.85rem">{{ m.nick or m.username or '队友' }}</div>
+          <div style="font-size:.98rem">{{ m.text }}</div>
+        </div>
+      </div>
+      {% else %}
+      <p class="note">还没人说话，打个招呼？</p>
+      {% endfor %}
+    </div>
+    {% if me %}
+    <form method="post" action="{{ url_for('public.car_action', cid=car.id, action='msg') }}">
+      <div class="field" style="display:flex;gap:10px">
+        <input class="field" name="text" placeholder="说点什么…" required style="flex:1">
+        <button class="btn btn--accent" type="submit">发送</button>
+      </div>
+    </form>
+    {% endif %}
+  </div>
+</section>
+
+{% endblock %}

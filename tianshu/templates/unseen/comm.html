@@ -1,0 +1,70 @@
+{% extends 'layout.html' %}
+{% block title %}唠嗑社区 · 甜薯剧本杀{% endblock %}
+{% block desc %}玩前玩后都想说两句？社区里找队友、发招募、晒复盘。{% endblock %}
+{% block content %}
+
+<section class="sec" style="padding-top:120px">
+  <div class="wrap">
+    <div class="sec__head">
+      <div>
+        <span class="eyebrow" data-reveal>唠嗑 · Community</span>
+        <h2 class="h2" data-reveal data-d="1" style="margin-top:14px">气味相投的人，自然凑到一起。</h2>
+      </div>
+    </div>
+
+    <div class="tabbar" data-reveal>
+      <a class="chip {{ 'on' if ftype in ('','all') }}" href="{{ url_for('public.comm', type='all') }}">全部</a>
+      <a class="chip {{ 'on' if ftype == 'chat' }}" href="{{ url_for('public.comm', type='chat') }}">闲聊</a>
+      <a class="chip {{ 'on' if ftype == 'recruit' }}" href="{{ url_for('public.comm', type='recruit') }}">招募</a>
+    </div>
+
+    {% if me %}
+    <form method="post" action="{{ url_for('public.post_create') }}" class="post" data-reveal style="background:var(--paper)">
+      <div class="field"><input name="title" placeholder="一句话标题（可选）"></div>
+      <div class="field"><textarea name="text" rows="3" placeholder="说点什么…" required></textarea></div>
+      <div class="field--row">
+        <input name="topic" placeholder="话题，如：情感 / 硬核 / 恐怖">
+        <select name="type">
+          <option value="chat">闲聊帖</option>
+          <option value="recruit">缺位招募</option>
+        </select>
+      </div>
+      <div class="field--row">
+        <input name="recruitRole" placeholder="缺什么位（招募时填）">
+        <input name="recruitNeed" type="number" min="1" max="12" placeholder="缺几人">
+      </div>
+      <button class="btn btn--accent" type="submit">发出去 <span class="arr">→</span></button>
+    </form>
+    {% else %}
+    <p class="note" data-reveal>想发帖？<a class="link-underline" href="{{ url_for('user.login', next=url_for('public.comm')) }}">登录</a> 之后就能聊。</p>
+    {% endif %}
+
+    <div style="margin-top:24px">
+      {% for p in posts %}
+      <article class="post" data-reveal data-d="{{ loop.index0 % 4 }}">
+        <div class="post__head">
+          <span class="post__av">{{ '🗣' }}</span>
+          <div>
+            <div class="post__name">{{ p.username or '玩家' }}{% if p.title %} · {{ p.title }}{% endif %}</div>
+            <div class="post__meta">{{ p.topic or '闲聊' }}{% if p.postType == 'recruit' %} · 招募{% endif %}</div>
+          </div>
+        </div>
+        <p class="post__text">{{ p.text }}</p>
+        {% if p.postType == 'recruit' %}
+        <p class="note">缺位：{{ p.recruitRole or '—' }} · 还差 {{ p.recruitNeed or '?' }} 人{% if p.recruitScript %} · 《{{ p.recruitScript }}》{% endif %}</p>
+        {% endif %}
+        <div class="post__foot">
+          <form method="post" action="{{ url_for('public.post_like', pid=p.id) }}" style="display:inline">
+            <button type="submit">♥ {{ (p.likes or [])|length }}</button>
+          </form>
+          {% if me and p.phone == me.phone %}<span>· 我的帖</span>{% endif %}
+        </div>
+      </article>
+      {% else %}
+      <p class="note">还没有帖子，来当第一个开口的人。</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% endblock %}

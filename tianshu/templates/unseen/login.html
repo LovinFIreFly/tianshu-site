@@ -1,0 +1,26 @@
+{% extends 'layout.html' %}
+{% block title %}登录 · 甜薯剧本杀{% endblock %}
+{% block content %}
+
+<div class="auth">
+  <aside class="auth__aside">
+    <div>
+      <span class="eyebrow eyebrow--dark">甜薯剧本杀</span>
+      <div class="big" style="margin-top:22px">欢迎回来，<br>今晚约哪一局？</div>
+    </div>
+    <p style="color:var(--dark-2-ink)">登录后就能约本、拼车、组局、唠嗑，一条线索串到底。</p>
+  </aside>
+  <div class="auth__main">
+    <h2 class="h2">登录</h2>
+    <p class="note">手机号或用户名都行。</p>
+    <form method="post" action="{{ url_for('user.login') }}{% if request.args.next %}?next={{ request.args.next }}{% endif %}" style="margin-top:18px">
+      <div class="field"><label>账号</label><input name="account" autocomplete="username" placeholder="手机号 / 用户名" required></div>
+      <div class="field"><label>密码</label><input name="password" type="password" autocomplete="current-password" placeholder="密码" required></div>
+      <label class="agree"><input type="checkbox" name="remember" value="1" checked> 记住我（半年内免登）</label>
+      <button class="btn btn--accent" type="submit" style="width:100%;justify-content:center">登录 <span class="arr">→</span></button>
+    </form>
+    <p class="note">还没号？<a class="link-underline" href="{{ url_for('user.register') }}">注册一个</a> · <a class="link-underline" href="{{ url_for('user.forgot') }}">忘了密码</a></p>
+  </div>
+</div>
+
+{% endblock %}

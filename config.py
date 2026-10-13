@@ -72,6 +72,10 @@ SETTINGS_DEFAULT = {
     "mobileMode": "zine",
     # 历史兼容：单款式旧值，二选一都没配时回退到这里
     "skin": "v5",
+    # 站点版式（uiVer）：可选值见 business.UI_VERSIONS（'unseen' / 'nova' / '2' / '1'）。
+    # unseen = 全新独立版式（参考 unseen.co / blueyard），作为新站点默认外观；
+    # 后台「门店设置 → 外观款式」也可改（落库到 data/settings.json，覆盖这里的默认值）。
+    "uiVer": "unseen",
     # 店铺实拍（"真实照片前置"用）：后台「门店设置」里传，首页会挂一条照片墙
     "shopPhotos": [],          # 形如 [{'url':'/img/shop/...','cap':'前台'}, ...]
     "shopIntro": "",           # 店铺一句话（实拍区旁边配的手写小字）

@@ -1,0 +1,57 @@
+{% extends 'layout.html' %}
+{% block title %}本本墙 · 甜薯剧本杀{% endblock %}
+{% block desc %}在演剧目一墙摆开。按情绪、难度、人数挑本，热门与新本永远在最前。{% endblock %}
+{% block content %}
+
+<section class="sec" style="padding-top:120px">
+  <div class="wrap">
+    <div class="sec__head">
+      <div>
+        <span class="eyebrow" data-reveal>本本墙 · The Catalogue</span>
+        <h2 class="h2" data-reveal data-d="1" style="margin-top:14px">在演剧目，一墙摆开。</h2>
+      </div>
+      <span class="note" data-reveal>{{ scripts|length }} 部在演</span>
+    </div>
+
+    <form class="filters" method="get" action="{{ url_for('public.scripts') }}" data-reveal>
+      <input type="search" name="q" value="{{ q }}" placeholder="搜剧名或简介…">
+      <select name="diff" onchange="this.form.submit()">
+        <option value="">全部难度</option>
+        {% for d in range(1,6) %}<option value="{{ d }}" {{ 'selected' if diff|string == d|string }}>难度 {{ d }}</option>{% endfor %}
+      </select>
+      {% if tag %}<a class="chip on" href="{{ url_for('public.scripts') }}">#{{ tag }} ✕</a>{% endif %}
+      <button class="btn btn--ghost" type="submit">筛选</button>
+    </form>
+
+    <div class="filters" data-reveal>
+      {% for t in tags[:14] %}
+        <a class="chip {{ 'on' if t in sel_tags or t == tag }}" href="{{ url_for('public.scripts', tag=t) }}">{{ t }}</a>
+      {% endfor %}
+    </div>
+
+    <div class="cards" style="margin-top:34px">
+      {% for s in scripts %}
+      <a class="card" href="{{ url_for('public.script_detail', sid=s.id) }}" data-reveal data-d="{{ loop.index0 % 4 }}" data-cursor>
+        <div class="card__cover">
+          <div class="ov"></div>
+          <div class="emo">{{ s.emoji or '🎭' }}</div>
+        </div>
+        <div class="card__body">
+          <div class="card__title">{{ s.title }}</div>
+          <div class="card__tags">
+            {% for t in (s.tags or [])[:3] %}<span class="tag{% if t in ['热门','上新','新本'] %} tag--hot{% endif %}">{{ t }}</span>{% endfor %}
+          </div>
+          <div class="card__foot">
+            <span class="card__price">¥{{ s.price or 0 }}</span>
+            <span class="card__diff">{% for i in range(5) %}{% if loop.index <= (s.diff or 0) %}●{% else %}<i>○</i>{% endif %}{% endfor %}</span>
+          </div>
+        </div>
+      </a>
+      {% else %}
+      <p class="note">没有匹配的剧目，换个筛选试试。</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% endblock %}

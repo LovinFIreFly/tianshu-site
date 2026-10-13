@@ -1,0 +1,20 @@
+{% extends 'layout.html' %}
+{% block title %}甜薯剧本杀 · 约局工作室{% endblock %}
+{% block content %}
+
+<section class="hero" style="min-height:88vh;display:grid;align-items:center">
+  <div class="wrap" style="text-align:center">
+    <span class="eyebrow" data-reveal style="justify-content:center">甜薯剧本杀 · 约局工作室</span>
+    <h1 class="display" data-reveal data-d="1" style="margin:22px auto 0;max-width:18ch">把一晚上的<em>悬念</em>，交给一群对的人。</h1>
+    <p class="lede" data-reveal data-d="2" style="margin:24px auto 0">挑本、拼车、组局、唠嗑——一个入口约齐。先随便逛逛，看对眼了再进门。</p>
+    <div class="hero__sub" data-reveal data-d="3" style="justify-content:center;margin-top:32px">
+      <a class="btn btn--accent" href="{{ url_for('public.home', browse=1) }}">先随便逛逛 <span class="arr">→</span></a>
+      <a class="btn btn--ghost" href="{{ url_for('user.login') }}">登录</a>
+    </div>
+    <p class="note" data-reveal data-d="4" style="margin-top:28px">
+      在演 <b>{{ meta.scripts if meta else 0 }}</b> 部 · 今日 <b>{{ meta.today if meta else 0 }}</b> 场
+    </p>
+  </div>
+</section>
+
+{% endblock %}

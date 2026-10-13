@@ -1,0 +1,34 @@
+{% extends 'layout.html' %}
+{% block title %}今日组局 · 甜薯剧本杀{% endblock %}
+{% block desc %}今天在开的局一览无余。看中哪场直接约，没合适的自己开一桌。{% endblock %}
+{% block content %}
+
+<section class="sec" style="padding-top:120px">
+  <div class="wrap">
+    <div class="sec__head">
+      <div>
+        <span class="eyebrow" data-reveal>今日组局 · Tonight</span>
+        <h2 class="h2" data-reveal data-d="1" style="margin-top:14px">今晚，谁在开场。</h2>
+      </div>
+      <a class="btn btn--accent" href="{{ url_for('public.scripts') }}" data-reveal>去开一桌 <span class="arr">→</span></a>
+    </div>
+
+    <div class="rows" style="margin-top:24px">
+      {% for s in sessions %}
+      <a class="row" href="{{ url_for('public.script_detail', sid=s.sid) if s.sid else url_for('public.scripts') }}" data-reveal data-d="{{ loop.index0 % 4 }}" data-cursor>
+        <span class="row__when">{{ s.time or '' }}</span>
+        <span>
+          <span class="row__title">{{ s.title or '一场组局' }}</span><br>
+          <span class="row__sub">《{{ s.scriptTitle or '' }}》· DM {{ s.dmName or '待安排' }} · {{ s.players or '' }} 人</span>
+        </span>
+        <span class="row__pill">{{ s.status or 'open' }}</span>
+        <span class="idx__go">→</span>
+      </a>
+      {% else %}
+      <p class="note">今天还没有开放的局。去本本墙挑个本，约的时候选「拼车」就能发车。</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% endblock %}

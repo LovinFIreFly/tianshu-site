@@ -1062,7 +1062,7 @@ UI_VERSIONS = {
 # 视觉上完全脱离剧本杀框架，但功能模块（本本墙 / 拼车 / 唠嗑 / 组局 / 我的 / 登录注册）接口与后端一致。
 UI_NOVA = 'nova'
 UI_UNSEEN = 'unseen'
-DEFAULT_UI = 'nova'
+DEFAULT_UI = 'unseen'
 
 
 def is_unseen(v=None):

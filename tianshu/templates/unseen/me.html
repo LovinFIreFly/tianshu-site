@@ -1,0 +1,77 @@
+{% extends 'layout.html' %}
+{% block title %}我的 · 甜薯剧本杀{% endblock %}
+{% block content %}
+
+<section class="sec" style="padding-top:120px">
+  <div class="wrap">
+    <span class="eyebrow" data-reveal>我的 · Profile</span>
+    <h2 class="h2" data-reveal data-d="1" style="margin-top:14px">账号一目了然。</h2>
+
+    <div class="me-grid" style="margin-top:30px">
+      <aside class="me-card" data-reveal>
+        <div class="me-av">{{ (u.profile.avatar if u.profile else '🎭') or '🎭' }}</div>
+        <div style="font-family:var(--font-display);font-size:1.4rem">{{ (u.profile.nick if u.profile else u.username) or u.username }}</div>
+        <div class="note">📱 {{ u.phone }}</div>
+        <div class="me-stat">
+          <div><div class="n">{{ bookings|length }}</div><div class="l">预约</div></div>
+          <div><div class="n">{{ coupons|length }}</div><div class="l">券</div></div>
+          <div><div class="n">{{ notices|length }}</div><div class="l">消息</div></div>
+        </div>
+      </aside>
+
+      <div class="stack">
+        <section data-reveal>
+          <h3 class="h3" style="margin-bottom:14px">我的预约</h3>
+          <div class="rows">
+            {% for b in bookings[:8] %}
+            <div class="row">
+              <span class="row__when">{{ b.time or '' }}</span>
+              <span>
+                <span class="row__title">{{ b.scriptTitle or '一场预约' }}</span><br>
+                <span class="row__sub">{{ b.players or '' }} 人 · {{ b.status or '' }}</span>
+              </span>
+              <span class="row__pill">{{ '拼车' if b.carNew else '包车' }}</span>
+              <a class="idx__go" href="{{ url_for('public.script_detail', sid=b.sid) if b.sid else '#' }}">看本 →</a>
+            </div>
+            {% else %}
+            <p class="note">还没有预约。<a class="link-underline" href="{{ url_for('public.scripts') }}">去本本墙挑一个</a>。</p>
+            {% endfor %}
+          </div>
+        </section>
+
+        <section data-reveal>
+          <h3 class="h3" style="margin-bottom:14px">收藏</h3>
+          <div class="field--row">
+            {% for g, label in [('want','想玩'),('done','已玩'),('avoid','避雷')] %}
+            <div class="card" style="padding:14px">
+              <div class="note" style="margin:0 0 8px">{{ label }}（{{ favGroups[g]|length }}）</div>
+              <div style="font-size:.9rem">{{ favGroups[g]|map(attribute='title')|join('、') or '—' }}</div>
+            </div>
+            {% endfor %}
+          </div>
+        </section>
+
+        <section data-reveal>
+          <h3 class="h3" style="margin-bottom:14px">资料设置</h3>
+          <form method="post" action="{{ url_for('user.profile_save') }}" class="book" style="background:var(--paper)">
+            <div class="field"><label>昵称</label><input name="nick" value="{{ (u.profile.nick if u.profile else '') or '' }}"></div>
+            <div class="field--row">
+              <div class="field"><label>性别</label>
+                <select name="gender">
+                  <option value="">不填</option>
+                  <option value="男" {{ 'selected' if (u.profile.gender if u.profile else '') == '男' }}>男</option>
+                  <option value="女" {{ 'selected' if (u.profile.gender if u.profile else '') == '女' }}>女</option>
+                </select>
+              </div>
+              <div class="field"><label>年龄</label><input type="number" name="age" min="0" max="99" value="{{ (u.profile.age if u.profile else '') or '' }}"></div>
+            </div>
+            <button class="btn btn--ghost" type="submit">保存资料</button>
+          </form>
+          <p class="note" style="margin-top:14px"><a class="link-underline" href="{{ faqUrl }}">常见问题</a> · 客服微信：{{ serviceWechat or '见首页' }} · <a class="link-underline" href="{{ url_for('user.logout') }}">退出登录</a></p>
+        </section>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

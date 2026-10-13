@@ -1,0 +1,16 @@
+{% extends 'layout.html' %}
+{% block title %}{{ code }} · 甜薯剧本杀{% endblock %}
+{% block content %}
+
+<section class="sec" style="padding-top:140px;min-height:70vh;display:grid;align-items:center">
+  <div class="wrap" style="text-align:center">
+    <div class="display" style="font-size:clamp(4rem,12vw,9rem);color:var(--accent)">{{ code or '404' }}</div>
+    <p class="lede" style="margin:10px auto 0">{{ msg or '这一页好像走进了暗场，找不到出口。' }}</p>
+    <div style="margin-top:28px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+      <a class="btn btn--accent" href="{{ url_for('public.home') }}">回首页 <span class="arr">→</span></a>
+      <a class="btn btn--ghost" href="{{ url_for('public.scripts') }}">去本本墙</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
