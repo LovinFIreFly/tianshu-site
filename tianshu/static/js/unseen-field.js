@@ -1,9 +1,10 @@
 /* ============================================================================
-   Unseen · 暗场实时噪声场（零依赖 WebGL，替换 2D radial-gradient 追光）
-   —— 全屏片元着色器：fbm 域扭曲暗场烟雾 + 光标暖光 + 光标「雕刻」光迹
-      + 分章演化（随滚动 uChapter 调制噪声尺度/色相/雕刻强度）
-      + 胶片颗粒 + 暗角 + 廉价色散。WebGL1 兼容；无 WebGL 回退 CSS 渐变。
-   挂载：<canvas class="field" data-field>，由 layout 全局放置。
+   Unseen · 暗场实时场
+   —— 优先：WebGL2 真 GPU 流体（Navier-Stokes：速度场 + 散度 + Jacobi 压力投影
+      + 半拉格朗日平流 + 光标力注入），拼进 fbm 暗场 → 光标划过的"水一样"流动。
+   —— 兜底：无 WebGL2/浮点渲染时退回 WebGL1 的 fbm 域扭曲噪声场。
+   —— 再兜底：都不可用 → html.no-field（CSS 渐变）。
+   纯零依赖。挂载：<canvas class="field" data-field>
    ========================================================================== */
 (function () {
   'use strict';
@@ -11,199 +12,342 @@
   if (!canvas) return;
   var REDUCE = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  var gl = canvas.getContext('webgl', { antialias: false, alpha: false, depth: false, stencil: false, powerPreference: 'high-performance' })
-        || canvas.getContext('experimental-webgl', { antialias: false, alpha: false, depth: false, stencil: false });
-  if (!gl) { document.documentElement.classList.add('no-field'); canvas.style.display = 'none'; return; }
+  function noField() { document.documentElement.classList.add('no-field'); canvas.style.display = 'none'; }
 
-  var VERT = [
-    'attribute vec2 aPos;',
-    'void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }'
+  var VERT_QUAD = [
+    'attribute vec2 aPos; varying vec2 vUv;',
+    'void main(){ vUv = aPos*0.5+0.5; gl_Position = vec4(aPos,0.0,1.0); }'
   ].join('\n');
 
-  var FRAG = [
-    '#ifdef GL_FRAGMENT_PRECISION_HIGH',
-    'precision highp float;',
-    '#else',
-    'precision mediump float;',
-    '#endif',
-    'uniform vec2  uRes;',
-    'uniform float uTime;',
-    'uniform vec2  uMouse;',       // 光标像素坐标（左上原点）
-    'uniform float uMouseAmt;',    // 光标活跃度 0..1
-    'uniform float uChapter;',     // 0..1 章节进度（滚动驱动）
-    'uniform vec3  uTrail[16];',   // 光迹：xy 像素坐标，z 年龄 0(新)..1(将逝)
-    'uniform int   uTrailN;',
+  /* ======================= 公共：fbm 片段片元（显示用） ======================= */
+  var FBM_BLOCK = [
     'float hash(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }',
-    'float noise(vec2 p){',
-    '  vec2 i=floor(p), f=fract(p);',
-    '  float a=hash(i), b=hash(i+vec2(1.,0.)), c=hash(i+vec2(0.,1.)), d=hash(i+vec2(1.,1.));',
-    '  vec2 u=f*f*(3.-2.*f);',
-    '  return mix(mix(a,b,u.x), mix(c,d,u.x), u.y);',
-    '}',
-    'float fbm(vec2 p){',
-    '  float v=0.0, a=0.5;',
-    '  for(int i=0;i<5;i++){ v+=a*noise(p); p=p*2.02+vec2(1.7,9.2); a*=0.5; }',
-    '  return v;',
-    '}',
-    'void main(){',
-    '  vec2 uv = vec2(gl_FragCoord.x/uRes.x, 1.0 - gl_FragCoord.y/uRes.y);', // 左上原点，与 CSS/鼠标一致
-    '  float asp = uRes.x/uRes.y;',
-    '  vec2 p = vec2((uv.x-0.5)*asp, uv.y-0.5);',
-    '  vec2 m = vec2((uMouse.x/uRes.x-0.5)*asp, uMouse.y/uRes.y-0.5);',
-    '  float t = uTime*0.055;',
-    '  float ch = uChapter;',
-    // 域扭曲噪声（两层流向相反）
-    '  vec2 q = p*1.55 + vec2(t, -t*0.72);',
-    '  q += vec2(fbm(q*0.8 + t*0.6), fbm(q*0.8 - t*0.6 + 3.1))*0.85;',
-    '  float nR = fbm(q*1.1 + vec2(0.010,0.0) + ch*2.0);',
-    '  float nG = fbm(q*1.1 + ch*2.0);',
-    '  float nB = fbm(q*1.1 - vec2(0.010,0.0) + ch*2.0);',
-    '  float n2 = fbm(q*2.35 - ch*3.0 + 7.0);',
-    '  float smoke = smoothstep(0.18, 0.98, nG*0.72 + n2*0.45);',
-    // 光标暖光
-    '  vec2 dm = p - m;',
-    '  float gl0 = exp(-length(dm)*3.1) * (0.42 + uMouseAmt*0.85);',
-    // 光标「雕刻」光迹
-    '  float carve = 0.0;',
-    '  for(int i=0;i<16;i++){',
-    '    if(i >= uTrailN) break;',
-    '    vec3 tp = uTrail[i];',
-    '    vec2 tpv = vec2((tp.x/uRes.x-0.5)*asp, (tp.y/uRes.y-0.5));',
-    '    float dd = length(p - tpv);',
-    '    carve += exp(-dd*15.0) * (1.0 - tp.z);',
-    '  }',
-    '  carve = clamp(carve*0.42*(0.6+ch*0.8), 0.0, 1.6);',
-    // 配色
-    '  vec3 base  = vec3(0.030,0.026,0.022);',
-    '  vec3 ember = vec3(0.812,0.353,0.196);',   // #CF5A32
-    '  vec3 amber = vec3(0.886,0.580,0.278);',   // #E29447
-    '  vec3 cool  = vec3(0.16,0.19,0.30);',
-    '  vec3 col = base;',
-    '  col.r += smoke*0.36*mix(cool.r, ember.r, ch) + (nR-nG)*0.28;',
-    '  col.g += smoke*0.36*mix(cool.g, ember.g, ch);',
-    '  col.b += smoke*0.36*mix(cool.b, ember.b, ch) + (nB-nG)*0.28;',
-    '  col += gl0  * amber * 0.55;',
-    '  col += carve* vec3(1.0,0.86,0.66) * 0.55;',
-    // 顶部一束极弱光带，制造纵深
-    '  col += vec3(0.10,0.075,0.055) * smoothstep(0.42,0.0,uv.y) * (0.6+0.4*ch);',
-    // 暗角
-    '  float vig = smoothstep(1.30, 0.32, length(uv-0.5)*1.42);',
-    '  col *= 0.5 + 0.66*vig;',
-    // 胶片颗粒
-    '  col += (hash(uv*uRes + fract(uTime))-0.5)*0.045;',
-    // 微弱扫描线
-    '  col *= 1.0 - 0.03*step(0.5, fract(uv.y*uRes.y*0.5));',
-    '  gl_FragColor = vec4(max(col,0.0), 1.0);',
-    '}'
+    'float noise(vec2 p){ vec2 i=floor(p), f=fract(p); float a=hash(i),b=hash(i+vec2(1.,0.)),c=hash(i+vec2(0.,1.)),d=hash(i+vec2(1.,1.)); vec2 u=f*f*(3.-2.*f); return mix(mix(a,b,u.x),mix(c,d,u.x),u.y); }',
+    'float fbm(vec2 p){ float v=0.0,a=0.5; for(int i=0;i<5;i++){ v+=a*noise(p); p=p*2.02+vec2(1.7,9.2); a*=0.5; } return v; }'
   ].join('\n');
 
-  function compile(type, src) {
-    var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
-    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error('[field]', gl.getShaderInfoLog(s)); return null; }
-    return s;
-  }
-  var vs = compile(gl.VERTEX_SHADER, VERT), fs = compile(gl.FRAGMENT_SHADER, FRAG);
-  if (!vs || !fs) { document.documentElement.classList.add('no-field'); canvas.style.display = 'none'; return; }
-  var prog = gl.createProgram(); gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { console.error('[field]', gl.getProgramInfoLog(prog)); document.documentElement.classList.add('no-field'); canvas.style.display = 'none'; return; }
-  gl.useProgram(prog);
+  /* ======================================================================
+     路径 A：WebGL2 真 GPU 流体
+     ====================================================================== */
+  function initFluid(gl) {
+    gl.getExtension('EXT_color_buffer_float');
+    gl.getExtension('OES_texture_float_linear');
 
-  var buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW); // 覆盖全屏的大三角
-  var aPos = gl.getAttribLocation(prog, 'aPos'); gl.enableVertexAttribArray(aPos);
-  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-  gl.viewport(0, 0, canvas.width, canvas.height);
-
-  var U = {
-    res: gl.getUniformLocation(prog, 'uRes'),
-    time: gl.getUniformLocation(prog, 'uTime'),
-    mouse: gl.getUniformLocation(prog, 'uMouse'),
-    amt: gl.getUniformLocation(prog, 'uMouseAmt'),
-    chapter: gl.getUniformLocation(prog, 'uChapter'),
-    trail: gl.getUniformLocation(prog, 'uTrail'),
-    trailN: gl.getUniformLocation(prog, 'uTrailN')
-  };
-
-  /* ---- 尺寸（DPR 封顶 1.5）---- */
-  var dpr = 1;
-  function resize() {
-    dpr = Math.min(1.5, window.devicePixelRatio || 1);
-    canvas.width = Math.max(1, Math.floor(innerWidth * dpr));
-    canvas.height = Math.max(1, Math.floor(innerHeight * dpr));
-    canvas.style.width = innerWidth + 'px'; canvas.style.height = innerHeight + 'px';
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    if (U.res) gl.uniform2f(U.res, canvas.width, canvas.height);
-    renderFrame();
-  }
-  addEventListener('resize', resize, { passive: true });
-
-  /* ---- 光标 + 光迹 ---- */
-  var mx = innerWidth * 0.62, my = innerHeight * 0.42;  // 平滑后（用于暖光）
-  var tmx = mx, tmy = my;                                // 目标
-  var amt = 0, tAmt = 0;
-  var trail = [];                                        // {x,y,t0}
-  var TRAIL_MAX = 16, TRAIL_LIFE = 1300;                 // ms
-  function pushTrail(x, y) {
-    var last = trail[trail.length - 1];
-    if (last && Math.hypot(x - last.x, y - last.y) < 14) return;
-    trail.push({ x: x, y: y, t0: performance.now() });
-    if (trail.length > TRAIL_MAX) trail.shift();
-  }
-  function onMove(x, y) { tmx = x; tmy = y; tAmt = 1; pushTrail(x, y); }
-  addEventListener('mousemove', function (e) { onMove(e.clientX, e.clientY); }, { passive: true });
-  addEventListener('pointermove', function (e) { if (e.pointerType !== 'mouse') onMove(e.clientX, e.clientY); }, { passive: true });
-  addEventListener('touchmove', function (e) { if (e.touches[0]) onMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
-
-  /* ---- 章节（滚动驱动）---- */
-  var chapter = 0, chapterTarget = 0;
-  function onScroll() {
-    var max = Math.max(1, document.documentElement.scrollHeight - innerHeight);
-    chapterTarget = Math.min(1, Math.max(0, scrollY / max));
-  }
-  addEventListener('scroll', onScroll, { passive: true }); onScroll();
-
-  /* ---- 渲染循环 ---- */
-  var trailData = new Float32Array(TRAIL_MAX * 3);
-  var running = true, t0 = performance.now();
-  function render(now) {
-    if (!running) return;
-    var time = (now - t0) / 1000;
-    mx += (tmx - mx) * 0.12; my += (tmy - my) * 0.12;
-    amt += (tAmt - amt) * 0.05; tAmt *= 0.96;
-    chapter += (chapterTarget - chapter) * 0.06;
-
-    // 光迹年龄 / 淘汰
-    var k = 0, nowMs = now;
-    for (var i = 0; i < trail.length; i++) {
-      var age = (nowMs - trail[i].t0) / TRAIL_LIFE;
-      if (age >= 1) continue;
-      trailData[k * 3] = trail[i].x * dpr; trailData[k * 3 + 1] = trail[i].y * dpr; trailData[k * 3 + 2] = age;
-      k++;
+    function sh(t, src) {
+      var s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error('[field]', gl.getShaderInfoLog(s)); return null; }
+      return s;
     }
-    gl.uniform2f(U.mouse, mx * dpr, my * dpr);
-    gl.uniform1f(U.amt, Math.min(1, amt));
-    gl.uniform1f(U.time, time);
-    gl.uniform1f(U.chapter, chapter);
-    if (U.trail) gl.uniform3fv(U.trail, trailData);
-    if (U.trailN) gl.uniform1i(U.trailN, k);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
-    requestAnimationFrame(render);
-  }
-  function renderFrame() {
-    var now = performance.now();
-    mx = tmx; my = tmy;
-    gl.uniform2f(U.mouse, mx * dpr, my * dpr);
-    gl.uniform1f(U.amt, 1); gl.uniform1f(U.time, (now - t0) / 1000); gl.uniform1f(U.chapter, chapterTarget);
-    gl.uniform1i(U.trailN, 0);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    function prog(frag) {
+      var p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, VERT_QUAD)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, frag));
+      gl.linkProgram(p);
+      if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { console.error('[field]', gl.getProgramInfoLog(p)); return null; }
+      return p;
+    }
+    function U(p, names) { var o = {}; names.forEach(function (n) { o[n] = gl.getUniformLocation(p, n); }); return o; }
+
+    var F_SPLAT = [
+      'precision highp float; varying vec2 vUv;',
+      'uniform sampler2D uTarget; uniform float uAspect; uniform vec3 uPoint; uniform vec2 uForce;',
+      'void main(){ vec2 p=vUv-uPoint.xy; p.x*=uAspect; vec3 s=exp(-dot(p,p)/uPoint.z)*vec3(uForce,0.0);',
+      '  gl_FragColor = vec4(texture2D(uTarget,vUv).xyz + s, 1.0); }'
+    ].join('\n');
+    var F_ADVECT = [
+      'precision highp float; varying vec2 vUv;',
+      'uniform sampler2D uVelocity; uniform sampler2D uSource; uniform vec2 uTexel; uniform float uDt; uniform float uDissipation;',
+      'void main(){ vec2 coord = vUv - uDt * texture2D(uVelocity,vUv).xy * uTexel;',
+      '  gl_FragColor = uDissipation * texture2D(uSource, coord); gl_FragColor.a = 1.0; }'
+    ].join('\n');
+    var F_DIVERGENCE = [
+      'precision highp float; varying vec2 vUv;',
+      'uniform sampler2D uVelocity; uniform vec2 uTexel;',
+      'void main(){ float L=texture2D(uVelocity,vUv-vec2(uTexel.x,0.)).x; float R=texture2D(uVelocity,vUv+vec2(uTexel.x,0.)).x;',
+      '  float B=texture2D(uVelocity,vUv-vec2(0.,uTexel.y)).y; float T=texture2D(uVelocity,vUv+vec2(0.,uTexel.y)).y;',
+      '  gl_FragColor = vec4(0.5*((R-L)+(T-B)),0.0,0.0,1.0); }'
+    ].join('\n');
+    var F_PRESSURE = [
+      'precision highp float; varying vec2 vUv;',
+      'uniform sampler2D uPressure; uniform sampler2D uDivergence; uniform vec2 uTexel;',
+      'void main(){ float L=texture2D(uPressure,vUv-vec2(uTexel.x,0.)).x; float R=texture2D(uPressure,vUv+vec2(uTexel.x,0.)).x;',
+      '  float B=texture2D(uPressure,vUv-vec2(0.,uTexel.y)).x; float T=texture2D(uPressure,vUv+vec2(0.,uTexel.y)).x;',
+      '  float div=texture2D(uDivergence,vUv).x; gl_FragColor = vec4((L+R+B+T-div)*0.25,0.0,0.0,1.0); }'
+    ].join('\n');
+    var F_GRADIENT = [
+      'precision highp float; varying vec2 vUv;',
+      'uniform sampler2D uPressure; uniform sampler2D uVelocity; uniform vec2 uTexel;',
+      'void main(){ float L=texture2D(uPressure,vUv-vec2(uTexel.x,0.)).x; float R=texture2D(uPressure,vUv+vec2(uTexel.x,0.)).x;',
+      '  float B=texture2D(uPressure,vUv-vec2(0.,uTexel.y)).x; float T=texture2D(uPressure,vUv+vec2(0.,uTexel.y)).x;',
+      '  vec2 v=texture2D(uVelocity,vUv).xy - vec2(R-L,T-B)*0.5; gl_FragColor = vec4(v,0.0,1.0); }'
+    ].join('\n');
+    var F_DISPLAY = [
+      '#ifdef GL_FRAGMENT_PRECISION_HIGH', 'precision highp float;', '#else', 'precision mediump float;', '#endif',
+      'varying vec2 vUv;',
+      'uniform sampler2D uVelocity; uniform vec2 uRes; uniform float uTime; uniform float uChapter;',
+      'uniform vec2 uMouse; uniform float uMouseAmt; uniform vec3 uTrail[16]; uniform int uTrailN;',
+      FBM_BLOCK,
+      'void main(){',
+      '  float asp = uRes.x/uRes.y;',
+      '  vec2 vel = texture2D(uVelocity, vUv).xy;',
+      '  vec2 q = vec2((vUv.x-0.5)*asp, (vUv.y-0.5));',
+      '  q += vel * 0.030;',                                  // ← 流体位移：整片烟雾随速度场流动
+      '  float t = uTime*0.05, ch = uChapter;',
+      '  vec2 w = q*1.5 + vec2(t,-t*0.7);',
+      '  w += vec2(fbm(w*0.8+t*0.6), fbm(w*0.8-t*0.6+3.1))*0.85;',
+      '  float nR=fbm(w*1.1+vec2(0.010,0.0)+ch*2.0), nG=fbm(w*1.1+ch*2.0), nB=fbm(w*1.1-vec2(0.010,0.0)+ch*2.0);',
+      '  float n2=fbm(w*2.35-ch*3.0+7.0);',
+      '  float smoke = smoothstep(0.18,0.98, nG*0.72 + n2*0.45);',
+      '  float speed = length(vel);',                          // 速度快的地方微微发亮（流动的光泽）
+      '  vec2 p = vec2((vUv.x-0.5)*asp, vUv.y-0.5); vec2 m = vec2((uMouse.x-0.5)*asp, uMouse.y-0.5);',
+      '  float gl0 = exp(-length(p-m)*3.9) * (0.10 + uMouseAmt*0.22);',
+      '  float carve = 0.0;',
+      '  for(int i=0;i<16;i++){ if(i>=uTrailN) break; vec3 tp=uTrail[i]; vec2 tv=vec2((tp.x-0.5)*asp, tp.y-0.5);',
+      '    carve += exp(-length(p-tv)*15.0)*(1.0-tp.z); }',
+      '  carve = clamp(carve*0.40*(0.6+ch*0.8),0.0,1.5);',
+      '  vec3 base=vec3(0.030,0.026,0.022), ember=vec3(0.812,0.353,0.196), amber=vec3(0.886,0.580,0.278), cool=vec3(0.16,0.19,0.30);',
+      '  vec3 col = base;',
+      '  col.r += smoke*0.34*mix(cool.r,ember.r,ch) + (nR-nG)*0.26;',
+      '  col.g += smoke*0.34*mix(cool.g,ember.g,ch);',
+      '  col.b += smoke*0.34*mix(cool.b,ember.b,ch) + (nB-nG)*0.26;',
+      '  col += smoothstep(0.02,0.22,speed) * ember * 0.30;',   // 流速光泽
+      '  col += gl0 * mix(amber,ember,0.45) * 0.30;',
+      '  col += carve * vec3(1.0,0.86,0.66) * 0.42;',
+      '  col += vec3(0.10,0.075,0.055)*smoothstep(0.42,0.0,vUv.y)*(0.6+0.4*ch);',
+      '  float vig = smoothstep(1.30,0.32, length(vUv-0.5)*1.42); col *= 0.5 + 0.66*vig;',
+      '  col += (hash(vUv*uRes + fract(uTime))-0.5)*0.045;',
+      '  col *= 1.0 - 0.03*step(0.5, fract(vUv.y*uRes.y*0.5));',
+      '  gl_FragColor = vec4(max(col,0.0),1.0);',
+      '}'
+    ].join('\n');
+
+    var pSplat = prog(F_SPLAT), pAdvect = prog(F_ADVECT), pDiv = prog(F_DIVERGENCE),
+        pPress = prog(F_PRESSURE), pGrad = prog(F_GRADIENT), pDisp = prog(F_DISPLAY);
+    if (!pSplat || !pAdvect || !pDiv || !pPress || !pGrad || !pDisp) return false;
+
+    var uSplat = U(pSplat, ['uTarget', 'uAspect', 'uPoint', 'uForce']);
+    var uAdv = U(pAdvect, ['uVelocity', 'uSource', 'uTexel', 'uDt', 'uDissipation']);
+    var uDiv = U(pDiv, ['uVelocity', 'uTexel']);
+    var uPress = U(pPress, ['uPressure', 'uDivergence', 'uTexel']);
+    var uGrad = U(pGrad, ['uPressure', 'uVelocity', 'uTexel']);
+    var uDisp = U(pDisp, ['uVelocity', 'uRes', 'uTime', 'uChapter', 'uMouse', 'uMouseAmt', 'uTrail', 'uTrailN']);
+
+    // 全屏四边形
+    var buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    function bindQuad(p) { var a = gl.getAttribLocation(p, 'aPos'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0); }
+    function draw(p) { bindQuad(p); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); }
+
+    // FBO
+    function mkFBO(w, h, internal) {
+      var tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texImage2D(gl.TEXTURE_2D, 0, internal, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
+      var fbo = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+      gl.viewport(0, 0, w, h); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+      var ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      return { tex: tex, fbo: fbo, w: w, h: h, ok: ok };
+    }
+    function mkDouble(w, h, internal) { var a = mkFBO(w, h, internal), b = mkFBO(w, h, internal); return { read: a, write: b, swap: function () { var t = this.read; this.read = this.write; this.write = t; } }; }
+
+    var sim = { w: 0, h: 0, texel: [0, 0] }, velocity, divergence, pressure;
+    var FMT = gl.RGBA16F;
+    function initSim() {
+      var long = 128;
+      if (canvas.width >= canvas.height) { sim.w = long; sim.h = Math.max(1, Math.round(long * canvas.height / canvas.width)); }
+      else { sim.h = long; sim.w = Math.max(1, Math.round(long * canvas.width / canvas.height)); }
+      sim.texel = [1 / sim.w, 1 / sim.h];
+      velocity = mkDouble(sim.w, sim.h, FMT);
+      divergence = mkFBO(sim.w, sim.h, FMT);
+      pressure = mkDouble(sim.w, sim.h, FMT);
+      if (!velocity.read.ok || !divergence.ok || !pressure.read.ok) return false;
+      return true;
+    }
+
+    function resize() {
+      var dpr = Math.min(1.5, window.devicePixelRatio || 1);
+      canvas.width = Math.max(1, Math.floor(innerWidth * dpr));
+      canvas.height = Math.max(1, Math.floor(innerHeight * dpr));
+      canvas.style.width = innerWidth + 'px'; canvas.style.height = innerHeight + 'px';
+      if (!sim.w || Math.abs(canvas.width / canvas.height - sim.w / sim.h) > 0.35) { if (!initSim()) return false; }
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, canvas.width, canvas.height);
+      return true;
+    }
+
+    // 鼠标 / 章节
+    var mx = 0.62, my = 0.42, pmx = mx, pmy = my, amt = 0, tamt = 0, firstMove = true;
+    var trail = [], TRAIL_MAX = 16, TRAIL_LIFE = 1300;
+    function pushTrail(x, y) { var l = trail[trail.length - 1]; if (l && Math.hypot(x - l.x, y - l.y) < 0.02) return; trail.push({ x: x, y: y, t0: nowMs() }); if (trail.length > TRAIL_MAX) trail.shift(); }
+    function nowMs() { return performance.now(); }
+    function onMove(cx, cy) {
+      var nx = cx / innerWidth, ny = 1 - cy / innerHeight;
+      pmx = mx; pmy = my; mx = nx; my = ny; tamt = 1;
+      if (firstMove) { pmx = nx; pmy = ny; firstMove = false; return; }
+      pushTrail(nx, ny);
+    }
+    window.addEventListener('mousemove', function (e) { onMove(e.clientX, e.clientY); }, { passive: true });
+    window.addEventListener('touchmove', function (e) { if (e.touches[0]) onMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+
+    var chapter = 0, chapterTarget = 0;
+    function onScroll() { var max = Math.max(1, document.documentElement.scrollHeight - innerHeight); chapterTarget = Math.min(1, Math.max(0, scrollY / max)); }
+    window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+
+    var SPLAT_FORCE = 6200, DISSIPATION = 0.975, PRESSURE_ITER = 22, CURL = 0;
+    var trailData = new Float32Array(TRAIL_MAX * 3);
+    var aspect = 1;
+
+    function step(dt, now) {
+      var dx = (mx - pmx) * SPLAT_FORCE, dy = (my - pmy) * SPLAT_FORCE;
+      pmx = mx; pmy = my;
+      if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) {
+        gl.useProgram(pSplat); gl.uniform1i(uSplat.uTarget, 0); gl.uniform1f(uSplat.uAspect, aspect);
+        gl.uniform3f(uSplat.uPoint, mx, my, 0.00035); gl.uniform2f(uSplat.uForce, dx, dy);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, velocity.read.tex);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, velocity.write.fbo); gl.viewport(0, 0, sim.w, sim.h); draw(pSplat);
+        velocity.swap();
+      }
+      // 速度自平流
+      gl.useProgram(pAdvect); gl.uniform2f(uAdv.uTexel, sim.texel[0], sim.texel[1]);
+      gl.uniform1f(uAdv.uDt, dt); gl.uniform1f(uAdv.uDissipation, DISSIPATION);
+      gl.uniform1i(uAdv.uVelocity, 0); gl.uniform1i(uAdv.uSource, 0);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, velocity.read.tex);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, velocity.write.fbo); draw(pAdvect); velocity.swap();
+      // 散度
+      gl.useProgram(pDiv); gl.uniform2f(uDiv.uTexel, sim.texel[0], sim.texel[1]); gl.uniform1i(uDiv.uVelocity, 0);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, velocity.read.tex);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, divergence.fbo); draw(pDiv);
+      // 压力 Jacobi
+      gl.useProgram(pPress); gl.uniform2f(uPress.uTexel, sim.texel[0], sim.texel[1]);
+      gl.uniform1i(uPress.uDivergence, 1);
+      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, divergence.tex);
+      gl.uniform1i(uPress.uPressure, 0);
+      for (var i = 0; i < PRESSURE_ITER; i++) {
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, pressure.read.tex);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, pressure.write.fbo); draw(pPress); pressure.swap();
+      }
+      // 减压力梯度 → 无散度速度
+      gl.useProgram(pGrad); gl.uniform2f(uGrad.uTexel, sim.texel[0], sim.texel[1]);
+      gl.uniform1i(uGrad.uPressure, 0); gl.uniform1i(uGrad.uVelocity, 1);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, pressure.read.tex);
+      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, velocity.read.tex);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, velocity.write.fbo); draw(pGrad); velocity.swap();
+
+      // 光迹
+      var k = 0;
+      for (var j = 0; j < trail.length; j++) {
+        var age = (now - trail[j].t0) / TRAIL_LIFE; if (age >= 1) continue;
+        trailData[k * 3] = trail[j].x; trailData[k * 3 + 1] = trail[j].y; trailData[k * 3 + 2] = age; k++;
+      }
+      // 显示
+      gl.useProgram(pDisp);
+      gl.uniform1i(uDisp.uVelocity, 0); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, velocity.read.tex);
+      gl.uniform2f(uDisp.uRes, canvas.width, canvas.height);
+      gl.uniform1f(uDisp.uTime, now / 1000);
+      gl.uniform1f(uDisp.uChapter, chapter);
+      gl.uniform2f(uDisp.uMouse, mx, my);
+      gl.uniform1f(uDisp.uMouseAmt, Math.min(1, amt));
+      gl.uniform3fv(uDisp.uTrail, trailData); gl.uniform1i(uDisp.uTrailN, k);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, canvas.width, canvas.height); draw(pDisp);
+    }
+
+    if (!resize()) return false;
+    var last = nowMs(), running = true;
+    function loop(now) {
+      if (!running) return;
+      var dt = Math.min(0.033, (now - last) / 1000); last = now;
+      amt += (tamt - amt) * 0.05; tamt *= 0.96; chapter += (chapterTarget - chapter) * 0.06;
+      aspect = canvas.width / canvas.height;
+      step(dt, now);
+      requestAnimationFrame(loop);
+    }
+    window.addEventListener('resize', function () { if (running) resize(); }, { passive: true });
+    document.addEventListener('visibilitychange', function () { if (document.hidden) running = false; else { running = true; last = nowMs(); requestAnimationFrame(loop); } });
+    if (REDUCE) { aspect = canvas.width / canvas.height; step(0.016, nowMs()); }
+    else requestAnimationFrame(loop);
+    return true;
   }
 
-  document.addEventListener('visibilitychange', function () {
-    if (document.hidden) { running = false; }
-    else if (running === false) { running = true; requestAnimationFrame(render); }
-  });
+  /* ======================================================================
+     路径 B：WebGL1 fbm 兜底（原实现）
+     ====================================================================== */
+  function initFbm() {
+    var gl = canvas.getContext('webgl', { antialias: false, alpha: false, depth: false }) || canvas.getContext('experimental-webgl');
+    if (!gl) return false;
+    function sh(t, s) { var x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) { console.error('[field]', gl.getShaderInfoLog(x)); return null; } return x; }
+    var vs = sh(gl.VERTEX_SHADER, 'attribute vec2 aPos; void main(){ gl_Position=vec4(aPos,0.,1.); }');
+    var frag = [
+      '#ifdef GL_FRAGMENT_PRECISION_HIGH', 'precision highp float;', '#else', 'precision mediump float;', '#endif',
+      'uniform vec2 uRes; uniform float uTime; uniform vec2 uMouse; uniform float uMouseAmt; uniform float uChapter;',
+      'uniform vec3 uTrail[16]; uniform int uTrailN;',
+      FBM_BLOCK,
+      'void main(){ vec2 uv=vec2(gl_FragCoord.x/uRes.x, 1.0-gl_FragCoord.y/uRes.y); float asp=uRes.x/uRes.y;',
+      ' vec2 p=vec2((uv.x-0.5)*asp,uv.y-0.5); vec2 m=vec2((uMouse.x/uRes.x-0.5)*asp, uMouse.y/uRes.y-0.5);',
+      ' float t=uTime*0.055, ch=uChapter; vec2 q=p*1.55+vec2(t,-t*0.72);',
+      ' q+=vec2(fbm(q*0.8+t*0.6), fbm(q*0.8-t*0.6+3.1))*0.85;',
+      ' float nR=fbm(q*1.1+vec2(0.010,0.0)+ch*2.0), nG=fbm(q*1.1+ch*2.0), nB=fbm(q*1.1-vec2(0.010,0.0)+ch*2.0), n2=fbm(q*2.35-ch*3.0+7.0);',
+      ' float smoke=smoothstep(0.18,0.98,nG*0.72+n2*0.45);',
+      ' float gl0=exp(-length(p-m)*3.9)*(0.10+uMouseAmt*0.22); float carve=0.0;',
+      ' for(int i=0;i<16;i++){ if(i>=uTrailN) break; vec3 tp=uTrail[i]; vec2 tv=vec2((tp.x/uRes.x-0.5)*asp,(tp.y/uRes.y-0.5));',
+      '   carve+=exp(-length(p-tv)*15.0)*(1.0-tp.z); }',
+      ' carve=clamp(carve*0.40*(0.6+ch*0.8),0.0,1.5);',
+      ' vec3 base=vec3(0.030,0.026,0.022), ember=vec3(0.812,0.353,0.196), amber=vec3(0.886,0.580,0.278), cool=vec3(0.16,0.19,0.30);',
+      ' vec3 col=base; col.r+=smoke*0.34*mix(cool.r,ember.r,ch)+(nR-nG)*0.26; col.g+=smoke*0.34*mix(cool.g,ember.g,ch);',
+      ' col.b+=smoke*0.34*mix(cool.b,ember.b,ch)+(nB-nG)*0.26;',
+      ' col+=gl0*mix(amber,ember,0.45)*0.30; col+=carve*vec3(1.0,0.86,0.66)*0.42;',
+      ' col+=vec3(0.10,0.075,0.055)*smoothstep(0.42,0.0,uv.y)*(0.6+0.4*ch);',
+      ' float vig=smoothstep(1.30,0.32,length(uv-0.5)*1.42); col*=0.5+0.66*vig;',
+      ' col+=(hash(uv*uRes+fract(uTime))-0.5)*0.045; col*=1.0-0.03*step(0.5,fract(uv.y*uRes.y*0.5));',
+      ' gl_FragColor=vec4(max(col,0.0),1.0); }'
+    ].join('\n');
+    var fs = sh(gl.FRAGMENT_SHADER, frag); if (!vs || !fs) return false;
+    var p = gl.createProgram(); gl.attachShader(p, vs); gl.attachShader(p, fs); gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { console.error('[field]', gl.getProgramInfoLog(p)); return false; }
+    gl.useProgram(p);
+    var buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    var a = gl.getAttribLocation(p, 'aPos'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
+    var L = { res: gl.getUniformLocation(p, 'uRes'), time: gl.getUniformLocation(p, 'uTime'), mouse: gl.getUniformLocation(p, 'uMouse'), amt: gl.getUniformLocation(p, 'uMouseAmt'), chapter: gl.getUniformLocation(p, 'uChapter'), trail: gl.getUniformLocation(p, 'uTrail'), trailN: gl.getUniformLocation(p, 'uTrailN') };
+    var dpr = 1, mx = innerWidth * 0.62, my = innerHeight * 0.42, tmx = mx, tmy = my, amt = 0, tamt = 0;
+    var trail = [], TR_MAX = 16, TR_LIFE = 1300, t0 = performance.now();
+    function push(x, y) { var l = trail[trail.length - 1]; if (l && Math.hypot(x - l.x, y - l.y) < 14) return; trail.push({ x: x, y: y, t0: performance.now() }); if (trail.length > TR_MAX) trail.shift(); }
+    function mv(x, y) { tmx = x; tmy = y; tamt = 1; push(x, y); }
+    window.addEventListener('mousemove', function (e) { mv(e.clientX, e.clientY); }, { passive: true });
+    window.addEventListener('touchmove', function (e) { if (e.touches[0]) mv(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    var chapter = 0, chapterTarget = 0;
+    function onScroll() { var max = Math.max(1, document.documentElement.scrollHeight - innerHeight); chapterTarget = Math.min(1, Math.max(0, scrollY / max)); }
+    window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+    function resize() { dpr = Math.min(1.5, window.devicePixelRatio || 1); canvas.width = Math.max(1, Math.floor(innerWidth * dpr)); canvas.height = Math.max(1, Math.floor(innerHeight * dpr)); canvas.style.width = innerWidth + 'px'; canvas.style.height = innerHeight + 'px'; gl.viewport(0, 0, canvas.width, canvas.height); if (L.res) gl.uniform2f(L.res, canvas.width, canvas.height); }
+    window.addEventListener('resize', resize, { passive: true });
+    var td = new Float32Array(TR_MAX * 3), running = true;
+    function render(now) { if (!running) return; mx += (tmx - mx) * 0.12; my += (tmy - my) * 0.12; amt += (tamt - amt) * 0.05; tamt *= 0.96; chapter += (chapterTarget - chapter) * 0.06;
+      var k = 0; for (var i = 0; i < trail.length; i++) { var age = (now - trail[i].t0) / TR_LIFE; if (age >= 1) continue; td[k * 3] = trail[i].x * dpr; td[k * 3 + 1] = trail[i].y * dpr; td[k * 3 + 2] = age; k++; }
+      if (L.mouse) gl.uniform2f(L.mouse, mx * dpr, my * dpr); if (L.amt) gl.uniform1f(L.amt, Math.min(1, amt)); if (L.time) gl.uniform1f(L.time, (now - t0) / 1000); if (L.chapter) gl.uniform1f(L.chapter, chapter);
+      if (L.trail) gl.uniform3fv(L.trail, td); if (L.trailN) gl.uniform1i(L.trailN, k);
+      gl.drawArrays(gl.TRIANGLES, 0, 3); requestAnimationFrame(render); }
+    resize();
+    if (REDUCE) { if (L.time) gl.uniform1f(L.time, 0.5); if (L.trailN) gl.uniform1i(L.trailN, 0); gl.drawArrays(gl.TRIANGLES, 0, 3); running = false; }
+    else requestAnimationFrame(render);
+    return true;
+  }
 
-  resize();
-  if (REDUCE) { running = false; renderFrame(); }   // 减弱动效：静态渲染一帧
-  else { requestAnimationFrame(render); }
+  /* ---- 启动：先用临时 canvas 探测 WebGL2 浮点渲染，再决定本 canvas 用哪条路径 ----
+     （同一 canvas 只能有一种 context：webgl2 与 webgl 不能共存） */
+  function supportsGL2Float() {
+    try {
+      var c = document.createElement('canvas');
+      var g = c.getContext('webgl2');
+      return !!(g && g.getExtension('EXT_color_buffer_float'));
+    } catch (e) { return false; }
+  }
+  var ok = false;
+  if (supportsGL2Float()) {
+    var gl2 = canvas.getContext('webgl2', { antialias: false, alpha: false, depth: false, powerPreference: 'high-performance' });
+    if (gl2) { try { ok = initFluid(gl2); } catch (e) { console.error('[field]', e); ok = false; } }
+  } else {
+    try { ok = initFbm(); } catch (e2) { console.error('[field]', e2); ok = false; }
+  }
+  if (!ok) noField();
 })();

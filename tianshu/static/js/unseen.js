@@ -8,6 +8,15 @@
   'use strict';
   var REDUCE = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var COARSE = window.matchMedia && window.matchMedia('(hover: none), (pointer: coarse)').matches;
+  /* GSAP 3.13（本地 vendor）可用时，用它的编排替代手写揭示（更"被安排过"） */
+  var HAS_GSAP = !!(window.gsap && window.ScrollTrigger);
+  if (HAS_GSAP) {
+    try {
+      gsap.registerPlugin(ScrollTrigger);
+      if (window.SplitText) gsap.registerPlugin(SplitText);
+      document.documentElement.classList.add('gsap-on');
+    } catch (e) { HAS_GSAP = false; }
+  }
   function $(s, c) { return (c || document).querySelector(s); }
   function $$(s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); }
   function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
@@ -77,6 +86,31 @@
   function initReveal() {
     var els = $$('[data-reveal]');
     if (!els.length) return;
+    if (HAS_GSAP && !REDUCE) {
+      var run = function () { els.forEach(function (el) {
+        var d = parseFloat(el.getAttribute('data-d') || '0') || 0;
+        // 标题（.h2）用 SplitText 逐行遮罩揭示；其余淡入上浮
+        if (el.classList.contains('h2') && window.SplitText) {
+          var st = null;
+          try { st = new SplitText(el, { type: 'lines', mask: 'lines' }); } catch (e) { st = null; }
+          if (st && st.lines && st.lines.length) {
+            gsap.from(st.lines, {
+              yPercent: 115, duration: 1.0, ease: 'power4.out', stagger: 0.07, delay: d * 0.07,
+              scrollTrigger: { trigger: el, start: 'top 88%', once: true }
+            });
+            return;
+          }
+        }
+        gsap.from(el, {
+          y: 30, autoAlpha: 0, duration: 1.0, ease: 'power3.out', delay: d * 0.07,
+          scrollTrigger: { trigger: el, start: 'top 86%', once: true }
+        });
+      }); };
+      // 等字体就绪再拆分/编排（避免 SplitText 断行测量不准）
+      if (document.fonts && document.fonts.ready && document.fonts.ready.then) document.fonts.ready.then(run, run);
+      else run();
+      return;
+    }
     if (REDUCE || !('IntersectionObserver' in window)) { els.forEach(function (el) { el.classList.add('in'); }); return; }
     var io = new IntersectionObserver(function (ents) {
       ents.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });

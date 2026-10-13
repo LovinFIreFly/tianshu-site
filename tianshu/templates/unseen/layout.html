@@ -92,6 +92,10 @@
   </footer>
 
   <script src="{{ url_for('static', filename='js/csrf.js') }}" defer></script>
+  {# GSAP 3.13（免费商用）本地 vendor：编排揭示 / SplitText 逐字 #}
+  <script src="{{ url_for('static', filename='js/vendor/gsap.min.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/vendor/ScrollTrigger.min.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/vendor/SplitText.min.js') }}" defer></script>
   <script src="{{ url_for('static', filename='js/unseen-field.js', v=static_v('js/unseen-field.js')) }}" defer></script>
   <script src="{{ url_for('static', filename='js/unseen.js', v=static_v('js/unseen.js')) }}" defer></script>
   {% block extra_js %}{% endblock %}
