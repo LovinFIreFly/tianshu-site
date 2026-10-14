@@ -13,7 +13,7 @@ import time
 from datetime import timedelta
 from urllib.parse import urlencode
 
-from flask import Flask, abort, flash, g, jsonify, redirect, render_template, request, send_from_directory, session
+from flask import Flask, Response, abort, flash, g, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 from jinja2 import BaseLoader, FileSystemLoader, TemplateNotFound
 
 from config import IMG_DIR, ROOMS_DEFAULT, SEED_USERS, SESSION_DAYS, SETTINGS_DEFAULT, TEMPLATES_AUTO_RELOAD
@@ -341,6 +341,34 @@ def create_app():
         resp.headers['Service-Worker-Allowed'] = '/'
         return resp
 
+    @app.get('/robots.txt')
+    def robots_txt():
+        """爬虫规则：公开栏目可爬；工作台 / 后台 / 我的 / 用户主页 不爬。"""
+        body = ('User-agent: *\n'
+                'Allow: /\n'
+                'Disallow: /admin\n'
+                'Disallow: /dm\n'
+                'Disallow: /me\n'
+                'Disallow: /u/\n'
+                'Sitemap: %s\n' % url_for('sitemap_xml', _external=True))
+        return Response(body, mimetype='text/plain')
+
+    @app.get('/sitemap.xml')
+    def sitemap_xml():
+        """只列公开的静态栏目页（本本墙 / 拼车 / 唠嗑 / 组局 / 问答）；
+        详情页交给爬虫顺着站内链接自然发现——不在这里穷举，免得天天变。"""
+        pages = [url_for('public.home', _external=True),
+                 url_for('public.scripts', _external=True),
+                 url_for('public.car', _external=True),
+                 url_for('public.comm', _external=True),
+                 url_for('public.group', _external=True),
+                 url_for('public.faq', _external=True)]
+        xml = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+               '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+               + ''.join('  <url><loc>%s</loc></url>\n' % u for u in pages)
+               + '</urlset>\n')
+        return Response(xml, mimetype='application/xml')
+
     @app.get('/health')
     def health():
         return jsonify(ok=True, mode='python-only')
@@ -388,6 +416,26 @@ def create_app():
                 resp.headers['Vary'] = ((vary + ', ') if vary else '') + 'Accept-Encoding'
         except Exception:
             pass
+        return resp
+
+    @app.after_request
+    def _security_headers(resp):
+        """2026 基线安全响应头（低成本、高杠杆）：防 MIME 嗅探 / 限制 Referrer /
+        关掉用不到的浏览器能力 / 防点击劫持；HTTPS 下追加 HSTS。
+        CSP 先以 **Report-Only** 观察（只报告、不阻断），避免一刀切把内联脚本/样式锁死。"""
+        resp.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        resp.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        resp.headers.setdefault('Permissions-Policy',
+                                'camera=(), microphone=(), geolocation=(), browsing-topics=()')
+        resp.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+        if request.is_secure:
+            resp.headers.setdefault('Strict-Transport-Security',
+                                    'max-age=31536000; includeSubDomains')
+        resp.headers.setdefault(
+            'Content-Security-Policy-Report-Only',
+            "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; font-src 'self' data:; "
+            "connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'")
         return resp
 
     @app.teardown_request

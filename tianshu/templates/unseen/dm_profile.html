@@ -14,7 +14,7 @@
 
     <div class="band__row" style="margin-top:clamp(20px,3vw,34px)">
       {% if pf.photo %}
-      <img class="band__photo" src="{{ pf.photo }}" alt="{{ nickname }}" data-reveal>
+      <img class="band__photo" src="{{ pf.photo }}" alt="{{ nickname }}" width="132" height="132" loading="lazy" decoding="async" data-reveal>
       {% endif %}
       <div style="min-width:0;flex:1">
         <span class="eyebrow eyebrow--dark" data-reveal>主持人 · Game Master</span>

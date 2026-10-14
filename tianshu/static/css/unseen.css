@@ -34,8 +34,11 @@
      否则左栏第一行（那个 eyebrow）会被导航压住 —— login / register 上一直如此。 */
   --nav-h: 86px;
 
-  --font-display: "Fraunces", "Noto Serif SC", "Songti SC", "Source Han Serif SC", serif;
-  --font-sans: "Inter", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  /* 中文交给系统字族（不再拉 CJK webfont —— 那是首屏最重的一块）：
+     拉丁用 Fraunces / Inter，落到中文字符时依次尝试系统黑体/宋体。
+     Noto * CJK 放在后面只作「本机已装就用」的兜底，不触发任何网络请求。 */
+  --font-display: "Fraunces", "Songti SC", "Source Han Serif SC", "Noto Serif CJK SC", "Noto Serif SC", "SimSun", serif;
+  --font-sans: "Inter", "PingFang SC", "Microsoft YaHei", "HarmonyOS Sans SC", "Source Han Sans SC", "Noto Sans CJK SC", "Noto Sans SC", system-ui, -apple-system, sans-serif;
   --font-mono: "Space Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 
   --ease: cubic-bezier(.22,.61,.36,1);

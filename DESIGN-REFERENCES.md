@@ -123,6 +123,10 @@
 | UiLoader 模板按目录回落 | **原创** |
 | `SO_REUSEADDR` 部署修复 | **原创**，线上 TIME_WAIT 排查 |
 | **不撞用属性名**（`.field` 撞车 / `data-count` 撞车） | **原创教训** —— 见 `DESIGN-PITFALLS` |
+| 中文字体改**系统字族**（撤下 Google 的 Noto Sans/Serif SC 两个 CJK 家族） | 性能取舍：CJK webfont 是首屏最重的一块；见 `OPTIMIZATION-REPORT` §1.1 |
+| hero 图**模板直出** + `preload` / `fetchpriority="high"`（不再等 JS 探测才加载） | 性能：让 LCP 候选早发现；见 `OPTIMIZATION-REPORT` §1.2 |
+| 安全响应头（nosniff/Referrer-Policy/Permissions-Policy/X-Frame-Options + CSP Report-Only）、`/robots.txt`、`/sitemap.xml` | 2026 基线；CSP 先观察不阻断 |
+| unseen 版补上 **Service Worker 注册**（此前只有 base/nova/v1 有） | 一致性修补 |
 
 ---
 

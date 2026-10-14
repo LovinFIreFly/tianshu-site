@@ -5,9 +5,25 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>{% block title %}甜薯剧本杀 · 约局工作室{% endblock %}</title>
   <meta name="description" content="{% block desc %}甜薯剧本杀 —— 把一晚上的悬念，交给一群对的人。本本墙、拼车、唠嗑、组局，一个入口约齐。{% endblock %}">
+  {# 分享 / 搜索 / 移动端元信息（unseen 版此前只有一条 description，补齐） #}
+  <link rel="canonical" href="{{ request.base_url }}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="甜薯剧本杀">
+  <meta property="og:title" content="{{ self.title()|striptags|trim }}">
+  <meta property="og:description" content="{{ self.desc()|striptags|trim }}">
+  <meta property="og:url" content="{{ request.base_url }}">
+  <meta property="og:image" content="{{ url_for('static', filename='media/hero.webp', _external=True) }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#F4F1EA">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" href="{{ url_for('static', filename='icon.svg') }}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,600;1,9..144,900&family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;600;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  {# 字体：**不再从 Google 拉两个中文字库**（Noto Sans/Serif SC 是首屏最大的一块，
+     中文改由系统字族承担：macOS 苹方/宋体、Windows 微软雅黑/宋体，见 unseen.css 的 --font-* 栈）。
+     拉丁展示体只保留实际用到的字重（去掉了没用到的 Fraunces 700 与两组斜体），进一步减请求。 #}
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,900;1,9..144,900&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/unseen.css', v=static_v('css/unseen.css')) }}">
   {# Lenis 的极简配套样式（html/body height:auto + 关掉与 JS 打架的 CSS 平滑滚动） #}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/lenis.css', v=static_v('css/lenis.css')) }}">
@@ -146,5 +162,13 @@
   <script src="{{ url_for('static', filename='js/unseen-field.js', v=static_v('js/unseen-field.js')) }}" defer></script>
   <script src="{{ url_for('static', filename='js/unseen.js', v=static_v('js/unseen.js')) }}" defer></script>
   {% block extra_js %}{% endblock %}
+
+  {# 离线外壳：与 base / nova / v1 版保持一致（unseen 版此前漏了注册，PWA 等于没接）。
+     放在 #main 之外 —— 换页时 Transit 只重跑 #main 内的脚本，这里不会重复注册。 #}
+  <script>
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
+  }
+  </script>
 </body>
 </html>

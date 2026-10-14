@@ -14,7 +14,7 @@
       {% set av = ((who.profile.avatar if who.profile else '') or '')|string %}
       <div class="who__av" data-reveal>
         {% if av.startswith('/img/') or av.startswith('http') %}
-        <img src="{{ av }}" alt="{{ who.username }}">
+        <img src="{{ av }}" alt="{{ who.username }}" loading="lazy" decoding="async">
         {% else %}
         <span>{{ av or (((who.profile.nick if who.profile else '') or who.username or '玩')[:1]) }}</span>
         {% endif %}

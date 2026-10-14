@@ -8,7 +8,7 @@
     <a class="link-underline" href="{{ url_for('public.scripts') }}" data-reveal>← 返回本本墙</a>
     <div class="detail" style="margin-top:24px">
       <div class="detail__cover{% if sc.img or sc.cover %} detail__cover--pic{% endif %}" data-reveal>
-        {% if sc.img or sc.cover %}<img class="detail__img" src="{{ sc.img or sc.cover }}" alt="{{ sc.title }}">{% endif %}
+        {% if sc.img or sc.cover %}<img class="detail__img" src="{{ sc.img or sc.cover }}" alt="{{ sc.title }}" loading="lazy" decoding="async">{% endif %}
         <div class="ov"></div>
         <div class="emo">{{ (sc.title or '本')[:1] }}</div>
       </div>

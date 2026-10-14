@@ -177,3 +177,23 @@ SEO/社交元信息、安全头、PWA 离线。WebGL 与滚动这块**已经调�
 - **PWA/离线**：freewebtoapp.com、scaler.com、stackpractices.com、azimuddin.bd
 - **Flask/部署**：idctop.com、johal.in、compilenrun.com、CSDN Flask 性能
 - **转化 UX**：oui.digital、howdy-creative.co、jhkuo.com、leononline.com.tw、bomcreation.com
+
+---
+
+## 7. 落地进度（v12 已实施）
+
+| 项 | 状态 | 落点 |
+|---|---|---|
+| 中文字体瘦身 | ✅ 已做 | 从 Google Fonts **移除 Noto Sans/Serif SC 两个 CJK 家族**，中文交系统字族；Fraunces 去掉未用字重。`templates/unseen/layout.html` + `static/css/unseen.css` 的 `--font-display/--font-sans` |
+| hero LCP | ✅ 已做 | hero 图改**模板直出** + `<link rel=preload as=image fetchpriority=high>` + `width/height/decoding`；`unseen.js` 的 `initHeroMedia` 改为"图片直出、有视频才升级" |
+| 图片尺寸/解码 | ✅ 已做 | unseen 各模板补 `decoding="async"`、`loading="lazy"`、关键图 `width/height`（容器本就有 `aspect-ratio`，CLS 已基本解决） |
+| 安全头 | ✅ 已做 | `tianshu/__init__.py` 的 `after_request` 统一加 nosniff / Referrer-Policy / Permissions-Policy / X-Frame-Options（HTTPS 下加 HSTS）+ CSP **Report-Only** |
+| OG/canonical/manifest/theme-color | ✅ 已做 | `templates/unseen/layout.html`（unseen 版此前只有一条 description） |
+| robots.txt / sitemap.xml | ✅ 已做 | `tianshu/__init__.py` 新增 `/robots.txt` 与 `/sitemap.xml` 两个路由 |
+| PWA / service worker | ✅ 已补 | unseen 版此前**漏了 SW 注册**，已在 layout 末尾补上（与 base/nova/v1 一致） |
+| 无障碍（skip link / 焦点环 / 海报廊键盘替代 / 对比度扫描） | ⏳ 待做 | P1 中风险项，需要设计侧配合，单独排期 |
+| Nginx 前置 / Brotli / HTTP2 | ⏳ 待做 | 部署侧 |
+| web-vitals RUM + Lighthouse CI + 性能预算 | ⏳ 待做 | 监控侧 |
+
+**验证**：17 路由 sweep 全绿（`unseen` / 坏图 0 / JS 报错 0）；`curl` 复核安全头、robots、sitemap、
+`preload/fetchpriority/manifest/SW/canonical/og`、字体 URL 已无 Noto。

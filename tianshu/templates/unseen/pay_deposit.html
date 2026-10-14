@@ -82,7 +82,7 @@
         {% if settings.groupQr %}
         <div style="margin-top:26px;padding-top:24px;border-top:1px solid var(--line)">
           <p class="note" style="margin:0 0 14px">或者扫码进顾客群 —— 约本、拼车、问进度都在群里</p>
-          <img class="qr" src="{{ settings.groupQr }}" alt="{{ settings.shopName }} 顾客群二维码">
+          <img class="qr" src="{{ settings.groupQr }}" alt="{{ settings.shopName }} 顾客群二维码" width="148" loading="lazy" decoding="async">
         </div>
         {% endif %}
 

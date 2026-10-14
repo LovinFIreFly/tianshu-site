@@ -14,7 +14,7 @@
   {% for s in scripts %}
   <a class="card" href="{{ url_for('public.script_detail', sid=s.id) }}" data-reveal data-d="{{ loop.index0 % 4 }}" data-cursor>
     <div class="card__cover{% if s.img or s.cover %} card__cover--pic{% endif %}">
-      {% if s.img or s.cover %}<img class="card__img" src="{{ s.img or s.cover }}" alt="{{ s.title }}" loading="lazy">{% endif %}
+      {% if s.img or s.cover %}<img class="card__img" src="{{ s.img or s.cover }}" alt="{{ s.title }}" loading="lazy" decoding="async">{% endif %}
       <div class="ov"></div>
       <span class="card__idx">{{ '%02d' % loop.index }}</span>
       <span class="emo">{{ (s.title or '本')[:1] }}</span>

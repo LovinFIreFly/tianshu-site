@@ -1,6 +1,10 @@
 {% extends 'layout.html' %}
 {% block title %}甜薯剧本杀 · 今晚，你演谁{% endblock %}
 {% block desc %}甜薯剧本杀 —— 挑本、拼车、组局、唠嗑，一个入口约齐。看今晚谁在开场，或者自己开一桌。{% endblock %}
+{% block extra_head %}
+{# 首屏大图是 LCP 候选：preload + 高优先级，让它在 CSS / 字体之前就开始下载（不再等 JS 探测） #}
+<link rel="preload" as="image" href="{{ url_for('static', filename='media/hero.webp') }}" fetchpriority="high">
+{% endblock %}
 {% block content %}
 
 <nav class="rail" data-rail aria-hidden="true">
@@ -13,9 +17,15 @@
 
 <!-- 幕一 · 光缝 -->
 <section class="stage" id="a1" data-spot>
+  {# 首屏大图**直出**（旧版要等 JS 发 HEAD 探测才去加载 → LCP 晚发现）。
+     它带 fetchpriority="high" + 上面的 preload；JS 若发现 hero.mp4 存在会把它换成循环视频，
+     不存在就保持这张图（见 unseen.js 的 initHeroMedia）。 #}
   <div class="stage__media-host" data-hero
        data-hero-video="/static/media/hero.mp4"
-       data-hero-img="/static/media/hero.webp" aria-hidden="true"></div>
+       data-hero-img="/static/media/hero.webp" aria-hidden="true">
+    <img class="stage__media" src="{{ url_for('static', filename='media/hero.webp') }}"
+         alt="" width="1920" height="1080" fetchpriority="high" decoding="async">
+  </div>
   <div class="stage__glow" aria-hidden="true"></div>
   <div class="stage__slits" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="stage__grain" aria-hidden="true"></div>
@@ -81,7 +91,7 @@
       {% for s in scripts %}
       <a class="poster" href="{{ url_for('public.script_detail', sid=s.id) }}" data-poster data-cursor="看这个本">
         <div class="poster__face{% if s.img or s.cover %} poster__face--pic{% endif %}">
-          {% if s.img or s.cover %}<img class="poster__img" src="{{ s.img or s.cover }}" alt="{{ s.title }}" loading="lazy">{% endif %}
+          {% if s.img or s.cover %}<img class="poster__img" src="{{ s.img or s.cover }}" alt="{{ s.title }}" loading="lazy" decoding="async">{% endif %}
           <span class="poster__idx">{{ '%02d' % loop.index }}</span>
           {% if s.tags and ('热门' in s.tags or '上新' in s.tags or '新本' in s.tags) %}<span class="poster__ribbon">热门</span>{% endif %}
           <span class="poster__glyph">{{ (s.title or '本')[:1] }}</span>

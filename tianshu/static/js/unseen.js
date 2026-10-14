@@ -835,35 +835,36 @@
     t = setTimeout(function () { body.classList.add('is-idle'); }, 2400);
   }
 
-  /* ---------------- 首屏实测素材位（有就启用，没有就退回纯 WebGL 暗场）---------------- */
+  /* ---------------- 首屏素材（图片直出，视频可升级）----------------
+     图片现在由模板**直出**（见 home.html，带 fetchpriority="high"，是首屏 LCP 候选）。
+     旧版要等这里先发 HEAD 探测再创建 <img> —— 那样图片是"晚发现"的，LCP 吃亏。
+     这里只做两件事：① 图片就绪时给 <html> 加 has-media（激活压暗幕布等样式）；
+     ② 若 hero.mp4 真的存在（HEAD 2xx）才把它换成循环视频；不存在就保留图片。 */
   function initHeroMedia() {
     var host = $('[data-hero]');
     if (!host) return;
+    var existing = $('.stage__media', host);
     var vSrc = host.getAttribute('data-hero-video');
-    var iSrc = host.getAttribute('data-hero-img');
-    function attach(el) {
-      el.className = 'stage__media';
-      host.appendChild(el);
-      document.documentElement.classList.add('has-media');
+    function mark() { document.documentElement.classList.add('has-media'); }
+    if (existing && existing.tagName === 'IMG') {
+      if (existing.complete && existing.naturalWidth) mark();
+      else existing.addEventListener('load', mark, { once: true });
     }
-    function tryImage() {
-      if (!iSrc) return;
-      var img = new Image();
-      img.onload = function () { attach(img); };
-      img.src = iSrc;
-    }
-    if (vSrc && window.fetch) {
-      fetch(vSrc, { method: 'HEAD' }).then(function (r) {
-        if (!r || !r.ok) { tryImage(); return; }
-        var v = document.createElement('video');
-        v.src = vSrc; v.muted = true; v.loop = true; v.playsInline = true;
-        v.setAttribute('autoplay', ''); v.setAttribute('muted', ''); v.setAttribute('preload', 'auto');
-        v.setAttribute('tabindex', '-1');
-        v.addEventListener('error', tryImage, { once: true });
-        v.addEventListener('loadeddata', function () { attach(v); if (v.play) v.play().catch(function () {}); }, { once: true });
-        v.load();
-      }).catch(tryImage);
-    } else { tryImage(); }
+    if (!vSrc || !window.fetch) return;
+    fetch(vSrc, { method: 'HEAD' }).then(function (r) {
+      if (!r || !r.ok) return;                       // 没有视频 → 保留直出的图片
+      var v = document.createElement('video');
+      v.className = 'stage__media';
+      v.src = vSrc; v.muted = true; v.loop = true; v.playsInline = true;
+      v.setAttribute('autoplay', ''); v.setAttribute('muted', ''); v.setAttribute('preload', 'auto');
+      v.setAttribute('tabindex', '-1');
+      v.addEventListener('loadeddata', function () {
+        if (existing && existing.parentNode) existing.parentNode.replaceChild(v, existing);
+        else host.appendChild(v);
+        mark(); if (v.play) v.play().catch(function () {});
+      }, { once: true });
+      v.load();
+    }).catch(function () {});
   }
 
   /* ---------------- 本本墙搜索：描边进度环（移植 nova 的 Search 模块）----------------
