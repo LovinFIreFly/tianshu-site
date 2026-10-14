@@ -85,7 +85,14 @@
         <span class="eyebrow" data-reveal>本本墙 · The Catalogue</span>
         <h2 class="h2" style="margin-top:14px" data-reveal data-d="1">这几部，正在上演。</h2>
       </div>
-      <span class="gallery__hint" data-reveal data-d="2">横向拖拽 / 滚动 → 全部剧目 {{ scripts|length }} 部</span>
+      {# 键盘/按钮替代拖拽（WCAG 2.5.7）：拖拽不再是唯一的浏览方式 #}
+      <div class="gallery__side" data-reveal data-d="2">
+        <span class="gallery__hint">拖拽 / 滚动 / ← → 全部 {{ scripts|length }} 部</span>
+        <div class="gallery__nav" role="group" aria-label="切换剧目">
+          <button type="button" data-gal-prev aria-label="上一部">←</button>
+          <button type="button" data-gal-next aria-label="下一部">→</button>
+        </div>
+      </div>
     </div>
     <div class="gallery__track" data-gallery-track>
       {% for s in scripts %}

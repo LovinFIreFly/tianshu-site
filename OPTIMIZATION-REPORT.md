@@ -191,9 +191,17 @@ SEO/社交元信息、安全头、PWA 离线。WebGL 与滚动这块**已经调�
 | OG/canonical/manifest/theme-color | ✅ 已做 | `templates/unseen/layout.html`（unseen 版此前只有一条 description） |
 | robots.txt / sitemap.xml | ✅ 已做 | `tianshu/__init__.py` 新增 `/robots.txt` 与 `/sitemap.xml` 两个路由 |
 | PWA / service worker | ✅ 已补 | unseen 版此前**漏了 SW 注册**，已在 layout 末尾补上（与 base/nova/v1 一致） |
-| 无障碍（skip link / 焦点环 / 海报廊键盘替代 / 对比度扫描） | ⏳ 待做 | P1 中风险项，需要设计侧配合，单独排期 |
-| Nginx 前置 / Brotli / HTTP2 | ⏳ 待做 | 部署侧 |
-| web-vitals RUM + Lighthouse CI + 性能预算 | ⏳ 待做 | 监控侧 |
+| 无障碍：skip link | ✅ 已做 | `templates/unseen/layout.html` 的 `.skip` + CSS |
+| 无障碍：全局焦点环 | ✅ 已做 | `unseen.css` 的 `:focus-visible`（自绘光标不能替代键盘焦点） |
+| 无障碍：对比度 | ✅ 已做 | `--ink-3` #7E7568→#8A8173（4.3→5.1:1）、`--ink-dim` #46403A→#6A6155（1.9→~3:1） |
+| 无障碍：表单 label 关联 | ✅ 已做 | 23 处 `for`/`id` 自动配对（login/register/forgot/me/script）+ comm 无标签输入补 `aria-label` |
+| 无障碍：海报廊键盘替代 | ✅ 已做 | ←/→ 键 + 可见前后按钮（WCAG 2.5.7 拖拽替代） |
+| 无障碍：flash 播报 | ✅ 已做 | flash 容器加 `role="status" aria-live="polite"` |
+| web-vitals RUM | ✅ 已做 | `static/js/vitals.js`（零依赖，LCP/CLS/INP）+ `POST /vitals` 落盘 `data/vitals.log` |
+| 性能预算 | ✅ 已做 | `tools/perf_budget.py`（gzip 体积预算，`--strict` 可挂 CI） |
+| Nginx 前置 / Brotli / HTTP2 | ✅ 已出样例 | `deploy/nginx.conf.sample`（需部署侧采用；Flask 侧 HSTS 记得配 ProxyFix） |
+| Lighthouse CI | ⏳ 可选 | 需 Node/CI，本仓库暂无构建链；`tools/perf_budget.py` 已可代跑体积门禁 |
 
 **验证**：17 路由 sweep 全绿（`unseen` / 坏图 0 / JS 报错 0）；`curl` 复核安全头、robots、sitemap、
-`preload/fetchpriority/manifest/SW/canonical/og`、字体 URL 已无 Noto。
+`preload/fetchpriority/manifest/SW/canonical/og`、字体 URL 已无 Noto、`/vitals` POST→204 且写盘、
+skip link / 海报廊导航 / label 关联均在，体积预算通过（101.8K / 108K）。

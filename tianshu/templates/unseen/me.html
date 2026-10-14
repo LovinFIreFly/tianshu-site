@@ -54,16 +54,16 @@
         <section data-reveal>
           <h3 class="h3" style="margin-bottom:14px">资料设置</h3>
           <form method="post" action="{{ url_for('user.profile_save') }}" class="book" style="background:var(--paper)">
-            <div class="field"><label>昵称</label><input name="nick" value="{{ (u.profile.nick if u.profile else '') or '' }}"></div>
+            <div class="field"><label for="f-nick">昵称</label><input id="f-nick" name="nick" value="{{ (u.profile.nick if u.profile else '') or '' }}"></div>
             <div class="field--row">
-              <div class="field"><label>性别</label>
-                <select name="gender">
+              <div class="field"><label for="f-gender">性别</label>
+                <select id="f-gender" name="gender">
                   <option value="">不填</option>
                   <option value="男" {{ 'selected' if (u.profile.gender if u.profile else '') == '男' }}>男</option>
                   <option value="女" {{ 'selected' if (u.profile.gender if u.profile else '') == '女' }}>女</option>
                 </select>
               </div>
-              <div class="field"><label>年龄</label><input type="number" name="age" min="0" max="99" value="{{ (u.profile.age if u.profile else '') or '' }}"></div>
+              <div class="field"><label for="f-age">年龄</label><input id="f-age" type="number" name="age" min="0" max="99" value="{{ (u.profile.age if u.profile else '') or '' }}"></div>
             </div>
             <button class="btn btn--ghost" type="submit">保存资料</button>
           </form>

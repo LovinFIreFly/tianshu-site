@@ -14,20 +14,20 @@
     <h2 class="h2">注册</h2>
     <p class="note">手机号当账号，邮箱收验证码。</p>
     <form method="post" action="{{ url_for('user.register') }}{% if request.args.next %}?next={{ request.args.next }}{% endif %}" style="margin-top:18px">
-      <div class="field"><label>手机号</label><input name="phone" inputmode="numeric" placeholder="11 位手机号" required></div>
+      <div class="field"><label for="f-phone">手机号</label><input id="f-phone" name="phone" inputmode="numeric" placeholder="11 位手机号" required></div>
       <div class="field--row">
-        <div class="field" style="flex:2"><label>邮箱</label><input name="email" type="email" placeholder="收验证码用" required></div>
+        <div class="field" style="flex:2"><label for="f-email">邮箱</label><input id="f-email" name="email" type="email" placeholder="收验证码用" required></div>
         <div class="field" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end">
           <button type="button" class="btn btn--ghost" id="sendCode" style="height:46px">获取验证码</button>
         </div>
       </div>
-      <div class="field"><label>验证码</label><input name="code" placeholder="邮箱里的 4 位码（本机填 1234）" required></div>
-      <div class="field"><label>名字</label><input name="username" placeholder="昵称 / 玩家名" required></div>
+      <div class="field"><label for="f-code">验证码</label><input id="f-code" name="code" placeholder="邮箱里的 4 位码（本机填 1234）" required></div>
+      <div class="field"><label for="f-username">名字</label><input id="f-username" name="username" placeholder="昵称 / 玩家名" required></div>
       <div class="field--row">
-        <div class="field"><label>密码</label><input name="password" type="password" placeholder="至少 6 位" required></div>
-        <div class="field"><label>确认密码</label><input name="password2" type="password" placeholder="再输一次" required></div>
+        <div class="field"><label for="f-password">密码</label><input id="f-password" name="password" type="password" placeholder="至少 6 位" required></div>
+        <div class="field"><label for="f-password2">确认密码</label><input id="f-password2" name="password2" type="password" placeholder="再输一次" required></div>
       </div>
-      <div class="field"><label>邀请码（可选）</label><input name="invite" placeholder="朋友给的邀请码，双方各得券"></div>
+      <div class="field"><label for="f-invite">邀请码（可选）</label><input id="f-invite" name="invite" placeholder="朋友给的邀请码，双方各得券"></div>
       <label class="agree"><input type="checkbox" name="agree" value="1" required> 我已阅读并同意《用户协议》</label>
       <button class="btn btn--accent" type="submit" style="width:100%;justify-content:center">注册并登录 <span class="arr">→</span></button>
     </form>

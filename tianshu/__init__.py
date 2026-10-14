@@ -30,7 +30,8 @@ _static_v_cache = {}
 
 # 不需要 CSRF 令牌的写接口（见 csrf_guard 里的说明）：只记路径的匿名埋点
 # 小程序登录 / 绑定用 Bearer token 鉴权，不是 Cookie，CSRF 对它无意义，直接放行。
-_CSRF_FREE = {'/api/track', '/m/api/track', '/m/api/mp/login', '/m/api/mp/bind'}
+_CSRF_FREE = {'/api/track', '/m/api/track', '/m/api/mp/login', '/m/api/mp/bind',
+              '/vitals'}   # /vitals 也是 sendBeacon 匿名上报（Core Web Vitals），同样带不了令牌
 
 
 class UiLoader(BaseLoader):
@@ -340,6 +341,30 @@ def create_app():
         resp.headers['Cache-Control'] = 'no-cache'
         resp.headers['Service-Worker-Allowed'] = '/'
         return resp
+
+    @app.post('/vitals')
+    def vitals():
+        """收前端的 Core Web Vitals 信标（sendBeacon，见 static/js/vitals.js）。
+
+        落盘 data/vitals.log（每行一条 JSON，JSONL），超过约 1MB 就整份清空重来 ——
+        这是"看一眼真实用户的 LCP/CLS/INP"，不是正经数仓，够用就行。
+        **一律静默返回 204**：监控绝不能反过来拖慢页面或把错误抛回给用户。"""
+        try:
+            raw = (request.get_data() or b'')[:4000]
+            if raw:
+                base = os.path.dirname(app.root_path)          # 仓库根（tianshu 的上一级）
+                path = os.path.join(base, 'data', 'vitals.log')
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                try:
+                    if os.path.getsize(path) > 1024 * 1024:
+                        open(path, 'w').close()                # 超过 1MB：清空重来，免无限增长
+                except OSError:
+                    pass
+                with open(path, 'a', encoding='utf-8') as fh:
+                    fh.write(raw.decode('utf-8', 'replace').replace('\n', ' ')[:4000] + '\n')
+        except Exception:
+            pass
+        return ('', 204)
 
     @app.get('/robots.txt')
     def robots_txt():

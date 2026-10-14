@@ -37,7 +37,7 @@
           <p class="note" data-reveal style="margin-top:18px;color:var(--accent-2)">已使用优惠券抵扣，应付 ¥{{ o.due }}</p>
           {% elif coupons %}
           <div class="field" data-reveal style="margin-top:20px;max-width:420px">
-            <label>用优惠券抵扣游玩费</label>
+            <label for="coupon-select">用优惠券抵扣游玩费</label>
             <select name="couponId" id="coupon-select" form="pay-form">
               <option value="0" data-amount="0">不使用优惠券</option>
               {% for c in coupons %}

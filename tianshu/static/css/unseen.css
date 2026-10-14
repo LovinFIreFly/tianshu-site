@@ -11,9 +11,9 @@
   --paper-2:    #17130F;   /* 面板 */
   --paper-3:    #211B15;   /* 更高一级面板 */
   --ink:        #F2ECE1;   /* 暖白正文 */
-  --ink-2:      #B6AC9D;
-  --ink-3:      #7E7568;
-  --ink-dim:    #46403A;   /* 未被照亮时的字色 */
+  --ink-2:      #B6AC9D;   /* 8.7:1 */
+  --ink-3:      #8A8173;   /* 5.1:1 —— 原 #7E7568 只有 4.3:1，小字（11px 标签）不达标，已提亮 */
+  --ink-dim:    #6A6155;   /* 未照亮字色：提到 ~3:1（巨字达标），仍与 --lit 拉开层次 */
   --line:       rgba(242,236,225,.12);
   --line-2:     rgba(242,236,225,.06);
   --accent:     #CF5A32;   /* 朱砂（暗底提亮） */
@@ -70,6 +70,20 @@ body {
 body.has-cursor { cursor: none; }
 /* 换页 / 滚动期间锁住原生定位不受影响（走 window.scrollTo，不用 transform 包裹）*/
 html.smooth, html.smooth body { scroll-behavior: auto; }
+
+/* ---------- 键盘可达性（WCAG 2.4.1 / 2.4.7 / 2.4.11）----------
+   自绘光标（body.has-cursor{cursor:none}）**不能**替代键盘焦点 —— 这里保证：
+   ① 有个"跳到主内容"，键盘第一下 Tab 就能绕过重复导航；
+   ② 任何可聚焦元素都有清晰可见的焦点环（表单控件用自己的描边代替，见 .field 段）。 */
+.skip {
+  position: fixed; top: 10px; left: 50%; transform: translate(-50%, -180%);
+  z-index: 300; padding: 10px 18px; border-radius: 10px;
+  background: var(--accent); color: var(--accent-ink);
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-decoration: none;
+  transition: transform .2s var(--ease-out);
+}
+.skip:focus { transform: translate(-50%, 0); }
+:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; border-radius: 3px; }
 
 /* ---------- 全局 WebGL 暗场（canvas 在内容之下，实时噪声/追光/雕刻）----------
    ⚠️ 类名必须叫 field-canvas，**不能叫 field**：表单字段用的是 .field（见下面 forms 段）。
@@ -307,6 +321,17 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 }
 .gallery__head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; padding-inline: var(--gut); }
 .gallery__hint { font-family: var(--font-mono); font-size: 11px; letter-spacing: .2em; color: var(--ink-3); }
+/* 海报廊的键盘/按钮替代（WCAG 2.5.7）：40px 圆形前后键，触控目标够大、有可见焦点环 */
+.gallery__side { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.gallery__nav { display: inline-flex; gap: 8px; }
+.gallery__nav button {
+  width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
+  border: 1px solid var(--line); background: var(--paper-2); color: var(--ink-2);
+  font-size: 16px; line-height: 1; display: grid; place-items: center;
+  transition: border-color .3s, color .3s, background .3s;
+}
+.gallery__nav button:hover { border-color: rgba(207,90,50,.5); color: var(--ink); }
+.gallery__nav button:active { background: var(--paper-3); }
 .gallery__track { display: flex; gap: clamp(16px, 2.2vw, 34px); padding-inline: var(--gut); will-change: transform; }
 .poster { flex: 0 0 auto; width: clamp(230px, 24vw, 340px); transition: opacity .6s, filter .6s; }
 .gallery.dragging, .gallery.dragging a { cursor: grabbing; }

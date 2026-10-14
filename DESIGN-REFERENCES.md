@@ -127,6 +127,10 @@
 | hero 图**模板直出** + `preload` / `fetchpriority="high"`（不再等 JS 探测才加载） | 性能：让 LCP 候选早发现；见 `OPTIMIZATION-REPORT` §1.2 |
 | 安全响应头（nosniff/Referrer-Policy/Permissions-Policy/X-Frame-Options + CSP Report-Only）、`/robots.txt`、`/sitemap.xml` | 2026 基线；CSP 先观察不阻断 |
 | unseen 版补上 **Service Worker 注册**（此前只有 base/nova/v1 有） | 一致性修补 |
+| 无障碍：`.skip` 跳转链接 + `:focus-visible` 全局焦点环 + 对比度提升（`--ink-3`/`--ink-dim`）+ 表单 label 配对 + flash `aria-live` | WCAG 2.2 AA；自绘光标不能替代键盘焦点 |
+| 海报廊 **←/→ 键 + 前后按钮**（拖拽之外的另一条路） | WCAG 2.5.7 Dragging Movements |
+| Core Web Vitals **自采**（`vitals.js` → `POST /vitals` → `data/vitals.log`） | 零依赖 RUM，不引第三方 |
+| 体积预算 `tools/perf_budget.py` + Nginx 样例 `deploy/nginx.conf.sample` | 防回归 / 部署侧 |
 
 ---
 

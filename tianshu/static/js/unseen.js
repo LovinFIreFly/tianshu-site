@@ -379,6 +379,39 @@
     track.addEventListener('touchcancel', end, { passive: true });
   }
 
+  /* ---------------- 海报廊键盘替代（WCAG 2.5.7：拖拽不能是唯一方式）----------------
+     Tab 本就能逐个聚焦卡片（浏览器会把卡片滚进视野，钉住的导轨随之推进）；
+     这里再补两件：←/→ 在卡片间移动焦点，以及两个可见的前后按钮（已加在 home.html）。 */
+  function initGalleryKeyboard() {
+    var track = $('[data-gallery-track]');
+    if (!track) return;
+    var posters = $$('.poster', track);
+    if (!posters.length) return;
+    var i = 0;
+    function go(n) {
+      i = Math.max(0, Math.min(posters.length - 1, n));
+      var p = posters[i];
+      if (p && p.focus) p.focus();               // 聚焦即触发浏览器把卡片滚进视野
+      posters.forEach(function (x) { x.classList.toggle('on', x === p); });
+    }
+    var prev = $('[data-gal-prev]'), next = $('[data-gal-next]');
+    if (prev) prev.addEventListener('click', function () { go(i - 1); });
+    if (next) next.addEventListener('click', function () { go(i + 1); });
+    /* 只在海报廊进入视口时接管方向键，别把全站的方向键都抢了；
+       也要避开正在输入的表单控件（换页会 pOff 统一摘掉这个监听）。 */
+    pOn(document, 'keydown', function (e) {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      var a = document.activeElement;
+      if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' ||
+                a.tagName === 'SELECT' || a.isContentEditable)) return;
+      var r = track.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > innerHeight) return;
+      e.preventDefault();
+      go(e.key === 'ArrowRight' ? i + 1 : i - 1);
+    });
+  }
+
   /* ---------------- Night 时间轴定位 ---------------- */
   function parseMin(t) {
     var m = /(\d{1,2})\s*[:：]\s*(\d{1,2})/.exec(t || '');
@@ -549,7 +582,7 @@
 
     /* 壳层级脚本：换页时**不能**重跑（重跑会重复绑 window/document 级监听，
        光标会变双份、滚动会双倍速）。其余页面级脚本必须跟着新内容重新执行。 */
-    var SHELL_JS = /(^|\/)(csrf|unseen|unseen-field|gsap|ScrollTrigger|SplitText|lenis)\.(js|min\.js)/i;
+    var SHELL_JS = /(^|\/)(csrf|unseen|unseen-field|gsap|ScrollTrigger|SplitText|lenis|vitals)\.(js|min\.js)/i;
     /* ⚠️ 这个值必须 ≥ --tr-out 的时长，否则旧场景的"上移"只播了个头就被换掉 ——
        实测过：硬编码 430ms 时，0.52s 的离场动画只走到 10%（translateY 才 -7px 就被换页）。 */
     function minOutMs() { return trOutMs(); }
@@ -1047,6 +1080,7 @@
     initSpotlight();
     initGallery();
     initTouchGallery();
+    initGalleryKeyboard();
     initNight();
     initFloat();
     initMagnetic();

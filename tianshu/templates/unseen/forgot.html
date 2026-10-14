@@ -20,20 +20,20 @@
 
     <form method="post" style="margin-top:18px">
       <div class="field">
-        <label>注册手机号</label>
-        <input name="phone" type="tel" maxlength="11" inputmode="numeric" placeholder="11 位手机号"
+        <label for="f-phone">注册手机号</label>
+        <input id="f-phone" name="phone" type="tel" maxlength="11" inputmode="numeric" placeholder="11 位手机号"
                autocomplete="username" value="{{ request.form.get('phone','') }}" required>
       </div>
       <div class="field">
-        <label>注册邮箱（验证码发到这里）</label>
-        <input name="email" type="email" placeholder="you@example.com"
+        <label for="f-email">注册邮箱（验证码发到这里）</label>
+        <input id="f-email" name="email" type="email" placeholder="you@example.com"
                value="{{ request.form.get('email','') }}" required>
       </div>
 
       <div class="code-row" style="margin-bottom:18px">
         <div class="field">
-          <label>验证码</label>
-          <input name="code" type="tel" maxlength="6" inputmode="numeric" placeholder="6 位验证码"
+          <label for="f-code">验证码</label>
+          <input id="f-code" name="code" type="tel" maxlength="6" inputmode="numeric" placeholder="6 位验证码"
                  data-code-input required>
         </div>
         <button class="btn btn--ghost" type="button" data-code-btn data-purpose="reset"
@@ -45,13 +45,13 @@
 
       <div class="field--row">
         <div class="field">
-          <label>新密码（至少 6 位）</label>
-          <input name="password" type="password" placeholder="新密码"
+          <label for="f-password">新密码（至少 6 位）</label>
+          <input id="f-password" name="password" type="password" placeholder="新密码"
                  autocomplete="new-password" required>
         </div>
         <div class="field">
-          <label>确认新密码</label>
-          <input name="password2" type="password" placeholder="再输一遍"
+          <label for="f-password2">确认新密码</label>
+          <input id="f-password2" name="password2" type="password" placeholder="再输一遍"
                  autocomplete="new-password" enterkeyhint="go" required>
         </div>
       </div>

@@ -20,18 +20,18 @@
 
     {% if me %}
     <form method="post" action="{{ url_for('public.post_create') }}" class="post" data-reveal style="background:var(--paper)">
-      <div class="field"><input name="title" placeholder="一句话标题（可选）"></div>
-      <div class="field"><textarea name="text" rows="3" placeholder="说点什么…" required></textarea></div>
+      <div class="field"><input name="title" placeholder="一句话标题（可选）" aria-label="标题（可选）"></div>
+      <div class="field"><textarea name="text" rows="3" placeholder="说点什么…" aria-label="正文内容" required></textarea></div>
       <div class="field--row">
-        <input name="topic" placeholder="话题，如：情感 / 硬核 / 恐怖">
-        <select name="type">
+        <input name="topic" placeholder="话题，如：情感 / 硬核 / 恐怖" aria-label="话题">
+        <select name="type" aria-label="帖子类型">
           <option value="chat">闲聊帖</option>
           <option value="recruit">缺位招募</option>
         </select>
       </div>
       <div class="field--row">
-        <input name="recruitRole" placeholder="缺什么位（招募时填）">
-        <input name="recruitNeed" type="number" min="1" max="12" placeholder="缺几人">
+        <input name="recruitRole" placeholder="缺什么位（招募时填）" aria-label="缺的位">
+        <input name="recruitNeed" type="number" min="1" max="12" placeholder="缺几人" aria-label="缺几人">
       </div>
       <button class="btn btn--accent" type="submit">发出去 <span class="arr">→</span></button>
     </form>

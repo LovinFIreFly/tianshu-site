@@ -31,26 +31,26 @@
           <h3 class="h3" style="margin-bottom:4px">约这一本</h3>
           <p class="note">填好日期和场次，定金线下转小客服微信，到店核销。</p>
           <input type="hidden" name="sid" value="{{ sc.id }}">
-          <div class="field"><label>日期</label><input type="date" name="ts_day" value="{{ day_min }}" min="{{ day_min }}" max="{{ day_max }}" required></div>
-          <div class="field"><label>时间</label><input type="time" name="time" value="19:00" required></div>
-          <div class="field"><label>人数</label><input type="number" name="players" min="{{ lo }}" max="{{ hi }}" value="{{ lo }}" required></div>
-          <div class="field"><label>方式</label>
-            <select name="mode">
+          <div class="field"><label for="f-ts-day">日期</label><input id="f-ts-day" type="date" name="ts_day" value="{{ day_min }}" min="{{ day_min }}" max="{{ day_max }}" required></div>
+          <div class="field"><label for="f-time">时间</label><input id="f-time" type="time" name="time" value="19:00" required></div>
+          <div class="field"><label for="f-players">人数</label><input id="f-players" type="number" name="players" min="{{ lo }}" max="{{ hi }}" value="{{ lo }}" required></div>
+          <div class="field"><label for="f-mode">方式</label>
+            <select id="f-mode" name="mode">
               <option value="拼车">拼车（凑人发车）</option>
               <option value="包车">包车（整场独享）</option>
             </select>
           </div>
           {% if dms %}
-          <div class="field"><label>指定 DM</label>
-            <select name="dmPhone">
+          <div class="field"><label for="f-dmphone">指定 DM</label>
+            <select id="f-dmphone" name="dmPhone">
               <option value="">不指定，随机排</option>
               {% for d in dms %}<option value="{{ d.phone }}">{{ d.name }}</option>{% endfor %}
             </select>
           </div>
           {% endif %}
           {% if open_cars %}
-          <div class="field"><label>加入已有拼车</label>
-            <select name="carId">
+          <div class="field"><label for="f-carid">加入已有拼车</label>
+            <select id="f-carid" name="carId">
               <option value="">不拼，我自己开</option>
               {% for c in open_cars %}<option value="{{ c.id }}">{{ c.title }}（还差 {{ c.need }} 人）</option>{% endfor %}
             </select>

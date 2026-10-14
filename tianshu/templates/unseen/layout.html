@@ -30,6 +30,8 @@
   {% block extra_head %}{% endblock %}
 </head>
 <body>
+  {# 键盘用户的第一站：跳过重复导航直达主内容（WCAG 2.4.1）。平时视觉隐藏，聚焦时出现。 #}
+  <a class="skip" href="#main">跳到主内容</a>
   {# ⚠️ 类名是 field-canvas 不是 field —— 表单也用 .field（见 unseen.css 的 forms 段）。
      以前叫 .field 时，画布那条 position:fixed;inset:0;width:100%;height:100%;pointer-events:none
      会顺手套到每一个表单字段上：字段全被做成全屏浮层、定到 (0,0)，页面看着就像"输入框没了"。 #}
@@ -94,7 +96,7 @@
     {% with msgs = get_flashed_messages(with_categories=true) %}
       {% if msgs %}
         <div class="wrap" style="padding-top:96px">
-          {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
+          {% for cat, m in msgs %}<div class="flash {{ cat }}" role="status" aria-live="polite">{{ m }}</div>{% endfor %}
         </div>
       {% endif %}
     {% endwith %}
@@ -152,6 +154,8 @@
   </footer>
 
   <script src="{{ url_for('static', filename='js/csrf.js') }}" defer></script>
+  {# Core Web Vitals 采集（LCP/CLS/INP → /vitals → data/vitals.log），零依赖、失败静默 #}
+  <script src="{{ url_for('static', filename='js/vitals.js', v=static_v('js/vitals.js')) }}" defer></script>
   {# GSAP 3.13（免费商用）本地 vendor：编排揭示 / SplitText 逐字 #}
   <script src="{{ url_for('static', filename='js/vendor/gsap.min.js') }}" defer></script>
   <script src="{{ url_for('static', filename='js/vendor/ScrollTrigger.min.js') }}" defer></script>
