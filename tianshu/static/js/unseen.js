@@ -21,6 +21,7 @@
   function $$(s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); }
   function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
   function lerp(a, b, t) { return a + (b - a) * t; }
+  var WARM_READY = false;   // 媒体预暖只需装一次（换页后靠 MutationObserver 接管新节点）
 
   /* ---------------- 可重入的常驻 rAF ----------------
      场景流动式转场会把"页面级"模块整体重跑一遍（换页后新 DOM 要重新接上动效）。
@@ -237,6 +238,54 @@
       });
     }, { threshold: 0.16, rootMargin: '0px 0px -10% 0px' });
     secs.forEach(function (s) { io.observe(s); });
+  }
+
+  /* ---------------- 媒体预暖：提前「一整屏」把懒加载图解码好 ----------------
+     用 rootMargin: '100% 0px' —— 元素还在屏幕下方一整屏之外时就算"进入"，
+     于是解码/取图被提前执行，等真正滚到时那一刻不会卡。
+     最需要它的是幕二那条横向海报廊：它一进屏就要被拖动，若 6 张图此刻才
+     同时开始解码，拖动第一帧必掉。提前一屏解码，拖起来就是顺的。
+     只做预暖：不改 DOM、不改尺寸、失败静默；新插入的卡片由 MutationObserver 自动接管。 */
+  function initMediaWarm() {
+    if (WARM_READY || !('IntersectionObserver' in window)) return;
+    WARM_READY = true;
+    var WARM = '[data-gallery-track] img[loading="lazy"], .cards img[loading="lazy"], img[data-warm]';
+    var idle = window.requestIdleCallback || function (f) { return setTimeout(f, 160); };
+    function warm(img) {
+      // 先摘掉 lazy（否则浏览器在横向/远距离场景里可能压着不取），再解码。
+      if (img.loading === 'lazy') img.loading = 'eager';
+      idle(function () { if (img.decode) { img.decode()['catch'](function () {}); } });
+    }
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        io.unobserve(en.target);
+        warm(en.target);
+      });
+    }, { rootMargin: '100% 0px' });
+    // WeakSet：页面转场后旧节点被丢弃时不会拖住内存
+    var seen = ('WeakSet' in window) ? new WeakSet() : { _a: [], has: function (n) { return this._a.indexOf(n) > -1; }, add: function (n) { this._a.push(n); } };
+    function adopt(root) {
+      var list = $$(WARM, root);
+      for (var i = 0; i < list.length; i++) {
+        if (seen.has(list[i])) continue;
+        seen.add(list[i]); io.observe(list[i]);
+      }
+    }
+    adopt(document);
+    if (!('MutationObserver' in window)) return;
+    var mo = new MutationObserver(function (muts) {
+      for (var i = 0; i < muts.length; i++) {
+        var added = muts[i].addedNodes;
+        for (var j = 0; j < added.length; j++) {
+          var n = added[j];
+          if (n.nodeType !== 1) continue;
+          if (n.matches && n.matches('img')) adopt(n.parentNode || document);
+          else adopt(n);
+        }
+      }
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
   }
 
   /* ---------------- 首屏离场视差 ----------------
@@ -1076,6 +1125,7 @@
     initReveal();
     initSplit();
     initScenes();
+    initMediaWarm();
     initHeroParallax();
     initSpotlight();
     initGallery();

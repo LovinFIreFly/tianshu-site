@@ -84,7 +84,8 @@
     <div class="gallery__head">
       <div>
         <span class="eyebrow" data-reveal><b>S.02</b> 本本墙 · The Catalogue</span>
-        <h2 class="h2" style="margin-top:14px" data-reveal data-d="1">这几部，正在上演。</h2>
+        <h2 class="h2" style="margin-top:14px" data-reveal data-d="1">这几部，<br>正在上演。</h2>
+        <p class="kicker" data-reveal data-d="2">挑一本，替别人活一晚。</p>
       </div>
       {# 键盘/按钮替代拖拽（WCAG 2.5.7）：拖拽不再是唯一的浏览方式 #}
       <div class="gallery__side" data-reveal data-d="2">
@@ -125,7 +126,8 @@
     <div class="sec__head" style="margin-bottom:0">
       <div>
         <span class="eyebrow" data-reveal><b>S.03</b> 今日组局 · Tonight</span>
-        <h2 class="h2" style="margin-top:14px" data-reveal data-d="1">今晚，谁在开场。</h2>
+        <h2 class="h2" style="margin-top:14px" data-reveal data-d="1">今晚，<br>谁在开场。</h2>
+        <p class="kicker" data-reveal data-d="2">今晚的司仪，是台上那个人。</p>
       </div>
       <a class="link-underline" href="{{ url_for('public.group') }}" data-reveal>组局一览 →</a>
     </div>
@@ -176,7 +178,7 @@
         <span class="p__no">04</span>
         <span class="p__t">组局</span>
         <span class="p__go">{{ sessions|length }} 局 →</span>
-        <span class="p__d">今天在开的局一览无余。看中哪场，直接约；没合适的，自己开一桌。</span>
+        <span class="p__d">今天在开的局一览无余。看中哪场，直接约；没合适的，自己坐主位开一桌。</span>
       </a>
     </div>
   </div>
