@@ -28,7 +28,10 @@ BUDGET = {
     'js/vendor/gsap.min.js':   30.0,
     'js/vendor/ScrollTrigger.min.js': 19.0,
     'js/vendor/SplitText.min.js':      4.0,
-    'css/unseen.css':          20.0,
+    # v18 去 AI 味续改：新增 --sec-y 留白令牌、text-wrap balance/pretty、
+    # .kicker 角色比喻小句等真实规则 → gzip +1.0K。这是有意的功能增量，不是悄悄胖回去，
+    # 所以把预算同步提到 22.0K（仍留 ~5% 余量）。若继续增长，应转为"先删旧规则再加新规则"。
+    'css/unseen.css':          22.0,
     'css/lenis.css':            0.5,
 }
 # 首屏"必须下载"的壳层合计预算（gzip 后）
