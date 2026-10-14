@@ -133,7 +133,7 @@
     {% if sessions %}
     <div class="night__axis" data-night>
       {% for se in sessions[:8] %}
-      <a class="night__mark" href="{{ url_for('public.group') }}" data-time="{{ se.time or '' }}" data-cursor="看这场">
+      <a class="night__mark" href="{{ url_for('public.group') }}" data-time="{{ se.time or '' }}" data-cursor="看这场" style="--i:{{ loop.index0 }}">
         <span class="night__dot"></span>
         <span class="night__card"><b>{{ se.title or '一场组局' }}</b>{{ se.time or '' }}{% if se.dmName %} · DM {{ se.dmName }}{% endif %}</span>
       </a>

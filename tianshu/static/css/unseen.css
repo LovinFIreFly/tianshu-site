@@ -322,17 +322,31 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 .stage__sub { margin-top: clamp(22px, 3vw, 34px); max-width: 46ch; color: var(--ink-2); font-size: clamp(1rem,1.35vw,1.16rem); }
 .stage__sub b { color: var(--ink); font-weight: 500; }
 
-/* 首屏巨字入场（双图层同步，避免遮罩裁掉文字阴影）*/
-.stage__type .t { opacity: 0; transform: translateY(36px); animation: heroUp 1.15s var(--ease-out) both; }
+/* 首屏巨字入场（双图层同步）—— 从"淡入上浮"升级为**遮罩掀开**：
+   每条字从下沿被裁开、向上掀出（clip-path 只作用于自身，不需要额外包一层；
+   学 symphonyofvines / unseen 的 mask 揭示，比 opacity 淡入"有设计"）。 */
+.stage__type .t {
+  opacity: 1; transform: translateY(.16em);
+  clip-path: inset(104% -3% -8% -3%);
+  animation: heroWipe 1.05s var(--ease-out) both;
+}
 .stage__type .t:nth-child(1) { animation-delay: .14s; }
 .stage__type .t:nth-child(2) { animation-delay: .28s; }
-@keyframes heroUp { to { opacity: 1; transform: none; } }
+@keyframes heroWipe { to { clip-path: inset(-8% -3% -8% -3%); transform: none; } }
 
 .stage__foot {
   margin-top: clamp(38px, 7vh, 74px); display: flex; justify-content: space-between;
   align-items: flex-end; gap: 28px; flex-wrap: wrap;
 }
 .stage__acts { display: flex; flex-wrap: wrap; gap: clamp(18px, 3.4vw, 46px); }
+/* 入口逐盏亮起（只动 opacity —— 动 transform 会和 .act:hover 的位移打架，因为 animation 的
+   forwards 填充优先级高于普通声明，会把 hover 的 translateY 永久盖掉）。 */
+.stage__acts .act { animation: actIn .7s var(--ease-out) both; }
+.stage__acts .act:nth-child(1) { animation-delay: .58s; }
+.stage__acts .act:nth-child(2) { animation-delay: .68s; }
+.stage__acts .act:nth-child(3) { animation-delay: .78s; }
+.stage__acts .act:nth-child(4) { animation-delay: .88s; }
+@keyframes actIn { from { opacity: 0; } to { opacity: 1; } }
 .act {
   position: relative; display: inline-flex; align-items: baseline; gap: 9px;
   font-family: var(--font-display); font-size: clamp(1.12rem, 1.75vw, 1.5rem);
@@ -450,6 +464,14 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 .night__tick span { position: absolute; top: 12px; left: 8px; font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: .1em; }
 .night__mark { position: absolute; transform: translate(-50%, 0); bottom: 22px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .night__dot { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 6px rgba(207,90,50,.16); transition: transform .4s var(--ease-out), box-shadow .4s; }
+/* ⭐ 逐盏点亮（学 hubtown.co.in 的「光源纹理 + 滚动 reveal 进度」）：
+   幕三进入视口时，时间点一颗一颗亮起来（--i 由模板写），而不是整排一起出现。 */
+.night__dot { opacity: .25; box-shadow: none; }
+.night.in .night__dot { animation: lampOn .7s var(--ease-out) both; animation-delay: calc(var(--i, 0) * .13s); }
+@keyframes lampOn {
+  from { opacity: .25; transform: scale(.6); box-shadow: 0 0 0 0 rgba(207,90,50,0); }
+  to   { opacity: 1; transform: none; box-shadow: 0 0 0 6px rgba(207,90,50,.16); }
+}
 .night__card { font-family: var(--font-mono); font-size: 11px; color: var(--ink-2); text-align: center; white-space: nowrap; }
 .night__card b { display: block; font-family: var(--font-display); font-size: .95rem; color: var(--ink); font-weight: 500; letter-spacing: 0; transform: translateX(0); }
 .night__mark:hover .night__dot { transform: scale(1.35); box-shadow: 0 0 0 10px rgba(207,90,50,.22); }
