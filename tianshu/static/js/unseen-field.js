@@ -361,4 +361,15 @@
     try { ok = initFbm(); } catch (e2) { console.error('[field]', e2); ok = false; }
   }
   if (!ok) noField();
+
+  /* 告诉壳层"场已就绪" —— 首屏 loader 等的就是这个信号（见 unseen.js 的 initBoot）。
+     为什么连等两帧：着色器刚编译完时第一帧还没上屏，这时候撤 loader 会闪一下空白。
+     为什么还要写全局标记：defer 的执行顺序是 unseen-field.js 早于 unseen.js，
+     所以事件可能派发在监听器绑定之前 —— 漏掉的用 window.__tsFieldReady 兜回来。 */
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      window.__tsFieldReady = true;
+      try { window.dispatchEvent(new Event('ts:field-ready')); } catch (e) {}
+    });
+  });
 })();

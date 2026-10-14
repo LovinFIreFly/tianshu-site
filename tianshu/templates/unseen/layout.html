@@ -18,7 +18,35 @@
   <canvas class="field-canvas" data-field aria-hidden="true"></canvas>
   <div class="cursor" aria-hidden="true"></div>
   <div class="cursor-ring" aria-hidden="true"><span class="lb"></span></div>
-  <div class="veil" aria-hidden="true"><span class="mark">甜薯</span></div>
+
+  {# 场景流动式转场层（学 unseen.co 的换页）：旧场景上移离场 → 液面漫过 → 新场景从下上移进入。
+     三条纵横光带 + 两条青/品红错位色散带，纯 CSS transform，不用 canvas（不给主线程加负担）。
+     JS 拿不到 / 减弱动效 / fetch 失败时，它会保持隐藏，页面照常整页跳转。 #}
+  <div class="transit" id="transit" aria-hidden="true">
+    <div class="transit__haze"></div>
+    <div class="transit__band"></div>
+    <div class="transit__band"></div>
+    <div class="transit__band"></div>
+    <div class="transit__disp transit__disp--c"></div>
+    <div class="transit__disp transit__disp--m"></div>
+  </div>
+
+  {# 首屏 loader：学 hubtown.co.in 的极简语法 —— 一行等宽方块 + 两个 mono 小标签，
+     不加 logo 动画。进度绑定真实事件（DOM 就绪 / WebGL 首帧），并设 2.6s 兜底放行，
+     绝不会把用户关在门外。 #}
+  <div class="boot" id="boot" aria-hidden="true">
+    <div class="boot__box">
+      <div class="boot__row">
+        <span class="boot__k">甜薯剧本杀</span>
+        <span class="boot__pct" id="bootPct">0%</span>
+      </div>
+      <div class="boot__bar" id="bootBar"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="boot__row">
+        <span class="boot__k">正在布场</span>
+        <span class="boot__k">Loading</span>
+      </div>
+    </div>
+  </div>
 
   <header class="nav" id="nav">
     <a class="nav__brand" href="{{ url_for('public.home') }}" data-cursor>
@@ -54,6 +82,17 @@
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
+
+  {# 图框行（学 hubtown.co.in 的底部三处微标签）：像建筑图纸的图签，
+     用 10px/字距 .2em 的全大写等宽小字把页面"框"起来。
+     刻意放在文档流里而不是 fixed —— fixed 会压在正文和表单上。 #}
+  <div class="wrap">
+    <div class="frame">
+      <span class="micro"><i class="dot"></i>甜薯剧本杀 · 约局工作室</span>
+      <span class="micro">按 <b>S</b> 随机挑一本</span>
+      <span class="micro">设计语言参考 Unseen / BlueYard / Hubtown</span>
+    </div>
+  </div>
 
   <footer class="foot">
     <div class="wrap">
