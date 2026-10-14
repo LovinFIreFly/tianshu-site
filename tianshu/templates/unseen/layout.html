@@ -9,6 +9,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,600;1,9..144,900&family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;600;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/unseen.css', v=static_v('css/unseen.css')) }}">
+  {# Lenis 的极简配套样式（html/body height:auto + 关掉与 JS 打架的 CSS 平滑滚动） #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/lenis.css', v=static_v('css/lenis.css')) }}">
   {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -138,6 +140,9 @@
   <script src="{{ url_for('static', filename='js/vendor/gsap.min.js') }}" defer></script>
   <script src="{{ url_for('static', filename='js/vendor/ScrollTrigger.min.js') }}" defer></script>
   <script src="{{ url_for('static', filename='js/vendor/SplitText.min.js') }}" defer></script>
+  {# Lenis 平滑滚动（vendor，暴露 globalThis.Lenis）。必须在 unseen.js 之前 ——
+     unseen.js 的 initSmooth 会优先启用它，缺了才退回手写惯量滚动。 #}
+  <script src="{{ url_for('static', filename='js/vendor/lenis.min.js') }}" defer></script>
   <script src="{{ url_for('static', filename='js/unseen-field.js', v=static_v('js/unseen-field.js')) }}" defer></script>
   <script src="{{ url_for('static', filename='js/unseen.js', v=static_v('js/unseen.js')) }}" defer></script>
   {% block extra_js %}{% endblock %}

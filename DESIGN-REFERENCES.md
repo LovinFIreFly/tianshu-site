@@ -54,6 +54,19 @@
 | **fetch 换 DOM 实现真无缝**（不是播完动画再 `location.href`） | **nova.js 的 `Transit` 模块**（nova 已实现，我搬了架构） | `unseen.js` 的 `Transit` |
 | 壳层/页面级脚本区分（换页时壳层不重跑） | nova 的 `SHELL_JS` 白名单 | `unseen.js` 的 `SHELL_JS` |
 | 首屏 loader：一行方块进度 + 两个 mono 小标签 | **hubtown** 的 `LOADING CONTENT` + 16 格进度 + 右上 `413%` | `layout.html` 的 `.boot`、`unseen.js` 的 `initBoot` |
+| **上下文转场表**：按 from→to 页面种类选不同转场（flow / rise / veil / sweep） | **unseen.co** 的 Highway *contextual transitions*（`homeToProject`/`toWorld`… 由 REA 逆向确认，见 `rea-runs/HIGHWAY-ASSCROLL-INSTANTIATION.md`） | `unseen.js` 的 `TR` / `pickTransition` / `applyTransition`；`unseen.css` 的 `.transit.tr-*` |
+
+> **v11 增补（Lenis + 上下文转场）**：
+> 1. **平滑滚动换成真正的 Lenis**（vendor `lenis.min.js`，暴露 `globalThis.Lenis`）。关键前提是它驱动**原生 scrollTo**
+>    （`wrapper.scrollTo`），所以 `window.scrollY` / scroll 事件 / ScrollTrigger / sticky / 锚点照常工作——
+>    这正是能安全替换旧手写实现的原因。与 ScrollTrigger 走官方同步：`lenis.on('scroll', ScrollTrigger.update)`
+>    + `gsap.ticker.add(t => lenis.raf(t*1000))`。缺 Lenis 时**自动退回**原手写惯量滚动，行为不变。
+> 2. **程序化滚动统一入口 `scrollToY(y, immediate)`**：海报廊拖拽、`S` 键挑选、换页复位都走它；
+>    有 Lenis 时不让外部直接 `window.scrollTo`（会被 Lenis 每帧拉回去）。学 unseen.co 用 ASScroll 的同一架构：
+>    **滚动只由一个引擎驱动，其余模块都读它的结果**。
+> 3. **上下文转场**：`Transit` 按「页面种类」配对选转场——默认 `flow`（液面漫过，现状）、进详情 `rise`
+>    （更快、单条主液面）、进表单/登录 `veil`（薄幕淡换）、回首页 `sweep`（液面反向回落）。
+>    每个变体自带时长，JS 写根元素 `--tr-*`、CSS 只改几何与显隐，**时长仍只有一个来源**。
 
 ### C. 首页五幕
 

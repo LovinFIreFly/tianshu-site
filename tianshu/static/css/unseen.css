@@ -764,6 +764,34 @@ main.is-in { animation: sceneIn var(--tr-in) cubic-bezier(.16,1,.3,1) both; }
 }
 .transit.on .transit__haze { opacity: 1; }
 
+/* ---------- 上下文转场变体（学 unseen.co 的 Highway contextual transitions）----------
+   Transit 按 from→to 的"页面种类"落一个变体类（JS 里 pickTransition）：
+   · 默认 flow —— 三条液面 + 色散，扫过全屏（现状，进首页→浏览、列表间跳转）
+   · tr-rise  —— 进详情：只留一条主液面、更快、更克制（内容页不需要大动干戈）
+   · tr-veil  —— 进表单/登录：不扫带，只一层暖色薄幕淡换（少动作，不打扰输入）
+   · tr-sweep —— 回首页：液面从顶部反向回落（与默认相反的方向，表达"回到起点"）
+   时长不写死：JS 把该变体的 --tr-out/--tr-in/--tr-band 写到根元素，这里只改几何与显隐。 */
+.transit.tr-rise .transit__band:nth-child(3),
+.transit.tr-rise .transit__band:nth-child(4),
+.transit.tr-rise .transit__disp { display: none; }
+.transit.tr-rise .transit__band {
+  height: 84vh; filter: blur(10px);
+  transform: translate3d(0, 108vh, 0) skewY(0deg);
+}
+.transit.tr-rise.on .transit__band { transform: translate3d(0, -96vh, 0) skewY(0deg); }
+
+.transit.tr-veil .transit__band,
+.transit.tr-veil .transit__disp { display: none; }
+.transit.tr-veil .transit__haze {
+  background: radial-gradient(120% 100% at 50% 50%, rgba(207,90,50,.26), rgba(14,12,10,0) 68%);
+}
+.transit.tr-veil.on .transit__haze { opacity: 1; }
+
+.transit.tr-sweep .transit__band { transform: translate3d(0, -108vh, 0) skewY(-2.2deg); }
+.transit.tr-sweep.on .transit__band { transform: translate3d(0, 58vh, 0) skewY(1.4deg); }
+.transit.tr-sweep .transit__disp { transform: translate3d(0, -108vh, 0); }
+.transit.tr-sweep.on .transit__disp { transform: translate3d(0, 20vh, 0); }
+
 /* ---------- 首屏 loader（学 hubtown.co.in 的极简方块进度条）----------
    参考：hubtown.co.in 进场 —— 深底 + 一行等宽方块 + 「LOADING CONTENT」+ 右上百分比。
    这里保留同样的语法：方块进度 + 两个 mono 小标签，不加 logo 动画。 */

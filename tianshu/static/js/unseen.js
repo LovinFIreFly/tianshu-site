@@ -101,10 +101,39 @@
     setTimeout(function () { if (r.parentNode) r.parentNode.removeChild(r); }, 720);
   }
 
-  /* ---------------- Smooth 惯量滚动（Lenis 式：驱动原生 scrollTo，保留 sticky/锚点）---------------- */
+  /* ---------------- Smooth 惯量滚动 ----------------
+     首选 Lenis（vendor 本地 1.1.20）。关键前提：Lenis 驱动的是**原生 scrollTo**
+     （`options.wrapper.scrollTo({behavior:'instant'})`，不是 transform 包裹内容）——
+     所以 window.scrollY / scroll 事件 / ScrollTrigger / sticky / 锚点全部照常工作，
+     这正是能安全替换旧手写实现的原因（学 unseen.co 用 ASScroll 的同一套思路：
+     滚动只由一个引擎驱动，其余模块都读它的结果，绝不各写一套）。
+     与 ScrollTrigger 走官方同步：lenis.on('scroll', ScrollTrigger.update) +
+     gsap.ticker.add(t => lenis.raf(t*1000))。缺 Lenis 时退回下面手写版，行为不变。 */
+  var LENIS = null;
+  /* 统一程序化滚动入口：有 Lenis 就走 Lenis（否则直接 window.scrollTo 会和它的
+     缓动打架——Lenis 每帧回写位置，外部直接改会被它"拉回去"）。 */
+  function scrollToY(y, immediate) {
+    if (LENIS) { try { LENIS.scrollTo(y, { immediate: !!immediate }); return; } catch (e) {} }
+    if (immediate) window.scrollTo(0, y); else window.scrollTo({ top: y, behavior: 'smooth' });
+  }
   function initSmooth() {
     if (REDUCE || COARSE) return;
     var doc = document.documentElement;
+    doc.classList.add('smooth');
+    if (window.Lenis) {
+      try {
+        LENIS = new Lenis({ lerp: 0.14, smoothWheel: true, smoothTouch: false, wheelMultiplier: 1 });
+        if (HAS_GSAP && window.ScrollTrigger) {
+          LENIS.on('scroll', ScrollTrigger.update);
+          gsap.ticker.add(function (time) { LENIS.raf(time * 1000); });
+          gsap.ticker.lagSmoothing(0);
+        } else {
+          (function pump(t) { LENIS.raf(t); requestAnimationFrame(pump); })(performance.now());
+        }
+        return;
+      } catch (e) { LENIS = null; }        // 构造失败就当没有，落到手写兜底
+    }
+    /* ---- 手写兜底（Lenis 没加载成功时）---- */
     function maxY() { return Math.max(0, doc.scrollHeight - innerHeight); }
     var target = window.scrollY, current = target, running = false;
     doc.classList.add('smooth');
@@ -299,7 +328,7 @@
     track.addEventListener('pointermove', function (e) {
       if (!down) return;
       var dx = e.clientX - sx; moved = Math.abs(dx);
-      window.scrollTo(0, sy - dx * 1.15);
+      scrollToY(sy - dx * 1.15, true);      // 走统一入口：有 Lenis 时不让它把位置拉回去
     });
     function up(e) {
       if (!down) return; down = false; sec.classList.remove('dragging');
@@ -476,9 +505,51 @@
      ========================================================================== */
   var Transit = (function () {
     var busy = false;
+
+    /* ---- 上下文转场表（学 unseen.co 的 Highway contextual transitions）----
+       unseen.co 的换页不是"所有跳转一个样"：它按 from→to 的页面 slug 组合选不同转场
+       （homeToProject / projectToProject / toWorld …）。这里把同样的思想搬进 Transit：
+       按「页面种类」而非精确路径配对，选一个变体。默认 flow = 现状（液面漫过屏幕）；
+       →详情 rise（更快、只留一条主液面，克制）；→表单 veil（不扫带，一层薄幕）；
+       →首页 sweep（液面反向回落）。每个变体自带时长，JS 与 CSS 共用同一组 --tr-*。 */
+    var TR = {
+      flow:  { out: 0.44, in: 0.68, band: 0.82, cls: '' },        // 默认：三条液面 + 色散（现状）
+      rise:  { out: 0.34, in: 0.56, band: 0.58, cls: 'tr-rise' }, // 进详情：更快、单条主液面
+      veil:  { out: 0.30, in: 0.50, band: 0.50, cls: 'tr-veil' }, // 进表单/登录：薄幕淡换
+      sweep: { out: 0.42, in: 0.66, band: 0.78, cls: 'tr-sweep' } // 回首页：液面反向
+    };
+    function kindOf(p) {
+      if (!p || p === '/') return 'home';
+      if (/^\/scripts\/?$/.test(p)) return 'browse';
+      if (/^\/(script|car)\/[^/]/.test(p)) return 'detail';
+      if (/^\/(login|register|forgot|profile)\/?$/.test(p)) return 'form';
+      if (/^\/(me|dm|admin)\/?/.test(p)) return 'account';
+      return 'list';                                        // 拼车/唠嗑/组局/问答 …
+    }
+    function pickTransition(fromPath, toPath) {
+      var t = kindOf(toPath);
+      if (t === 'detail') return 'rise';
+      if (t === 'form') return 'veil';
+      if (t === 'home') return 'sweep';
+      return 'flow';                                        // 含 home→browse 等其余
+    }
+    /* 落表：把该变体的时长写进根元素的 --tr-*（secs() 读的就是它），并给液面层落类 */
+    function applyTransition(name) {
+      var cfg = TR[name] || TR.flow;
+      try {
+        var st = document.documentElement.style;
+        st.setProperty('--tr-out', cfg.out + 's');
+        st.setProperty('--tr-in', cfg.in + 's');
+        st.setProperty('--tr-band', cfg.band + 's');
+      } catch (e) {}
+      var layer = $('#transit');
+      if (layer) layer.className = 'transit' + (cfg.cls ? ' ' + cfg.cls : '');
+      try { document.documentElement.setAttribute('data-tr', name); } catch (e) {}
+    }
+
     /* 壳层级脚本：换页时**不能**重跑（重跑会重复绑 window/document 级监听，
        光标会变双份、滚动会双倍速）。其余页面级脚本必须跟着新内容重新执行。 */
-    var SHELL_JS = /(^|\/)(csrf|unseen|unseen-field|gsap|ScrollTrigger|SplitText)\.(js|min\.js)/i;
+    var SHELL_JS = /(^|\/)(csrf|unseen|unseen-field|gsap|ScrollTrigger|SplitText|lenis)\.(js|min\.js)/i;
     /* ⚠️ 这个值必须 ≥ --tr-out 的时长，否则旧场景的"上移"只播了个头就被换掉 ——
        实测过：硬编码 430ms 时，0.52s 的离场动画只走到 10%（translateY 才 -7px 就被换页）。 */
     function minOutMs() { return trOutMs(); }
@@ -532,6 +603,12 @@
       if (!main) { location.href = url; return; }
       busy = true;
       var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
+
+      /* ⓪ 先按 from→to 选转场变体（Highway contextual 的搬法）：落类 + 写 --tr-*。
+         必须在下面读 minOutMs()/totalMs() 之前执行，否则用的还是上一组的时长。 */
+      var toPath = url;
+      try { toPath = new URL(url, location.href).pathname; } catch (e) {}
+      applyTransition(pickTransition(location.pathname, toPath));
 
       /* ① 旧场景上移离场：每个直接子块给递增的上移量 + 递增延迟 —— 分镜感 */
       var kids = Array.prototype.slice.call(main.children);
@@ -589,9 +666,9 @@
       runScripts(fresh, doc2);
       try { history.pushState({ ts: 1 }, '', url); } catch (err) {}
       /* ⚠️ 不要在这里摘 html.smooth —— 那个类是"关掉 CSS 平滑滚动"的开关
-         （html.smooth { scroll-behavior: auto }）。摘掉反而会让下面这行 scrollTo(0,0)
-         变成一段平滑滚动，新场景会从半空中滑下来。保持它不动，复位才是瞬时的。 */
-      window.scrollTo(0, 0);
+         （html.smooth { scroll-behavior: auto }）。摘掉反而会让复位变成一段平滑滚动，
+         新场景会从半空中滑下来。保持它不动，走统一入口的 immediate 复位才是瞬时的。 */
+      scrollToY(0, true);
 
       /* ⑤ 重跑页面级实例（新 DOM 的揭示 / 逐字 / 追光 / 横滚 / 时间轴 / 视差 / 计数 / 素材探测） */
       bootPage(fresh);
@@ -618,7 +695,7 @@
       }, secs('--tr-in', 0.68) * 1000 + 120);
       setTimeout(function () {
         var l = layer2();
-        if (l) l.classList.remove('on');
+        if (l) { l.classList.remove('on'); l.className = 'transit'; }   // 顺带清掉 tr-* 变体类
       }, totalMs());
     }
     /* 液面层每次现查：换页时整块 #transit 是常驻节点（在 layout 里，不在 main 内），
@@ -939,7 +1016,8 @@
       var href = a.getAttribute('href');
       if (!href) return;
       e.preventDefault();
-      a.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      if (LENIS) LENIS.scrollTo(a, { offset: -(innerHeight - a.offsetHeight) / 2 });
+      else a.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
       links.forEach(function (p) { p.classList.remove('on'); });
       a.classList.add('on');
       /* 走场景流动转场，别用 location.href 硬切 —— 键盘入口更该有好动效 */

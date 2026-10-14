@@ -178,7 +178,35 @@ if (url.pathname === location.pathname && url.search && document.querySelector('
 
 ---
 
-## 11. 本节的方法论（怎么发现这些坑的）
+## 11. 引入 Lenis 后：双滚动引擎 / ScrollTrigger 失同步 / 程序化滚动被拉回
+
+**现象**：换用 Lenis（`window.Lenis`）后，若处理不当会出现三类问题：滚轮"加速"或发涩（两套缓动叠加）、
+ScrollTrigger 驱动的揭示动画随滚动漂移/抖动、拖拽海报廊时位置"弹回去"。
+
+**根因**：
+1. **双引擎**：旧的手写惯量滚动（`initSmooth`）和 Lenis 都去接管 `wheel` + 回写 `scrollTo`，两者各缓动一次 → 叠加。
+2. **失同步**：Lenis 的平滑是"每帧逼近"渐进过程，而 ScrollTrigger 默认只读原生 scroll 事件。不同步时
+   ScrollTrigger 拿到的位置滞后于视觉位置 → 揭示漂移。
+3. **拉回**：Lenis 每帧回写滚动位置；外部直接 `window.scrollTo()`（拖拽、快捷键、换页复位）改的位置会被
+   它下一帧覆盖回"目标值"。
+
+**修法**：
+- **二选一**：`if (window.Lenis) { 用 Lenis } else { 旧手写兜底 }`，用 early return 保证同一时刻只有一个引擎在跑。
+- **显式同步**：`LENIS.on('scroll', ScrollTrigger.update)` + `gsap.ticker.add(function(t){ LENIS.raf(t*1000); })`
+  + `gsap.ticker.lagSmoothing(0)`（没有 GSAP 时用自带 rAF 泵 `LENIS.raf`）。
+- **统一入口**：写一个 `scrollToY(y, immediate)`——有 Lenis 走 `LENIS.scrollTo(y,{immediate})`，否则 `window.scrollTo`；
+  拖拽（`initGallery`）、`S` 键挑选（`initShortcut`）、换页复位（`Transit.swap`）**全部**改走它。
+
+**验证**：Playwright 实测——`window.Lenis === true`、`html.lenis` 类已加、滚轮后 `window.scrollY` 从 0 → 430
+（证明确实驱动原生滚动）；点「本本墙」`navigation entries 1 → 1`（就地换 DOM，未整页跳）、`data-tr=flow`；
+17 路由全覆盖 `JS 报错=无`。见 `_research/smoke_unseen.py`。
+
+> **通用规律**：任何"单一职责的系统资源"（滚动、时钟、渲染循环）都不该有第二个人去抢。
+> 换页那次的 `loop(name,fn)` 可重入 rAF、这次的"滚动单引擎"——是同一条纪律的两次应用。
+
+---
+
+## 12. 本节的方法论（怎么发现这些坑的）
 
 | 手段 | 用途 |
 |---|---|
