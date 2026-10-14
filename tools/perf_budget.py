@@ -34,9 +34,8 @@ BUDGET = {
 # 首屏"必须下载"的壳层合计预算（gzip 后）
 SHELL_BUDGET_KB = 108.0
 
-# 首屏媒体（已压缩，不 gzip；按原始大小算）
+# 首屏媒体（已压缩，不 gzip；按原始大小算）。当前首屏用静态图，不放视频。
 MEDIA_BUDGET = {
-    'media/hero.mp4':  400.0,   # 无声循环，720p CRF30 约 200K
     'media/hero.webp': 120.0,   # LCP 图
     'media/hero.jpg':  220.0,   # 老格式兜底
 }

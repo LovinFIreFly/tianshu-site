@@ -134,7 +134,7 @@
 | 标题结构：每页唯一 `h1`（首屏巨字改为 `.stage__type .base` 的 h1）+ 层级不跳 | WCAG 1.3.1 / 结构化 |
 | 静态无障碍检查 `tools/a11y_check.py`（无浏览器，可挂 CI） | 自查 lang/alt/label/id/h1/地标/skip |
 | CI 门禁 `.github/workflows/ci.yml` | 语法 + 体积预算 + 无障碍 |
-| hero 场景视频 `static/media/hero.mp4`（图生视频，首帧=原 hero.webp） | 学 unseen.co/projects 的"视频章节"；用 v12 的"图在前、视频后升级"路径保 LCP |
+| 去「AI 味」：全局圆角 14→2px、药丸按钮/角标/tag 全部改方、筛选 chip 改编辑式文字行、卡片去掉"上浮+大投影" | 对齐 unseen/blueyard 的编辑语汇（无圆角、发丝线、克制动效） |
 
 ---
 

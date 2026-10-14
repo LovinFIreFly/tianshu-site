@@ -18,10 +18,10 @@
 <!-- 幕一 · 光缝 -->
 <section class="stage" id="a1" data-spot>
   {# 首屏大图**直出**（旧版要等 JS 发 HEAD 探测才去加载 → LCP 晚发现）。
-     它带 fetchpriority="high" + 上面的 preload；JS 若发现 hero.mp4 存在会把它换成循环视频，
-     不存在就保持这张图（见 unseen.js 的 initHeroMedia）。 #}
+     带 fetchpriority="high" + 上面的 preload，是首屏 LCP 候选（用静态图，不用视频）。
+     若以后想换成循环视频：把 mp4 放到 /static/media/ 并加 data-hero-video，
+     unseen.js 的 initHeroMedia 只会在探测到它存在时才升级。 #}
   <div class="stage__media-host" data-hero
-       data-hero-video="/static/media/hero.mp4"
        data-hero-img="/static/media/hero.webp" aria-hidden="true">
     <img class="stage__media" src="{{ url_for('static', filename='media/hero.webp') }}"
          alt="" width="1920" height="1080" fetchpriority="high" decoding="async">

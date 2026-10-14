@@ -43,7 +43,7 @@
 
   --ease: cubic-bezier(.22,.61,.36,1);
   --ease-out: cubic-bezier(.16,1,.3,1);
-  --r: 14px;
+  --r: 2px;   /* 编辑式版式：几乎不带圆角 —— 大圆角/药丸是"AI 味"最重的来源之一 */
 
   /* 转场时长（唯一来源）—— JS 也读这几个变量来决定"什么时候清场"。
      以前 JS 里硬编码 900ms，一旦调 CSS 时长就会脱钩，动画会被拦腰截断。 */
@@ -77,7 +77,7 @@ html.smooth, html.smooth body { scroll-behavior: auto; }
    ② 任何可聚焦元素都有清晰可见的焦点环（表单控件用自己的描边代替，见 .field 段）。 */
 .skip {
   position: fixed; top: 10px; left: 50%; transform: translate(-50%, -180%);
-  z-index: 300; padding: 10px 18px; border-radius: 10px;
+  z-index: 300; padding: 10px 18px; border-radius: 2px;
   background: var(--accent); color: var(--accent-ink);
   font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-decoration: none;
   transition: transform .2s var(--ease-out);
@@ -141,7 +141,7 @@ h1,h2,h3,h4 { font-family: var(--font-display); font-weight: 400; line-height: 1
   --bg: var(--ink); --fg: var(--paper);
   position: relative; overflow: hidden; isolation: isolate;
   display: inline-flex; align-items: center; gap: 10px;
-  padding: 14px 26px; border-radius: 999px;
+  padding: 14px 26px; border-radius: 2px;
   background: var(--bg); color: var(--fg);
   border: 1px solid transparent; font-weight: 500; font-size: .95rem;
   transition: transform .5s var(--ease-out), color .4s, border-color .4s;
@@ -180,7 +180,7 @@ h1,h2,h3,h4 { font-family: var(--font-display); font-weight: 400; line-height: 1
 .nav.scrolled { background: rgba(14,12,10,.9); background: color-mix(in srgb, var(--paper) 90%, transparent); padding-block: 10px; border-bottom-color: var(--line); }
 .nav__brand { display: inline-flex; align-items: center; gap: 11px; font-family: var(--font-display); }
 .nav__brand .mark {
-  width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center;
+  width: 34px; height: 34px; border-radius: 2px; display: grid; place-items: center;
   border: 1px solid var(--accent); background: rgba(207,90,50,.10); color: var(--accent);
   font-weight: 900; font-size: 18px; box-shadow: 0 8px 22px -12px var(--glow);
 }
@@ -296,7 +296,7 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 .stage__keys { font-family: var(--font-mono); font-size: 11px; letter-spacing: .16em; color: var(--ink-3); display: inline-flex; align-items: center; gap: 9px; }
 .stage__keys b {
   display: inline-grid; place-items: center; min-width: 21px; height: 21px; padding: 0 6px;
-  border: 1px solid var(--line); border-radius: 5px; color: var(--accent-2); font-weight: 400;
+  border: 1px solid var(--line); border-radius: 2px; color: var(--accent-2); font-weight: 400;
   transition: border-color .4s, color .4s;
 }
 .stage__keys:hover b { border-color: rgba(207,90,50,.55); }
@@ -336,7 +336,7 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 .poster { flex: 0 0 auto; width: clamp(230px, 24vw, 340px); transition: opacity .6s, filter .6s; }
 .gallery.dragging, .gallery.dragging a { cursor: grabbing; }
 .poster__face {
-  position: relative; aspect-ratio: 3 / 4.2; border-radius: 6px; overflow: hidden;
+  position: relative; aspect-ratio: 3 / 4.2; border-radius: 2px; overflow: hidden;
   border: 1px solid var(--line); background: var(--paper-3);
   display: grid; place-items: center;
   transition: transform .7s var(--ease-out), box-shadow .7s, border-color .5s, filter .6s;
@@ -348,12 +348,13 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
   text-shadow: 0 10px 40px rgba(0,0,0,.6); line-height: 1; transition: transform .7s var(--ease-out), color .5s;
 }
 .poster__idx { position: absolute; z-index: 2; top: 14px; left: 16px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); letter-spacing: .14em; }
-.poster__ribbon { position: absolute; z-index: 2; top: 14px; right: 14px; font-size: 11px; letter-spacing: .05em; padding: 4px 10px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); }
+/* 角标：从"填充药丸"改成发丝描边的编辑式标记（不抢画面） */
+.poster__ribbon { position: absolute; z-index: 2; top: 14px; right: 14px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .14em; padding: 4px 9px; border-radius: 2px; background: rgba(10,9,8,.55); color: var(--accent-2); border: 1px solid rgba(207,90,50,.55); backdrop-filter: blur(3px); }
 .poster__body { margin-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .poster__title { font-family: var(--font-display); font-size: clamp(1.05rem, 1.5vw, 1.32rem); line-height: 1.15; transition: color .5s; }
 .poster__meta { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); letter-spacing: .06em; margin-top: 5px; }
 .poster__price { font-family: var(--font-display); font-size: 1.2rem; color: var(--accent-2); white-space: nowrap; }
-.poster.on .poster__face { transform: scale(1.04); box-shadow: 0 40px 80px -40px rgba(0,0,0,.9); border-color: rgba(207,90,50,.5); }
+.poster.on .poster__face { transform: scale(1.03); border-color: rgba(207,90,50,.55); }
 .poster.on .poster__glyph { transform: translateY(-2px) scale(1.06); color: var(--lit); }
 .poster.on .poster__title { color: var(--lit); }
 .poster.dim { opacity: .45; filter: saturate(.7); }
@@ -489,7 +490,8 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
   position: relative; background: var(--paper-2); border: 1px solid var(--line);
   border-radius: var(--r); overflow: hidden; transition: transform .5s var(--ease), box-shadow .5s, border-color .5s;
 }
-.card:hover { transform: translateY(-6px); box-shadow: 0 34px 60px -34px rgba(0,0,0,.9); border-color: rgba(207,90,50,.4); }
+/* hover：不再"整块上浮 + 大投影"（那是通用卡片模板的动作），改成边框发亮 + 内容微微前压 */
+.card:hover { border-color: rgba(207,90,50,.45); }
 .card__cover { aspect-ratio: 4/5; background: var(--paper-3); display: grid; place-items: center; position: relative; overflow: hidden; }
 .card__cover .emo { font-family: var(--font-display); font-weight: 900; font-size: clamp(2.8rem,5vw,4rem); color: rgba(242,236,225,.9); }
 .card__cover .ov { position: absolute; inset: 0; background: radial-gradient(120% 90% at 30% 10%, rgba(207,90,50,.32), transparent 60%); }
@@ -511,8 +513,8 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 .card__body { padding: 18px 18px 20px; }
 .card__title { font-family: var(--font-display); font-size: 1.32rem; line-height: 1.1; }
 .card__tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.tag { font-size: 11px; letter-spacing: .04em; padding: 4px 10px; border-radius: 999px; background: var(--paper-3); color: var(--ink-2); border: 1px solid var(--line); }
-.tag--hot { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.tag { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .1em; padding: 3px 8px; border-radius: 2px; background: transparent; color: var(--ink-3); border: 1px solid var(--line); }
+.tag--hot { background: transparent; color: var(--accent-2); border-color: rgba(207,90,50,.5); }
 .card__foot { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; font-size: .9rem; }
 .card__price { font-family: var(--font-display); font-size: 1.25rem; color: var(--accent-2); }
 .card__diff { display: inline-flex; gap: 3px; color: var(--accent); letter-spacing: 2px; font-size: .8rem; }
@@ -520,12 +522,24 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 
 .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 28px; }
 .filters input, .filters select {
-  font: inherit; padding: 10px 14px; border-radius: 999px; border: 1px solid var(--line);
+  font: inherit; padding: 10px 14px; border-radius: 2px; border: 1px solid var(--line);
   background: var(--paper-2); color: var(--ink);
 }
-.chip { padding: 9px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper-2); color: var(--ink-2); font-size: .9rem; transition: .3s; }
-.chip:hover { border-color: var(--ink-3); color: var(--ink); }
-.chip.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+/* 筛选：改成**编辑式文字行** —— 去掉"填充药丸"，可点文字 + 发丝分隔，
+   选中用朱砂下划线而不是整块反白（unseen/blueyard 的列表语汇，不再是通用 App 模板）。*/
+.chip {
+  padding: 4px 0; border: 0; background: none; color: var(--ink-3);
+  font: inherit; font-size: .94rem; letter-spacing: .02em; cursor: pointer;
+  transition: color .3s;
+}
+.chip:hover { color: var(--ink); }
+.chip.on {
+  color: var(--ink);
+  text-decoration: underline; text-underline-offset: 7px;
+  text-decoration-color: var(--accent); text-decoration-thickness: 2px;
+}
+select.chip { border: 1px solid var(--line); border-radius: 2px; background: var(--paper-2); color: var(--ink); padding: 8px 12px; }
+.filters[data-lib-tags] { gap: 16px; }
 
 .rows { border-top: 1px solid var(--line); }
 .row {
@@ -536,7 +550,7 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 .row__when { font-family: var(--font-mono); font-size: 12px; color: var(--accent); white-space: nowrap; }
 .row__title { font-family: var(--font-display); font-size: 1.25rem; }
 .row__sub { color: var(--ink-2); font-size: .9rem; }
-.row__pill { font-size: .82rem; color: var(--ink-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; white-space: nowrap; }
+.row__pill { font-family: var(--font-mono); font-size: .78rem; letter-spacing: .08em; color: var(--ink-3); border: 1px solid var(--line); border-radius: 2px; padding: 4px 10px; white-space: nowrap; }
 
 .quotes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: clamp(16px,2vw,28px); }
 .quote { border: 1px solid var(--line); border-radius: var(--r); padding: 24px; background: var(--paper-2); }
@@ -564,7 +578,7 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 .field { margin-bottom: 18px; }
 .field label { display: block; font-size: .82rem; letter-spacing: .04em; color: var(--ink-2); margin-bottom: 8px; }
 .field input, .field textarea, .field select {
-  width: 100%; font: inherit; padding: 13px 15px; border-radius: 12px;
+  width: 100%; font: inherit; padding: 13px 15px; border-radius: 2px;
   border: 1px solid var(--line); background: var(--paper-2); color: var(--ink); transition: border-color .3s, box-shadow .3s;
 }
 .field input::placeholder, .field textarea::placeholder { color: var(--ink-3); }
@@ -778,8 +792,10 @@ main.is-in { animation: sceneIn var(--tr-in) cubic-bezier(.16,1,.3,1) both; }
   position: absolute; left: 0; right: 0; height: 2px;
   transform: translate3d(0, 108vh, 0); opacity: .9; will-change: transform;
 }
-.transit__disp--c { background: linear-gradient(90deg, transparent, rgba(120,220,255,.85), rgba(120,255,230,.5), transparent); }
-.transit__disp--m { background: linear-gradient(90deg, transparent, rgba(255,120,190,.75), rgba(230,140,255,.45), transparent); }
+/* 色散带：原来是青/品红（很"赛博/AI"），改成品牌自己的琥珀/朱砂 —— 保留错位色散，
+   但不再引入本设计之外的色相。（两条带的错位时长不变，观感仍然是"水波折射"。） */
+.transit__disp--c { background: linear-gradient(90deg, transparent, rgba(255,214,178,.85), rgba(226,148,71,.5), transparent); }
+.transit__disp--m { background: linear-gradient(90deg, transparent, rgba(207,90,50,.72), rgba(226,148,71,.45), transparent); }
 .transit.on .transit__disp { transform: translate3d(0, -20vh, 0); }
 .transit.on .transit__disp--c { transition: transform calc(var(--tr-band) * .98) cubic-bezier(.42,0,.28,1); }
 .transit.on .transit__disp--m { transition: transform calc(var(--tr-band) * .92) cubic-bezier(.42,0,.28,1); transition-delay: .035s; }
@@ -925,12 +941,12 @@ html.has-media .boot { background: #070605; }
    机制照搬 nova.js 的 Search 模块：一圈极淡底线 + 一段朱砂走线，
    聚焦开始巡航转圈 → 提交一次性转满一整圈。核心思路是「反馈先于结果」：
    点下去先看到那圈转满，再去拿数据，人就不会觉得"点了没反应"。
-   颜色全部换成 unseen 令牌（走线用朱砂），形状改成 unseen 的药丸。
+   颜色全部换成 unseen 令牌（走线用朱砂），形状改成编辑式的方框（不再用药丸）。
    ========================================================================== */
 .libbar { display: flex; align-items: center; gap: clamp(14px,2vw,22px); flex-wrap: wrap; margin-bottom: 16px; }
 .u-search {
   position: relative; display: block; width: 100%; max-width: 470px;
-  border-radius: 999px; background: var(--paper-2);
+  border-radius: 2px; background: var(--paper-2);
 }
 .u-search__ring { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
 .u-search__ring rect { fill: none; }
@@ -955,12 +971,12 @@ html.has-media .boot { background: #070605; }
 @keyframes usRingGo { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -100; } }
 .u-search__in {
   width: 100%; height: 54px; padding: 0 58px 0 24px; border: 0; background: transparent;
-  border-radius: 999px; font: inherit; font-size: .98rem; color: var(--ink);
+  border-radius: 2px; font: inherit; font-size: .98rem; color: var(--ink);
 }
 .u-search__in::placeholder { color: var(--ink-3); }
 .u-search__in:focus { outline: none; }
 .u-search__go {
-  position: absolute; right: 7px; top: 7px; width: 40px; height: 40px; border-radius: 50%;
+  position: absolute; right: 7px; top: 7px; width: 40px; height: 40px; border-radius: 2px;
   border: 1px solid transparent; display: grid; place-items: center;
   background: var(--paper-3); color: var(--ink-2);
   transition: background .3s, color .3s, transform .45s var(--ease-out);
