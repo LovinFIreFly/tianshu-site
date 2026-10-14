@@ -19,7 +19,7 @@
     </div>
 
     {% if me %}
-    <form method="post" action="{{ url_for('public.post_create') }}" class="post" data-reveal style="background:var(--paper)">
+    <form method="post" action="{{ url_for('public.post_create') }}" class="post post--form" data-reveal>
       <div class="field"><input name="title" placeholder="一句话标题（可选）" aria-label="标题（可选）"></div>
       <div class="field"><textarea name="text" rows="3" placeholder="说点什么…" aria-label="正文内容" required></textarea></div>
       <div class="field--row">

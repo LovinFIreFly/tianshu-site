@@ -599,7 +599,7 @@ select.chip { border: 1px solid var(--line); border-radius: 2px; background: var
 .row__pill { font-family: var(--font-mono); font-size: .78rem; letter-spacing: .08em; color: var(--ink-3); border: 1px solid var(--line); border-radius: 2px; padding: 4px 10px; white-space: nowrap; }
 
 .quotes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: clamp(16px,2vw,28px); }
-.quote { border: 1px solid var(--line); border-radius: var(--r); padding: 24px; background: var(--paper-2); }
+.quote { border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 24px 0 0; background: transparent; }
 .quote__text { font-family: var(--font-display); font-size: 1.18rem; line-height: 1.4; }
 .quote__by { margin-top: 16px; font-size: .85rem; color: var(--ink-3); display: flex; align-items: center; gap: 10px; }
 .quote__av { width: 30px; height: 30px; border-radius: 50%; background: var(--paper-3); border: 1px solid var(--line); display: grid; place-items: center; font-size: 13px; font-family: var(--font-display); }
@@ -623,24 +623,36 @@ select.chip { border: 1px solid var(--line); border-radius: 2px; background: var
 .auth__main .h2 { margin-bottom: 6px; }
 .field { margin-bottom: 18px; }
 .field label { display: block; font-size: .82rem; letter-spacing: .04em; color: var(--ink-2); margin-bottom: 8px; }
-.field input, .field textarea, .field select {
+/* ⚠️ .field--row 是 .field 的**兄弟**类，不是后代：只写 .field input 会让
+   「话题 / 缺什么位 / 缺几人」这类行内控件漏网，回落成浏览器原生亮底输入框 ——
+   在暗场里非常突兀。所以两个选择器都要列上。 */
+.field input, .field textarea, .field select,
+.field--row input, .field--row textarea, .field--row select {
   width: 100%; font: inherit; padding: 13px 15px; border-radius: 2px;
   border: 1px solid var(--line); background: var(--paper-2); color: var(--ink); transition: border-color .3s, box-shadow .3s;
 }
-.field input::placeholder, .field textarea::placeholder { color: var(--ink-3); }
-.field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(207,90,50,.18); }
+.field input::placeholder, .field textarea::placeholder,
+.field--row input::placeholder, .field--row textarea::placeholder { color: var(--ink-3); }
+.field input:focus, .field textarea:focus, .field select:focus,
+.field--row input:focus, .field--row textarea:focus, .field--row select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(207,90,50,.18); }
 .field--row { display: flex; gap: 12px; }
 .field--row > * { flex: 1; }
 .agree { display: flex; gap: 10px; align-items: flex-start; font-size: .88rem; color: var(--ink-2); margin: 6px 0 18px; }
 .agree input { margin-top: 4px; }
 .note { font-size: .82rem; color: var(--ink-3); margin-top: 14px; }
-.flash { padding: 12px 16px; border-radius: 12px; margin-bottom: 18px; font-size: .9rem; border: 1px solid var(--line); background: var(--paper-2); }
+.flash { padding: 12px 16px; border-radius: 2px; margin-bottom: 18px; font-size: .9rem; border: 1px solid var(--line); background: var(--paper-2); }
 .flash.ok { background: rgba(88,150,100,.14); border-color: rgba(88,150,100,.34); }
 .flash.warn { background: rgba(207,90,50,.14); border-color: rgba(207,90,50,.36); }
 
 /* ---------- comm ---------- */
-.post { border: 1px solid var(--line); border-radius: var(--r); padding: 22px; margin-bottom: 18px; background: var(--paper-2); transition: transform .4s var(--ease), box-shadow .4s, border-color .4s; }
-.post:hover { transform: translateY(-3px); border-color: rgba(207,90,50,.3); box-shadow: 0 24px 50px -30px rgba(0,0,0,.9); }
+/* 去卡片化：帖子是**发丝分隔的行**，不是浮起的填充卡片。
+   填充卡片 + hover 上浮 + 大投影，是最典型的"通用 App 模板"动作，编辑式站点不用。
+   ⚠️ 发帖表单和帖子共用 .post，表单用 .post--form 保留一个描边实体块。 */
+.post { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 22px 0; margin: 0; background: transparent; transition: padding-left .45s var(--ease), background .45s; }
+.post:first-of-type { border-top: 1px solid var(--line); }
+.post:hover { padding-left: 12px; background: linear-gradient(90deg, var(--paper-2), transparent 55%); }
+.post--form { border: 1px solid var(--line); border-radius: var(--r); padding: 22px; margin-bottom: 26px; background: transparent; }
+.post--form:hover { padding-left: 22px; background: transparent; }
 .post__head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .post__av { width: 36px; height: 36px; border-radius: 50%; background: var(--paper-3); border: 1px solid var(--line); color: var(--ink); display: grid; place-items: center; font-family: var(--font-display); }
 .post__name { font-weight: 500; }
@@ -658,11 +670,37 @@ select.chip { border: 1px solid var(--line); border-radius: 2px; background: var
 .me-stat { display: flex; gap: 22px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
 .me-stat .n { font-family: var(--font-display); font-size: 1.5rem; }
 .me-stat .l { font-size: .78rem; color: var(--ink-3); }
+/* 收藏三格：发丝顶线的编辑式小块，不用填充卡片 */
+.fav { border-top: 1px solid var(--line); padding-top: 14px; }
 .stack > * + * { margin-top: 14px; }
+
+/* ---------- faq / 折叠清单：发丝分隔，不用填充卡片 ---------- */
+.faq { border-top: 1px solid var(--line); }
+.faq details { border-bottom: 1px solid var(--line); }
+.faq summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  padding: 24px 0; cursor: pointer; list-style: none;
+  font-family: var(--font-display); font-size: clamp(1.12rem, 1.7vw, 1.4rem); line-height: 1.24;
+  transition: color var(--t-micro) var(--ease-soft);
+}
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after {
+  content: ""; flex: none; width: 13px; height: 13px;
+  background:
+    linear-gradient(var(--ink-3), var(--ink-3)) center/13px 1.4px no-repeat,
+    linear-gradient(var(--ink-3), var(--ink-3)) center/1.4px 13px no-repeat;
+  transition: transform var(--t-mid) var(--ease-soft);
+}
+.faq summary:hover { color: var(--lit); }
+.faq details[open] summary::after {
+  transform: rotate(45deg);
+  background-image: linear-gradient(var(--accent), var(--accent)), linear-gradient(var(--accent), var(--accent));
+}
+.faq details > p { margin: 0 0 26px; color: var(--ink-2); max-width: 64ch; }
 
 /* ---------- detail ---------- */
 .detail { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(24px,4vw,60px); align-items: start; }
-.detail__cover { aspect-ratio: 1; border-radius: 18px; background: var(--paper-3); border: 1px solid var(--line); display: grid; place-items: center; position: relative; overflow: hidden; }
+.detail__cover { aspect-ratio: 1; border-radius: 2px; background: var(--paper-3); border: 1px solid var(--line); display: grid; place-items: center; position: relative; overflow: hidden; }
 .detail__cover .emo { font-family: var(--font-display); font-weight: 900; font-size: 4.6rem; color: rgba(242,236,225,.9); }
 .detail__cover .ov { position: absolute; inset: 0; z-index: 2; background: radial-gradient(120% 90% at 30% 10%, rgba(207,90,50,.3), transparent 60%); }
 /* 详情页封面是主角：只做极轻的暗角压边，不压暗主体 */
@@ -674,7 +712,7 @@ select.chip { border: 1px solid var(--line); border-radius: 2px; background: var
 .kv dd { margin: 0; }
 .book { background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r); padding: 24px; }
 .book__day { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 18px; }
-.book__day button { padding: 9px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--paper-3); color: var(--ink); transition: .3s; }
+.book__day button { padding: 9px 14px; border-radius: 2px; border: 1px solid var(--line); background: var(--paper-3); color: var(--ink); transition: .3s; }
 .book__day button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 
 /* ---------- cursor ---------- */
@@ -972,7 +1010,7 @@ html.has-media .boot { background: #070605; }
 .pay { display: grid; grid-template-columns: 1.12fr .88fr; gap: clamp(26px, 4vw, 64px); align-items: start; }
 .pay__side { background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r); padding: clamp(20px, 2.4vw, 26px); }
 .pay__side h2 { font-family: var(--font-mono); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 14px; font-weight: 400; }
-.qr { width: 148px; flex: none; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--paper-3); }
+.qr { width: 148px; flex: none; border: 1px solid var(--line); border-radius: 2px; overflow: hidden; background: var(--paper-3); }
 .wechat { font-family: var(--font-mono); font-size: 15px; letter-spacing: .04em; color: var(--accent-2); word-break: break-all; }
 
 /* ---------- 通用两栏（DM 主页等内页）----------

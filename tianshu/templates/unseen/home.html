@@ -33,8 +33,8 @@
     <div class="stage__top">
       <span class="eyebrow" data-reveal><b>S.01</b> 甜薯剧本杀 · 约局工作室</span>
       <div class="stage__clock" data-reveal data-d="1">
-        <span data-today>—</span> · 今晚<br>
-        <b>{{ sessions|length }}</b> 场在开 · 已陪同 <b data-count="{{ served or 0 }}">0</b> 场
+        <span data-today>—</span><br>
+        {% if sessions %}<b>{{ sessions|length }}</b> 场 · 今晚开局{% else %}今晚，等你开场{% endif %}
       </div>
     </div>
 
@@ -51,8 +51,7 @@
     </div>
 
     <p class="stage__sub" data-reveal data-d="2">
-      不是又一家剧本杀店。我们做的是「<b>约本</b>」这件事本身 —— 挑本、拼车、组局、唠嗑，一条线索串到底。
-      把光标挪到字上，光就跟到哪儿；剩下的，交给暗场。
+      不是又一家剧本杀店。我们只做「<b>约本</b>」这一件事 —— 挑本、拼车、组局、唠嗑，一条线索串到底。
     </p>
 
     <div class="stage__foot">

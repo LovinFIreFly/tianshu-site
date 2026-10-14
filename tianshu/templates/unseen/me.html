@@ -23,12 +23,13 @@
         <section data-reveal>
           <h2 class="h3" style="margin-bottom:14px">我的预约</h2>
           <div class="rows">
+            {% set b_map = {'booked':'已预约','arrived':'已到店','cancelled':'已取消','pending':'待确认','done':'已完成'} %}
             {% for b in bookings[:8] %}
             <div class="row">
               <span class="row__when">{{ b.time or '' }}</span>
               <span>
                 <span class="row__title">{{ b.scriptTitle or '一场预约' }}</span><br>
-                <span class="row__sub">{{ b.players or '' }} 人 · {{ b.status or '' }}</span>
+                <span class="row__sub">{{ b.players or '' }} 人 · {{ b_map.get(b.status, b.status) or '' }}</span>
               </span>
               <span class="row__pill">{{ '拼车' if b.carNew else '包车' }}</span>
               <a class="idx__go" href="{{ url_for('public.script_detail', sid=b.sid) if b.sid else '#' }}">看本 →</a>
@@ -43,7 +44,7 @@
           <h3 class="h3" style="margin-bottom:14px">收藏</h3>
           <div class="field--row">
             {% for g, label in [('want','想玩'),('done','已玩'),('avoid','避雷')] %}
-            <div class="card" style="padding:14px">
+            <div class="fav">
               <div class="note" style="margin:0 0 8px">{{ label }}（{{ favGroups[g]|length }}）</div>
               <div style="font-size:.9rem">{{ favGroups[g]|map(attribute='title')|join('、') or '—' }}</div>
             </div>

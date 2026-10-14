@@ -14,6 +14,7 @@
     </div>
 
     <div class="rows" style="margin-top:24px">
+      {% set st_map = {'open':'可约','closed':'已关闭','full':'已满','cancelled':'已取消','done':'已散场','pending':'待确认'} %}
       {% for s in sessions %}
       <a class="row" href="{{ url_for('public.script_detail', sid=s.sid) if s.sid else url_for('public.scripts') }}" data-reveal data-d="{{ loop.index0 % 4 }}" data-cursor>
         <span class="row__when">{{ s.time or '' }}</span>
@@ -21,7 +22,7 @@
           <span class="row__title">{{ s.title or '一场组局' }}</span><br>
           <span class="row__sub">《{{ s.scriptTitle or '' }}》· DM {{ s.dmName or '待安排' }} · {{ s.players or '' }} 人</span>
         </span>
-        <span class="row__pill">{{ s.status or 'open' }}</span>
+        <span class="row__pill">{{ st_map.get(s.status, s.status) or '可约' }}</span>
         <span class="idx__go">→</span>
       </a>
       {% else %}
