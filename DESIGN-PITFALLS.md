@@ -154,7 +154,31 @@ LISTEN 的端口，判断依然准确；Windows 例外 —— 那边会真抢端
 
 ---
 
-## 10. 本节的方法论（怎么发现这些坑的）
+## 10. 转场点击拦截：同路径 + query 不能一刀切放行
+
+**现象**：点首页「先瞅瞅有啥本」（`/` → `/?browse=1`，欢迎页→浏览页）时，整页被 reload（"整页 load 新增 = 1"），v9 的场景流动转场没生效，像退回了最原始的硬跳。
+
+**根因**：`Transit` 的点击拦截里有一条早期规则：
+
+```js
+if (url.pathname === location.pathname && url.search) return;
+```
+
+本意是：本本墙原地换网格（`?partial=1` 只改 query）应当交给页面自己的 `[data-lib]` 处理，别被转场拦截。但它**没有区分"是不是本本墙"** —— 任何"同路径 + 改 query"的链接都被放行，于是 `/` → `/?browse=1` 这次"整页内容替换"也被放过了，走回整页 load。
+
+**修法**：放行条件收紧到"页面真的有原地换内容的标记"才交给页面自己：
+
+```js
+if (url.pathname === location.pathname && url.search && document.querySelector('[data-lib]')) return;
+```
+
+只有本本墙（`[data-lib]`）才走页面内 swap；其它同路径改 query 一律照常走 fetch 换 DOM。
+
+**验证**：playwright 点「先瞅瞅有啥本」，`整页 load 新增 = 0`，转场层正常工作；本本墙分类切换仍是原地换网格、不受影响。
+
+---
+
+## 11. 本节的方法论（怎么发现这些坑的）
 
 | 手段 | 用途 |
 |---|---|

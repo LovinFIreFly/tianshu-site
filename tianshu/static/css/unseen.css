@@ -630,6 +630,42 @@ html.gsap-on .split .ch { animation: none !important; transform: none !important
 [data-float] { will-change: transform; }
 
 /* ============================================================================
+   页内「场景流动」入场（v10）—— 让首屏之下的每一幕，都用和页间转场同一套
+   「从下方上移 + 去模糊」的语言进场，整页滚动就像在不同场景之间流动，
+   而不是普通地往下滚。配合 backdrop 的 WebGL 场（随滚动变章节 = uChapter），
+   营造 bienville / hubtown 那种「你始终在一个空间里」的固定视图感。
+
+   ⚠️ 这些元素本就在文档里（不是换页时新插入的），所以这里用 transition 没问题——
+   它们首帧就以「下方 9vh + 模糊」画出，IntersectionObserver 触发 .in 时才有过渡。
+   （页间转场之所以必须用 animation，是因为换页新节点可能还没被画过任何一帧。）
+   安全：初始隐藏只在 html.js-on 下生效；无 JS / 无 IO / reduced-motion 一律直接可见。
+   ========================================================================== */
+html.js-on [data-scene] {
+  opacity: 0;
+  transform: translate3d(0, 9vh, 0);
+  filter: blur(7px);
+  transition: opacity .8s var(--ease-out),
+              transform .9s cubic-bezier(.16, 1, .3, 1),
+              filter .7s linear;
+  will-change: transform, opacity, filter;
+}
+html.js-on [data-scene].in { opacity: 1; transform: none; filter: blur(0); }
+
+/* 首屏离场视差：滚出第一幕时，整组内容像「房间」在身后退去（上移 + 微缩 + 淡出） */
+.stage__body {
+  transform: translate3d(0, calc(var(--leave, 0) * -9%), 0)
+             scale(calc(1 - var(--leave, 0) * 0.05));
+  opacity: calc(1 - var(--leave, 0) * 0.9);
+  transform-origin: 50% 42%;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.js-on [data-scene] { opacity: 1; transform: none; filter: none; transition: none; }
+  .stage__body { transform: none; opacity: 1; }
+}
+
+/* ============================================================================
    场景流动式转场（v9）—— 学 unseen.co 的换页：旧场景上移离场，新场景从下方上移进入，
    中间用「液面漫过」溶接。不再用「盖一个甜薯字标」那种硬切。
    参考：unseen.co/projects 与 Index 之间的过渡（过渡中整屏变成横向波纹 + 青/品红描边色散）。

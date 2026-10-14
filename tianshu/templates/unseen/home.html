@@ -102,7 +102,7 @@
 {% endif %}
 
 <!-- 幕三 · 今晚（时间轴排期） -->
-<section class="night" id="a3">
+<section class="night" id="a3" data-scene>
   <div class="wrap">
     <div class="sec__head" style="margin-bottom:0">
       <div>
@@ -129,7 +129,7 @@
 </section>
 
 <!-- 幕四 · 路径（四件事） -->
-<section class="paths" id="a4">
+<section class="paths" id="a4" data-scene>
   <div class="wrap paths__grid">
     <div>
       <div class="paths__huge" data-float="-0.06">四<br><em>件</em>事</div>
@@ -166,7 +166,7 @@
 
 <!-- 幕五 · 声音 -->
 {% if reviews %}
-<section class="voices" id="a5" data-voices>
+<section class="voices" id="a5" data-voices data-scene>
   <div class="wrap">
     <span class="eyebrow" data-reveal>玩家之声 · Voices</span>
     <div class="voices__stage">
@@ -185,7 +185,7 @@
 {% endif %}
 
 <!-- 谢幕 -->
-<section class="curtain">
+<section class="curtain" data-scene>
   <div class="curtain__glow" aria-hidden="true"></div>
   <div class="wrap">
     <div class="curtain__grid">

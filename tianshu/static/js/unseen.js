@@ -191,6 +191,44 @@
     els.forEach(function (el) { io.observe(el); });
   }
 
+  /* ---------------- 页内「场景流动」入场 ----------------
+     首屏之下的每一幕（data-scene）：进入视口时从下方 9vh + 模糊流上来、去模糊就位，
+     与页间转场（is-in）同一套视觉语言，让整页滚动像在不同场景间流动。
+     安全：无 IO / reduced-motion 一律直接 .in；初始隐藏只在 html.js-on 下生效。 */
+  function initScenes() {
+    var secs = $$('[data-scene]');
+    if (!secs.length) return;
+    if (REDUCE || !('IntersectionObserver' in window)) {
+      secs.forEach(function (s) { s.classList.add('in'); });
+      return;
+    }
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (en) {
+        if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
+      });
+    }, { threshold: 0.16, rootMargin: '0px 0px -10% 0px' });
+    secs.forEach(function (s) { io.observe(s); });
+  }
+
+  /* ---------------- 首屏离场视差 ----------------
+     滚出第一幕时，整组 hero 内容像「房间」在身后退去（上移 + 微缩 + 淡出）。
+     配合背后固定不动的 WebGL 场（随滚动变章节），就是 bienville / hubtown 那种
+     「你始终在一个空间里、只是视角在挪」的固定视图感。纯 transform/opacity，不重绘。 */
+  function initHeroParallax() {
+    var stage = $('.stage');
+    if (!stage || REDUCE || COARSE) return;
+    var body = $('.stage__body', stage);
+    if (!body) return;
+    var h = stage.offsetHeight || innerHeight, last = -1;
+    pOn(window, 'resize', function () { h = stage.offsetHeight || innerHeight; }, { passive: true });
+    loop('heroLeave', function () {
+      var p = clamp(window.scrollY / h, 0, 1);
+      if (Math.abs(p - last) < 0.002) return;     // 只在变动时写样式，避免无谓合成
+      last = p;
+      body.style.setProperty('--leave', p.toFixed(3));
+    });
+  }
+
   /* ---------------- Spotlight 追光照亮 ---------------- */
   function initSpotlight() {
     var stage = $('[data-spot]');
@@ -479,7 +517,12 @@
       try { url = new URL(a.href, location.href); } catch (err) { return; }
       if (url.origin !== location.origin) return;
       if (/^\/(admin|dm)(\/|$)/.test(url.pathname)) return;              // 后台 / DM 工作台：各走各的
-      if (url.pathname === location.pathname && url.search) return;      // 只换 query（本本墙筛选）：交给页面自己
+      /* 只换 query 时：只有「本页自带原地换内容」的才交给页面自己 —— 本本墙用 [data-lib] 标记，
+         它的筛选/搜索是自己 fetch 换网格的，转场插一脚会和它打架。
+         ⚠️ 别把这条写成「同名路径 + 有 query 就放行」：`/` → `/?browse=1` 也是同名路径带 query，
+         但那是「落地页(welcome) → 浏览页(home)」的整页内容切换，放行就变成生硬整页跳（实测踩过）。 */
+      if (url.pathname === location.pathname && url.search &&
+          document.querySelector('[data-lib]')) return;
       e.preventDefault();
       go(url.href);
     }
@@ -916,9 +959,12 @@
   function bootPage() {
     pOff();
     stopLoop('spotlight');
+    stopLoop('heroLeave');
     if (VOICE_TIMER) { clearInterval(VOICE_TIMER); VOICE_TIMER = null; }
     initReveal();
     initSplit();
+    initScenes();
+    initHeroParallax();
     initSpotlight();
     initGallery();
     initTouchGallery();
