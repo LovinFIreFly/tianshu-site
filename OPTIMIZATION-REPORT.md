@@ -186,6 +186,7 @@ SEO/社交元信息、安全头、PWA 离线。WebGL 与滚动这块**已经调�
 |---|---|---|
 | 中文字体瘦身 | ✅ 已做 | 从 Google Fonts **移除 Noto Sans/Serif SC 两个 CJK 家族**，中文交系统字族；Fraunces 去掉未用字重。`templates/unseen/layout.html` + `static/css/unseen.css` 的 `--font-display/--font-sans` |
 | hero LCP | ✅ 已做 | hero 图改**模板直出** + `<link rel=preload as=image fetchpriority=high>` + `width/height/decoding`；`unseen.js` 的 `initHeroMedia` 改为"图片直出、有视频才升级" |
+| hero 场景视频 | ✅ 已做 | `static/media/hero.mp4`：以原 `hero.webp` 为首帧做图生视频（首帧与静态图一致，切换无缝），**720p H.264 CRF30 无声 196KB**（原 3.1MB，并裁掉生成水印）。走 v12 的"图片在前、视频就绪后升级"路径 —— **LCP 仍是静态图**，视频只在加载完才淡入替换，不伤首屏 |
 | 图片尺寸/解码 | ✅ 已做 | unseen 各模板补 `decoding="async"`、`loading="lazy"`、关键图 `width/height`（容器本就有 `aspect-ratio`，CLS 已基本解决） |
 | 安全头 | ✅ 已做 | `tianshu/__init__.py` 的 `after_request` 统一加 nosniff / Referrer-Policy / Permissions-Policy / X-Frame-Options（HTTPS 下加 HSTS）+ CSP **Report-Only** |
 | OG/canonical/manifest/theme-color | ✅ 已做 | `templates/unseen/layout.html`（unseen 版此前只有一条 description） |

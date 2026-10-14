@@ -34,6 +34,13 @@ BUDGET = {
 # 首屏"必须下载"的壳层合计预算（gzip 后）
 SHELL_BUDGET_KB = 108.0
 
+# 首屏媒体（已压缩，不 gzip；按原始大小算）
+MEDIA_BUDGET = {
+    'media/hero.mp4':  400.0,   # 无声循环，720p CRF30 约 200K
+    'media/hero.webp': 120.0,   # LCP 图
+    'media/hero.jpg':  220.0,   # 老格式兜底
+}
+
 
 def gz(path):
     with open(path, 'rb') as fh:
@@ -66,6 +73,17 @@ def main():
         tflag = '  <== OVER'
         over = True
     print('%-34s %18.1fK %8.1fK%s' % ('TOTAL (gzip)', tot, SHELL_BUDGET_KB, tflag))
+    # 首屏媒体（不 gzip）
+    for rel, budget in MEDIA_BUDGET.items():
+        path = os.path.join(STATIC, rel)
+        if not os.path.exists(path):
+            continue
+        raw = os.path.getsize(path) / 1024.0
+        flag = ''
+        if raw > budget:
+            flag = '  <== OVER'
+            over = True
+        print('%-34s %8.1fK %9s %8.1fK%s' % (rel, raw, '', budget, flag))
     if over:
         print('\n有资源超出预算。' + ('（--strict）' if strict else ''))
         if strict:
