@@ -122,13 +122,13 @@
 <!-- 幕三 · 今晚（时间轴排期） -->
 <section class="night" id="a3" data-scene>
   <div class="wrap">
-    <div class="sec__head" style="margin-bottom:0">
-      <div>
-        <span class="eyebrow" data-reveal><b>S.03</b> 今日组局 · Tonight</span>
-        <h2 class="h2" style="margin-top:14px" data-reveal data-d="1">今晚，<br>谁在开场。</h2>
+    <div class="night__head">
+      <h2 class="h2 night__title" data-reveal>今晚，<br>谁在开场。</h2>
+      <div class="night__meta">
+        <span class="eyebrow" data-reveal data-d="1"><b>S.03</b> 今日组局 · Tonight</span>
         <p class="kicker" data-reveal data-d="2">今晚的司仪，是台上那个人。</p>
+        <a class="link-underline" href="{{ url_for('public.group') }}" data-reveal data-d="3">组局一览 →</a>
       </div>
-      <a class="link-underline" href="{{ url_for('public.group') }}" data-reveal>组局一览 →</a>
     </div>
     {% if sessions %}
     <div class="night__axis" data-night>

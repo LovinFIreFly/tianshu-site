@@ -73,11 +73,11 @@
       <span class="mark">薯</span><span class="brand-word">甜薯</span>
     </a>
     <nav class="nav__links" id="navLinks">
-      <a href="{{ url_for('public.scripts') }}" class="{{ 'on' if request.path.startswith('/scripts') }}">本本墙</a>
-      <a href="{{ url_for('public.car') }}" class="{{ 'on' if request.path.startswith('/car') }}">拼车</a>
-      <a href="{{ url_for('public.comm') }}" class="{{ 'on' if request.path.startswith('/comm') }}">唠嗑</a>
-      <a href="{{ url_for('public.group') }}" class="{{ 'on' if request.path.startswith('/group') }}">组局</a>
-      <a href="{{ url_for('public.faq') }}">问答</a>
+      <a href="{{ url_for('public.scripts') }}" class="{{ 'on' if request.path.startswith('/scripts') }}"><span class="nw"><b>本本墙</b><i>本本墙</i></span></a>
+      <a href="{{ url_for('public.car') }}" class="{{ 'on' if request.path.startswith('/car') }}"><span class="nw"><b>拼车</b><i>拼车</i></span></a>
+      <a href="{{ url_for('public.comm') }}" class="{{ 'on' if request.path.startswith('/comm') }}"><span class="nw"><b>唠嗑</b><i>唠嗑</i></span></a>
+      <a href="{{ url_for('public.group') }}" class="{{ 'on' if request.path.startswith('/group') }}"><span class="nw"><b>组局</b><i>组局</i></span></a>
+      <a href="{{ url_for('public.faq') }}"><span class="nw"><b>问答</b><i>问答</i></span></a>
     </nav>
     <div class="nav__cta">
       {% if my_dm %}<a class="link-underline nav__work" href="{{ url_for('dm.index') }}">DM 工作台</a>{% endif %}

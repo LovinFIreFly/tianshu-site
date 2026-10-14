@@ -235,6 +235,13 @@ p, .lede, .p__d, .idx__desc { text-wrap: pretty; }
 .nav__links a { font-size: .94rem; color: var(--ink-2); transition: color .3s; position: relative; }
 .nav__links a:hover, .nav__links a.on { color: var(--ink); }
 .nav__links a.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 2px; background: var(--accent); border-radius: 2px; }
+/* 双层字体切换（学 unseen.co 的导航母题）：无衬线 → 衬线斜体滑入，把"理性→感性"的瞬间做进导航。
+   注意：overflow:hidden 必须放在内层 .nw 上，不能放在 <a> 上 —— 否则会把 .on 的下划线一起裁掉。 */
+.nw { position: relative; display: inline-block; height: 1.32em; overflow: hidden; vertical-align: bottom; }
+.nw b, .nw i { display: block; font-weight: 400; font-style: normal; transition: transform .45s var(--ease-out); }
+.nw i { position: absolute; inset: 0; transform: translateY(108%); font-family: var(--font-display); font-style: italic; letter-spacing: .02em; color: var(--accent-2); }
+.nav__links a:hover .nw b { transform: translateY(-108%); }
+.nav__links a:hover .nw i { transform: translateY(0); }
 .nav__cta { display: flex; align-items: center; gap: 14px; }
 .nav__work { color: var(--accent-2); }
 .nav__work::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; margin-right: 7px; vertical-align: middle; box-shadow: 0 0 0 3px rgba(207,90,50,.18); }
@@ -432,6 +439,12 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
    幕三 · 时间轴排期（今晚组局）
    ========================================================================== */
 .night { position: relative; padding: var(--sec-y) 0; }
+/* 幕三页首**不复刻幕二**：幕二是"eyebrow → h2 → kicker"竖排，幕三改成
+   "巨标题在左 / 元信息挂在右侧竖线栏" —— 同一页两幕编排明显不同，节奏才不雷同（去模板感的关键一步）。 */
+.night__head { display: grid; grid-template-columns: minmax(0, 1.28fr) minmax(0, .72fr); align-items: end; gap: clamp(24px, 4vw, 62px); }
+.night__title { font-size: clamp(2.7rem, 7vw, 6.2rem); }
+.night__meta { display: grid; gap: 14px; justify-items: start; border-left: 1px solid var(--line); padding-left: clamp(18px, 2vw, 30px); }
+@media (max-width: 760px) { .night__head { grid-template-columns: 1fr; } .night__meta { border-left: 0; padding-left: 0; } }
 .night__axis { position: relative; margin-top: clamp(34px, 6vh, 70px); height: clamp(180px, 26vh, 260px); border-top: 1px solid var(--line); }
 .night__tick { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line-2); }
 .night__tick span { position: absolute; top: 12px; left: 8px; font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: .1em; }
@@ -514,8 +527,22 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
    通用小节（内页沿用）
    ========================================================================== */
 .sec { padding: var(--sec-y) 0; }
-.sec__head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; margin-bottom: clamp(28px,4vw,52px); }
-.sec__head .h2 { max-width: 20ch; }
+/* 非对称页首（学 upforward 的 7:5 + 基线错位、unseen 的 Selected Work）：
+   左右不等分才有张力，"两栏各半、都贴底"是最像模板的那种对称。 */
+.sec__head {
+  display: grid; grid-template-columns: minmax(0, 1.42fr) minmax(0, .58fr);
+  align-items: end; gap: clamp(20px, 3vw, 46px);
+  margin-bottom: clamp(32px, 4.6vw, 64px);
+}
+.sec__head > :last-child { justify-self: end; text-align: right; }
+.sec__head .h2 { max-width: 18ch; }
+/* 内页页首抬到"真巨字"：原先与节标题同尺寸 → 整站缺一条层级线（unseen 的字号对比可达 ~7×）。 */
+.sec .sec__head .h2,
+.sec > .wrap > .h2 { font-size: clamp(2.5rem, 6.4vw, 5.8rem); line-height: 1.01; letter-spacing: -.015em; }
+@media (max-width: 760px) {
+  .sec__head { grid-template-columns: 1fr; }
+  .sec__head > :last-child { justify-self: start; text-align: left; }
+}
 
 .idx { border-top: 1px solid var(--line); }
 .idx__row {
@@ -531,13 +558,18 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 .idx__row:hover .idx__go { color: var(--accent); }
 
 /* 剧本卡片（内页本本墙）*/
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(258px, 1fr)); gap: clamp(16px,2vw,26px); }
-.card {
-  position: relative; background: var(--paper-2); border: 1px solid var(--line);
-  border-radius: var(--r); overflow: hidden; transition: transform .5s var(--ease), box-shadow .5s, border-color .5s;
+/* 发丝网格（学 unseen 的 Selected Work / upforward 的 .rows）：
+   1px gap 露出底色当分隔线 —— 一屏摆开像一张**印样**，而不是一堆浮起的卡。
+   去掉卡片自己的边框/圆角/面板底色，hover 只换底色（不位移、不投影）。 */
+.cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(258px, 1fr));
+  gap: 1px; background: var(--line); border-block: 1px solid var(--line);
 }
-/* hover：不再"整块上浮 + 大投影"（那是通用卡片模板的动作），改成边框发亮 + 内容微微前压 */
-.card:hover { border-color: rgba(207,90,50,.45); }
+.card {
+  position: relative; background: var(--paper); border: 0;
+  border-radius: 0; overflow: hidden; transition: background .5s var(--ease);
+}
+.card:hover { background: var(--paper-2); }
 .card__cover { aspect-ratio: 4/5; background: var(--paper-3); display: grid; place-items: center; position: relative; overflow: hidden; }
 .card__cover .emo { font-family: var(--font-display); font-weight: 900; font-size: clamp(2.8rem,5vw,4rem); color: rgba(242,236,225,.9); }
 .card__cover .ov { position: absolute; inset: 0; background: radial-gradient(120% 90% at 30% 10%, rgba(207,90,50,.32), transparent 60%); }
@@ -892,6 +924,16 @@ main.is-in { animation: sceneIn var(--tr-in) cubic-bezier(.16,1,.3,1) both; }
   transition: opacity .9s var(--ease);
 }
 .transit.on .transit__haze { opacity: 1; }
+/* 噪声溶接（学 unseen.co 的噪声 wipe）：给"液面"一层不规则颗粒，
+   否则扫过时只有三条平直的边，看着像进度条而不是"水漫上来"。 */
+.transit__haze::after {
+  content: ""; position: absolute; inset: -14%; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cfilter id='t'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.011' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23t)'/%3E%3C/svg%3E");
+  opacity: .18; mix-blend-mode: screen;
+  transform: translate3d(0, 7vh, 0);
+  transition: transform var(--tr-band) cubic-bezier(.42,0,.28,1);
+}
+.transit.on .transit__haze::after { transform: translate3d(0, -7vh, 0); }
 
 /* ---------- 上下文转场变体（学 unseen.co 的 Highway contextual transitions）----------
    Transit 按 from→to 的"页面种类"落一个变体类（JS 里 pickTransition）：
