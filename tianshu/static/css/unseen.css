@@ -43,6 +43,16 @@
 
   --ease: cubic-bezier(.22,.61,.36,1);
   --ease-out: cubic-bezier(.16,1,.3,1);
+  /* —— 去 AI 味的动效 token（Up Forward 全站统一 cubic-bezier(.4,.4,0,1)；Sunbousai 另配带回弹的）——
+     缓动：一个站点一套命名曲线，日常用 soft，回弹只在强调处；时长分三级，别什么都 .3s。 */
+  --ease-soft: cubic-bezier(.4,.4,0,1);
+  --ease-overshoot: cubic-bezier(.34,1.2,.64,1);
+  --t-micro: .3s;    /* hover / 微交互 */
+  --t-mid:   .5s;    /* 背景 / 配色 */
+  --t-enter: .7s;    /* 内容进场 */
+  /* 行高：紧凑为主（Wantedly 正文 1.2，说明书式的 1.5 只给长段落） */
+  --lh-tight: 1.2;
+  --lh-body: 1.58;
   --r: 2px;   /* 编辑式版式：几乎不带圆角 —— 大圆角/药丸是"AI 味"最重的来源之一 */
 
   /* 转场时长（唯一来源）—— JS 也读这几个变量来决定"什么时候清场"。
@@ -61,7 +71,7 @@ body {
   font-family: var(--font-sans);
   font-weight: 400;
   font-size: clamp(15px, 1.05vw, 17px);
-  line-height: 1.65;
+  line-height: var(--lh-body, 1.58);
   letter-spacing: .005em;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -84,6 +94,15 @@ html.smooth, html.smooth body { scroll-behavior: auto; }
 }
 .skip:focus { transform: translate(-50%, 0); }
 :focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; border-radius: 3px; }
+
+/* ---------- 全局 reduced-motion 兜底（专业标志；Wantedly 10 处 / Up Forward 5 处都写了）----------
+   一处兜住全站：所有动画/过渡压到瞬时，滚动不再平滑。放在最前，优先级靠 !important 保证。 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important; scroll-behavior: auto !important;
+  }
+}
 
 /* ---------- 全局 WebGL 暗场（canvas 在内容之下，实时噪声/追光/雕刻）----------
    ⚠️ 类名必须叫 field-canvas，**不能叫 field**：表单字段用的是 .field（见下面 forms 段）。
@@ -120,21 +139,30 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .eyebrow::before { content: ""; width: 30px; height: 1px; background: var(--accent); display: inline-block; }
 .eyebrow--dark { color: var(--dark-2-ink); }
 .eyebrow--dark::before { background: var(--accent-2); }
+/* 章节号 S.01 / S.02（CoMinVi 的分镜编号）：小小的、等宽的，给页面"书/电影"的节奏 */
+.eyebrow b { font-family: var(--font-mono); font-weight: 400; letter-spacing: .12em; color: var(--accent-2); margin-right: 4px; }
 
 h1,h2,h3,h4 { font-family: var(--font-display); font-weight: 400; line-height: 1.04; margin: 0; letter-spacing: -.01em; }
-.display { font-size: clamp(2.6rem, 7.2vw, 6.2rem); font-weight: 600; }
-.h2 { font-size: clamp(2rem, 4.4vw, 3.4rem); }
-.h3 { font-size: clamp(1.4rem, 2.4vw, 2rem); }
+/* 字号阶梯收紧：AI 爱 h1=80/h2=48/h3=32 的巨大落差 + 行高 1.5；
+   这里把每级差压到 ≤2.25×（display→h2→h3→正文），读起来紧凑有力（Wantedly 的 9/11/12/13/14/16 阶梯同理）。 */
+.display { font-size: clamp(2.3rem, 6vw, 5.2rem); font-weight: 600; }
+.h2 { font-size: clamp(1.7rem, 3.2vw, 2.5rem); }
+.h3 { font-size: clamp(1.2rem, 1.9vw, 1.6rem); }
 .lede { font-size: clamp(1.05rem, 1.5vw, 1.24rem); color: var(--ink-2); max-width: 56ch; }
 .dim { color: var(--ink-3); }
 
 /* ---------- 链接 ---------- */
+/* 双层下划线交叉滑动（Wantedly 独门）：浅线从右收缩、深线从左展开，交叉瞬间像"翻页"。
+   用 transform: scaleX() + 相反的 transform-origin，比"改颜色"高级，也不触发重排。 */
 .link-underline { position: relative; display: inline-block; }
-.link-underline::after {
-  content: ""; position: absolute; left: 0; right: 100%; bottom: -2px; height: 1px;
-  background: currentColor; transition: right .45s var(--ease);
+.link-underline::before, .link-underline::after {
+  content: ""; position: absolute; left: 0; bottom: -3px; width: 100%; height: 1px;
+  background: currentColor; transition: transform var(--t-micro) var(--ease-soft);
 }
-.link-underline:hover::after { right: 0; }
+.link-underline::before { transform: scaleX(1); transform-origin: right; opacity: .3; }
+.link-underline::after  { transform: scaleX(0); transform-origin: left; }
+.link-underline:hover::before { transform: scaleX(0); }
+.link-underline:hover::after  { transform: scaleX(1); }
 
 /* ---------- 按钮（磁吸 + 光缝填充）---------- */
 .btn {
@@ -651,7 +679,8 @@ body.has-cursor .cursor-ring.big .lb { opacity: 1; transform: none; }
 /* GSAP 接管时：撤掉 CSS 的初始隐藏，改由 gsap.from 编排（避免双重动画） */
 html.gsap-on [data-reveal] { opacity: 1; transform: none; transition: none; }
 html.gsap-on .split .ch { animation: none !important; transform: none !important; }
-[data-reveal] { opacity: 0; transform: translateY(26px); transition: opacity .9s var(--ease), transform .9s var(--ease); }
+/* 初始用 .001 而不是 0：opacity:0 偶尔触发合成层优化，导致首帧闪一下（Miroom 同做法） */
+[data-reveal] { opacity: .001; transform: translateY(26px); transition: opacity var(--t-enter) var(--ease-soft), transform var(--t-enter) var(--ease-soft); }
 [data-reveal].in { opacity: 1; transform: none; }
 [data-reveal][data-d="1"] { transition-delay: .08s; }
 [data-reveal][data-d="2"] { transition-delay: .16s; }

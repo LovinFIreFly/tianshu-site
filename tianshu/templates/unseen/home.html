@@ -31,7 +31,7 @@
   <div class="stage__grain" aria-hidden="true"></div>
   <div class="wrap stage__body">
     <div class="stage__top">
-      <span class="eyebrow" data-reveal>甜薯剧本杀 · 约局工作室</span>
+      <span class="eyebrow" data-reveal><b>S.01</b> 甜薯剧本杀 · 约局工作室</span>
       <div class="stage__clock" data-reveal data-d="1">
         <span data-today>—</span> · 今晚<br>
         <b>{{ sessions|length }}</b> 场在开 · 已陪同 <b data-count="{{ served or 0 }}">0</b> 场
@@ -83,7 +83,7 @@
   <div class="gallery__sticky">
     <div class="gallery__head">
       <div>
-        <span class="eyebrow" data-reveal>本本墙 · The Catalogue</span>
+        <span class="eyebrow" data-reveal><b>S.02</b> 本本墙 · The Catalogue</span>
         <h2 class="h2" style="margin-top:14px" data-reveal data-d="1">这几部，正在上演。</h2>
       </div>
       {# 键盘/按钮替代拖拽（WCAG 2.5.7）：拖拽不再是唯一的浏览方式 #}
@@ -124,7 +124,7 @@
   <div class="wrap">
     <div class="sec__head" style="margin-bottom:0">
       <div>
-        <span class="eyebrow" data-reveal>今日组局 · Tonight</span>
+        <span class="eyebrow" data-reveal><b>S.03</b> 今日组局 · Tonight</span>
         <h2 class="h2" style="margin-top:14px" data-reveal data-d="1">今晚，谁在开场。</h2>
       </div>
       <a class="link-underline" href="{{ url_for('public.group') }}" data-reveal>组局一览 →</a>
@@ -186,7 +186,7 @@
 {% if reviews %}
 <section class="voices" id="a5" data-voices data-scene>
   <div class="wrap">
-    <span class="eyebrow" data-reveal>玩家之声 · Voices</span>
+    <span class="eyebrow" data-reveal><b>S.04</b> 玩家之声 · Voices</span>
     <div class="voices__stage">
       {% for r in reviews[:3] %}
       <blockquote class="voices__q{% if loop.first %} on{% endif %}" data-voice="{{ loop.index0 }}">
