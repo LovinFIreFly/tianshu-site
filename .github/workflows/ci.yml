@@ -1,0 +1,62 @@
+name: CI
+
+# 三道便宜的闸门，防"悄悄变胖 / 悄悄变不可达"：
+#   1) 语法：Python 编译 + JS 语法
+#   2) 体积预算：tools/perf_budget.py --strict
+#   3) 无障碍：起服务后跑 tools/a11y_check.py --strict
+# 说明：本仓库没有前端构建链（Flask+Jinja 直出 + vendor 静态资源），所以 CI 很轻。
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # JS 语法（node 预装在 runner 上）
+      - name: JS syntax
+        run: |
+          for f in tianshu/static/js/unseen.js tianshu/static/js/unseen-field.js \
+                   tianshu/static/js/vitals.js tianshu/static/js/csrf.js; do
+            node --check "$f" && echo "OK $f"
+          done
+      - name: Python syntax
+        run: python -m compileall -q tianshu app.py
+      - name: Size budget
+        run: python tools/perf_budget.py --strict
+
+  a11y:
+    runs-on: ubuntu-latest
+    # 需要能把站点起起来；本地 data/ 不入库，CI 里数据为空 —— 公开页仍应可达，
+    # 但为免"缺数据导致误报"把一个好提交卡住，这里设为不阻断（看日志即可）。
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install deps
+        run: pip install -r requirements.txt
+      - name: Boot app
+        run: |
+          python app.py --no-browser --port 8081 >/tmp/app.log 2>&1 &
+          for i in $(seq 1 40); do
+            python - <<'PY'
+import socket,sys
+try:
+    socket.create_connection(('127.0.0.1',8081),0.4).close(); sys.exit(0)
+except OSError:
+    sys.exit(1)
+PY
+            if [ $? -eq 0 ]; then echo "up"; break; fi
+            sleep 0.5
+          done
+      - name: Accessibility check
+        run: python tools/a11y_check.py http://127.0.0.1:8081 --strict

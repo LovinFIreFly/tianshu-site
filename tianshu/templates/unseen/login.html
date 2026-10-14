@@ -11,7 +11,7 @@
     <p style="color:var(--dark-2-ink)">登录后就能约本、拼车、组局、唠嗑，一条线索串到底。</p>
   </aside>
   <div class="auth__main">
-    <h2 class="h2">登录</h2>
+    <h1 class="h2">登录</h1>
     <p class="note">手机号或用户名都行。</p>
     <form method="post" action="{{ url_for('user.login') }}{% if request.args.next %}?next={{ request.args.next }}{% endif %}" style="margin-top:18px">
       <div class="field"><label for="f-account">账号</label><input id="f-account" name="account" autocomplete="username" placeholder="手机号 / 用户名" required></div>

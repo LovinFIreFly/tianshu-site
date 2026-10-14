@@ -131,6 +131,9 @@
 | 海报廊 **←/→ 键 + 前后按钮**（拖拽之外的另一条路） | WCAG 2.5.7 Dragging Movements |
 | Core Web Vitals **自采**（`vitals.js` → `POST /vitals` → `data/vitals.log`） | 零依赖 RUM，不引第三方 |
 | 体积预算 `tools/perf_budget.py` + Nginx 样例 `deploy/nginx.conf.sample` | 防回归 / 部署侧 |
+| 标题结构：每页唯一 `h1`（首屏巨字改为 `.stage__type .base` 的 h1）+ 层级不跳 | WCAG 1.3.1 / 结构化 |
+| 静态无障碍检查 `tools/a11y_check.py`（无浏览器，可挂 CI） | 自查 lang/alt/label/id/h1/地标/skip |
+| CI 门禁 `.github/workflows/ci.yml` | 语法 + 体积预算 + 无障碍 |
 
 ---
 

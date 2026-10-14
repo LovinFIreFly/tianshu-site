@@ -21,7 +21,7 @@
       </div>
 
       <div data-reveal data-d="1" style="min-width:0">
-        <h2 class="h2" style="margin:0">{{ (who.profile.nick if who.profile else '') or who.username }}</h2>
+        <h1 class="h2" style="margin:0">{{ (who.profile.nick if who.profile else '') or who.username }}</h1>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
           {% if role_name == 'dm' %}<span class="tag tag--hot">剧组 · DM</span>
           {% elif role_name == 'user' %}<span class="tag">玩家</span>
@@ -51,7 +51,7 @@
     <div class="sec__head" style="margin-bottom:20px">
       <div>
         <span class="eyebrow" data-reveal>可开本</span>
-        <h3 class="h3" data-reveal data-d="1" style="margin-top:12px">他手上的剧目。</h3>
+        <h2 class="h3" data-reveal data-d="1" style="margin-top:12px">他手上的剧目。</h2>
       </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap" data-reveal>

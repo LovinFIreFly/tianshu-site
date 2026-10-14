@@ -200,7 +200,9 @@ SEO/社交元信息、安全头、PWA 离线。WebGL 与滚动这块**已经调�
 | web-vitals RUM | ✅ 已做 | `static/js/vitals.js`（零依赖，LCP/CLS/INP）+ `POST /vitals` 落盘 `data/vitals.log` |
 | 性能预算 | ✅ 已做 | `tools/perf_budget.py`（gzip 体积预算，`--strict` 可挂 CI） |
 | Nginx 前置 / Brotli / HTTP2 | ✅ 已出样例 | `deploy/nginx.conf.sample`（需部署侧采用；Flask 侧 HSTS 记得配 ProxyFix） |
-| Lighthouse CI | ⏳ 可选 | 需 Node/CI，本仓库暂无构建链；`tools/perf_budget.py` 已可代跑体积门禁 |
+| 无障碍：标题结构 | ✅ 已做 | 每页唯一 `h1`（首屏巨字 / 页首标题）+ 层级不跳（footer h4→h2、内容 h2/h3 归位）；`tools/a11y_check.py` 复核 **10/10 通过** |
+| CI 门禁（体积 + 无障碍 + 语法） | ✅ 已加 | `.github/workflows/ci.yml`：`tools/perf_budget.py --strict` + `tools/a11y_check.py --strict` + JS/Py 语法 |
+| Lighthouse CI | ⏳ 可选 | 需真实浏览器与 CI 时长；体积与无障碍门禁已由上面两个脚本覆盖 |
 
 **验证**：17 路由 sweep 全绿（`unseen` / 坏图 0 / JS 报错 0）；`curl` 复核安全头、robots、sitemap、
 `preload/fetchpriority/manifest/SW/canonical/og`、字体 URL 已无 Noto、`/vitals` POST→204 且写盘、

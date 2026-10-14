@@ -11,7 +11,7 @@
     <p style="color:var(--dark-2-ink)">注册只要一分钟。验证码发到邮箱，本机测试直接填 1234。</p>
   </aside>
   <div class="auth__main">
-    <h2 class="h2">注册</h2>
+    <h1 class="h2">注册</h1>
     <p class="note">手机号当账号，邮箱收验证码。</p>
     <form method="post" action="{{ url_for('user.register') }}{% if request.args.next %}?next={{ request.args.next }}{% endif %}" style="margin-top:18px">
       <div class="field"><label for="f-phone">手机号</label><input id="f-phone" name="phone" inputmode="numeric" placeholder="11 位手机号" required></div>

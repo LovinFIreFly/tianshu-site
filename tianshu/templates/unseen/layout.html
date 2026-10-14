@@ -122,7 +122,7 @@
           <p style="max-width:34ch;margin-top:16px;color:var(--dark-2-ink)">把一晚上的悬念，交给一群对的人。约本、拼车、组局，一个入口搞定。</p>
         </div>
         <div>
-          <h4>逛逛</h4>
+          <h2>逛逛</h2>
           <ul>
             <li><a class="link-underline" href="{{ url_for('public.scripts') }}">本本墙</a></li>
             <li><a class="link-underline" href="{{ url_for('public.car') }}">拼车大厅</a></li>
@@ -131,7 +131,7 @@
           </ul>
         </div>
         <div>
-          <h4>账号</h4>
+          <h2>账号</h2>
           <ul>
             {% if my_dm %}<li><a class="link-underline" href="{{ url_for('dm.index') }}">DM 工作台</a></li>{% endif %}
             {% if my_admin %}<li><a class="link-underline" href="{{ url_for('admin.dashboard') }}">管理后台</a></li>{% endif %}

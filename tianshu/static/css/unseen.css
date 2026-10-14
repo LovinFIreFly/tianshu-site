@@ -259,7 +259,7 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 /* 中日韩字没有真斜体，禁止浏览器合成倾斜（合成斜体是"廉价 AI 味"的典型）：
    西文用 Fraunces 真斜体，中文保持正体。 */
 .stage__type, .h2, .h3, .poster__title, .card__title { font-synthesis: none; }
-.stage__type .base { color: var(--ink-dim); }
+.stage__type .base { color: var(--ink-dim); font-weight: inherit; }   /* 巨字是 h1，需继承 .stage__type 的 900 字重（全局 h1 复位成了 400） */
 .stage__type .litwrap { position: absolute; inset: 0; pointer-events: none; color: var(--lit); }
 .stage__type .litwrap {
   -webkit-mask-image: radial-gradient(circle clamp(150px,19vw,300px) at var(--mx,50%) var(--my,50%), #000 0%, rgba(0,0,0,.55) 44%, transparent 74%);
@@ -549,7 +549,7 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 .foot a { color: var(--dark-2-ink); }
 .foot__top { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 40px; }
 .foot__brand { font-family: var(--font-display); font-weight: 600; font-size: 1.9rem; color: var(--dark-ink); }
-.foot h4 { font-family: var(--font-mono); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 16px; }
+.foot h2 { font-family: var(--font-mono); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 16px; font-weight: 400; }
 .foot ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .foot__bottom { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--dark-line); font-size: .82rem; color: var(--dark-2-ink); }
 
@@ -908,7 +908,7 @@ html.has-media .boot { background: #070605; }
 .amount i { font-style: normal; font-size: .42em; color: var(--ink-3); vertical-align: super; letter-spacing: 0; }
 .pay { display: grid; grid-template-columns: 1.12fr .88fr; gap: clamp(26px, 4vw, 64px); align-items: start; }
 .pay__side { background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r); padding: clamp(20px, 2.4vw, 26px); }
-.pay__side h4 { font-family: var(--font-mono); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 14px; }
+.pay__side h2 { font-family: var(--font-mono); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 14px; font-weight: 400; }
 .qr { width: 148px; flex: none; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--paper-3); }
 .wechat { font-family: var(--font-mono); font-size: 15px; letter-spacing: .04em; color: var(--accent-2); word-break: break-all; }
 

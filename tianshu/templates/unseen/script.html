@@ -28,7 +28,7 @@
 
         {% if me %}
         <form method="post" action="{{ url_for('user.book') }}" class="book">
-          <h3 class="h3" style="margin-bottom:4px">约这一本</h3>
+          <h2 class="h3" style="margin-bottom:4px">约这一本</h2>
           <p class="note">填好日期和场次，定金线下转小客服微信，到店核销。</p>
           <input type="hidden" name="sid" value="{{ sc.id }}">
           <div class="field"><label for="f-ts-day">日期</label><input id="f-ts-day" type="date" name="ts_day" value="{{ day_min }}" min="{{ day_min }}" max="{{ day_max }}" required></div>
