@@ -752,6 +752,66 @@ select.chip { border: 1px solid var(--line); border-radius: 2px; background: var
 }
 .faq details > p { margin: 0 0 26px; color: var(--ink-2); max-width: 64ch; }
 
+/* ============================================================================
+   ③④ 追加：光标雕刻（symphonyofvines）/ 深度模糊墙（cosmos）/ 卡片噪声圆揭示（hubtown）
+   ========================================================================== */
+
+/* ---------- ① 光标「雕刻」（学 symphonyofvines.unseen.co 的实时雕刻）----------
+   在聚光灯之外再叠一层「被刻开的表面」：光标处露出细密的斜纹材质，
+   边缘由一层噪点撑开成毛边 —— 于是光斑不再是干净的圆，而像被刀口剖开。
+   复用聚光已有的 --mx/--my（initSpotlight 以百分比 lerp 写到 .stage 上，无需新增 JS）。 */
+.stage__carve {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    repeating-linear-gradient(72deg, rgba(255,233,207,.06) 0 1px, transparent 1px 26px),
+    radial-gradient(120% 80% at 50% 42%, rgba(255,214,178,.10), transparent 62%);
+  -webkit-mask-image: radial-gradient(circle 190px at var(--mx,60%) var(--my,40%), #000 42%, transparent 76%);
+  mask-image: radial-gradient(circle 190px at var(--mx,60%) var(--my,40%), #000 42%, transparent 76%);
+  transition: opacity 1s var(--ease);
+}
+/* 毛边：噪点层被父级 mask 一并裁切，所以只出现在雕刻圈内（不再单独挂 mask） */
+.stage__carve::after {
+  content: ""; position: absolute; inset: -14%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.5' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: .18;
+}
+body.is-idle .stage__carve { opacity: 0; }
+
+/* ---------- ② 深度模糊墙（学 cosmos.so 首屏：随机布点 + 离中心越远越糊/越淡）----------
+   用作「玩家之声 / 空状态」的氛围底：不是一张图，是一层会呼吸的散落素材。 */
+.depthwall { position: absolute; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; }
+.depthwall i {
+  position: absolute; width: 118px; aspect-ratio: 1; border-radius: 12px; display: block;
+  background: linear-gradient(135deg, #2a211a, #14100c); will-change: transform;
+}
+.depthwall i:nth-child(3n) { background: linear-gradient(135deg, #3a2a20, #1b130d); }
+.depthwall i:nth-child(4n) { background: linear-gradient(135deg, #4a2a22, #24120d); }
+.voices, .night, .curtain { position: relative; }
+.voices > .wrap, .night > .wrap, .curtain > .wrap { position: relative; z-index: 1; }
+/* 空状态（本本墙 No Match）：给深度墙一个像样的舞台 */
+.empty { position: relative; overflow: hidden; padding: clamp(64px, 12vh, 140px) 0; border-top: 1px solid var(--line); }
+.empty__inner { position: relative; z-index: 1; }
+.empty .depthwall { opacity: .8; }
+
+/* ---------- ③ 本本墙卡片：噪声毛边的圆形揭示（学 hubtown.co.in 的鼠标蒙版）----------
+   hover 时从光标处晕开一圈暖光（毛边由噪点层撑），像提灯扫过封面。 */
+.card__lit {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0;
+  background: radial-gradient(circle 130px at var(--mx,50%) var(--my,50%),
+              rgba(255,224,190,.42), rgba(207,90,50,.18) 52%, transparent 72%);
+  -webkit-mask-image: radial-gradient(circle 130px at var(--mx,50%) var(--my,50%), #000 46%, transparent 80%);
+  mask-image: radial-gradient(circle 130px at var(--mx,50%) var(--my,50%), #000 46%, transparent 80%);
+  transition: opacity .45s var(--ease);
+}
+.card__lit::after {
+  content: ""; position: absolute; inset: -10%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.55' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: .2;
+}
+.card:hover .card__lit, .card:focus-visible .card__lit { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .stage__carve, .card__lit, .depthwall { display: none; } }
+@media (max-width: 760px) { .depthwall { display: none; } }
+
 /* ---------- detail ---------- */
 .detail { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(24px,4vw,60px); align-items: start; }
 .detail__cover { aspect-ratio: 1; border-radius: 2px; background: var(--paper-3); border: 1px solid var(--line); display: grid; place-items: center; position: relative; overflow: hidden; }

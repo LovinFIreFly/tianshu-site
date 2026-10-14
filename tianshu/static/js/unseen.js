@@ -511,6 +511,43 @@
     }
   }
 
+  /* ---------------- 深度模糊墙（学 cosmos.so：随机布点 + 离中心越远越糊/越淡）---------------- */
+  function initDepthWall() {
+    $$('[data-depthwall]').forEach(function (host) {
+      if (host.__built) return; host.__built = true;
+      for (var i = 0; i < 22; i++) {
+        var t = document.createElement('i');
+        var x = Math.random() * 100, y = Math.random() * 100;
+        var edge = Math.min(x, 100 - x, y, 100 - y) / 50;      // 0(贴边) ~ 1(居中)
+        t.style.left = x + '%'; t.style.top = y + '%';
+        t.style.transform = 'translate(-50%,-50%) rotate(' + (Math.random() * 40 - 20).toFixed(1) +
+                            'deg) scale(' + (0.55 + edge * 0.7).toFixed(2) + ')';
+        t.style.opacity = (0.18 + edge * 0.5).toFixed(2);
+        t.style.filter = 'blur(' + ((1 - edge) * 2.4).toFixed(1) + 'px)';
+        host.appendChild(t);
+        if (HAS_GSAP && !REDUCE) {
+          gsap.to(t, { y: '+=' + (8 + Math.random() * 18), duration: 5 + Math.random() * 4,
+                       ease: 'sine.inOut', yoyo: true, repeat: -1, delay: Math.random() * 3 });
+        }
+      }
+    });
+  }
+
+  /* ---------------- 卡片：噪声毛边圆形揭示（学 hubtown 的鼠标蒙版）----------------
+     事件委托到 document —— 本本墙的网格会被 initLib 的 fetch 换掉，
+     挂在卡片上的监听会一起被换掉；委托则对新卡片同样生效，且只有一个监听。 */
+  function initCardLit() {
+    if (COARSE || document.__cardLit) return;
+    document.__cardLit = true;
+    document.addEventListener('mousemove', function (e) {
+      var cover = e.target && e.target.closest && e.target.closest('.card__cover');
+      if (!cover) return;
+      var r = cover.getBoundingClientRect();
+      cover.style.setProperty('--mx', ((e.clientX - r.left) / (r.width || 1) * 100) + '%');
+      cover.style.setProperty('--my', ((e.clientY - r.top) / (r.height || 1) * 100) + '%');
+    }, { passive: true });
+  }
+
   /* ---------------- Magnetic 磁吸 ---------------- */
   function initMagnetic() {
     if (COARSE || REDUCE) return;
@@ -1133,6 +1170,8 @@
     initGalleryKeyboard();
     initNight();
     initFloat();
+    initDepthWall();
+    initCardLit();
     initMagnetic();
     initRail();
     initVoices();

@@ -29,6 +29,8 @@
   <div class="stage__glow" aria-hidden="true"></div>
   <div class="stage__slits" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="stage__grain" aria-hidden="true"></div>
+  {# 光标「雕刻」层（学 symphonyofvines）：复用聚光的 --mx/--my，在光斑处露出一层被剖开的材质 #}
+  <div class="stage__carve" aria-hidden="true"></div>
   <div class="wrap stage__body">
     <div class="stage__top">
       <span class="eyebrow" data-reveal><b>S.01</b> 甜薯剧本杀 · 约局工作室</span>
@@ -186,6 +188,8 @@
 <!-- 幕五 · 声音 -->
 {% if reviews %}
 <section class="voices" id="a5" data-voices data-scene>
+  {# 玩家之声：cosmos.so 的深度模糊墙做氛围底 #}
+  <div class="depthwall" data-depthwall aria-hidden="true"></div>
   <div class="wrap">
     <span class="eyebrow" data-reveal><b>S.04</b> 玩家之声 · Voices</span>
     <div class="voices__stage">

@@ -16,6 +16,8 @@
     <div class="card__cover{% if s.img or s.cover %} card__cover--pic{% endif %}">
       {% if s.img or s.cover %}<img class="card__img" src="{{ s.img or s.cover }}" alt="{{ s.title }}" loading="lazy" decoding="async">{% endif %}
       <div class="ov"></div>
+      {# 噪声毛边的圆形揭示（学 hubtown）：hover 时从光标处晕开一圈暖光，--mx/--my 由 unseen.js 的 initCardLit 写 #}
+      <span class="card__lit" aria-hidden="true"></span>
       <span class="card__idx">{{ '%02d' % loop.index }}</span>
       <span class="emo">{{ (s.title or '本')[:1] }}</span>
     </div>
@@ -34,8 +36,12 @@
 </div>
 {% else %}
 <div class="empty" data-lib-grid data-lib-n="0">
-  <span class="eyebrow">No Match</span>
-  <h2 class="h3" style="margin-top:14px">没找到想冲的本。</h2>
-  <p class="note">换个词，或者去掉几个类型再试试 —— 类型选得越少，结果越宽。</p>
+  {# 空状态用 cosmos.so 的「深度模糊墙」做氛围底：散落素材，离中心越远越糊越淡 #}
+  <div class="depthwall" data-depthwall aria-hidden="true"></div>
+  <div class="empty__inner">
+    <span class="eyebrow">No Match</span>
+    <h2 class="h3" style="margin-top:14px">没找到想冲的本。</h2>
+    <p class="note">换个词，或者去掉几个类型再试试 —— 类型选得越少，结果越宽。</p>
+  </div>
 </div>
 {% endif %}
