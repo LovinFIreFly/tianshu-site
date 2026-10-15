@@ -31,6 +31,7 @@ strip_css, strip_js = _assets.strip_css, _assets.strip_js
 BUDGET = {
     'js/unseen.js':            21.0,
     'js/unseen-field.js':      10.0,
+    'js/unseen-dust.js':        6.0,   # 首屏浮尘粒子场（canvas 2D，零依赖）
     'js/vitals.js':             2.0,
     'js/csrf.js':               1.5,
     'js/vendor/lenis.min.js':   5.0,
@@ -41,7 +42,7 @@ BUDGET = {
     'css/lenis.css':            0.5,
 }
 # 首屏"必须下载"的壳层合计预算（gzip 后，min 列）
-SHELL_BUDGET_KB = 108.0
+SHELL_BUDGET_KB = 114.0
 
 # 首屏媒体（已压缩，不 gzip；按原始大小算）。当前首屏用静态图，不放视频。
 MEDIA_BUDGET = {

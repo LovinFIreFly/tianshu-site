@@ -23,6 +23,8 @@
     <img src="{{ url_for('static', filename='media/hero.webp') }}" alt="" fetchpriority="high" decoding="async">
   </div>
   <div class="stage__glow" aria-hidden="true"></div>
+  {# 「光中的浮尘」粒子场 —— 与 welcome.html 同一层，两个首屏不分裂。见 unseen-dust.js。 #}
+  <canvas class="stage__dust" data-dust aria-hidden="true"></canvas>
   <div class="stage__edge" aria-hidden="true">约局工作室 · 甜薯 UNSEEN</div>
   <div class="stage__edge stage__edge--r" aria-hidden="true">S.01 · 光缝 · THE LIGHT SLIT</div>
   <div class="wrap stage__body">

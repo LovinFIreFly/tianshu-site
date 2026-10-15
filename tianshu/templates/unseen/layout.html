@@ -46,6 +46,11 @@
     <span class="ic ic--search" aria-hidden="true">
       <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.6" stroke="currentColor" stroke-width="1.5"/><path d="M10.6 10.6 14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
     </span>
+    {# 输入类控件的光标：一根**画在圆圈里的 I**（上下两道短横 + 竖杆）。
+       用户明确要求：搜索框不要再出现系统那个 I 型鼠标指针，用自绘圆圈 + I 代替。 #}
+    <span class="ic ic--caret" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M5.6 2.2h4.8M8 2.2v11.6M5.6 13.8h4.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </span>
     <span class="ic ic--drag" aria-hidden="true">
       <svg viewBox="0 0 16 16" fill="none"><path d="M8 1.5 5.5 4h5L8 1.5ZM8 14.5 5.5 12h5l-2.5 2.5ZM1.5 8 4 5.5v5L1.5 8ZM14.5 8 12 5.5v5l2.5-2.5Z" fill="currentColor"/></svg>
     </span>
@@ -182,6 +187,9 @@
      unseen.js 的 initSmooth 会优先启用它，缺了才退回手写惯量滚动。 #}
   <script src="{{ url_for('static', filename='js/vendor/lenis.min.js') }}" defer></script>
   <script src="{{ url_for('asset_delivery', filename='js/unseen-field.js', v=static_v('js/unseen-field.js')) }}" defer></script>
+  {# 首屏浮尘粒子场（canvas 2D，零依赖）。必须在 unseen.js 之前 —— unseen.js 的
+     bootPage 会调 window.__dustInit() 给换页后的新 canvas 重建（幂等）。 #}
+  <script src="{{ url_for('asset_delivery', filename='js/unseen-dust.js', v=static_v('js/unseen-dust.js')) }}" defer></script>
   <script src="{{ url_for('asset_delivery', filename='js/unseen.js', v=static_v('js/unseen.js')) }}" defer></script>
   {% block extra_js %}{% endblock %}
 

@@ -1650,6 +1650,9 @@
     initMediaWarm();
     initHeroParallax();
     initSceneParallax();
+    /* 浮尘粒子场（unseen-dust.js）：换页后 #main 里的旧 canvas 已被换掉，
+       这里重新建一次（该模块的 init 是幂等的，同一个 canvas 只绑一次）。 */
+    if (window.__dustInit) window.__dustInit();
     initHeroStagger();
     initTickerSpeed();
     initSpotlight();
@@ -1669,8 +1672,7 @@
     initToday();
     initHeroMedia();
     initSearch();
-    initLib();
-    initSelect();
+    initLib();    initSelect();
     initPostForm();
   }
 

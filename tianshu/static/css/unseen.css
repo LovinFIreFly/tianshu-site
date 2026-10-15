@@ -44,7 +44,10 @@
   /* 章节纵向留白（唯一来源）。编辑式版式的"呼吸"来自这里 ——
      想往上加留白只改这一处，全站大节一起变。
      下限 96px 保证窄屏也有整块留白；上限 200px 让大屏是"一屏一幕"。 */
-  --sec-y: clamp(96px, 14vh, 200px);
+  /* 节间距。原 clamp(96px,14vh,200px) 在 900px 高的屏上就是上下各 126px —— 每节之间
+     一条巨大的白带，这正是用户说的"大面积留白 → 空 → AI 感"的来源之一。
+     压到 8.5vh 后节与节能接上，版面变"密"（不是变挤：正文行宽/字号都没动）。 */
+  --sec-y: clamp(60px, 8.5vh, 124px);
   /* 固定导航条的高度（未滚动时）。.auth__aside / .auth__main 的内边距要绕过它，
      否则左栏第一行（那个 eyebrow）会被导航压住 —— login / register 上一直如此。 */
   --nav-h: 86px;
@@ -98,6 +101,11 @@ body {
   overflow-x: hidden;
 }
 body.has-cursor { cursor: none; }
+/* ⚠️ 上面那行**管不住输入框**：UA 样式表给 input/textarea 在元素自身上设了 cursor:text，
+   而"元素自身的声明"优先于"继承来的值" —— 所以系统那个 I 型光标照样会盖在自绘光标的上面。
+   必须按元素显式关掉，改由 .cursor-ring.text / .search 里自绘的「圆圈 + I」承担。 */
+body.has-cursor input, body.has-cursor textarea, body.has-cursor select,
+body.has-cursor [contenteditable="true"], body.has-cursor [contenteditable=""] { cursor: none; }
 /* 换页 / 滚动期间锁住原生定位不受影响（走 window.scrollTo，不用 transform 包裹）*/
 html.smooth, html.smooth body { scroll-behavior: auto; }
 
@@ -361,6 +369,13 @@ body.is-idle .stage__glow { opacity: 0; }
                     oklch(96.5% 0.013 78 / .52) 68%, oklch(96.5% 0.013 78 / .70) 100%);
 }
 body.is-idle .stage__scene img { transform: translate3d(0, 0, 0) scale(1.08); }
+/* 首屏浮尘画布（见 unseen-dust.js）。放在场景底之上、正文之下。
+   注意：这里**没有** mask —— 粒子靠 JS 里"离光斑中心越远越稀"做衰减，
+   比给整块画布套 mask 更省（不用每帧重新栅格化 mask），也更好调。 */
+.stage__dust { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%;
+  display: block; pointer-events: none; }
+/* 减弱动效下**不隐藏**这层：JS 那边 REDUCE 时只画一帧静态图就不进循环了。
+   WCAG 要的是"不要动"，不是"不要质感"—— 静态浮尘留着，画面仍不空。 */
 /* 右缘竖排字标：与左缘 .stage__edge 成对（离轴编辑式家具） */
 .stage__edge--r { left: auto; right: clamp(10px, 1.4vw, 22px); transform: translateY(-50%); }
 /* 发丝线 + 微标签：给"巨字上方那片空"一点结构 —— 空不等于空无，线和小字就是家具 */
@@ -1584,10 +1599,16 @@ html.has-media .boot { background: #070605; }
    ========================================================================== */
 .cursor-ring .ic { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transform: scale(.4); transition: opacity .3s, transform .3s var(--ease-out); color: #fff; pointer-events: none; }
 .cursor-ring .ic svg { width: 44%; height: 44%; }
-body.has-cursor .cursor-ring.search { width: 64px; height: 64px; border-color: #fff; background: rgba(255,255,255,.10); }
-body.has-cursor .cursor-ring.search .ic--search { opacity: 1; transform: none; }
+/* 搜索框 / 输入框：**圆圈 + 里面一根 I**。
+   系统那个 I 型鼠标指针已被关掉（见 body.has-cursor 那几条），这里补自绘替代。
+   原先 .search 画的是放大镜、.text 是一根 3px 竖条 —— 竖条尤其糟：圆圈直接没了，
+   用户看到的就剩系统 I 型。现在两种状态统一成"圆圈 + I"。 */
+body.has-cursor .cursor-ring.search { width: 58px; height: 58px; border-color: #fff; background: rgba(255,255,255,.10); }
+body.has-cursor .cursor-ring.search .ic--search { opacity: 0; }
+body.has-cursor .cursor-ring.search .ic--caret { opacity: 1; transform: none; }
 body.has-cursor .cursor-ring.search .lb { opacity: 0 !important; }
-body.has-cursor .cursor-ring.text { width: 3px; height: 30px; border: 0; background: #fff; border-radius: 1px; }
+body.has-cursor .cursor-ring.text { width: 52px; height: 52px; border: 1.5px solid #fff; background: rgba(255,255,255,.06); border-radius: 50%; }
+body.has-cursor .cursor-ring.text .ic--caret { opacity: 1; transform: none; }
 body.has-cursor .cursor-ring.drag { width: 66px; height: 66px; border-color: #fff; background: rgba(255,255,255,.10); }
 body.has-cursor .cursor-ring.drag .ic--drag { opacity: 1; transform: none; }
 body.has-cursor .cursor-ring.drag .lb { opacity: 0 !important; }
