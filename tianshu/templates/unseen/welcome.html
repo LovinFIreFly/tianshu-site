@@ -3,9 +3,19 @@
 {% block desc %}推门进来，挑个本，坐下就开始。挑本、拼车、组局、唠嗑，一条线索串到底。{% endblock %}
 {% block content %}
 
-{# 进站闸门：暗场聚光灯语言 —— 巨字由随光标的暖色追光照亮，底部编辑式对齐、编号入口 #}
+{# 进站闸门：巨字由随光标的暖色追光照亮，底部编辑式对齐 + 编号入口。
+   用户看到的那版诊断是「太规矩太板正、不灵动、太空」—— 这里按 turionspace 的编舞去治：
+   满幅场景当纸面暗纹、底缘补一排微标签栏、标题明暗两档。 #}
 <section class="stage" data-spot>
+  {# 满幅「场景底」：图只当底纹（低透明 + 纸色渐变罩），字仍深墨、可读性不动；
+     指针/滚动给视差（--scene-x/--scene-y）；滚动时圆形场景由 26% 展开到 150%
+     —— 就是 turionspace 那个「星球变换」，见 unseen.js initSceneParallax。 #}
+  <div class="stage__scene" aria-hidden="true" data-scene-bg>
+    <img src="{{ url_for('static', filename='media/hero.webp') }}" alt="" fetchpriority="high" decoding="async">
+  </div>
   <div class="stage__glow" aria-hidden="true"></div>
+  <div class="stage__edge" aria-hidden="true">约局工作室 · 甜薯 UNSEEN</div>
+  <div class="stage__edge stage__edge--r" aria-hidden="true">S.00 · 推门 · THE DOOR</div>
   <div class="wrap stage__body">
     <div class="stage__top">
       <span class="eyebrow" data-reveal>甜薯剧本杀 · 约局工作室</span>
@@ -15,8 +25,17 @@
       </div>
     </div>
 
+    {# 发丝线 + 微标签：给"巨字上方那片空"一点结构。空不等于空无，线和小字就是家具。 #}
+    <div class="stage__rule" data-reveal data-d="1">
+      <span class="r-l"><b>000</b> 进站</span>
+      <span class="r-m" aria-hidden="true"></span>
+      <span class="r-r">14:00 – 02:00 · 全年无休</span>
+    </div>
+
     <div class="stage__type">
-      {# 首屏巨字是这一页的 h1 #}
+      {# 首屏巨字是这一页的 h1；.litwrap 是 aria-hidden 的追光视觉副本。
+         两行有意做成**明暗两档**（前句 .t:first-child 退一档墨色）—— 学 turionspace
+         一句标题里藏亮暗两档的景深，而不是整句同色糊成一块。 #}
       <h1 class="base">
         <span class="t">推门进来，</span>
         <span class="t">今晚你演<em>谁</em>？</span>
@@ -37,7 +56,19 @@
         <a class="act" href="{{ url_for('user.login') }}" data-cursor="登记">02 登录</a>
         <a class="act" href="{{ url_for('user.register') }}" data-cursor="登记">03 去登记</a>
       </div>
-      <span class="stage__scroll" data-reveal data-d="2">在演 {{ meta.scripts if meta else 0 }} 部 · 今日 {{ meta.today if meta else 0 }} 场</span>
+    </div>
+
+    {# Turion 式底缘三段微标签栏：编号 ｜ 实时数据 ｜ 右对齐两行说明。
+       原先这里只有一句 scroll 提示，虚；换成一排编目家具，把画框"钉住"。
+       ⚠️ 刻意**不用** data-reveal：它在 ScrollTrigger 的触发线以下，会一直停在
+       opacity:0 / visibility:hidden，首屏就看不见这排家具了。改用 CSS 入场动画。 #}
+    <div class="stage__cap">
+      <span class="cap__i"><i class="sq" aria-hidden="true">▪</i>000 进站</span>
+      <span class="cap__tag"><i class="sq" aria-hidden="true">▪</i>在演 {{ meta.scripts if meta else 0 }} 部 · 今日 {{ meta.today if meta else 0 }} 场</span>
+      <span class="cap__end">
+        <i class="sq" aria-hidden="true">▪</i>不是又一家剧本杀店 —— 只做「约本」这一件事<br>
+        <span class="dim">不卖卡 · 不催单 · 不让你在门口排队</span>
+      </span>
     </div>
   </div>
 </section>
@@ -53,7 +84,11 @@
 {# 宣言：巨型长句断点 —— 在重复节奏里插一段 Editorial 断点，专治单调 #}
 <section class="manifesto">
   <div class="wrap">
-    <span class="eyebrow" data-reveal>为什么是甜薯</span>
+    <div class="sec__frame" aria-hidden="true">
+      <span><i class="sq">▪</i>001</span>
+      <span class="sf__line"></span>
+      <span class="sf__note">为什么是甜薯 · <b>WHY TIANSHU</b></span>
+    </div>
     <p class="manifesto__line" data-reveal data-d="1">把一晚上的悬念，<br>交给<em>一群对的人</em>。</p>
     <p class="manifesto__note" data-reveal data-d="2">我们不卖卡、不催单、不让你在门口排队。进来坐下，剧本自己会带你走完这一晚。</p>
   </div>
@@ -63,7 +98,11 @@
 <section class="paths" data-accent="amber">
   <div class="wrap paths__grid">
     <div>
-      <span class="eyebrow" data-reveal>进门能做什么</span>
+      <div class="sec__frame" aria-hidden="true">
+        <span><i class="sq">▪</i>002</span>
+        <span class="sf__line"></span>
+        <span class="sf__note">进门能做什么 · <b>FOUR WAYS IN</b></span>
+      </div>
       <div class="paths__huge" data-reveal data-d="1" style="margin-top:18px">四件<em>事</em></div>
       <p class="paths__note" data-reveal data-d="2">从选本到散场，一条动线走完 —— 不用在四个群里来回问"还差谁"。</p>
     </div>
@@ -113,7 +152,11 @@
   <div class="wrap">
     <div class="sec__head">
       <div>
-        <span class="eyebrow" data-reveal>怎么约</span>
+        <div class="sec__frame" aria-hidden="true">
+          <span><i class="sq">▪</i>003</span>
+          <span class="sf__line"></span>
+          <span class="sf__note">怎么约 · <b>HOW IT WORKS</b></span>
+        </div>
         <h2 class="h2" data-reveal data-d="1" style="margin-top:14px">三步，<br>坐下一桌。</h2>
       </div>
       <span class="note" data-reveal>不收定金 · 不成局不扣费</span>
@@ -144,7 +187,11 @@
 {# 玩家之声：静态两句，给页面一点"真人"温度 #}
 <section class="sec">
   <div class="wrap">
-    <span class="eyebrow" data-reveal>玩家之声</span>
+    <div class="sec__frame" aria-hidden="true">
+      <span><i class="sq">▪</i>004</span>
+      <span class="sf__line"></span>
+      <span class="sf__note">玩家之声 · <b>VOICES</b></span>
+    </div>
     <div class="quotes" data-reveal data-d="1" style="margin-top:24px">
       <blockquote class="quote">
         <p class="quote__text">"本来只是想凑个周末，结果一桌人从晚上八点聊到凌晨两点，散场了还舍不得走。"</p>
@@ -160,6 +207,13 @@
 
 {# 谢幕 CTA：推门进来 #}
 <section class="curtain">
+  <div class="wrap">
+    <div class="sec__frame" aria-hidden="true">
+      <span><i class="sq">▪</i>005</span>
+      <span class="sf__line"></span>
+      <span class="sf__note">散场 · <b>CURTAIN CALL</b></span>
+    </div>
+  </div>
   <div class="wrap curtain__grid">
     <div class="curtain__big" data-reveal>推门进来，<br>今晚你<em>演谁</em>？</div>
     <div class="curtain__side">

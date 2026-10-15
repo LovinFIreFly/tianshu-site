@@ -17,6 +17,7 @@
   --ink-2:      oklch(43%   0.020 56);   /* 次级 */
   --ink-3:      oklch(53%   0.017 56);   /* 静音（浅底上 ≥4.5:1，a11y 达标；原 58% 只有 3.88） */
   --ink-dim:    oklch(73%   0.014 56);   /* 未提亮字色（巨字/水印） */
+  --ink-wash:   oklch(46%   0.019 56);   /* 巨字「前句」的退档墨色：与满墨 --ink 组成明暗两档（学 turionspace 的双色调，暖纸上 ≥5.5:1） */
   --line:       oklch(25% 0.022 56 / .14);
   --line-2:     oklch(25% 0.022 56 / .07);
 
@@ -333,6 +334,46 @@ body.is-idle .stage__glow { opacity: 0; }
    亮场首屏不再需要压暗幕布、胶片颗粒与暗场画布（Hallmark Gate 45 装饰无目的）。
    若以后要回暗场沉浸，谢幕 .curtain 已自带 --dark 底 + 暖光，无需首屏暗场。 */
 .stage__body { position: relative; z-index: 3; }
+/* 「场景底」：满幅 hero 图当纸面暗纹（学 turionspace 的满幅场景 + 巨字压其上，但洗成浅暖亮场）。
+   低透明 + 纸色渐变罩 → 字仍深墨、可读性不变；指针/滚动视差（--scene-x/--scene-y）让纸面"有生命"。
+   这是治"首屏太空"的主药：中间仍是一句话，但底不再是纯白，而是一层"在场"的影像。 */
+.stage__scene { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+  /* 「星球变换」（学 turionspace）：场景底是一束圆光，滚动时由小光斑**展开**成满幅世界。
+     --p 由 unseen.js 按首屏滚动进度写，单位 **px**（≈视口对角参考长的 26% → 150%）。
+     ⚠️ 这里必须用 px、不能用百分比：radial-gradient 的 circle 尺寸**只接受 <length>**，
+        `circle 26%` 是无效值 —— 整条声明会被丢掉、mask 直接变 none（踩过）。
+        clip-path 的 circle() 才吃百分比，但 clip-path 是硬边，浅底上会显出一个
+        "贴上去的圆"；这里要的是光斑，所以用 mask 在 62%→100% 之间渐隐化掉圆边。 */
+  -webkit-mask-image: radial-gradient(circle at 63% 40%, #000 0, #000 calc(var(--p, 320px) * .62), transparent var(--p, 320px));
+          mask-image: radial-gradient(circle at 63% 40%, #000 0, #000 calc(var(--p, 320px) * .62), transparent var(--p, 320px));
+}
+.stage__scene img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  opacity: .34; filter: saturate(.72) contrast(1.06);
+  transform: translate3d(var(--scene-x, 0px), var(--scene-y, 0px), 0) scale(1.08);
+  will-change: transform;
+}
+.stage__scene::after {
+  content: ""; position: absolute; inset: 0;
+  background:
+    radial-gradient(120% 90% at 62% 34%, oklch(96.5% 0.013 78 / .30), oklch(96.5% 0.013 78 / 0) 60%),
+    linear-gradient(180deg, oklch(96.5% 0.013 78 / .55) 0%, oklch(96.5% 0.013 78 / .40) 30%,
+                    oklch(96.5% 0.013 78 / .52) 68%, oklch(96.5% 0.013 78 / .70) 100%);
+}
+body.is-idle .stage__scene img { transform: translate3d(0, 0, 0) scale(1.08); }
+/* 右缘竖排字标：与左缘 .stage__edge 成对（离轴编辑式家具） */
+.stage__edge--r { left: auto; right: clamp(10px, 1.4vw, 22px); transform: translateY(-50%); }
+/* 发丝线 + 微标签：给"巨字上方那片空"一点结构 —— 空不等于空无，线和小字就是家具 */
+.stage__rule {
+  display: flex; align-items: center; gap: clamp(12px, 2vw, 22px);
+  margin-top: clamp(16px, 3.2vh, 32px);
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+.stage__rule .r-l b { color: var(--accent); font-weight: 400; margin-right: 6px; }
+.stage__rule .r-m { flex: 1; height: 1px; background: var(--line); }
+.stage__rule .r-r { color: var(--ink-3); white-space: nowrap; }
+@media (max-width: 600px) { .stage__rule { font-size: 10px; letter-spacing: .14em; } .stage__rule .r-r { display: none; } }
 /* 首屏左缘竖排字标：离轴编辑式细节，打破"内容永远居中在 wrap 里"的格式化感 */
 .stage__edge {
   position: absolute; left: clamp(10px, 1.4vw, 22px); top: 50%; z-index: 4;
@@ -1236,6 +1277,19 @@ main.is-in { animation: sceneIn var(--tr-in) cubic-bezier(.16,1,.3,1) both; }
   text-transform: uppercase; color: var(--ink-3);
 }
 .boot__pct { color: var(--amber-ink); }
+/* 逐行「解码」开场（学 mariavasilyeva）：等宽小字、发丝线分带、每行轻微错位 —— 有节奏的"布场"感 */
+.boot__lines {
+  display: grid; gap: 2px; justify-items: center;
+  margin: 6px 0 4px; padding: 10px clamp(20px, 6vw, 60px);
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .18em; color: var(--ink-3);
+}
+.boot__ln { display: block; white-space: nowrap; }
+.boot__lines .boot__ln:first-child { color: var(--ink-2); }
+.boot__lines .boot__ln:last-child { color: var(--amber-ink); }
+.boot__ln:nth-child(2) { transform: translateX(-13px); }
+.boot__ln:nth-child(3) { transform: translateX(9px); }
+.boot__ln:nth-child(4) { transform: translateX(-6px); }
 /* 打开后有实测素材（hero.mp4/webp）时，loader 让位给素材首帧，别抢戏 */
 html.has-media .boot { background: #070605; }
 
@@ -1617,6 +1671,82 @@ body.has-cursor .cursor-ring.drag .lb { opacity: 0 !important; }
   .stats > div:last-child { border-bottom: 0; }
   .who__act { margin-left: 0; width: 100%; }
   .band__photo { width: 96px; height: 96px; }
+}
+
+/* ============================================================================
+   去板正 · 学 turionspace / mariavasilyeva 的「编舞」
+   ── 用户诊断：「太规矩太板正，反而不灵动」。这两句判据来自 CDP 实拍：
+      · turionspace     —— 满幅场景 + 巨字压其上；**底缘一排微标签栏**
+                            （▪ 编号 · ▪ 标语 · ▪ 右对齐两行说明）把画框"钉住"；
+                            一句标题里还藏着**亮暗两档**（Accelerating … destiny 满色，
+                            中间那句褪一档）—— 框架感由此而来，不靠塞更多内容。
+      · mariavasilyeva  —— 开场是**错行等宽短句**逐行解码 + 细横线 + 居中百分比
+                            （已落在 .boot__* 上）。
+   本块只补两件：首屏底缘家具、标题明暗两档。不新增任何"无目的装饰"。
+   ========================================================================== */
+
+/* 巨字明暗两档：前句退一档墨度 → 两行有前后景深，不再是一坨同质黑。
+   亮场下用**墨度差**而非色相差（色相差会显廉价）。 */
+.stage__type .t:first-child { color: var(--ink-wash); }
+/* 追光层 .litwrap 整层是 --lit，前句被指针照亮时会自然"提回"满色 —— 前后景深随指针
+   入场而收敛，这是有意的"被光打亮"节奏，不是 bug。 */
+
+/* ── Turion 式底缘三段微标签栏 ──────────────────────────────────────────
+   首屏底部原先只有「功能入口 + 一句 scroll 提示」，虚。补一排编目家具：
+   左 编号 ｜ 中 实时数据 ｜ 右 两行小字说明（右对齐，Turion 同款）。
+   上方一条发丝线把这一栏钉在版心上 —— 线和小字就是家具，空不等于空无。 */
+.stage__cap {
+  margin-top: clamp(26px, 4.6vh, 48px);
+  padding-top: clamp(13px, 2vh, 20px);
+  border-top: 1px solid var(--line);
+  display: grid; grid-template-columns: auto auto 1fr;
+  align-items: start; gap: clamp(18px, 4vw, 64px);
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .17em;
+  text-transform: uppercase; line-height: 1.9; color: var(--ink-3);
+}
+.stage__cap .sq { font-style: normal; color: var(--accent); margin-right: 8px; font-size: .78em; vertical-align: .08em; }
+.stage__cap .cap__end { justify-self: end; text-align: right; }
+.stage__cap .cap__end .dim { color: var(--ink-3); }
+/* 底栏自己入场（不用 data-reveal：它在 ScrollTrigger 触发线下方，会一直停在隐藏态） */
+.stage__cap { animation: capIn .8s var(--ease-out) .52s both; }
+@keyframes capIn { from { opacity: 0; transform: translateY(16px); } }
+@media (max-width: 880px) {
+  .stage__cap { grid-template-columns: 1fr; gap: 3px; }
+  .stage__cap .cap__end { justify-self: start; text-align: left; }
+}
+@media (max-width: 600px) { .stage__cap { font-size: 10px; letter-spacing: .13em; } }
+
+/* ── 编辑式「节框」：编号方块 + 发丝线 + 右侧微说明 ──────────────────────
+   病根是「每一节都是 eyebrow → 巨字 → 内容」同一套骨架，节与节之间毫无标记，
+   读起来像五块同款积木摞起来。给每节钉一条节框（编号 + 横线 + 双语小注），
+   页面立刻有"被编过目"的秩序感。纯装饰，调用处一律 aria-hidden。 */
+.sec__frame {
+  display: flex; align-items: center; gap: clamp(12px, 2vw, 22px);
+  margin-bottom: clamp(16px, 2.6vh, 28px);
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.sec__frame .sq { font-style: normal; color: var(--accent); margin-right: 7px; font-size: .78em; }
+.sec__frame .sf__line { flex: 1; height: 1px; background: var(--line); }
+.sec__frame .sf__note { white-space: nowrap; }
+.sec__frame .sf__note b { color: var(--amber-ink); font-weight: 400; }
+/* 暗场（谢幕）里同一套节框换暗底配色，否则线和小字看不见 */
+.curtain .sec__frame { color: var(--dark-2-ink); }
+.curtain .sec__frame .sf__line { background: var(--dark-line); }
+@media (max-width: 600px) { .sec__frame { font-size: 10px; letter-spacing: .13em; } .sec__frame .sf__note { display: none; } }
+
+/* 首屏纵向节流：加了 .stage__rule + .stage__cap 之后，原来的间距预算在 900px 高的视口
+   里刚好溢出一屏 —— CTA 与底缘标签栏被推到折线以下，"家具"反而看不见。这里按
+   「一屏装得下：眉标 → 发丝线 → 巨字 → 说明 → 入口 → 标签栏」重配一次纵向节奏。
+   ⚠️ 必须限定 min-width:601px：本块写在文件末尾，若不加媒体查询会盖掉上面
+   600px 以下的移动端 .stage/.stage__top 规则（同特异性、后写者胜）。 */
+@media (min-width: 601px) {
+  .stage { padding-top: clamp(96px, 13vh, 136px); padding-bottom: clamp(32px, 5.2vh, 60px); }
+  .stage__top { margin-bottom: clamp(22px, 4.6vh, 54px); }
+  .stage__rule { margin-top: clamp(14px, 2.4vh, 24px); }
+  .stage__sub { margin-top: clamp(18px, 2.4vw, 28px); }
+  .stage__foot { margin-top: clamp(26px, 4.2vh, 48px); }
+  .stage__cap { margin-top: clamp(20px, 3.2vh, 36px); }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -147,6 +147,36 @@
     if (LENIS) { try { LENIS.scrollTo(y, { immediate: !!immediate }); return; } catch (e) {} }
     if (immediate) window.scrollTo(0, y); else window.scrollTo({ top: y, behavior: 'smooth' });
   }
+  /* ---------------- 首屏「场景底」视差 ----------------
+     学 unseen / mariavasilyeva 的"整屏随鼠标微动"：指针 + 滚动给 hero 底图一点位移（≤22px），
+     幅度刻意小 —— 只为让纸面"活着"，绝不抢主体字。
+     用 pOn 注册指针监听（换页会被 pOff 摘掉，不泄漏）；rAF 循环在元素被换掉后自行退出。 */
+  function initSceneParallax() {
+    var bg = $('[data-scene-bg]');
+    if (!bg || REDUCE) return;
+    var tx = 0, ty = 0, cx = 0, cy = 0;
+    pOn(window, 'pointermove', function (e) {
+      tx = (e.clientX / innerWidth - 0.5) * -22;
+      ty = (e.clientY / innerHeight - 0.5) * -14;
+    }, { passive: true });
+    (function loop() {
+      if (!bg.isConnected) return;               // 换页后元素已移除 → 自动停（不会累积循环）
+      cx = lerp(cx, tx, 0.08);
+      cy = lerp(cy, ty, 0.08);
+      var sy = window.scrollY;
+      /* 「星球变换」：首屏滚过 0→70vh 时，圆形场景由 26% 展开到 150%（小光斑 → 满幅世界）。
+         ⚠️ 半径必须以 **px** 写出：radial-gradient 的 circle 尺寸只接受 <length>，
+         `circle 26%` 是无效值，整条 mask 声明会被丢成 none。R 取视口对角参考长
+         sqrt(w²+h²)/√2 —— 与 clip-path circle(百分比) 的解析口径一致，所以视觉不变。 */
+      var p = clamp(sy / (innerHeight * 0.70), 0, 1);
+      var R = Math.sqrt(innerWidth * innerWidth + innerHeight * innerHeight) / Math.SQRT2;
+      bg.style.setProperty('--p', ((0.26 + p * 1.24) * R).toFixed(1) + 'px');
+      bg.style.setProperty('--scene-x', cx.toFixed(2) + 'px');
+      bg.style.setProperty('--scene-y', (cy + Math.min(sy, innerHeight) * 0.05).toFixed(2) + 'px');
+      requestAnimationFrame(loop);
+    })();
+  }
+
   /* #73 滚动进度条 + #78 回顶：轻量，一个 scroll 监听同时驱动两者。
      ⚠️ 必须用原生 addEventListener（不走 pOn）：bootPage 每次换页会 pOff 摘掉全部
      P_BOUND 监听，而本函数在 bootShell 只跑一次，若走 pOn 会被换页时一并摘掉，
@@ -989,7 +1019,7 @@
   function initBoot() {
     var boot = $('#boot');
     if (!boot || REDUCE) { if (boot) boot.classList.add('gone'); return; }
-    var bar = $$('#bootBar i'), pct = $('#bootPct');
+    var bar = $$('#bootBar i'), pct = $('#bootPct'), lns = $$('#bootLines .boot__ln');
     var n = bar.length || 12, score = 0, done = false;
     function paint() {
       var filled = Math.round(score * n);
@@ -999,10 +1029,31 @@
     function bump(to) { if (to > score) { score = to; paint(); } }
     function finish() {
       if (done) return; done = true;
+      lns.forEach(function (el) { el.textContent = el.getAttribute('data-t') || ''; });   // 收尾：全部解出真字
       bump(1);
-      setTimeout(function () { boot.classList.add('gone'); }, 160);
+      setTimeout(function () { boot.classList.add('gone'); }, 260);
     }
     paint();
+    /* 逐行「解码」开场（学 mariavasilyeva 的首屏转场）：每行错峰把随机字符解成真字，
+       进度走完时 finish() 兜底全部解出。纯 DOM，不依赖任何库；REDUCE 时上面已提前 return。 */
+    if (lns.length) {
+      var GLYPH = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#*<>/\\';
+      var t0 = performance.now();
+      (function decode() {
+        if (done) return;
+        var t = (performance.now() - t0) / 1000;
+        lns.forEach(function (el, i) {
+          var target = el.getAttribute('data-t') || '';
+          var keep = Math.floor(clamp((t - i * 0.18) / 0.5, 0, 1) * target.length);
+          var out = '';
+          for (var c = 0; c < target.length; c++) {
+            out += (c < keep || target.charAt(c) === ' ') ? target.charAt(c) : GLYPH[(Math.random() * GLYPH.length) | 0];
+          }
+          el.textContent = out;
+        });
+        requestAnimationFrame(decode);
+      })();
+    }
     /* 场脚本可能比我们更早跑完（defer 顺序里 unseen-field.js 在 unseen.js 前面），
        那种情况下事件已经错过了，所以先看全局标记。 */
     if (window.__tsFieldReady) { score = 1; finish(); return; }
@@ -1598,6 +1649,7 @@
     initScenes();
     initMediaWarm();
     initHeroParallax();
+    initSceneParallax();
     initHeroStagger();
     initTickerSpeed();
     initSpotlight();

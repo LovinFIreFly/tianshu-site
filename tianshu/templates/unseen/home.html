@@ -16,12 +16,15 @@
 
 <!-- 幕一 · 光缝 -->
 <section class="stage" id="a1" data-spot>
-  {# 首屏大图**直出**（旧版要等 JS 发 HEAD 探测才去加载 → LCP 晚发现）。
-     带 fetchpriority="high" + 上面的 preload，是首屏 LCP 候选（用静态图，不用视频）。
-     若以后想换成循环视频：把 mp4 放到 /static/media/ 并加 data-hero-video，
-     unseen.js 的 initHeroMedia 只会在探测到它存在时才升级。 #}
+  {# 满幅「场景底」：学 turionspace「满幅场景 + 巨字压在上面」，但按我们的浅暖亮场来 ——
+     图只当底纹（低透明 + 纸色渐变罩），字仍深墨，可读性不动。指针/滚动给一点视差
+     （--scene-x / --scene-y 由 unseen.js 写），让纸面"活着"，不再是一整张空白。 #}
+  <div class="stage__scene" aria-hidden="true" data-scene-bg>
+    <img src="{{ url_for('static', filename='media/hero.webp') }}" alt="" fetchpriority="high" decoding="async">
+  </div>
   <div class="stage__glow" aria-hidden="true"></div>
   <div class="stage__edge" aria-hidden="true">约局工作室 · 甜薯 UNSEEN</div>
+  <div class="stage__edge stage__edge--r" aria-hidden="true">S.01 · 光缝 · THE LIGHT SLIT</div>
   <div class="wrap stage__body">
     <div class="stage__top">
       <span class="eyebrow" data-reveal><b>S.01</b> 甜薯剧本杀 · 约局工作室</span>
@@ -29,6 +32,14 @@
         <span data-today>—</span><br>
         {% if sessions %}<b>{{ sessions|length }}</b> 场 · 今晚开局{% else %}今晚，等你开场{% endif %}
       </div>
+    </div>
+
+    {# 发丝线 + 微标签（学 turionspace 的角标 / 编辑式分栏线）：给"巨字上方那片空"一点结构，
+       空不等于空无 —— 线和小字就是"家具"。 #}
+    <div class="stage__rule" data-reveal data-d="1">
+      <span class="r-l"><b>001</b> 今晚的场</span>
+      <span class="r-m" aria-hidden="true"></span>
+      <span class="r-r">19:00 起 · 一束光落在桌上</span>
     </div>
 
     <div class="stage__type">
@@ -56,6 +67,17 @@
       </div>
       {% if scripts %}<span class="stage__keys" data-reveal data-d="4"><b>S</b>随机挑一本</span>{% endif %}
       <span class="stage__scroll" data-reveal data-d="4"><span class="ln"></span>往下，开幕</span>
+    </div>
+
+    {# Turion 式底缘三段微标签栏，与 welcome.html 保持同一套家具（两个首屏不分裂）。
+       同样刻意不用 data-reveal —— 它在 ScrollTrigger 触发线以下会一直停在隐藏态。 #}
+    <div class="stage__cap">
+      <span class="cap__i"><i class="sq" aria-hidden="true">▪</i>001 今晚的场</span>
+      <span class="cap__tag"><i class="sq" aria-hidden="true">▪</i>在演 {{ scripts|length }} 部 · 今日 {{ sessions|length }} 场</span>
+      <span class="cap__end">
+        <i class="sq" aria-hidden="true">▪</i>约局工作室 · 甜薯剧本杀<br>
+        <span class="dim">挑本 · 拼车 · 组局 · 唠嗑 —— 一条线索串到底</span>
+      </span>
     </div>
   </div>
 </section>

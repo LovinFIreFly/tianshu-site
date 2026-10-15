@@ -78,6 +78,15 @@
         <span class="boot__pct" id="bootPct">0%</span>
       </div>
       <div class="boot__bar" id="bootBar"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      {# 逐行「解码」开场（学 mariavasilyeva 的首屏转场）：每行先乱码、再逐字解出真字。
+         data-t 是终值——JS 拿它当目标串做 scramble，减速动画时也不会读错。 #}
+      <div class="boot__lines" id="bootLines">
+        <span class="boot__ln" data-t="正在装订剧本">正在装订剧本</span>
+        <span class="boot__ln" data-t="这需要一点时间">这需要一点时间</span>
+        <span class="boot__ln" data-t="正在调暗灯光">正在调暗灯光</span>
+        <span class="boot__ln" data-t="准备入场">准备入场</span>
+        <span class="boot__ln" data-t="祝你玩得尽兴">祝你玩得尽兴</span>
+      </div>
       <div class="boot__row">
         <span class="boot__k">正在布场</span>
         <span class="boot__k">Loading</span>
