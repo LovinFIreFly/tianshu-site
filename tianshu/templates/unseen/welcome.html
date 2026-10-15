@@ -3,15 +3,9 @@
 {% block desc %}推门进来，挑个本，坐下就开始。挑本、拼车、组局、唠嗑，一条线索串到底。{% endblock %}
 {% block content %}
 
-{# 进站闸门：与首页同属「暗场聚光灯」语言——巨字由随光标的暖色追光照亮，
-   底部编辑式对齐、编号入口，不再是居中对称的模板脸。 #}
+{# 进站闸门：暗场聚光灯语言 —— 巨字由随光标的暖色追光照亮，底部编辑式对齐、编号入口 #}
 <section class="stage" data-spot>
-  <div class="stage__media-host" data-hero
-       data-hero-img="/static/media/hero.webp" aria-hidden="true"></div>
   <div class="stage__glow" aria-hidden="true"></div>
-  <div class="stage__slits" aria-hidden="true"><i></i><i></i><i></i></div>
-  <div class="stage__grain" aria-hidden="true"></div>
-  <div class="stage__carve" aria-hidden="true"></div>
   <div class="wrap stage__body">
     <div class="stage__top">
       <span class="eyebrow" data-reveal>甜薯剧本杀 · 约局工作室</span>
@@ -44,6 +38,143 @@
         <a class="act" href="{{ url_for('user.register') }}" data-cursor="登记">03 去登记</a>
       </div>
       <span class="stage__scroll" data-reveal data-d="2">在演 {{ meta.scripts if meta else 0 }} 部 · 今日 {{ meta.today if meta else 0 }} 场</span>
+    </div>
+  </div>
+</section>
+
+{# 滚动字幕：编辑式细条，给首屏之后一点"有人在玩"的呼吸 #}
+<div class="ticker" data-reveal>
+  <div class="ticker__track">
+    <span>情感本</span><span>硬核推理</span><span>欢乐撕逼</span><span>恐怖惊悚</span><span>古风</span><span>机制本</span><span>新手友好</span><span>城限</span><span>独家</span>
+    <span>情感本</span><span>硬核推理</span><span>欢乐撕逼</span><span>恐怖惊悚</span><span>古风</span><span>机制本</span><span>新手友好</span><span>城限</span><span>独家</span>
+  </div>
+</div>
+
+{# 宣言：巨型长句断点 —— 在重复节奏里插一段 Editorial 断点，专治单调 #}
+<section class="manifesto">
+  <div class="wrap">
+    <span class="eyebrow" data-reveal>为什么是甜薯</span>
+    <p class="manifesto__line" data-reveal data-d="1">把一晚上的悬念，<br>交给<em>一群对的人</em>。</p>
+    <p class="manifesto__note" data-reveal data-d="2">我们不卖卡、不催单、不让你在门口排队。进来坐下，剧本自己会带你走完这一晚。</p>
+  </div>
+</section>
+
+{# 进门能做什么：四件事，编辑式编号列表（非重复小节头）。data-accent=amber 给这一节换暖琥珀强调，破单一砖红 #}
+<section class="paths" data-accent="amber">
+  <div class="wrap paths__grid">
+    <div>
+      <span class="eyebrow" data-reveal>进门能做什么</span>
+      <div class="paths__huge" data-reveal data-d="1" style="margin-top:18px">四件<em>事</em></div>
+      <p class="paths__note" data-reveal data-d="2">从选本到散场，一条动线走完 —— 不用在四个群里来回问"还差谁"。</p>
+    </div>
+    <div class="p-list">
+      <a class="p" href="{{ url_for('public.scripts') }}" data-reveal data-cursor="进" data-d="1">
+        <span class="p__no">01</span>
+        <span class="p__t">挑本</span>
+        <span class="p__d">在演剧目一墙摆开，按情绪、难度、人数挑，热门永远在最前。</span>
+        <span class="p__go">去本本墙 →</span>
+      </a>
+      <a class="p" href="{{ url_for('public.car') }}" data-reveal data-cursor="进" data-d="2">
+        <span class="p__no">02</span>
+        <span class="p__t">拼车</span>
+        <span class="p__d">差几位、什么时段、走哪条线，一眼看清，上车即发。</span>
+        <span class="p__go">去拼车 →</span>
+      </a>
+      <a class="p" href="{{ url_for('public.group') }}" data-reveal data-cursor="进" data-d="3">
+        <span class="p__no">03</span>
+        <span class="p__t">组局</span>
+        <span class="p__d">今晚在开的局一览无余，看中哪场直接约，没合适的自己开一桌。</span>
+        <span class="p__go">看今日组局 →</span>
+      </a>
+      <a class="p" href="{{ url_for('public.comm') }}" data-reveal data-cursor="进" data-d="4">
+        <span class="p__no">04</span>
+        <span class="p__t">唠嗑</span>
+        <span class="p__d">玩前玩后都想说两句？社区里找队友、发招募、晒复盘。</span>
+        <span class="p__go">去唠嗑 →</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+{# 数据条：今天的可信数字，给落地页一点"真东西"的厚度 #}
+<section class="sec" style="padding-top:0">
+  <div class="wrap">
+    <div class="stats" data-reveal>
+      <div><b>{{ meta.scripts if meta else 0 }}<i> 部</i></b><span>在演剧目</span></div>
+      <div><b>{{ meta.today if meta else 0 }}<i> 场</i></b><span>今晚已约</span></div>
+      <div><b>14:00<i>–</i>02:00</b><span>营业时段</span></div>
+      <div><b>全年<i> 无休</i></b><span>随时推门</span></div>
+    </div>
+  </div>
+</section>
+
+{# 三步坐下一桌 #}
+<section class="sec">
+  <div class="wrap">
+    <div class="sec__head">
+      <div>
+        <span class="eyebrow" data-reveal>怎么约</span>
+        <h2 class="h2" data-reveal data-d="1" style="margin-top:14px">三步，<br>坐下一桌。</h2>
+      </div>
+      <span class="note" data-reveal>不收定金 · 不成局不扣费</span>
+    </div>
+    <div class="idx">
+      <a class="idx__row" href="{{ url_for('public.scripts') }}" data-reveal data-cursor="挑本" data-d="1">
+        <span class="idx__no">S.01</span>
+        <span class="idx__title">挑本</span>
+        <span class="idx__desc">在本本墙逛一圈，看封面、读简介、比对难度和人数，挑中那一本。</span>
+        <span class="idx__go">→</span>
+      </a>
+      <a class="idx__row" href="{{ url_for('public.car') }}" data-reveal data-cursor="约局" data-d="2">
+        <span class="idx__no">S.02</span>
+        <span class="idx__title">约局</span>
+        <span class="idx__desc">选时段、填人数，一键发起；差的人丢进拼车，系统帮你凑齐。</span>
+        <span class="idx__go">→</span>
+      </a>
+      <a class="idx__row" href="{{ url_for('public.group') }}" data-reveal data-cursor="开演" data-d="3">
+        <span class="idx__no">S.03</span>
+        <span class="idx__title">开演</span>
+        <span class="idx__desc">到点推门进来，DM 已经布好场。剩下的，交给剧本和一群对的人。</span>
+        <span class="idx__go">→</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+{# 玩家之声：静态两句，给页面一点"真人"温度 #}
+<section class="sec">
+  <div class="wrap">
+    <span class="eyebrow" data-reveal>玩家之声</span>
+    <div class="quotes" data-reveal data-d="1" style="margin-top:24px">
+      <blockquote class="quote">
+        <p class="quote__text">"本来只是想凑个周末，结果一桌人从晚上八点聊到凌晨两点，散场了还舍不得走。"</p>
+        <div class="quote__by"><span class="quote__av">玩</span>小林 · 情感本爱好者</div>
+      </blockquote>
+      <blockquote class="quote">
+        <p class="quote__text">"拼车这个功能救了我这种社恐 —— 不用自己拉人，系统就把缺的位补上了。"</p>
+        <div class="quote__by"><span class="quote__av">玩</span>阿哲 · 硬核玩家</div>
+      </blockquote>
+    </div>
+  </div>
+</section>
+
+{# 谢幕 CTA：推门进来 #}
+<section class="curtain">
+  <div class="wrap curtain__grid">
+    <div class="curtain__big" data-reveal>推门进来，<br>今晚你<em>演谁</em>？</div>
+    <div class="curtain__side">
+      <p data-reveal data-d="1">选本、拼车、组局、唠嗑，一条线索串到底。先随便逛逛，看对眼了再留下。</p>
+      <div class="curtain__row" data-reveal data-d="2">
+        <a class="btn btn--accent btn--confirm" href="{{ url_for('public.home', browse=1) }}" data-confirm>先随便逛逛 <span class="arr">→</span></a>
+        <a class="btn btn--ghost" href="{{ url_for('user.register') }}" style="color:var(--dark-ink);border-color:var(--dark-line)">去登记</a>
+      </div>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="curtain__meta">
+      <span>营业 14:00 – 02:00 · 全年无休</span>
+      <span>把一晚上的悬念，交给一群对的人</span>
+      <span>© 甜薯剧本杀 · 约局工作室</span>
     </div>
   </div>
 </section>

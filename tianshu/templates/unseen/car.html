@@ -10,30 +10,36 @@
         <span class="eyebrow" data-reveal>拼车 · Carpool</span>
         <h1 class="h2" data-reveal data-d="1" style="margin-top:14px">差几位，<br>上车即发。</h1>
       </div>
-      <a class="btn btn--ghost" href="{{ url_for('public.scripts') }}" data-reveal>去本本墙开一桌</a>
+      <a class="btn btn--accent" href="{{ url_for('public.scripts') }}" data-reveal data-confirm>去本本墙开一桌 <span class="arr">→</span></a>
     </div>
 
     <form class="filters" method="get" action="{{ url_for('public.car') }}" data-reveal>
       <input type="search" name="q" value="{{ q }}" placeholder="搜本子…" aria-label="搜索剧本">
       <input type="number" name="players" value="{{ players }}" placeholder="≥ 人数" min="1" style="max-width:120px" aria-label="最少人数">
-      <select name="time" onchange="this.form.submit()" aria-label="时段">
+      <select name="time" data-u-select onchange="this.form.submit()" aria-label="时段">
         <option value="">全部时段</option>
         {% for p in ['上午','下午','晚上'] %}<option value="{{ p }}" {{ 'selected' if time == p }}>{{ p }}</option>{% endfor %}
       </select>
-      <select name="diff" onchange="this.form.submit()" aria-label="难度">
+      <select name="diff" data-u-select onchange="this.form.submit()" aria-label="难度">
         <option value="">全部难度</option>
         {% for d in range(1,6) %}<option value="{{ d }}" {{ 'selected' if diff|string == d|string }}>难度 {{ d }}</option>{% endfor %}
       </select>
-      <button class="btn btn--ghost" type="submit">筛</button>
+      <button class="btn btn--ghost btn--confirm" type="submit" data-confirm>筛选 <span class="ck"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
     </form>
 
     <div class="rows" style="margin-top:24px">
       {% for c in cars %}
-      <a class="row" href="{{ url_for('public.car_detail', cid=c.id) }}" data-reveal data-d="{{ loop.index0 % 4 }}" data-cursor>
+      {% set need = c.need if c.need is defined else c.min %}
+      <a class="row row--car" href="{{ url_for('public.car_detail', cid=c.id) }}" data-reveal data-d="{{ loop.index0 % 4 }}" data-cursor>
         <span class="row__when">{{ c.time or '' }}</span>
-        <span>
-          <span class="row__title">{{ c.title or '一辆拼车' }}</span><br>
-          <span class="row__sub">{{ c.scriptTitle or '' }} · 还差 {{ c.need if c.need is defined else c.min }} 人</span>
+        <span class="row__cover">{{ (c.scriptTitle or c.title or '本')[:1] }}</span>
+        <span class="row__main">
+          <span class="row__title">{{ c.title or '一辆拼车' }}</span>
+          <span class="row__sub">{{ c.scriptTitle or '剧本待定' }}</span>
+          <span class="row__seats" aria-label="还差 {{ need }} 人">
+            {% for i in range(6) %}<i class="{{ 'on' if i < (need|int if need is defined else 0) else '' }}"></i>{% endfor %}
+            <em>还差 {{ need }} 人</em>
+          </span>
         </span>
         <span class="row__pill">{{ '我的车' if c.id in mine else ('已满' if c.full else '拼车中') }}</span>
         <span class="idx__go">→</span>

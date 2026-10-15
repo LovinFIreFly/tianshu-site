@@ -14,7 +14,7 @@ from tianshu import business
 from config import PLAYER_TAGS
 from tianshu.db import db
 from tianshu.security import (current_user, hash_password, is_staff, login_required, rate,
-                             rate_clear, rate_peek, safe_next, verify_password)
+                             rate_clear, rate_peek, safe_next, safe_referrer, verify_password)
 
 
 def _safe_int(v, default=0):
@@ -180,7 +180,7 @@ def forgot():
             db.write('users', users)
             business.audit(u.get('username'), business.role_of(u), '用「找回密码」重设了密码')
             flash('密码重设好了，去登录吧', 'ok')
-            return redirect(request.args.get('next') or url_for('user.login'))
+            return redirect(safe_next(request.args.get('next'), url_for('user.login')))
     return render_template('forgot.html')
 
 
@@ -211,7 +211,7 @@ def code_send():
     if (request.headers.get('X-Requested-With') or '') == 'fetch':
         return jsonify(ok=ok, msg=msg)
     flash(msg, 'ok' if ok else 'warn')
-    return redirect(request.referrer or url_for('user.me'))
+    return redirect(safe_referrer(request.referrer, url_for('user.me')))
 
 
 # ---------------------------------------------------------------- 账号安全
@@ -453,7 +453,7 @@ def invoice_apply():
     oid = request.form.get('oid') or ''
     ok, msg = business.invoice_apply(current_user(), oid, request.form)
     flash(msg, 'ok' if ok else 'warn')
-    return redirect(request.referrer or url_for('user.me'))
+    return redirect(safe_referrer(request.referrer, url_for('user.me')))
 
 
 @bp.get('/me/pay/<int:oid>')

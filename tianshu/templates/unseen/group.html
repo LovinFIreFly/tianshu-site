@@ -10,7 +10,7 @@
         <span class="eyebrow" data-reveal>今日组局 · Tonight</span>
         <h1 class="h2" data-reveal data-d="1" style="margin-top:14px">今晚，<br>谁在开场。</h1>
       </div>
-      <a class="btn btn--accent" href="{{ url_for('public.scripts') }}" data-reveal>去开一桌 <span class="arr">→</span></a>
+      <a class="btn btn--accent btn--confirm" href="{{ url_for('public.scripts') }}" data-reveal data-confirm>去开一桌 <span class="arr">→</span></a>
     </div>
 
     <div class="rows" style="margin-top:24px">
@@ -26,7 +26,18 @@
         <span class="idx__go">→</span>
       </a>
       {% else %}
-      <p class="note">今天还没有开放的局。去本本墙挑个本，约的时候选「拼车」就能发车。</p>
+      <div class="empty grp-empty" data-reveal>
+        <span class="grp-empty__big" aria-hidden="true">今晚</span>
+        <div class="empty__inner">
+          <span class="eyebrow">Tonight · 空场</span>
+          <h2 class="h3" style="margin-top:14px">今晚还没有开放的局。</h2>
+          <p class="note">挑个本，约的时候选「拼车」，系统就帮你把缺的位补上、发车。</p>
+          <div class="grp-empty__row">
+            <a class="btn btn--accent btn--confirm" href="{{ url_for('public.scripts') }}" data-confirm>去本本墙开一桌 <span class="arr">→</span></a>
+            <a class="btn btn--ghost" href="{{ url_for('public.car') }}">看看拼车</a>
+          </div>
+        </div>
+      </div>
       {% endfor %}
     </div>
   </div>

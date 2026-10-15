@@ -1,13 +1,12 @@
 {% extends 'layout.html' %}
 {% block title %}甜薯剧本杀 · 今晚，你演谁{% endblock %}
 {% block desc %}甜薯剧本杀 —— 挑本、拼车、组局、唠嗑，一个入口约齐。看今晚谁在开场，或者自己开一桌。{% endblock %}
-{% block extra_head %}
-{# 首屏大图是 LCP 候选：preload + 高优先级，让它在 CSS / 字体之前就开始下载（不再等 JS 探测） #}
-<link rel="preload" as="image" href="{{ url_for('static', filename='media/hero.webp') }}" fetchpriority="high">
-{% endblock %}
+{% block extra_head %}{% endblock %}
 {% block content %}
 
-<nav class="rail" data-rail aria-hidden="true">
+{# 幕次导航：之前误标了 aria-hidden="true"，但里面是可聚焦的章节链接 —— 会被 axe 判为
+   aria-hidden-focus（隐藏元素里藏了可聚焦内容）。它本就是有用的导航，改成带名字的正规 landmark。 #}
+<nav class="rail" data-rail aria-label="幕次导航">
   <a href="#a1" class="on"><span class="d"></span><span class="lb">幕一 · 光缝</span></a>
   <a href="#a2"><span class="d"></span><span class="lb">幕二 · 剧目</span></a>
   <a href="#a3"><span class="d"></span><span class="lb">幕三 · 今晚</span></a>
@@ -21,16 +20,8 @@
      带 fetchpriority="high" + 上面的 preload，是首屏 LCP 候选（用静态图，不用视频）。
      若以后想换成循环视频：把 mp4 放到 /static/media/ 并加 data-hero-video，
      unseen.js 的 initHeroMedia 只会在探测到它存在时才升级。 #}
-  <div class="stage__media-host" data-hero
-       data-hero-img="/static/media/hero.webp" aria-hidden="true">
-    <img class="stage__media" src="{{ url_for('static', filename='media/hero.webp') }}"
-         alt="" width="1920" height="1080" fetchpriority="high" decoding="async">
-  </div>
   <div class="stage__glow" aria-hidden="true"></div>
-  <div class="stage__slits" aria-hidden="true"><i></i><i></i><i></i></div>
-  <div class="stage__grain" aria-hidden="true"></div>
-  {# 光标「雕刻」层（学 symphonyofvines）：复用聚光的 --mx/--my，在光斑处露出一层被剖开的材质 #}
-  <div class="stage__carve" aria-hidden="true"></div>
+  <div class="stage__edge" aria-hidden="true">约局工作室 · 甜薯 UNSEEN</div>
   <div class="wrap stage__body">
     <div class="stage__top">
       <span class="eyebrow" data-reveal><b>S.01</b> 甜薯剧本杀 · 约局工作室</span>
@@ -76,7 +67,24 @@
     {% for s in scripts %}<span>{{ s.title }}</span>{% endfor %}
   </div>
 </div>
+{# #72 反向跑马灯：换方向 + 换内容（氛围词），两条错位滚动更有"编辑式刊头"质感 #}
+<div class="ticker ticker--rev" aria-hidden="true">
+  <div class="ticker__track">
+    {% set moods = ['情感', '硬核', '欢乐', '恐怖', '推理', '机制', '阵营', '沉浸', '新手友好', '通宵场', '周末局', '拼车中'] %}
+    {% for m in moods %}<span>{{ m }}</span>{% endfor %}
+    {% for m in moods %}<span>{{ m }}</span>{% endfor %}
+  </div>
+</div>
 {% endif %}
+
+<!-- 宣言断点（blueyard 式巨型长句，打破 eyebrow→h2 的重复节奏） -->
+<section class="manifesto" data-scene>
+  <div class="wrap">
+    <span class="eyebrow" data-reveal><b>S.0</b> 宣言 · Manifesto</span>
+    <p class="manifesto__line" data-reveal data-d="1">我们<em>不</em>做又一家剧本杀店。<br>只把「约本」这一件事，<br>做到你愿意带朋友来。</p>
+    <p class="manifesto__note" data-reveal data-d="2">挑本、拼车、组局、唠嗑 —— 一条线索串到底，不绕路、不凑数、不催你办卡。</p>
+  </div>
+</section>
 
 <!-- 幕二 · 剧目（钉住横滚海报廊） -->
 {% if scripts %}
@@ -117,6 +125,9 @@
       </a>
       {% endfor %}
     </div>
+    {# #77 画廊进度指示：随海报廊推进填充，给横滚一个"读到哪了"的锚 #}
+    <div class="gallery__bar" aria-hidden="true"><i></i></div>
+    <div class="gal-thumb" aria-hidden="true"><div class="gal-thumb__in"><img alt=""><span class="gt-glyph"></span></div></div>
   </div>
 </section>
 {% endif %}

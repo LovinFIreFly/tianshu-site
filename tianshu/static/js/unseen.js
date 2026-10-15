@@ -62,32 +62,62 @@
     if (!dot || !ring) return;
     var lb = $('.lb', ring);
     document.body.classList.add('has-cursor');
-    var mx = innerWidth / 2, my = innerHeight / 2, rx = mx, ry = my;
-    addEventListener('mousemove', function (e) { mx = e.clientX; my = e.clientY; }, { passive: true });
+    var mx = innerWidth / 2, my = innerHeight / 2, rx = mx, ry = my, live = false;
+    addEventListener('mousemove', function (e) {
+      mx = e.clientX; my = e.clientY;
+      if (!live) { live = true; document.body.classList.add('cursor-live'); }   // 首次真实移动才显形
+    }, { passive: true });
     loop('cursor', function () {
       rx = lerp(rx, mx, 0.18); ry = lerp(ry, my, 0.18);
       dot.style.transform = 'translate(' + mx + 'px,' + my + 'px) translate(-50%,-50%)';
       ring.style.transform = 'translate(' + rx + 'px,' + ry + 'px) translate(-50%,-50%)';
     });
+    /* 状态机：交互元素放大；搜索框 → 放大镜；文本输入 → 竖杠；海报廊 → 四向箭头；
+       链接/带标签 → 放大显标签。图标显隐交给 CSS（ring 的类）。 */
+    function classify(t) {
+      if (!t) return '';
+      if (t.classList && t.classList.contains('u-search__in')) return 'search';
+      if (t.closest && t.closest('.gallery__track')) return 'drag';
+      if (t.matches && t.matches('input[type="text"],input[type="search"],input[type="email"],input[type="tel"],input:not([type]),textarea')) return 'text';
+      if (t.matches && t.matches('a,[data-cursor]')) return 'link';
+      return 'big';
+    }
     function over(e) {
-      var t = e.target.closest('a,button,[data-cursor],input,textarea,select,label');
+      var t = e.target.closest('a,button,[data-cursor],input,textarea,select,label,.u-search__in');
       if (!t) return;
-      ring.classList.add('big');
-      var label = t.getAttribute && t.getAttribute('data-cursor');
-      if (lb) lb.textContent = label || '';
-      if (label) ring.classList.add('tagged'); else ring.classList.remove('tagged');
+      var state = classify(t);
+      ring.classList.remove('big', 'search', 'text', 'drag', 'link');
+      ring.classList.add(state);
+      if (state === 'search' || state === 'text' || state === 'drag') {
+        if (lb) lb.textContent = '';
+        ring.classList.remove('tagged');
+      } else {
+        var label = t.getAttribute && t.getAttribute('data-cursor');
+        if (lb) lb.textContent = label || '';
+        if (label) ring.classList.add('tagged'); else ring.classList.remove('tagged');
+      }
     }
     function out(e) {
-      var t = e.target.closest('a,button,[data-cursor],input,textarea,select,label');
-      if (t) { ring.classList.remove('big'); ring.classList.remove('tagged'); if (lb) lb.textContent = ''; }
+      var t = e.target.closest('a,button,[data-cursor],input,textarea,select,label,.u-search__in');
+      if (t) { ring.classList.remove('big', 'search', 'text', 'drag', 'link', 'tagged'); if (lb) lb.textContent = ''; }
     }
     document.addEventListener('mouseover', over);
     document.addEventListener('mouseout', out);
     document.addEventListener('mousedown', function (e) {
       dot.style.opacity = '.4';
-      rippleAt(e.clientX, e.clientY);      // 学 nova：点下去必须有落点反馈
+      /* 确认类按钮：按压回弹 + 朱砂对勾（commit 反馈），不喷涟漪 */
+      var bc = e.target.closest && e.target.closest('[data-confirm], .btn--confirm');
+      if (bc) { commitFeedback(bc); return; }
+      rippleAt(e.clientX, e.clientY);      // 其余：落点涟漪（学 nova）
     });
     document.addEventListener('mouseup', function () { dot.style.opacity = ''; });
+  }
+
+  /* 确认感动效（#99）：给按钮一个"落定"的按压回弹，取代涟漪；不暴露原生小手。 */
+  function commitFeedback(el) {
+    if (REDUCE || !el) return;
+    el.classList.remove('is-commit'); void el.offsetWidth; el.classList.add('is-commit');
+    setTimeout(function () { el.classList.remove('is-commit'); }, 640);
   }
 
   /* 点击落点涟漪：纯 DOM 一个 span，不碰 WebGL 场 —— 一个元素的成本，反馈很实在。
@@ -116,6 +146,29 @@
   function scrollToY(y, immediate) {
     if (LENIS) { try { LENIS.scrollTo(y, { immediate: !!immediate }); return; } catch (e) {} }
     if (immediate) window.scrollTo(0, y); else window.scrollTo({ top: y, behavior: 'smooth' });
+  }
+  /* #73 滚动进度条 + #78 回顶：轻量，一个 scroll 监听同时驱动两者。
+     ⚠️ 必须用原生 addEventListener（不走 pOn）：bootPage 每次换页会 pOff 摘掉全部
+     P_BOUND 监听，而本函数在 bootShell 只跑一次，若走 pOn 会被换页时一并摘掉，
+     导致进度条/回顶失效。scrollbar/toTop 是 layout 里的常驻节点（在 #main 之外），
+     监听挂 window 一次即可，换页不丢失、也不会堆积。 */
+  function initScrollUI() {
+    var barI = $('#scrollbar i');
+    var top = $('#toTop');
+    function update() {
+      var h = document.documentElement;
+      var max = Math.max(1, h.scrollHeight - innerHeight);
+      var p = clamp(window.scrollY / max, 0, 1);
+      if (barI) barI.style.width = (p * 100) + '%';
+      if (top) top.classList.toggle('show', window.scrollY > 600);
+    }
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update, { passive: true });
+    update();
+    if (top) {
+      top.hidden = false;
+      top.addEventListener('click', function () { scrollToY(0); });
+    }
   }
   function initSmooth() {
     if (REDUCE || COARSE) return;
@@ -179,7 +232,10 @@
         }
         gsap.from(el, {
           y: 30, autoAlpha: 0, duration: 1.0, ease: 'power3.out', delay: d * 0.07,
-          scrollTrigger: { trigger: el, start: 'top 86%', once: true }
+          scrollTrigger: { trigger: el, start: 'top 86%', once: true },
+          /* 收尾清掉行内 transform：gsap 收尾会留下 identity 矩阵，使元素永久成为层叠上下文，
+             把内部的下拉列表困在同层卡片/标签之下（选项点不到）。清掉后落回 CSS 的 transform:none。 */
+          onComplete: function () { gsap.set(el, { clearProps: 'transform' }); }
         });
       }); };
       // 等字体就绪再拆分/编排（避免 SplitText 断行测量不准）
@@ -307,6 +363,35 @@
     });
   }
 
+  /* 首屏巨字逐行上浮（学 W1/U1 的进场）：两行标题错落淡入，把"平铺出现"换成有呼吸的开场 */
+  function initHeroStagger() {
+    var base = $('.base');
+    if (!base || REDUCE) return;
+    var lines = $$('.t', base);
+    if (!lines.length) return;
+    if (COARSE) { lines.forEach(function (l) { l.style.opacity = 1; }); return; }
+    if (HAS_GSAP) {
+      gsap.set(lines, { y: 28, opacity: 0 });
+      gsap.to(lines, { y: 0, opacity: 1, duration: .9, ease: 'power3.out', stagger: .12, delay: .22 });
+    }
+  }
+
+  /* 跑马灯随滚动提速（学 C1 的速度感应 marquee）：滚动越快，字幕跑得越快，停下归位 */
+  function initTickerSpeed() {
+    var track = $('.ticker__track');
+    if (!track || COARSE) return;
+    var anims = (track.getAnimations && track.getAnimations()) || [];
+    if (!anims.length) return;
+    var a = anims[0];
+    var base = 1, target = 1, lenis = window.LENIS;
+    loop('tickerSpeed', function () {
+      var v = lenis && lenis.velocity ? Math.abs(lenis.velocity) : 0;
+      target = 1 + Math.min(v / 16, 4);
+      base += (target - base) * 0.08;
+      try { a.playbackRate = base; } catch (e) {}
+    });
+  }
+
   /* ---------------- Spotlight 追光照亮 ---------------- */
   function initSpotlight() {
     var stage = $('[data-spot]');
@@ -343,6 +428,7 @@
     if (!sec || !track) return;
     var sticky = $('.gallery__sticky', sec);
     var posters = $$('.poster', sec);
+    var gbar = $('.gallery__bar i', sec);
     var overflow = 0;
     function measure() {
       overflow = Math.max(0, track.scrollWidth - (sticky ? sticky.clientWidth : innerWidth));
@@ -353,6 +439,8 @@
       var total = sec.offsetHeight - innerHeight;
       var p = total > 0 ? clamp(-r.top / total, 0, 1) : 0;
       track.style.transform = 'translate3d(' + (-p * overflow) + 'px,0,0)';
+      // #77 画廊进度指示：钉住模式下进度 = p
+      if (gbar) gbar.style.width = (p * 100) + '%';
       // 居中者点亮，其余压暗
       var mid = innerWidth / 2, best = null, bestD = Infinity;
       posters.forEach(function (po) {
@@ -395,6 +483,13 @@
   function initTouchGallery() {
     var track = $('[data-gallery-track]');
     if (!track || !COARSE) return;
+    var gbar = $('.gallery__bar i');
+    function syncBar() {
+      var max = Math.max(1, track.scrollWidth - track.clientWidth);
+      if (gbar) gbar.style.width = (clamp(track.scrollLeft / max, 0, 1) * 100) + '%';
+    }
+    track.addEventListener('scroll', syncBar, { passive: true });
+    syncBar();
     var sx = 0, sy = 0, lx = 0, lt = 0, v = 0, mode = 0, id = null;
     track.addEventListener('touchstart', function (e) {
       var t = e.touches[0]; if (!t) return;
@@ -426,6 +521,32 @@
     }
     track.addEventListener('touchend', end, { passive: true });
     track.addEventListener('touchcancel', end, { passive: true });
+  }
+
+  /* ---------------- 跟着光标走的悬浮缩略图（unseen.co 头号签名）----------------
+     悬停剧目海报时，一张缩略图黏在光标旁、带轻微惯性，打破"一排静态卡片"的模板感。
+     外层只定位、内层 .gal-thumb__in 负责缩放淡入（CSS 接管），互不抢 transform。 */
+  function initGalleryThumb() {
+    var thumb = $('.gal-thumb');
+    if (!thumb || COARSE) return;
+    var inner = $('.gal-thumb__in', thumb), img = $('.gal-thumb img', thumb), glyph = $('.gt-glyph', thumb);
+    var tx = innerWidth / 2, ty = innerHeight / 2, cx = tx, cy = ty, active = false;
+    function show(po) {
+      var pic = $('.poster__img', po);
+      if (pic && pic.getAttribute('src')) { img.src = pic.getAttribute('src'); img.style.display = ''; glyph.style.display = 'none'; }
+      else { img.style.display = 'none'; img.removeAttribute('src'); glyph.textContent = (($('.poster__glyph', po) || {}).textContent || '本'); glyph.style.display = ''; }
+      thumb.classList.add('on'); active = true;
+    }
+    function hide() { thumb.classList.remove('on'); active = false; }
+    $$('.poster').forEach(function (po) {
+      po.addEventListener('mouseenter', function () { show(po); });
+      po.addEventListener('mouseleave', hide);
+    });
+    addEventListener('mousemove', function (e) { tx = e.clientX; ty = e.clientY; }, { passive: true });
+    loop('galthumb', function () {
+      cx = lerp(cx, tx, 0.16); cy = lerp(cy, ty, 0.16);
+      thumb.style.transform = 'translate(' + cx + 'px,' + cy + 'px)';
+    });
   }
 
   /* ---------------- 海报廊键盘替代（WCAG 2.5.7：拖拽不能是唯一方式）----------------
@@ -652,6 +773,12 @@
       if (t === 'home') return 'sweep';
       return 'flow';                                        // 含 home→browse 等其余
     }
+    /* 转场巨字（学 U1 进场先出巨大章节名）：按目的地种给一行大字幕，扫过时浮出 */
+    var TRANSIT_LABEL = {
+      home: '首页', browse: '本本墙', detail: '本子', list: '一览',
+      form: '登记', account: '我的'
+    };
+    function transitTitleEl() { return document.getElementById('transitTitle'); }
     /* 落表：把该变体的时长写进根元素的 --tr-*（secs() 读的就是它），并给液面层落类 */
     function applyTransition(name) {
       var cfg = TR[name] || TR.flow;
@@ -728,6 +855,8 @@
       var toPath = url;
       try { toPath = new URL(url, location.href).pathname; } catch (e) {}
       applyTransition(pickTransition(location.pathname, toPath));
+      var tt = transitTitleEl();
+      if (tt) tt.textContent = TRANSIT_LABEL[kindOf(toPath)] || '';
 
       /* ① 旧场景上移离场：每个直接子块给递增的上移量 + 递增延迟 —— 分镜感 */
       var kids = Array.prototype.slice.call(main.children);
@@ -937,6 +1066,53 @@
     function upd() { nav.classList.toggle('scrolled', window.scrollY > 40); }
     addEventListener('scroll', upd, { passive: true });
     upd();
+
+    /* 指针跟随下划线（学 nova 的滑动线）：整条导航一根线，走到哪滑到哪 */
+    var links = $('.nav__links', nav);
+    if (!links) return;
+    var line = $('.nav__line', links), items = $$('a', links);
+    if (!line || !items.length) return;
+    function place(el) {
+      if (!el) { line.style.opacity = '0'; return; }
+      var r = el.getBoundingClientRect(), lr = links.getBoundingClientRect();
+      line.style.opacity = '1';
+      line.style.width = r.width + 'px';
+      line.style.transform = 'translateX(' + (r.left - lr.left) + 'px)';
+    }
+    var cur = $('.on', links) || items[0];
+    place(cur);
+    items.forEach(function (a) {
+      a.addEventListener('mouseenter', function () { place(a); });
+      a.addEventListener('focus', function () { place(a); });
+    });
+    links.addEventListener('mouseleave', function () { place(cur); });
+    addEventListener('resize', function () { place(cur); });
+  }
+
+  /* ---------------- 海报"立起来"（学 nova 的视角折叠）----------------
+     悬停那张随指针做 rotateX/Y 立起，同排兄弟后退让位 —— 卡片不再是平面大方块。 */
+  function initTilt() {
+    var sec = $('[data-gallery]');
+    if (!sec || COARSE) return;
+    var posters = $$('.poster', sec);
+    posters.forEach(function (po) {
+      po.addEventListener('pointerenter', function () {
+        sec.classList.add('dimming'); po.classList.add('is-cur');
+        po.style.setProperty('--fz', '0px'); po.style.setProperty('--fs', '1.05');
+      });
+      po.addEventListener('pointermove', function (e) {
+        var r = po.getBoundingClientRect();
+        var px = (e.clientX - r.left) / r.width - .5;
+        var py = (e.clientY - r.top) / r.height - .5;
+        po.style.setProperty('--fy', (px * 18).toFixed(2) + 'deg');
+        po.style.setProperty('--fx', (py * -16).toFixed(2) + 'deg');
+      });
+      po.addEventListener('pointerleave', function () {
+        sec.classList.remove('dimming'); po.classList.remove('is-cur');
+        po.style.setProperty('--fx', '0deg'); po.style.setProperty('--fy', '0deg');
+        po.style.setProperty('--fz', '0px'); po.style.setProperty('--fs', '1');
+      });
+    });
   }
 
   /* ---------------- 静止即退场（用户驱动：不自动表演）---------------- */
@@ -1001,6 +1177,7 @@
       inp.addEventListener('blur', function () { s.classList.remove('is-focus', 'is-run'); });
       inp.addEventListener('input', function () { s.classList.toggle('has-val', !!inp.value.trim()); });
       if (inp.value.trim()) s.classList.add('has-val');
+      initSearchSuggest(s, inp, form);
       if (!form) return;
       form.addEventListener('submit', function () {
         /* 那圈描边无论谁接管提交都要转满一圈 */
@@ -1009,6 +1186,55 @@
         setTimeout(function () { s.classList.remove('is-go'); s.classList.add('is-run'); }, 760);
       });
     });
+  }
+
+  /* ---------------- #148 搜索历史：聚焦下拉「最近搜过」----------------
+     存在 localStorage（客户端私有，不占后端、不跨设备）。聚焦即列，输入即按包含过滤；
+     点一条填回输入框并立即重搜（复用本本墙原地换网格），可一键清空。 */
+  function initSearchSuggest(s, inp, form) {
+    var sug = $('.u-search__sug', s);
+    if (!sug) return;
+    var listBox = $('[data-sug-list]', sug);
+    var clearBtn = $('[data-sug-clear]', sug);
+    var KEY = 'ts_recent_q_v1', MAX = 6;
+    function load() { try { var a = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+    function save(a) { try { localStorage.setItem(KEY, JSON.stringify(a.slice(0, MAX))); } catch (e) {} }
+    function remember(q) {
+      q = (q || '').trim(); if (!q) return;
+      var a = load().filter(function (x) { return x !== q; });
+      a.unshift(q); save(a);
+    }
+    var clockSVG = '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.2" stroke="currentColor" stroke-width="1.3"/><path d="M8 4.6V8l2.4 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
+    function render() {
+      var q = (inp.value || '').trim().toLowerCase();
+      var all = load();
+      var items = q ? all.filter(function (x) { return x.toLowerCase().indexOf(q) > -1; }) : all;
+      if (!items.length) { sug.hidden = true; return; }
+      listBox.innerHTML = '';
+      items.forEach(function (term) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'u-search__sug-i'; b.setAttribute('role', 'option');
+        var ic = document.createElement('span'); ic.className = 'ic'; ic.innerHTML = clockSVG;
+        var tx = document.createElement('span'); tx.className = 'tx'; tx.textContent = term;
+        b.appendChild(ic); b.appendChild(tx);
+        b.addEventListener('mousedown', function (e) { e.preventDefault(); });   // 抢在输入框 blur 之前
+        b.addEventListener('click', function () {
+          inp.value = term; inp.classList.add('has-val'); sug.hidden = true;
+          remember(term);
+          if (form) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        });
+        listBox.appendChild(b);
+      });
+      sug.hidden = false;
+    }
+    inp.addEventListener('focus', render);
+    inp.addEventListener('input', render);
+    inp.addEventListener('blur', function () { setTimeout(function () { sug.hidden = true; }, 170); });
+    if (form) form.addEventListener('submit', function () { remember(inp.value); sug.hidden = true; });
+    if (clearBtn) {
+      clearBtn.addEventListener('mousedown', function (e) { e.preventDefault(); });
+      clearBtn.addEventListener('click', function () { save([]); sug.hidden = true; });
+    }
   }
 
   /* ---------------- 本本墙原地换网格（接上后端一直空着的 ?partial=1）----------------
@@ -1027,7 +1253,20 @@
     var diffSel = $('[data-lib-diff]', box);
     var favBtn = $('[data-lib-fav]', box);
     var tagBox = $('[data-lib-tags]');
+    var clearBtn = $('[data-lib-clear]', box);
     var busy = false;
+
+    /* 清空筛选入口：有任一条件生效才显形（多选后条件可能多条，一键退回全部） */
+    function hasFilters() {
+      if (inp && inp.value.trim()) return true;
+      if (favBtn && favBtn.getAttribute('data-lib-fav') === '1') return true;
+      if (diffSel && $$('option', diffSel).some(function (o) { return o.selected; })) return true;
+      if (tagBox && $$('[data-lib-tag]', tagBox).some(function (b) {
+        return b.getAttribute('data-lib-tag') && b.classList.contains('on');
+      })) return true;
+      return false;
+    }
+    function syncClear() { if (clearBtn) clearBtn.hidden = !hasFilters(); }
 
     /* 条件一律从 DOM 现读，不在闭包里存状态 —— 任何来源的改动都能被正确反映 */
     function params() {
@@ -1038,17 +1277,23 @@
         .filter(function (b) { return b.classList.contains('on') && b.getAttribute('data-lib-tag'); })
         .map(function (b) { return b.getAttribute('data-lib-tag'); });
       if (tags.length) p.push('tags=' + encodeURIComponent(tags.join(',')));
-      if (diffSel && diffSel.value) p.push('diff=' + encodeURIComponent(diffSel.value));
+      if (diffSel && diffSel.multiple) {
+        var diffs = $$('option', diffSel).filter(function (o) { return o.selected; }).map(function (o) { return o.value; });
+        if (diffs.length) p.push('diffs=' + encodeURIComponent(diffs.join(',')));
+      } else if (diffSel && diffSel.value) {
+        p.push('diff=' + encodeURIComponent(diffSel.value));
+      }
       if (favBtn && favBtn.getAttribute('data-lib-fav') === '1') p.push('fav=1');
       return p.join('&');
     }
 
     function apply() {
       if (busy) return;
+      syncClear();
       var qs = params();
       busy = true;
       var g0 = $('[data-lib-grid]');
-      if (g0) g0.classList.add('is-loading');
+      if (g0) { g0.classList.add('is-loading'); g0.classList.add('is-leaving'); }   // 旧网格先轻淡出下移，不再瞬切
       var url = gridUrl + (gridUrl.indexOf('?') > -1 ? '&' : '?') + qs;
       window.fetch(url, { headers: { 'X-Requested-With': 'fetch' } })
         .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
@@ -1066,7 +1311,12 @@
             $$('[data-reveal]', fresh).forEach(function (el) { el.classList.add('in'); });
           });
           var n = fresh.getAttribute('data-lib-n') || '0';
-          $$('[data-lib-count]').forEach(function (el) { el.textContent = n; });
+          $$('[data-lib-count]').forEach(function (el) {
+            if (el.textContent !== n) {            // 数字变了才轻弹一下，让"筛掉了"被看见
+              el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
+            }
+            el.textContent = n;
+          });
           var out = $('[data-lib-count-out]');
           if (out) out.textContent = n;
           try { history.pushState({ lib: 1 }, '', pageUrl + (qs ? '?' + qs : '')); } catch (e) {}
@@ -1092,6 +1342,17 @@
       favBtn.classList.toggle('on', !on);
       apply();
     });
+    if (clearBtn) clearBtn.addEventListener('click', function () {
+      if (inp) { inp.value = ''; inp.classList.remove('has-val'); }
+      if (favBtn) { favBtn.setAttribute('data-lib-fav', '0'); favBtn.classList.remove('on'); }
+      if (diffSel) {                       // 多选清空：全部反选 + 让自定义下拉重画 label
+        $$('option', diffSel).forEach(function (o) { o.selected = false; });
+        var w = diffSel.closest ? diffSel.closest('.u-select') : null;
+        if (w && w.__usync) w.__usync();
+      }
+      if (tagBox) $$('[data-lib-tag]', tagBox).forEach(function (x) { x.classList.toggle('on', !x.getAttribute('data-lib-tag')); });
+      apply();
+    });
     if (tagBox) {
       tagBox.addEventListener('click', function (e) {
         var b = e.target.closest && e.target.closest('[data-lib-tag]');
@@ -1113,6 +1374,179 @@
     /* 表单提交（回车 / 点放大镜）也走原地换网格，别让浏览器整页跳 */
     var form = $('form', box);
     if (form) form.addEventListener('submit', function (e) { e.preventDefault(); apply(); });
+    syncClear();                            // 首屏按当前条件决定是否露出「清空筛选」
+  }
+
+  /* ---------------- 自定义下拉选择框（#97 · 渐进增强原生 <select>）----------------
+     把原生 <select data-u-select> 包成 editorial 风格下拉：发丝描边按钮 + 朱砂对勾 +
+     展开时列表从顶部裁开、选项逐条错落淡入。原生 select 移入 wrapper 内（视觉隐藏），
+     选中后回写值并 dispatch change —— 所以 car 的 onchange 整页筛、scripts 的 ?partial
+     换网格、comm 的表单提交全部照旧工作，零后端改动。
+     全局的"外部点击关闭 / Esc / 方向键"只绑一次（用 document 委托），避免换页后重复绑定。 */
+  /* 唠嗑发图：选图即出缩略预览（原生 file 多选 + 本地预览，不发请求） */
+  function initPostForm() {
+    var inp = $('.post__file input[type=file]');
+    var box = $('.post__previews');
+    if (!inp || !box || box.__bound) return;
+    box.__bound = 1;
+    inp.addEventListener('change', function () {
+      box.innerHTML = '';
+      var files = inp.files || [];
+      for (var i = 0; i < Math.min(files.length, 3); i++) {
+        var f = files[i];
+        if (!/^image\//.test(f.type)) continue;
+        var url = URL.createObjectURL(f);
+        var img = document.createElement('img');
+        img.src = url; img.alt = '';
+        box.appendChild(img);
+        img.addEventListener('load', function () { try { URL.revokeObjectURL(url); } catch (e) {} });
+      }
+    });
+  }
+
+  function initSelect() {
+    if (!document.__uSelBound) {
+      document.__uSelBound = 1;
+      document.addEventListener('click', function (e) {
+        var open = $$('.u-select.open');
+        for (var i = 0; i < open.length; i++) { if (!open[i].contains(e.target)) closeSelect(open[i]); }
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { $$('.u-select.open').forEach(closeSelect); return; }
+        var cur = $('.u-select.open'); if (!cur) return;
+        var list = $('.u-select__list', cur); if (!list) return;
+        var opts = $$('.u-select__opt', list);
+        var idx = -1;
+        for (var i = 0; i < opts.length; i++) if (opts[i].classList.contains('active')) { idx = i; break; }
+        if (e.key === 'ArrowDown') { e.preventDefault(); setSelectActive(cur, opts, Math.min(opts.length - 1, idx + 1)); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setSelectActive(cur, opts, Math.max(0, idx - 1)); }
+        else if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); if (idx >= 0) pickSelect(cur, opts[idx]); }
+        else if (e.key === 'Home') { e.preventDefault(); setSelectActive(cur, opts, 0); }
+        else if (e.key === 'End') { e.preventDefault(); setSelectActive(cur, opts, opts.length - 1); }
+      });
+    }
+    $$('select[data-u-select]').forEach(function (sel) {
+      if (sel.getAttribute('data-bound') === '1') return;
+      sel.setAttribute('data-bound', '1');
+      buildSelect(sel);
+    });
+  }
+  function buildSelect(sel) {
+    var multi = !!sel.multiple;
+    var wrap = document.createElement('span');
+    wrap.className = 'u-select' + (multi ? ' u-select--multi' : '');
+    sel.parentNode.insertBefore(wrap, sel);
+    wrap.appendChild(sel);                 // 原生 select 移入 wrapper：仍在表单内，照常提交
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'u-select__btn';
+    btn.setAttribute('aria-haspopup', 'listbox'); btn.setAttribute('aria-expanded', 'false');
+    var lbl = document.createElement('span'); lbl.className = 'lbl';
+    var chev = document.createElement('span'); chev.className = 'chev';
+    btn.appendChild(lbl); btn.appendChild(chev);
+    var list = document.createElement('div'); list.className = 'u-select__list'; list.setAttribute('role', 'listbox');
+    if (multi) list.setAttribute('aria-multiselectable', 'true');
+    /* a11y：role=listbox 是"输入类"控件，必须有无障碍名，否则 axe 报 aria-input-field-name */
+    list.setAttribute('aria-label', sel.getAttribute('aria-label') || '选项列表');
+    var tickSVG = '<svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    var btns = [], n = 0;                  // btns 与 sel.options 顺序一一对应
+    function addOption(o) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'u-select__opt'; b.setAttribute('role', 'option');
+      b.setAttribute('data-val', o.value);
+      b.style.setProperty('--i', n++);     // 错落淡入序：用 --i 而非 :nth-child，避免被 optgroup 标题打乱
+      var t = document.createElement('span'); t.textContent = o.textContent;
+      var tick = document.createElement('span'); tick.className = 'tick'; tick.innerHTML = tickSVG;
+      b.appendChild(t); b.appendChild(tick);
+      b.addEventListener('click', function () { pickSelect(wrap, b); });
+      btns.push(b); list.appendChild(b);
+    }
+    /* 遍历 children 才能保住 <optgroup> 的分组标题（sel.options 会把它们拍平） */
+    Array.prototype.slice.call(sel.children).forEach(function (node) {
+      if (node.tagName === 'OPTGROUP') {
+        var gl = document.createElement('div');
+        gl.className = 'u-select__grp'; gl.textContent = node.label || '';
+        list.appendChild(gl);
+        Array.prototype.slice.call(node.children).forEach(addOption);
+      } else if (node.tagName === 'OPTION') {
+        addOption(node);
+      }
+    });
+    wrap.appendChild(btn); wrap.appendChild(list);
+    var ph = sel.getAttribute('data-placeholder') || (multi ? '全部' : '');
+    function findOpt(val) {
+      for (var i = 0; i < sel.options.length; i++) if (sel.options[i].value === val) return sel.options[i];
+      return null;
+    }
+    function sync() {
+      if (multi) {
+        var names = [];
+        btns.forEach(function (b) {
+          var o = findOpt(b.getAttribute('data-val'));
+          var on = !!(o && o.selected);
+          b.classList.toggle('sel', on);
+          b.setAttribute('aria-selected', on ? 'true' : 'false');
+          if (on) names.push(b.firstChild.textContent);
+        });
+        wrap.classList.toggle('has-sel', names.length > 0);
+        lbl.textContent = !names.length ? ph : (names.length > 2 ? '已选 ' + names.length + ' 项' : names.join('、'));
+      } else {
+        var v = sel.value, cur = null;
+        btns.forEach(function (b) {
+          var on = b.getAttribute('data-val') === v; b.classList.toggle('sel', on); if (on) cur = b;
+        });
+        var o = sel.options[sel.selectedIndex]; lbl.textContent = o ? o.textContent : '';
+      }
+    }
+    sync();
+    sel.addEventListener('change', sync);
+    wrap.__usync = sync;                    // 供 pickSelect（多选）复用
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var wasOpen = wrap.classList.contains('open');
+      $$('.u-select.open').forEach(function (w) { if (w !== wrap) closeSelect(w); });
+      if (wasOpen) closeSelect(wrap); else openSelect(wrap);
+    });
+  }
+  function openSelect(wrap) {
+    var list = $('.u-select__list', wrap);
+    var btn = $('.u-select__btn', wrap);
+    /* 先量再决定朝上还是朝下：下方放不下且上方更宽裕就向上弹（矮屏 / 靠近视口底部）。
+       列表本身超高时由 CSS 的 max-height + overflow-y:auto 内部滚动。 */
+    if (list && btn) {
+      wrap.classList.remove('u-select--up');
+      var rb = btn.getBoundingClientRect();
+      var below = innerHeight - rb.bottom;
+      var need = Math.min(list.scrollHeight || 260, innerHeight * 0.62);
+      if (below < need + 18 && rb.top > below) wrap.classList.add('u-select--up');
+    }
+    wrap.classList.add('open');
+    if (btn) btn.setAttribute('aria-expanded', 'true');
+    var opts = $$('.u-select__opt', list);
+    for (var i = 0; i < opts.length; i++) { opts[i].classList.remove('active'); if (opts[i].classList.contains('sel')) opts[i].classList.add('active'); }
+    if (btn) btn.focus();
+  }
+  function closeSelect(wrap) {
+    wrap.classList.remove('open');
+    var btn = $('.u-select__btn', wrap); if (btn) btn.setAttribute('aria-expanded', 'false');
+  }
+  function setSelectActive(wrap, opts, idx) {
+    for (var i = 0; i < opts.length; i++) opts[i].classList.toggle('active', i === idx);
+    if (opts[idx] && opts[idx].scrollIntoView) opts[idx].scrollIntoView({ block: 'nearest' });
+  }
+  function pickSelect(wrap, b) {
+    var sel = $('select', wrap);
+    if (!sel) return;
+    if (sel.multiple) {                     // 多选：翻转该项、保持展开、实时回写并通知
+      var o = null, val = b.getAttribute('data-val');
+      for (var i = 0; i < sel.options.length; i++) if (sel.options[i].value === val) { o = sel.options[i]; break; }
+      if (o) o.selected = !o.selected;
+      if (wrap.__usync) wrap.__usync();
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      return;                               // 不关列表，方便连选
+    }
+    sel.value = b.getAttribute('data-val');
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    closeSelect(wrap);
   }
 
   /* ---------------- 键盘彩蛋：S = 随机挑一本 ----------------
@@ -1164,10 +1598,14 @@
     initScenes();
     initMediaWarm();
     initHeroParallax();
+    initHeroStagger();
+    initTickerSpeed();
     initSpotlight();
     initGallery();
     initTouchGallery();
     initGalleryKeyboard();
+    initGalleryThumb();
+    initTilt();
     initNight();
     initFloat();
     initDepthWall();
@@ -1180,11 +1618,14 @@
     initHeroMedia();
     initSearch();
     initLib();
+    initSelect();
+    initPostForm();
   }
 
   function bootShell() {
     initCursor();
     initSmooth();
+    initScrollUI();
     initNav();
     initIdle();
     initShortcut();

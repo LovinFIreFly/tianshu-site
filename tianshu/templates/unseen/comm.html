@@ -9,6 +9,33 @@
       <div>
         <span class="eyebrow" data-reveal>唠嗑 · Community</span>
         <h1 class="h2" data-reveal data-d="1" style="margin-top:14px">气味相投的人，<br>自然凑到一起。</h1>
+        <p class="comm__lead" data-reveal data-d="2">玩前找队友、发招募、晒复盘 —— 这里没有攻略感，只有一群真的在玩的人。</p>
+      </div>
+      {# 用 div 而非 aside：它嵌在 <main> 这个 landmark 里，aside 会造成 complementary landmark
+         嵌套、触发 axe 的 landmark-complementary-is-top-level；这里本就只是侧栏内容块。 #}
+      <div class="comm__aside" data-reveal>
+        <div class="comm__box">
+          <span class="comm__box-t">怎么玩</span>
+          <ol class="comm__steps">
+            <li>登录后发条闲聊，或挂个缺位招募</li>
+            <li>看中谁的局，直接约上一桌</li>
+            <li>玩完回来写两句复盘</li>
+          </ol>
+        </div>
+        <div class="comm__box">
+          <span class="comm__box-t">热门话题</span>
+          <div class="comm__tags">
+            <a class="chip" href="{{ url_for('public.comm', type='all') }}">情感</a>
+            <a class="chip" href="{{ url_for('public.comm', type='all') }}">硬核</a>
+            <a class="chip" href="{{ url_for('public.comm', type='all') }}">恐怖</a>
+            <a class="chip" href="{{ url_for('public.comm', type='recruit') }}">招募</a>
+            <a class="chip" href="{{ url_for('public.comm', type='all') }}">新手</a>
+          </div>
+        </div>
+        <div class="comm__box">
+          <span class="comm__box-t">现在</span>
+          <div class="comm__online"><span class="pulse" aria-hidden="true"></span>社区开放中 · 随时来聊</div>
+        </div>
       </div>
     </div>
 
@@ -19,12 +46,12 @@
     </div>
 
     {% if me %}
-    <form method="post" action="{{ url_for('public.post_create') }}" class="post post--form" data-reveal>
+    <form method="post" action="{{ url_for('public.post_create') }}" enctype="multipart/form-data" class="post post--form" data-reveal>
       <div class="field"><input name="title" placeholder="一句话标题（可选）" aria-label="标题（可选）"></div>
       <div class="field"><textarea name="text" rows="3" placeholder="说点什么…" aria-label="正文内容" required></textarea></div>
       <div class="field--row">
         <input name="topic" placeholder="话题，如：情感 / 硬核 / 恐怖" aria-label="话题">
-        <select name="type" aria-label="帖子类型">
+        <select name="type" data-u-select aria-label="帖子类型">
           <option value="chat">闲聊帖</option>
           <option value="recruit">缺位招募</option>
         </select>
@@ -33,7 +60,14 @@
         <input name="recruitRole" placeholder="缺什么位（招募时填）" aria-label="缺的位">
         <input name="recruitNeed" type="number" min="1" max="12" placeholder="缺几人" aria-label="缺几人">
       </div>
-      <button class="btn btn--accent" type="submit">发出去 <span class="arr">→</span></button>
+      <div class="field--row post__file-row">
+        <label class="post__file" title="最多 3 张图">
+          <input type="file" name="img" accept="image/*" multiple hidden>
+          <span class="post__file-btn">＋ 配图</span>
+        </label>
+        <div class="post__previews" aria-hidden="true"></div>
+      </div>
+      <button class="btn btn--accent btn--confirm" type="submit" data-confirm>发出去 <span class="ck"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
     </form>
     {% else %}
     <p class="note" data-reveal>想发帖？<a class="link-underline" href="{{ url_for('user.login', next=url_for('public.comm')) }}">登录</a> 之后就能聊。</p>
@@ -50,6 +84,11 @@
           </div>
         </div>
         <p class="post__text">{{ p.text }}</p>
+        {% if p.imgs %}
+        <div class="post__imgs">
+          {% for im in p.imgs %}<a class="post__img" href="{{ im }}" target="_blank" rel="noopener"><img src="{{ im }}" alt="配图" loading="lazy" decoding="async"></a>{% endfor %}
+        </div>
+        {% endif %}
         {% if p.postType == 'recruit' %}
         <p class="note">缺位：{{ p.recruitRole or '—' }} · 还差 {{ p.recruitNeed or '?' }} 人{% if p.recruitScript %} · 《{{ p.recruitScript }}》{% endif %}</p>
         {% endif %}
@@ -61,7 +100,12 @@
         </div>
       </article>
       {% else %}
-      <p class="note">还没有帖子，来当第一个开口的人。</p>
+      <div class="comm-guide" data-reveal>
+        <span class="eyebrow">还没有人开口</span>
+        <h3 class="h3" style="margin:12px 0 8px">来当第一个说两句的人。</h3>
+        <p class="note">登录之后就能发帖 —— 闲聊、招募缺位、或者晒一场刚散场的复盘。</p>
+        <a class="btn btn--accent btn--confirm" href="{{ url_for('user.login', next=url_for('public.comm')) }}" data-confirm>登录去发帖 <span class="arr">→</span></a>
+      </div>
       {% endfor %}
     </div>
   </div>

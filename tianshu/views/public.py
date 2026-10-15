@@ -7,13 +7,13 @@
 import os
 import time as _time
 
-from flask import (Blueprint, flash, jsonify, make_response, redirect,
+from flask import (Blueprint, current_app, flash, jsonify, make_response, redirect,
                    render_template, request, send_file, session, url_for)
 import os as _os
 
 from tianshu import business
 from tianshu.db import db
-from tianshu.security import current_user
+from tianshu.security import current_user, safe_referrer
 
 bp = Blueprint('public', __name__)
 
@@ -55,7 +55,7 @@ def toggle_theme():
     """
     cur = request.cookies.get('theme') or 'light'
     nxt = {'light': 'dark', 'dark': 'auto'}.get(cur, 'light')
-    resp = make_response(redirect(request.referrer or url_for('public.home')))
+    resp = make_response(redirect(safe_referrer(request.referrer, url_for('public.home'))))
     resp.set_cookie('theme', nxt, max_age=365 * 86400)
     return resp
 
@@ -132,6 +132,8 @@ def scripts():
     # 多选标签：?tags=情感,硬核 —— 命中任意一个就算（OR）。老的 ?tag= 单选仍然管用。
     sel_tags = [x.strip() for x in (request.args.get('tags') or '').split(',') if x.strip()]
     diff = request.args.get('diff') or ''
+    # 多选难度：?diffs=1,3 —— 命中任意一个难度就算（OR）。老的 ?diff= 单选仍然管用。
+    sel_diffs = [x.strip() for x in (request.args.get('diffs') or '').split(',') if x.strip()]
     only_fav = request.args.get('fav') == '1'
     u = current_user()
 
@@ -147,7 +149,10 @@ def scripts():
                 continue
         elif tag and tag not in (s.get('tags') or []):
             continue
-        if diff and str(s.get('diff')) != diff:
+        if sel_diffs:
+            if str(s.get('diff') or '') not in sel_diffs:
+                continue
+        elif diff and str(s.get('diff')) != diff:
             continue
         if only_fav and str(s.get('id')) not in favs:
             continue
@@ -166,8 +171,8 @@ def scripts():
     if request.args.get('partial') == '1':
         return render_template('_scripts_grid.html', scripts=rows, favs=favs, rating=rating)
     return render_template('scripts.html', scripts=rows, tags=tags,
-                           q=q, tag=tag, sel_tags=sel_tags, diff=diff, only_fav=only_fav, favs=favs,
-                           rating=rating)
+                           q=q, tag=tag, sel_tags=sel_tags, diff=diff, sel_diffs=sel_diffs,
+                           only_fav=only_fav, favs=favs, rating=rating)
 
 
 @bp.get('/scripts/<int:sid>')
@@ -321,7 +326,7 @@ def review_like(rid):
     u = current_user()
     if not u:
         flash('登录之后才能点赞', 'warn')
-        return redirect(request.referrer or url_for('public.home'))
+        return redirect(safe_referrer(request.referrer, url_for('public.home')))
     phone = str(u.get('phone'))
     rows = db.rows('reviews')
     for r in rows:
@@ -329,7 +334,7 @@ def review_like(rid):
             likes = [str(x) for x in r.get('likes') or []]
             r['likes'] = [x for x in likes if x != phone] if phone in likes else likes + [phone]
     db.write('reviews', rows)
-    return redirect(request.referrer or url_for('public.home'))
+    return redirect(safe_referrer(request.referrer, url_for('public.home')))
 
 
 @bp.get('/img/<sub>/<name>')
@@ -407,7 +412,10 @@ def post_create():
         return redirect(url_for('public.comm'))
     # 话题 / 招募字段（§2.4）
     topic = business.clean(request.form.get('topic'), 8)
-    post_type = request.form.get('postType') or ''
+    # ⚠️ 发帖表单的类型下拉字段名是 `type`（与 ?type= 筛选同义），而老/别的入口（如手机站）会发 `postType`。
+    # 以前这里只读 postType —— 于是网页端选「缺位招募」永远读不到，招募帖被当成闲聊、
+    # 招募字段被丢、`postType` 恒为空、招募角标与「?type=recruit」筛选都失效。两个名字都认。
+    post_type = (request.form.get('postType') or request.form.get('type') or '').strip()
     if post_type not in ('recruit',):
         post_type = ''
     recruit_need = 0
@@ -424,9 +432,30 @@ def post_create():
         if not recruit_need and not recruit_role:
             flash('缺位招募要至少填「缺几人」或「缺什么位」', 'warn')
             return redirect(url_for('public.comm'))
+    # 配图上传（唠嗑支持发图）：限 3 张、限图片类型、落盘到 static/uploads/posts/
+    imgs = []
+    files = request.files.getlist('img')
+    if files:
+        up_dir = os.path.join(current_app.static_folder, 'uploads', 'posts')
+        try: os.makedirs(up_dir, exist_ok=True)
+        except Exception: pass
+        ext_ok = ('.png', '.jpg', '.jpeg', '.gif', '.webp')
+        for f in files[:3]:
+            if not f or not getattr(f, 'filename', ''):
+                continue
+            fnm = f.filename.rsplit('.', 1)
+            ext = ('.' + fnm[-1].lower()) if len(fnm) > 1 else ''
+            if ext not in ext_ok:
+                continue
+            safe = '%d_%s.%s' % (business.now_ms(), _os.urandom(3).hex(), ext.lstrip('.'))
+            try:
+                f.save(os.path.join(up_dir, safe))
+                imgs.append('/static/uploads/posts/' + safe)
+            except Exception:
+                pass
     db.update('posts', lambda rows: [{
         'id': business.now_ms(), 'type': request.form.get('type') or 'chat',
-        'title': business.clean(request.form.get('title'), 40), 'text': text, 'imgs': [],
+        'title': business.clean(request.form.get('title'), 40), 'text': text, 'imgs': imgs,
         'topic': topic, 'postType': post_type,
         'recruitNeed': recruit_need, 'recruitRole': recruit_role,
         'recruitScript': recruit_script,
@@ -512,7 +541,7 @@ def review_follow(rid):
     text = business.clean(request.form.get('text'), 500)
     if not text:
         flash('写点什么再追评', 'warn')
-        return redirect(request.referrer or url_for('public.home'))
+        return redirect(safe_referrer(request.referrer, url_for('public.home')))
     rows = db.rows('reviews')
     for r in rows:
         if r.get('id') == rid and str(r.get('username')) == str(u.get('username')):
@@ -521,7 +550,7 @@ def review_follow(rid):
             r['followUps'] = ups
     db.write('reviews', rows)
     flash('追评加上了', 'ok')
-    return redirect(request.referrer or url_for('public.home'))
+    return redirect(safe_referrer(request.referrer, url_for('public.home')))
 
 
 @bp.post('/post/<int:pid>/report')
@@ -565,7 +594,7 @@ def fav(sid):
     # 前端自己改按钮状态，整页不刷新（剧本库 SPA 体验的一部分）。
     if request.args.get('ajax') == '1' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({'on': on, 'group': group})
-    return redirect(request.referrer or url_for('public.scripts'))
+    return redirect(safe_referrer(request.referrer, url_for('public.scripts')))
 
 
 def my_fav_ids(u):

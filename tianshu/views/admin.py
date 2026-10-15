@@ -14,7 +14,7 @@ from flask import Blueprint, flash, redirect, render_template, request, send_fil
 
 from tianshu import business
 from tianshu.db import db
-from tianshu.security import current_user, dm_required, is_staff, role, staff_required
+from tianshu.security import current_user, dm_required, is_staff, role, safe_referrer, staff_required
 from config import DATA_DIR, SESSION_TIMES, TAG_PRESETS
 
 
@@ -83,7 +83,7 @@ def verify():
     """到店核销：客人报 6 位码，前台在这儿输一下"""
     ok, msg, _b = business.verify_checkin(request.form.get('code'), current_user().get('username'))
     flash(msg, 'ok' if ok else 'warn')
-    return redirect(request.referrer or url_for('admin.dashboard'))
+    return redirect(safe_referrer(request.referrer, url_for('admin.dashboard')))
 
 
 @staff_required
@@ -1421,7 +1421,7 @@ def talktip_add():
                                    request.form.get('cat') or '其他',
                                    request.form.get('title'), request.form.get('text'))
     flash(msg, 'ok' if ok else 'warn')
-    return redirect(request.referrer or url_for('admin.dashboard') + '#talktips')
+    return redirect(safe_referrer(request.referrer, url_for('admin.dashboard') + '#talktips'))
 
 
 @bp.post('/talktips/<int:tid>/del')
@@ -1430,7 +1430,7 @@ def talktip_del(tid):
     """删话术（作者本人或管理员）"""
     ok, msg = business.talktip_del(current_user(), tid)
     flash(msg, 'ok' if ok else 'warn')
-    return redirect(request.referrer or url_for('admin.dashboard') + '#talktips')
+    return redirect(safe_referrer(request.referrer, url_for('admin.dashboard') + '#talktips'))
 
 
 def invoices_panel():
@@ -1446,7 +1446,7 @@ def invoice_done(iid):
     """标记发票已开（仅 admin）"""
     ok, msg = business.invoice_mark_done(iid, current_user().get('username'))
     flash(msg, 'ok' if ok else 'warn')
-    return redirect(request.referrer or url_for('admin.dashboard') + '#invoices')
+    return redirect(safe_referrer(request.referrer, url_for('admin.dashboard') + '#invoices'))
 
 
 def visits_panel():
@@ -1463,7 +1463,7 @@ def car_close(cid):
     u = dict(current_user(), _staff=True)
     ok, msg = business.car_action(u, cid, 'close', request.form)
     flash(msg, 'ok' if ok else 'warn')
-    return redirect(request.referrer or url_for('admin.dashboard') + '#bookings')
+    return redirect(safe_referrer(request.referrer, url_for('admin.dashboard') + '#bookings'))
 
 
 @bp.post('/bookings/<int:cid>/car-fill')
@@ -1473,7 +1473,7 @@ def car_fill(cid):
     u = dict(current_user(), _staff=True)
     ok, msg = business.car_action(u, cid, 'fill', request.form)
     flash(msg, 'ok' if ok else 'warn')
-    return redirect(request.referrer or url_for('admin.dashboard') + '#bookings')
+    return redirect(safe_referrer(request.referrer, url_for('admin.dashboard') + '#bookings'))
 
 
 # ---------------------------------------------------------------- 后台标签总表

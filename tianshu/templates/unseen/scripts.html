@@ -33,13 +33,32 @@
             <path d="M10.6 10.6 14 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
           </svg>
         </button>
+        {# #148 搜索历史：聚焦时下拉「最近搜过」（localStorage 存的），点一条即重搜，可清空 #}
+        <div class="u-search__sug" data-sug hidden>
+          <div class="u-search__sug-h"><span>最近搜过</span><button type="button" data-sug-clear>清空</button></div>
+          <div class="u-search__sug-list" data-sug-list role="listbox" aria-label="最近搜索"></div>
+        </div>
       </form>
       <span class="libcount">命中 <b data-lib-count>{{ scripts|length }}</b> 部</span>
-      <select class="chip" data-lib-diff aria-label="难度" style="padding:9px 14px">
-        <option value="">全部难度</option>
-        {% for d in range(1,6) %}<option value="{{ d }}" {{ 'selected' if diff|string == d|string }}>难度 {{ d }}</option>{% endfor %}
+      {# 难度改为多选（可同时挑「难度 1 + 难度 3」）：后端 ?diffs=1,3 取并集。
+         原生 option 用 optgroup 分档，前端 buildSelect 会渲染成带分组标题的复选下拉。 #}
+      <select class="chip" data-u-select data-lib-diff data-placeholder="全部难度"
+              multiple aria-label="难度（可多选）" style="padding:9px 14px">
+        <optgroup label="入门">
+          <option value="1" {{ 'selected' if '1' in sel_diffs or diff|string == '1' }}>难度 1</option>
+          <option value="2" {{ 'selected' if '2' in sel_diffs or diff|string == '2' }}>难度 2</option>
+        </optgroup>
+        <optgroup label="进阶">
+          <option value="3" {{ 'selected' if '3' in sel_diffs or diff|string == '3' }}>难度 3</option>
+          <option value="4" {{ 'selected' if '4' in sel_diffs or diff|string == '4' }}>难度 4</option>
+        </optgroup>
+        <optgroup label="硬核">
+          <option value="5" {{ 'selected' if '5' in sel_diffs or diff|string == '5' }}>难度 5</option>
+        </optgroup>
       </select>
       <button class="chip {{ 'on' if only_fav }}" type="button" data-lib-fav="{{ '1' if only_fav else '0' }}">只看想玩</button>
+      {# 有任一筛选生效时才出现的「清空筛选」——多选后条件可能有好几条，一键退回全部 #}
+      <button class="libclear" type="button" data-lib-clear hidden>清空筛选<span class="x" aria-hidden="true">×</span></button>
     </div>
 
     <div class="filters" data-reveal data-lib-tags>

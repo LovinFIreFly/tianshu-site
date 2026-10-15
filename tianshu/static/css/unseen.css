@@ -1,32 +1,42 @@
 /* ============================================================================
-   Unseen 风格 · 暗场设计系统（v2 · 聚光灯）
-   暗场为底 + 一束随光标的暖色追光；朱砂/暖陶土为唯一强调色。
-   参考：symphonyofvines.unseen.co（暗色沉浸/光标作用）、unseen.co/projects
-        （Selected Work 网格）、blueyard（编辑式版式）。
+   甜薯 unseen · 浅暖编辑式设计系统（v3 · 大改：去 AI 味）
+   浅暖纸底 + 克制砖红强调 + Fraunces(罗马正体)/Instrument Sans；
+   仅「夜场 / 谢幕」一幕用暖深沉浸层（呼应剧本杀的戏剧魂）。
+   参考 DNA（已抓计算样式）：symphonyofvines(#f4f0ec 暖白/罗马衬线)、blueyard(#fff6f4 暖浅)、
+   cosmos、misotone(#e8e2d4 米)、日系站；字体避开 Inter（AI 默认），强调色避开 #CF5A32（AI 朱砂）。
    ========================================================================== */
 
 :root {
-  /* —— 暗场基底（令牌沿用旧名，内页组件自动跟随翻转）—— */
-  --paper:      #0E0C0A;   /* 页底：暗场 */
-  --paper-2:    #17130F;   /* 面板 */
-  --paper-3:    #211B15;   /* 更高一级面板 */
-  --ink:        #F2ECE1;   /* 暖白正文 */
-  --ink-2:      #B6AC9D;   /* 8.7:1 */
-  --ink-3:      #8A8173;   /* 5.1:1 —— 原 #7E7568 只有 4.3:1，小字（11px 标签）不达标，已提亮 */
-  --ink-dim:    #6A6155;   /* 未照亮字色：提到 ~3:1（巨字达标），仍与 --lit 拉开层次 */
-  --line:       rgba(242,236,225,.12);
-  --line-2:     rgba(242,236,225,.06);
-  --accent:     #CF5A32;   /* 朱砂（暗底提亮） */
-  --accent-2:   #E29447;   /* 暖陶土 / 琥珀 */
-  --accent-ink: #1A0C06;
-  --lit:        #FFE9CF;   /* 被追光照亮时的字色 */
-  --glow:       rgba(207,90,50,.20);
+  color-scheme: light;
 
-  --dark:       #070605;   /* 更深的沉浸层（谢幕 / 换页）*/
-  --dark-2:     #100E0C;
-  --dark-ink:   #F2ECE1;
-  --dark-2-ink: #9C9384;
-  --dark-line:  rgba(242,236,225,.12);
+  /* —— 浅暖纸底（中性也带暖彩，绝不纯灰）—— */
+  --paper:      oklch(96.5% 0.013 78);   /* 暖白纸 */
+  --paper-2:    oklch(92.5% 0.017 76);   /* 面板 */
+  --paper-3:    oklch(88%   0.019 74);   /* 更高一级面板 */
+  --ink:        oklch(25%   0.022 56);   /* 暖近黑正文 */
+  --ink-2:      oklch(43%   0.020 56);   /* 次级 */
+  --ink-3:      oklch(53%   0.017 56);   /* 静音（浅底上 ≥4.5:1，a11y 达标；原 58% 只有 3.88） */
+  --ink-dim:    oklch(73%   0.014 56);   /* 未提亮字色（巨字/水印） */
+  --line:       oklch(25% 0.022 56 / .14);
+  --line-2:     oklch(25% 0.022 56 / .07);
+
+  /* —— 强调：克制的砖红/铁锈；明确不是 AI 朱砂 #CF5A32（更暗、更低彩、偏砖）——
+     只作强调，不做填充（占用 < 5% 视口，slop gate 23）。 */
+  --accent:     oklch(53% 0.135 44);     /* 砖红 / 铁锈 */
+  --accent-2:   oklch(66% 0.105 70);     /* 暖琥珀（次要，极少用）——用于暗底/描边/装饰 */
+  --amber-ink:  oklch(53% 0.105 70);     /* 同一支琥珀，作**浅底上的文字**用（暗一档，4.5:1 达标） */
+  --accent-ink: oklch(98% 0.008 78);     /* 强调面上的字色（浅） */
+  --lit:        oklch(47% 0.135 44);     /* 浅底上"被照亮"的字色 = 深强调 */
+  --glow:       oklch(53% 0.135 44 / .15);
+  --ring:       oklch(53% 0.135 44 / .20);
+  --ring-2:     oklch(53% 0.135 44 / .26);
+
+  /* —— 暖深沉浸层（仅「夜场 / 谢幕」一幕 + 换页）—— 暖深，不是旧 #0E0C0A —— */
+  --dark:       oklch(20% 0.018 56);     /* 暖深沉浸底 */
+  --dark-2:     oklch(26% 0.020 56);
+  --dark-ink:   oklch(95% 0.010 78);     /* 暖白字 */
+  --dark-2-ink: oklch(73% 0.014 62);
+  --dark-line:  oklch(95% 0.010 78 / .14);
 
   --maxw: 1240px;
   --gut: clamp(20px, 5vw, 72px);
@@ -39,10 +49,14 @@
   --nav-h: 86px;
 
   /* 中文交给系统字族（不再拉 CJK webfont —— 那是首屏最重的一块）：
-     拉丁用 Fraunces / Inter，落到中文字符时依次尝试系统黑体/宋体。
-     Noto * CJK 放在后面只作「本机已装就用」的兜底，不触发任何网络请求。 */
-  --font-display: "Fraunces", "Songti SC", "Source Han Serif SC", "Noto Serif CJK SC", "Noto Serif SC", "SimSun", serif;
-  --font-sans: "Inter", "PingFang SC", "Microsoft YaHei", "HarmonyOS Sans SC", "Source Han Sans SC", "Noto Sans CJK SC", "Noto Sans SC", system-ui, -apple-system, sans-serif;
+     - 拉丁正文：Instrument Sans（避开 Inter 这个 AI 默认）
+     - 拉丁展示：Fraunces，仅罗马正体（斜体标题是头号 AI tell，全局禁斜体）
+     - 等宽：Space Mono，只给真数字/数据，不用来做满屏 eyebrow
+     落到中文字符时依次尝试系统黑体/宋体。 */
+  /* 中文走免费 OFL 的 Noto（已接 Google Fonts 自动子集化）；拉丁分别交给 Fraunces / Instrument Sans / Space Mono。
+     落到中文时依次尝试：Noto（已加载）→ 系统宋黑兜底（断网/字体未就绪也不塌）。 */
+  --font-display: "Fraunces", "Noto Serif SC", "Songti SC", "Source Han Serif SC", serif;
+  --font-sans: "Instrument Sans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
   --font-mono: "Space Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 
   --ease: cubic-bezier(.22,.61,.36,1);
@@ -79,6 +93,7 @@ body {
   letter-spacing: .005em;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  font-synthesis: weight;   /* 允许合成粗体，但禁用合成斜体/倾斜 —— 中文被斜体化是头号 AI tell（W1 教训） */
   overflow-x: hidden;
 }
 body.has-cursor { cursor: none; }
@@ -97,7 +112,7 @@ html.smooth, html.smooth body { scroll-behavior: auto; }
   transition: transform .2s var(--ease-out);
 }
 .skip:focus { transform: translate(-50%, 0); }
-:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; border-radius: 3px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
 
 /* ---------- 全局 reduced-motion 兜底（专业标志；Wantedly 10 处 / Up Forward 5 处都写了）----------
    一处兜住全站：所有动画/过渡压到瞬时，滚动不再平滑。放在最前，优先级靠 !important 保证。 */
@@ -114,13 +129,22 @@ html.smooth, html.smooth body { scroll-behavior: auto; }
    会同时命中所有表单字段 —— 每个 .field 都变成全屏浮层并定在 (0,0)，
    页面上表现为"输入框和 label 凭空消失"（2026-10 排查了很久才发现）。 */
 .field-canvas { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; pointer-events: none; }
-main, .foot { position: relative; z-index: 1; }
+main { position: relative; z-index: 1; background: var(--paper); }   /* 浅暖底铺满内容层，暗场流体画布被彻底盖住 → 全站亮场、文字可读 */
+.foot { position: relative; z-index: 1; }
 html.no-field .field-canvas { display: none; }
+
+/* ---------- 全局胶片颗粒（学 U1 / U3 签名质感）----------
+   极淡 SVG 噪声叠在内容之上（multiply + 5%），给扁平暖纸底一点"胶片"颗粒；
+   data-URI 内联，零请求。reduced-motion 下它本来就是静止的，无需额外处理。 */
+.grain {
+  position: fixed; inset: 0; z-index: 150; pointer-events: none;
+  opacity: .045; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+
 html.no-field body {
-  background:
-    radial-gradient(90% 70% at 74% -10%, #201811 0%, rgba(32,24,17,0) 58%),
-    radial-gradient(80% 60% at 12% 108%, #1a120d 0%, rgba(26,18,13,0) 60%),
-    var(--paper);
+  background: var(--paper);
 }
 
 a { color: inherit; text-decoration: none; }
@@ -144,7 +168,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .eyebrow--dark { color: var(--dark-2-ink); }
 .eyebrow--dark::before { background: var(--accent-2); }
 /* 章节号 S.01 / S.02（CoMinVi 的分镜编号）：小小的、等宽的，给页面"书/电影"的节奏 */
-.eyebrow b { font-family: var(--font-mono); font-weight: 400; letter-spacing: .12em; color: var(--accent-2); margin-right: 4px; }
+.eyebrow b { font-family: var(--font-mono); font-weight: 400; letter-spacing: .12em; color: var(--amber-ink); margin-right: 4px; }
 
 h1,h2,h3,h4 { font-family: var(--font-display); font-weight: 400; line-height: 1.04; margin: 0; letter-spacing: -.01em; }
 /* 字号阶梯收紧：AI 爱 h1=80/h2=48/h3=32 的巨大落差 + 行高 1.5；
@@ -166,8 +190,8 @@ p, .lede, .p__d, .idx__desc { text-wrap: pretty; }
 
 /* 角色比喻小句（去 AI 味 · 第 2 条）：不写"功能"，写"你在这件事里是谁"。
    放在 h2 下面一行、斜体 display 字，像剧本里的一句旁白，而不是产品说明书的口号。 */
-.kicker { margin-top: 14px; font-family: var(--font-display); font-style: italic; font-size: clamp(1rem, 1.35vw, 1.18rem); color: var(--ink-3); letter-spacing: .005em; max-width: 34ch; }
-.kicker b { color: var(--accent-2); font-style: normal; font-weight: 500; }
+.kicker { margin-top: 14px; font-family: var(--font-display); font-size: clamp(1rem, 1.35vw, 1.18rem); color: var(--ink-3); letter-spacing: .005em; max-width: 34ch; }   /* 去 AI 味：旁白小句改正体，斜体 display 是 Hallmark Gate 38a 头号 AI tell */
+.kicker b { color: var(--amber-ink); font-style: normal; font-weight: 500; }
 
 /* ---------- 链接 ---------- */
 /* 双层下划线交叉滑动（Wantedly 独门）：浅线从右收缩、深线从左展开，交叉瞬间像"翻页"。
@@ -212,95 +236,123 @@ p, .lede, .p__d, .idx__desc { text-wrap: pretty; }
 /* ============================================================================
    导航 · 固定暗场栏 + 印章字标（暗场化）
    ========================================================================== */
+/* 顶栏在亮场首屏是"隐形"的：没有持久 1px 边框、没有半透明条、没有白底。
+   只有滚动后才浮出一条发丝线 + 极淡纸色 —— 专门打破 Hallmark Gate 42
+   的"wordmark 左 + 4-5 链接 + 右置实心按钮 + 1px 边 + 白底"标准 SaaS 指纹。 */
 .nav {
   position: fixed; top: 0; left: 0; right: 0; z-index: 90;
-  display: flex; align-items: center; justify-content: space-between; gap: 20px;
-  padding: 15px var(--gut);
-  background: rgba(14,12,10,.86);
-  background: color-mix(in srgb, var(--paper) 86%, transparent);
-  /* ⚠️ 不要在这上面用 backdrop-filter：它下面是一块每帧都在变的 WebGL 画布，
-     浏览器必须每帧重新做一次全宽模糊，是最典型的掉帧元凶。用不透明度换性能。*/
-  border-bottom: 1px solid var(--line-2);
-  transition: background .4s, padding .4s, border-color .4s, transform .5s var(--ease);
+  display: flex; align-items: center; justify-content: space-between; gap: clamp(14px,2vw,28px);
+  padding: 20px var(--gut);
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  transition: background .55s var(--ease), padding .45s var(--ease), border-color .55s var(--ease), transform .5s var(--ease);
 }
-.nav.scrolled { background: rgba(14,12,10,.9); background: color-mix(in srgb, var(--paper) 90%, transparent); padding-block: 10px; border-bottom-color: var(--line); }
+.nav.scrolled { background: color-mix(in srgb, var(--paper) 88%, transparent); padding-block: 12px; border-bottom-color: var(--line); }
 .nav__brand { display: inline-flex; align-items: center; gap: 11px; font-family: var(--font-display); }
 .nav__brand .mark {
   width: 34px; height: 34px; border-radius: 2px; display: grid; place-items: center;
-  border: 1px solid var(--accent); background: rgba(207,90,50,.10); color: var(--accent);
+  border: 1px solid var(--accent); background: oklch(53% 0.135 44 / .10); color: var(--accent);
   font-weight: 900; font-size: 18px; box-shadow: 0 8px 22px -12px var(--glow);
 }
 .nav__brand .brand-word { font-weight: 600; font-size: 1.16rem; letter-spacing: .02em; }
 .nav__links { display: flex; align-items: center; gap: clamp(14px, 2vw, 30px); }
 .nav__links a { font-size: .94rem; color: var(--ink-2); transition: color .3s; position: relative; }
 .nav__links a:hover, .nav__links a.on { color: var(--ink); }
-.nav__links a.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 2px; background: var(--accent); border-radius: 2px; }
+/* 指针跟随下划线（学 nova 的滑动线）：整条导航一根线，走到哪滑到哪，
+   替代原来静态的 .on::after 短线 —— 鼠标交互明显多了。 */
+.nav__line {
+  position: absolute; bottom: -7px; left: 0; width: 0; height: 2px; border-radius: 2px;
+  background: var(--accent); opacity: 0; pointer-events: none;
+  transition: transform .45s var(--ease-out), width .45s var(--ease-out), opacity .3s;
+}
 /* 双层字体切换（学 unseen.co 的导航母题）：无衬线 → 衬线斜体滑入，把"理性→感性"的瞬间做进导航。
    注意：overflow:hidden 必须放在内层 .nw 上，不能放在 <a> 上 —— 否则会把 .on 的下划线一起裁掉。 */
 .nw { position: relative; display: inline-block; height: 1.32em; overflow: hidden; vertical-align: bottom; }
 .nw b, .nw i { display: block; font-weight: 400; font-style: normal; transition: transform .45s var(--ease-out); }
-.nw i { position: absolute; inset: 0; transform: translateY(108%); font-family: var(--font-display); font-style: italic; letter-spacing: .02em; color: var(--accent-2); }
+.nw i { position: absolute; inset: 0; transform: translateY(108%); font-family: var(--font-display); font-style: italic; letter-spacing: .02em; color: var(--amber-ink); }
 .nav__links a:hover .nw b { transform: translateY(-108%); }
 .nav__links a:hover .nw i { transform: translateY(0); }
 .nav__cta { display: flex; align-items: center; gap: 14px; }
-.nav__work { color: var(--accent-2); }
-.nav__work::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; margin-right: 7px; vertical-align: middle; box-shadow: 0 0 0 3px rgba(207,90,50,.18); }
+/* 内容驱动的签名状态条：不是通用 CTA，是"此刻正在约局"的活体信号
+   （打破 Gate 42 右置实心按钮的单调节奏）。链接到组局页，带脉冲点。 */
+.nav__live {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-2); padding: 7px 13px; border: 1px solid var(--line); border-radius: 999px;
+  background: color-mix(in srgb, var(--paper) 72%, transparent);
+  transition: border-color .4s, color .4s;
+}
+.nav__live:hover { color: var(--ink); border-color: var(--accent); }
+.nav__live .pulse {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none;
+  box-shadow: 0 0 0 0 oklch(53% 0.135 44 / .55); animation: navpulse 2.4s var(--ease) infinite;
+}
+@keyframes navpulse {
+  0%   { box-shadow: 0 0 0 0 oklch(53% 0.135 44 / .55); }
+  70%  { box-shadow: 0 0 0 9px oklch(53% 0.135 44 / 0); }
+  100% { box-shadow: 0 0 0 0 oklch(53% 0.135 44 / 0); }
+}
+.nav__live b { color: var(--amber-ink); font-weight: 700; }
+/* 导航注册键改用幽灵药丸（描边而非实心）：右置不再是"高亮实心按钮"这一头号指纹 */
+.nav__cta .btn--nav { --bg: transparent; --fg: var(--ink); border-color: var(--accent); border-radius: 999px; padding: 9px 19px; font-size: .9rem; }
+.nav__cta .btn--nav::before { background: var(--accent); }
+.nav__cta .btn--nav:hover { color: var(--accent-ink); border-color: transparent; }
+.nav__work { color: var(--amber-ink); }
+.nav__work::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; margin-right: 7px; vertical-align: middle; box-shadow: 0 0 0 3px oklch(53% 0.135 44 / .18); }
 .nav__burger { display: none; background: none; border: 0; padding: 8px; }
 .nav__burger span { display: block; width: 22px; height: 2px; background: var(--ink); margin: 4px 0; transition: .3s; }
+/* 暗顶页（/login /register /forgot）：暗色左栏一直顶到导航之下，而这条 nav 横跨"左暗右亮"。
+   只有压在暗panel上的**品牌字与左侧链接**需要切暗场字色（深字压深底只有 1.1–2.2:1）；
+   右侧的「正在约局」徽标与「登录/注册」其实落在亮区，保持浅色主题。滚动后 nav 变亮底，也一并还原。 */
+body.on-dark-top .nav:not(.scrolled) .nav__brand { color: var(--dark-ink); }
+body.on-dark-top .nav:not(.scrolled) .nav__links a { color: var(--dark-2-ink); }
+body.on-dark-top .nav:not(.scrolled) .nav__links a:hover,
+body.on-dark-top .nav:not(.scrolled) .nav__links a.on { color: var(--dark-ink); }
+body.on-dark-top .nav:not(.scrolled) .nw i { color: var(--accent-2); }
+body.on-dark-top .nav:not(.scrolled) .nav__burger span { background: var(--dark-ink); }
 
 /* ============================================================================
    首屏 · 幕一「光缝」（Spotlight）
    ========================================================================== */
 .stage {
   position: relative; min-height: 100svh; display: flex; flex-direction: column;
-  justify-content: flex-end; padding: 128px 0 clamp(28px, 5vh, 56px);
+  justify-content: flex-end; padding: clamp(112px, 16vh, 160px) 0 clamp(48px, 8vh, 92px);
   overflow: hidden; isolation: isolate;
-  background: transparent;   /* 让全局 WebGL 暗场透出（无 WebGL 时由 html.no-field body 兜底） */
+  background: var(--paper);   /* 首屏=浅暖编辑式亮场；暗场流体画布已退役（见 html.no-field）*/
 }
 .stage__glow {
   position: absolute; inset: -10%; z-index: 0; pointer-events: none;
   background: radial-gradient(circle clamp(180px, 19vw, 330px) at var(--mx, 60%) var(--my, 40%),
-              var(--glow), rgba(207,90,50,0) 70%);
+              var(--glow), oklch(53% 0.135 44 / 0) 70%);
   opacity: .24; transition: opacity .9s var(--ease);   /* WebGL 已负责主光，CSS 光仅作极轻叠加 */
 }
 /* 用户驱动：光标停下 → 光自己退场（不自动表演）*/
 body.is-idle .stage__glow { opacity: 0; }
-.stage__slits { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-.stage__slits i {
-  position: absolute; top: -30%; width: 1px; height: 160%;
-  background: linear-gradient(180deg, transparent, rgba(255,214,178,.30), transparent);
-  opacity: .34; transform: rotate(6deg);
-}
-.stage__slits i:nth-child(1) { left: 22%; }
-.stage__slits i:nth-child(2) { left: 61%; height: 120%; opacity: .20; }
-.stage__slits i:nth-child(3) { left: 84%; opacity: .12; }
-/* ---------- 首屏实测素材位：把 hero.mp4 / hero.webp 丢进 static/media/ 即自动启用 ---------- */
-.stage__media-host { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-.stage__media-host > img, .stage__media-host > video {
-  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-  /* 调色已经在 tools/media_grade.py 里烘焙进素材了，这里不再挂全屏 filter（那是整屏一次额外栅格化） */
-}
-.stage__media-host::after {   /* 压暗幕布：保证巨字始终压得住画面 */
-  content: ""; position: absolute; inset: 0;
-  background: linear-gradient(180deg,
-    rgba(8,7,6,.52) 0%, rgba(8,7,6,.30) 24%, rgba(8,7,6,.72) 56%, rgba(8,7,6,.94) 100%);
-}
-/* 有实测素材时，未被照亮的字要"看得见但明显更暗"——层级不能丢 */
-html.has-media .stage__type .base { color: rgba(242,236,225,.32); }
-html.has-media .stage__slits { opacity: .5; }
-html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease); }
-.stage__grain {
-  position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: .055;
-  /* 不用 mix-blend-mode：它会让整屏进入离屏合成，每帧都要重算一遍混合 */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
-}
+/* 删除 .stage__slits：三条斜光带属无语义装饰（Hallmark Gate 45），亮场首屏不再需要 */
+/* 删除首屏全屏素材位 / 暗场颗粒 / 暗场相关 has-media 规则：
+   亮场首屏不再需要压暗幕布、胶片颗粒与暗场画布（Hallmark Gate 45 装饰无目的）。
+   若以后要回暗场沉浸，谢幕 .curtain 已自带 --dark 底 + 暖光，无需首屏暗场。 */
 .stage__body { position: relative; z-index: 3; }
+/* 首屏左缘竖排字标：离轴编辑式细节，打破"内容永远居中在 wrap 里"的格式化感 */
+.stage__edge {
+  position: absolute; left: clamp(10px, 1.4vw, 22px); top: 50%; z-index: 4;
+  transform: translateY(-50%) rotate(180deg); writing-mode: vertical-rl;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .34em; color: var(--ink-3);
+  pointer-events: none;
+}
+@media (max-width: 880px) { .stage__edge { display: none; } }
+/* #172 移动端首屏顶部留白过大：根因是 .stage 用 justify-content:flex-end 把内容贴底，
+   在 100svh 里自然顶空一大块。移动端改为顶对齐 + 取消满屏，hero 内容靠上、呼吸自然。 */
+@media (max-width: 600px) {
+  .stage { min-height: auto; justify-content: flex-start; padding-top: clamp(76px, 11vh, 112px); padding-bottom: clamp(40px, 8vh, 80px); }
+  .stage__top { margin-bottom: clamp(20px, 5vh, 40px); }
+}
 .stage__top {
   display: flex; justify-content: space-between; align-items: flex-start;
   gap: 20px; flex-wrap: wrap; margin-bottom: clamp(30px, 8vh, 84px);
 }
 .stage__clock { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .18em; color: var(--ink-3); text-align: right; line-height: 1.9; }
-.stage__clock b { color: var(--accent-2); font-weight: 400; }
+.stage__clock b { color: var(--amber-ink); font-weight: 400; }
 
 /* 巨字 + 追光照亮（双图层）*/
 .stage__type { position: relative; font-family: var(--font-display); font-weight: 900; font-synthesis: none; }
@@ -308,11 +360,11 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
   display: block; font-size: clamp(2.9rem, 10.4vw, 9.6rem); line-height: .98;
   letter-spacing: -.025em; margin: 0;
 }
-.stage__type .t em { font-style: italic; }
+.stage__type .t em { font-style: normal; color: var(--accent); }   /* 去 AI 味：强调用砖红而非斜体（Gate 38a）*/
 /* 中日韩字没有真斜体，禁止浏览器合成倾斜（合成斜体是"廉价 AI 味"的典型）：
    西文用 Fraunces 真斜体，中文保持正体。 */
 .stage__type, .h2, .h3, .poster__title, .card__title { font-synthesis: none; }
-.stage__type .base { color: var(--ink-dim); font-weight: inherit; }   /* 巨字是 h1，需继承 .stage__type 的 900 字重（全局 h1 复位成了 400） */
+.stage__type .base { color: var(--ink); font-weight: inherit; }   /* 巨字是 h1，需继承 .stage__type 的 900 字重（全局 h1 复位成了 400）；亮场下用深墨而非浅灰 */
 .stage__type .litwrap { position: absolute; inset: 0; pointer-events: none; color: var(--lit); }
 .stage__type .litwrap {
   -webkit-mask-image: radial-gradient(circle clamp(150px,19vw,300px) at var(--mx,50%) var(--my,50%), #000 0%, rgba(0,0,0,.55) 44%, transparent 74%);
@@ -363,10 +415,10 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 .stage__keys { font-family: var(--font-mono); font-size: 11px; letter-spacing: .16em; color: var(--ink-3); display: inline-flex; align-items: center; gap: 9px; }
 .stage__keys b {
   display: inline-grid; place-items: center; min-width: 21px; height: 21px; padding: 0 6px;
-  border: 1px solid var(--line); border-radius: 2px; color: var(--accent-2); font-weight: 400;
+  border: 1px solid var(--line); border-radius: 2px; color: var(--amber-ink); font-weight: 400;
   transition: border-color .4s, color .4s;
 }
-.stage__keys:hover b { border-color: rgba(207,90,50,.55); }
+.stage__keys:hover b { border-color: oklch(53% 0.135 44 / .55); }
 
 /* ============================================================================
    滚动字幕条（细，克制，仅一处）
@@ -377,6 +429,10 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 .ticker__track span { font-family: var(--font-display); font-size: clamp(1.1rem, 2.1vw, 1.7rem); color: var(--ink-3); padding-inline: 26px; display: inline-flex; align-items: center; gap: 26px; }
 .ticker__track span::after { content: "✳"; color: var(--accent); font-size: .55em; }
 @keyframes marq { to { transform: translateX(-50%); } }
+/* #72 反向跑马灯：复用同一条关键帧，反向播放即右→左错位滚动 */
+.ticker--rev { background: var(--paper); border-top: 0; }
+.ticker--rev .ticker__track { animation-direction: reverse; animation-duration: 52s; }
+.ticker--rev .ticker__track span { color: var(--ink-2); }
 
 /* ============================================================================
    幕二 · 钉住横向海报廊（本本墙）
@@ -397,10 +453,11 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
   font-size: 16px; line-height: 1; display: grid; place-items: center;
   transition: border-color .3s, color .3s, background .3s;
 }
-.gallery__nav button:hover { border-color: rgba(207,90,50,.5); color: var(--ink); }
+.gallery__nav button:hover { border-color: oklch(53% 0.135 44 / .5); color: var(--ink); }
 .gallery__nav button:active { background: var(--paper-3); }
-.gallery__track { display: flex; gap: clamp(16px, 2.2vw, 34px); padding-inline: var(--gut); will-change: transform; }
-.poster { flex: 0 0 auto; width: clamp(230px, 24vw, 340px); transition: opacity .6s, filter .6s; }
+.gallery__track { display: flex; gap: clamp(16px, 2.2vw, 34px); padding-inline: var(--gut); will-change: transform; perspective: 1500px; }
+.poster { flex: 0 0 auto; width: clamp(230px, 24vw, 340px); transform-style: preserve-3d; transition: opacity .6s, filter .6s; will-change: transform;
+  transform: rotateX(var(--fx, 0deg)) rotateY(var(--fy, 0deg)) translateY(var(--fz, 0px)) scale(var(--fs, 1)); }
 .gallery.dragging, .gallery.dragging a { cursor: grabbing; }
 .poster__face {
   position: relative; aspect-ratio: 3 / 4.2; border-radius: 2px; overflow: hidden;
@@ -408,7 +465,7 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
   display: grid; place-items: center;
   transition: transform .7s var(--ease-out), box-shadow .7s, border-color .5s, filter .6s;
 }
-.poster__face::after { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 80% at 30% 8%, rgba(207,90,50,.34), transparent 62%); opacity: .75; transition: opacity .6s; }
+.poster__face::after { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 80% at 30% 8%, oklch(53% 0.135 44 / .34), transparent 62%); opacity: .75; transition: opacity .6s; }
 .poster__glyph {
   position: relative; z-index: 2; font-family: var(--font-display); font-weight: 900;
   font-size: clamp(4.4rem, 8vw, 7.6rem); color: rgba(242,236,225,.9);
@@ -416,26 +473,32 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 }
 .poster__idx { position: absolute; z-index: 2; top: 14px; left: 16px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); letter-spacing: .14em; }
 /* 角标：从"填充药丸"改成发丝描边的编辑式标记（不抢画面） */
-.poster__ribbon { position: absolute; z-index: 2; top: 14px; right: 14px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .14em; padding: 4px 9px; border-radius: 2px; background: rgba(10,9,8,.55); color: var(--accent-2); border: 1px solid rgba(207,90,50,.55); backdrop-filter: blur(3px); }
+.poster__ribbon { position: absolute; z-index: 2; top: 14px; right: 14px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .14em; padding: 4px 9px; border-radius: 2px; background: oklch(25% 0.022 56 / .55); color: var(--accent-2); border: 1px solid oklch(53% 0.135 44 / .55); backdrop-filter: blur(3px); }
 .poster__body { margin-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .poster__title { font-family: var(--font-display); font-size: clamp(1.05rem, 1.5vw, 1.32rem); line-height: 1.15; transition: color .5s; }
 .poster__meta { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); letter-spacing: .06em; margin-top: 5px; }
 .poster__price { font-family: var(--font-display); font-size: 1.2rem; color: var(--accent-2); white-space: nowrap; }
-.poster.on .poster__face { transform: scale(1.03); border-color: rgba(207,90,50,.55); }
+.poster.on .poster__face { transform: scale(1.03); border-color: oklch(53% 0.135 44 / .55); }
 .poster.on .poster__glyph { transform: translateY(-2px) scale(1.06); color: var(--lit); }
 .poster.on .poster__title { color: var(--lit); }
 .poster.dim { opacity: .45; filter: saturate(.7); }
+/* 悬停那张立起来后，同排兄弟往后退（学 nova 的"视角折叠"）：用独立类，不抢滚动逻辑的 .dim */
+.gallery.dimming .poster:not(.is-cur) { opacity: .42; filter: saturate(.5); }
+.poster.is-cur { opacity: 1; }
 .poster__cta {
   margin-top: 14px; display: inline-flex; align-items: center; gap: 8px;
   font-family: var(--font-mono); font-size: 11px; letter-spacing: .16em; color: var(--ink-3);
   opacity: 0; transform: translateY(6px); transition: opacity .5s, transform .5s var(--ease-out), color .4s;
 }
 .poster.on .poster__cta { opacity: 1; transform: none; color: var(--accent-2); }
+/* #77 画廊进度指示 */
+.gallery__bar { height: 2px; background: var(--line); margin-top: clamp(14px, 2.4vh, 28px); overflow: hidden; }
+.gallery__bar i { display: block; height: 100%; width: 0; background: var(--accent); transform-origin: left center; }
 
 /* 有真实封面时：默认压暗降饱和（"没被照亮"），hover / 当前项才显色 —— 光只在该亮的地方 */
 .poster__face--pic::after {
   z-index: 2;
-  background: linear-gradient(180deg, rgba(10,9,8,.14) 0%, rgba(10,9,8,0) 32%, rgba(10,9,8,.74) 100%);
+  background: linear-gradient(180deg, oklch(25% 0.022 56 / .14) 0%, oklch(25% 0.022 56 / 0) 32%, oklch(25% 0.022 56 / .74) 100%);
   opacity: 1;
 }
 .poster__img {
@@ -448,6 +511,29 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 .poster:hover .poster__img, .poster.on .poster__img, .poster:focus-visible .poster__img {
   filter: grayscale(0) saturate(.95) brightness(.94) contrast(1.03); transform: scale(1.06);
 }
+
+/* 跟着光标走的悬浮缩略图（unseen.co 头号签名交互）：悬停剧目海报时，
+   一张缩略图黏在光标旁、带轻微惯性，专门打破"一排静态卡片"的模板感。
+   外层 .gal-thumb 只负责 JS 定位（translate），内层 .gal-thumb__in 负责缩放/淡入，
+   二者分层才不会互相覆盖 transform。没有真封面就用首字大字占位。 */
+.gal-thumb { position: fixed; top: 0; left: 0; z-index: 180; pointer-events: none; will-change: transform; }
+.gal-thumb__in {
+  width: 190px; height: 244px; border-radius: 3px; overflow: hidden;
+  transform: translate(-50%,-50%) scale(.82); opacity: 0;
+  transition: opacity .35s var(--ease-out), transform .45s var(--ease-out);
+  box-shadow: 0 32px 64px -28px rgba(30,20,16,.55); background: var(--paper-3);
+  display: grid; place-items: center;
+}
+.gal-thumb.on .gal-thumb__in { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+.gal-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gal-thumb .gt-glyph { font-family: var(--font-display); font-weight: 900; font-size: 4rem; color: rgba(242,236,225,.85); }
+
+/* blueyard 式巨型宣言长句：单列、大字号、大量留白、左对齐，
+   在"eyebrow→h2→内容"的重复节奏里插一段 Editorial 断点，专治单调。 */
+.manifesto { padding: var(--sec-y) 0; }
+.manifesto__line { font-family: var(--font-display); font-weight: 900; font-size: clamp(2rem, 5.4vw, 4.6rem); line-height: 1.05; letter-spacing: -.02em; max-width: 17ch; margin-top: 22px; }
+.manifesto__line em { font-style: normal; color: var(--accent); }
+.manifesto__note { margin-top: clamp(24px,3vh,36px); max-width: 44ch; color: var(--ink-2); font-size: clamp(1rem,1.3vw,1.14rem); }
 
 /* ============================================================================
    幕三 · 时间轴排期（今晚组局）
@@ -463,27 +549,27 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 .night__tick { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line-2); }
 .night__tick span { position: absolute; top: 12px; left: 8px; font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: .1em; }
 .night__mark { position: absolute; transform: translate(-50%, 0); bottom: 22px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.night__dot { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 6px rgba(207,90,50,.16); transition: transform .4s var(--ease-out), box-shadow .4s; }
+.night__dot { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 6px oklch(53% 0.135 44 / .16); transition: transform .4s var(--ease-out), box-shadow .4s; }
 /* ⭐ 逐盏点亮（学 hubtown.co.in 的「光源纹理 + 滚动 reveal 进度」）：
    幕三进入视口时，时间点一颗一颗亮起来（--i 由模板写），而不是整排一起出现。 */
 .night__dot { opacity: .25; box-shadow: none; }
 .night.in .night__dot { animation: lampOn .7s var(--ease-out) both; animation-delay: calc(var(--i, 0) * .13s); }
 @keyframes lampOn {
-  from { opacity: .25; transform: scale(.6); box-shadow: 0 0 0 0 rgba(207,90,50,0); }
-  to   { opacity: 1; transform: none; box-shadow: 0 0 0 6px rgba(207,90,50,.16); }
+  from { opacity: .25; transform: scale(.6); box-shadow: 0 0 0 0 oklch(53% 0.135 44 / 0); }
+  to   { opacity: 1; transform: none; box-shadow: 0 0 0 6px oklch(53% 0.135 44 / .16); }
 }
 .night__card { font-family: var(--font-mono); font-size: 11px; color: var(--ink-2); text-align: center; white-space: nowrap; }
 .night__card b { display: block; font-family: var(--font-display); font-size: .95rem; color: var(--ink); font-weight: 500; letter-spacing: 0; transform: translateX(0); }
-.night__mark:hover .night__dot { transform: scale(1.35); box-shadow: 0 0 0 10px rgba(207,90,50,.22); }
+.night__mark:hover .night__dot { transform: scale(1.35); box-shadow: 0 0 0 10px oklch(53% 0.135 44 / .22); }
 .night__stem { position: absolute; bottom: 22px; width: 1px; background: linear-gradient(180deg, var(--accent), transparent); }
 
 /* ============================================================================
    幕四 · 编辑式路径（四件事，非重复小节头）
    ========================================================================== */
 .paths { padding: var(--sec-y) 0; }
-.paths__grid { display: grid; grid-template-columns: .82fr 1.18fr; gap: clamp(28px, 5vw, 90px); align-items: start; }
-.paths__huge { font-family: var(--font-display); font-weight: 900; font-size: clamp(6rem, 20vw, 17rem); line-height: .78; letter-spacing: -.04em; color: var(--ink-dim); position: sticky; top: 16vh; }
-.paths__huge em { font-style: italic; color: var(--accent); }
+.paths__grid { display: grid; grid-template-columns: 1fr 1.05fr; gap: clamp(28px, 5vw, 90px); align-items: start; }
+.paths__huge { font-family: var(--font-display); font-weight: 900; font-size: clamp(4rem, 11.5vw, 9.5rem); line-height: .82; letter-spacing: -.03em; color: var(--ink-dim); position: sticky; top: 16vh; max-width: 100%; word-break: keep-all; }
+.paths__huge em { font-style: normal; color: var(--accent); }   /* 去 AI 味：巨型"件"字用砖红强调而非斜体（Gate 38a）*/
 .paths__note { margin-top: 18px; max-width: 30ch; color: var(--ink-3); font-size: .95rem; }
 .p-list { border-top: 1px solid var(--line); }
 .p {
@@ -492,13 +578,13 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
   transition: padding-left .5s var(--ease-out), background .5s;
 }
 .p::after { content: ""; position: absolute; left: 0; right: 100%; bottom: -1px; height: 2px; background: var(--accent); transition: right .6s var(--ease-out); }
-.p:hover { padding-left: 14px; background: linear-gradient(90deg, rgba(207,90,50,.07), transparent 58%); }
+.p:hover { padding-left: 14px; background: linear-gradient(90deg, oklch(53% 0.135 44 / .07), transparent 58%); }
 .p:hover::after { right: 0; }
 .p__no { font-family: var(--font-mono); font-size: 12.5px; color: var(--accent); }
 .p__t { font-family: var(--font-display); font-size: clamp(1.5rem, 2.7vw, 2.3rem); line-height: 1.08; }
 .p__d { grid-column: 2 / 3; color: var(--ink-2); font-size: .96rem; max-width: 48ch; margin-top: 8px; }
 .p__go { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .14em; color: var(--ink-3); white-space: nowrap; align-self: center; transition: color .4s; }
-.p:hover .p__go { color: var(--accent-2); }
+.p:hover .p__go { color: var(--amber-ink); }
 
 /* ============================================================================
    幕五 · 引言（大字轮播）
@@ -513,7 +599,7 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 }
 .voices__q.on { opacity: 1; transform: none; pointer-events: auto; }
 .voices__q .by { display: block; margin-top: 26px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .16em; color: var(--ink-3); }
-.voices__q .by b { color: var(--accent-2); font-weight: 400; }
+.voices__q .by b { color: var(--amber-ink); font-weight: 400; }
 .voices__dots { display: flex; gap: 10px; margin-top: 30px; }
 .voices__dots button { width: 34px; height: 2px; border: 0; padding: 0; background: var(--line); transition: background .4s; }
 .voices__dots button.on { background: var(--accent); }
@@ -525,10 +611,10 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
   position: relative; overflow: hidden; background: var(--dark); color: var(--dark-ink);
   padding: calc(var(--sec-y) * 1.15) 0 calc(var(--sec-y) * .72);
 }
-.curtain__glow { position: absolute; inset: 0; background: radial-gradient(80% 70% at 84% 8%, rgba(207,90,50,.24), transparent 60%); pointer-events: none; }
+.curtain__glow { position: absolute; inset: 0; background: radial-gradient(80% 70% at 84% 8%, oklch(53% 0.135 44 / .24), transparent 60%); pointer-events: none; }
 .curtain__grid { position: relative; display: grid; grid-template-columns: 1.25fr .75fr; gap: clamp(28px, 5vw, 80px); align-items: end; }
 .curtain__big { font-family: var(--font-display); font-weight: 900; font-size: clamp(2.4rem, 7vw, 6rem); line-height: .98; letter-spacing: -.02em; }
-.curtain__big em { font-style: italic; color: var(--accent-2); }
+.curtain__big em { font-style: normal; color: var(--accent-2); }   /* 去 AI 味：暗场巨字也用正体 + 暖色强调，不用斜体（Gate 38a）*/
 .curtain__side { display: grid; gap: 18px; justify-items: start; }
 .curtain__side p { color: var(--dark-2-ink); max-width: 32ch; margin: 0; }
 .curtain__row { display: flex; gap: 14px; flex-wrap: wrap; }
@@ -541,20 +627,21 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 .rail a { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .16em; color: var(--ink-3); transition: color .4s; }
 .rail a .d { width: 7px; height: 7px; border-radius: 50%; border: 1px solid var(--ink-3); transition: .4s; }
 .rail a.on { color: var(--lit); }
-.rail a.on .d { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 5px rgba(207,90,50,.16); }
+.rail a.on .d { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 5px oklch(53% 0.135 44 / .16); }
 .rail a .lb { opacity: 0; transform: translateX(-6px); transition: .4s var(--ease-out); }
 .rail:hover a .lb, .rail a.on .lb { opacity: 1; transform: none; }
 
 /* ============================================================================
    通用小节（内页沿用）
    ========================================================================== */
-.sec { padding: var(--sec-y) 0; }
+/* #66 整站页底留白过大：底部单独收一档，顶/底呼吸不均更自然 */
+.sec { padding: var(--sec-y) 0 clamp(72px, 10vh, 140px); }
 /* 非对称页首（学 upforward 的 7:5 + 基线错位、unseen 的 Selected Work）：
    左右不等分才有张力，"两栏各半、都贴底"是最像模板的那种对称。 */
 .sec__head {
   display: grid; grid-template-columns: minmax(0, 1.42fr) minmax(0, .58fr);
   align-items: end; gap: clamp(20px, 3vw, 46px);
-  margin-bottom: clamp(32px, 4.6vw, 64px);
+  margin-bottom: clamp(26px, 3.8vw, 52px);
 }
 .sec__head > :last-child { justify-self: end; text-align: right; }
 .sec__head .h2 { max-width: 18ch; }
@@ -594,12 +681,12 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 .card:hover { background: var(--paper-2); }
 .card__cover { aspect-ratio: 4/5; background: var(--paper-3); display: grid; place-items: center; position: relative; overflow: hidden; }
 .card__cover .emo { font-family: var(--font-display); font-weight: 900; font-size: clamp(2.8rem,5vw,4rem); color: rgba(242,236,225,.9); }
-.card__cover .ov { position: absolute; inset: 0; background: radial-gradient(120% 90% at 30% 10%, rgba(207,90,50,.32), transparent 60%); }
+.card__cover .ov { position: absolute; inset: 0; background: radial-gradient(120% 90% at 30% 10%, oklch(53% 0.135 44 / .32), transparent 60%); }
 .card__idx { position: absolute; z-index: 2; top: 12px; left: 14px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .14em; color: var(--ink-3); }
 /* 本本墙：有真封面 → 默认压暗降饱和，hover 才亮起来 */
 .card__cover--pic .ov {
   z-index: 2;
-  background: linear-gradient(180deg, rgba(10,9,8,.10) 0%, rgba(10,9,8,0) 30%, rgba(10,9,8,.70) 100%);
+  background: linear-gradient(180deg, oklch(25% 0.022 56 / .10) 0%, oklch(25% 0.022 56 / 0) 30%, oklch(25% 0.022 56 / .70) 100%);
 }
 .card__img {
   position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; object-fit: cover;
@@ -607,6 +694,11 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
   transition: filter .9s var(--ease-out), transform .9s var(--ease-out);
 }
 .card__cover--pic .emo { display: none; }
+
+/* 分区主题色（学 U2 子页独立主题色）：给 section 加 data-accent 即局部改写强调色，
+   打破全局单一砖红、又守住"强调色 < 5% 视口"的纪律。 */
+.sec[data-accent="amber"], .paths[data-accent="amber"], .manifesto[data-accent="amber"] { --accent: var(--accent-2); --lit: var(--accent-2); --glow: oklch(66% 0.105 70 / .15); }
+.sec[data-accent="ink"], .paths[data-accent="ink"] { --accent: var(--ink); --lit: var(--ink); }
 .card:hover .card__img, .card:focus-visible .card__img {
   filter: grayscale(0) saturate(.96) brightness(.96) contrast(1.03); transform: scale(1.05);
 }
@@ -614,9 +706,9 @@ html.has-media .field-canvas { opacity: .45; transition: opacity 1.2s var(--ease
 .card__title { font-family: var(--font-display); font-size: 1.32rem; line-height: 1.1; }
 .card__tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .tag { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .1em; padding: 3px 8px; border-radius: 2px; background: transparent; color: var(--ink-3); border: 1px solid var(--line); }
-.tag--hot { background: transparent; color: var(--accent-2); border-color: rgba(207,90,50,.5); }
+.tag--hot { background: transparent; color: var(--amber-ink); border-color: oklch(53% 0.135 44 / .5); }
 .card__foot { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; font-size: .9rem; }
-.card__price { font-family: var(--font-display); font-size: 1.25rem; color: var(--accent-2); }
+.card__price { font-family: var(--font-display); font-size: 1.25rem; color: var(--amber-ink); }
 .card__diff { display: inline-flex; gap: 3px; color: var(--accent); letter-spacing: 2px; font-size: .8rem; }
 .card__diff i { font-style: normal; color: var(--ink-3); }
 
@@ -651,6 +743,40 @@ select.chip { border: 1px solid var(--line); border-radius: 2px; background: var
 .row__title { font-family: var(--font-display); font-size: 1.25rem; }
 .row__sub { color: var(--ink-2); font-size: .9rem; }
 .row__pill { font-family: var(--font-mono); font-size: .78rem; letter-spacing: .08em; color: var(--ink-3); border: 1px solid var(--line); border-radius: 2px; padding: 4px 10px; white-space: nowrap; }
+/* 拼车行：加封面首字块 + 座位点阵，填满原本空荡的两行 */
+.row--car { grid-template-columns: auto auto 1fr auto auto; }
+.row__cover { flex: none; width: 46px; height: 46px; border-radius: 2px; display: grid; place-items: center; background: var(--paper-3); border: 1px solid var(--line); font-family: var(--font-display); font-weight: 900; font-size: 1.2rem; color: var(--ink-3); }
+.row__main { display: grid; gap: 5px; min-width: 0; }
+.row__seats { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+.row__seats i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+.row__seats i.on { background: var(--accent); }
+.row__seats em { font-style: normal; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em; color: var(--ink-3); margin-left: 4px; }
+@media (max-width: 600px) {
+  .row--car { grid-template-columns: auto 1fr auto; }
+  .row__cover { display: none; }
+  /* #174 筛选 chips 折成多行 → 改横向滚动 + 惯性，保持单行编辑式 */
+  .filters, .tabbar {
+    flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; margin-bottom: 22px; padding-bottom: 4px;
+  }
+  .filters::-webkit-scrollbar, .tabbar::-webkit-scrollbar { display: none; }
+  .filters .chip, .tabbar .chip { flex: none; }
+}
+
+/* ---------- 滚动进度条 / 回顶（#73 / #78）---------- */
+.scrollbar { position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 85; pointer-events: none; background: transparent; }
+.scrollbar i { display: block; height: 100%; width: 0; background: var(--accent); transform-origin: left center; transition: width .08s linear; }
+.to-top {
+  position: fixed; right: clamp(16px, 3vw, 30px); bottom: clamp(16px, 3vw, 30px); z-index: 84;
+  width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line);
+  background: var(--paper-2); color: var(--ink); font-size: 1.1rem; line-height: 1; cursor: pointer;
+  opacity: 0; transform: translateY(12px); pointer-events: none; transition: opacity .4s var(--ease), transform .4s var(--ease), border-color .3s, color .3s;
+  display: grid; place-items: center;
+}
+.to-top.show { opacity: 1; transform: none; pointer-events: auto; }
+.to-top:hover { border-color: var(--accent); color: var(--accent); }
+.to-top[hidden] { display: none; }
+@media (hover: none), (pointer: coarse) { .to-top { width: 50px; height: 50px; } }
 
 .quotes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: clamp(16px,2vw,28px); }
 .quote { border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 24px 0 0; background: transparent; }
@@ -659,18 +785,19 @@ select.chip { border: 1px solid var(--line); border-radius: 2px; background: var
 .quote__av { width: 30px; height: 30px; border-radius: 50%; background: var(--paper-3); border: 1px solid var(--line); display: grid; place-items: center; font-size: 13px; font-family: var(--font-display); }
 
 /* ---------- footer ---------- */
-.foot { background: var(--dark); color: var(--dark-2-ink); padding: clamp(56px,9vh,100px) 0 40px; }
+.foot { background: var(--dark); color: var(--dark-2-ink); padding: clamp(64px,10vh,120px) 0 clamp(40px,6vh,64px); }
 .foot a { color: var(--dark-2-ink); }
-.foot__top { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 40px; }
-.foot__brand { font-family: var(--font-display); font-weight: 600; font-size: 1.9rem; color: var(--dark-ink); }
-.foot h2 { font-family: var(--font-mono); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 16px; font-weight: 400; }
-.foot ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.foot__bottom { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--dark-line); font-size: .82rem; color: var(--dark-2-ink); }
+/* 页脚改排版式 colophon（打破 Gate 43 的"4 链接列 + 社交 + 版权"标准指纹）：
+   巨型衬线字标 + 单行横向链接 + 等宽元信息行，克制而有签名感。 */
+.foot__word { font-family: var(--font-display); font-weight: 900; font-size: clamp(3rem, 11vw, 8.4rem); line-height: .92; letter-spacing: -.02em; color: var(--dark-ink); }
+.foot__row { display: flex; flex-wrap: wrap; gap: 12px 28px; margin: clamp(28px,4vh,48px) 0 clamp(22px,3vh,38px); padding-top: clamp(22px,3vh,34px); border-top: 1px solid var(--dark-line); }
+.foot__row a { font-size: 1rem; color: var(--dark-2-ink); }
+.foot__meta { display: flex; flex-wrap: wrap; gap: 10px 28px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: color-mix(in srgb, var(--dark-2-ink) 78%, transparent); }
 
 /* ---------- forms ---------- */
 .auth { min-height: 100vh; display: grid; grid-template-columns: 1.05fr 1fr; }
 .auth__aside { background: var(--dark); color: var(--dark-ink); padding: calc(var(--nav-h) + clamp(24px,4.5vh,58px)) var(--gut) clamp(40px,7vh,90px); display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
-.auth__aside::after { content: ""; position: absolute; inset: 0; background: radial-gradient(70% 60% at 20% 15%, rgba(207,90,50,.24), transparent 60%); pointer-events: none; }
+.auth__aside::after { content: ""; position: absolute; inset: 0; background: radial-gradient(70% 60% at 20% 15%, oklch(53% 0.135 44 / .24), transparent 60%); pointer-events: none; }
 .auth__aside > * { position: relative; z-index: 2; }
 .auth__aside .big { font-family: var(--font-display); font-weight: 600; font-size: clamp(2rem,4vw,3.4rem); color: var(--dark-ink); line-height: 1.06; max-width: 14ch; }
 .auth__main { padding: calc(var(--nav-h) + clamp(24px,4.5vh,58px)) var(--gut) clamp(40px,7vh,90px); display: flex; flex-direction: column; justify-content: center; max-width: 520px; width: 100%; margin: 0 auto; }
@@ -688,15 +815,32 @@ select.chip { border: 1px solid var(--line); border-radius: 2px; background: var
 .field input::placeholder, .field textarea::placeholder,
 .field--row input::placeholder, .field--row textarea::placeholder { color: var(--ink-3); }
 .field input:focus, .field textarea:focus, .field select:focus,
-.field--row input:focus, .field--row textarea:focus, .field--row select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(207,90,50,.18); }
+.field--row input:focus, .field--row textarea:focus, .field--row select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px oklch(53% 0.135 44 / .18); }
 .field--row { display: flex; gap: 12px; }
 .field--row > * { flex: 1; }
 .agree { display: flex; gap: 10px; align-items: flex-start; font-size: .88rem; color: var(--ink-2); margin: 6px 0 18px; }
 .agree input { margin-top: 4px; }
 .note { font-size: .82rem; color: var(--ink-3); margin-top: 14px; }
+
+/* 唠嗑：右侧栏（热门话题 / 怎么玩 / 在线）—— 解决 hero 居中后大片留白，给社区一点"有人在"的密度 */
+.comm__lead { margin: 18px 0 0; max-width: 42ch; color: var(--ink-2); font-size: 1.02rem; line-height: 1.6; }
+.comm__aside { justify-self: start; text-align: left; display: grid; gap: 22px; align-content: start; min-width: 220px; }
+.comm__box { border-top: 1px solid var(--line); padding-top: 14px; }
+.comm__box-t { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-3); }
+.comm__steps { margin: 12px 0 0; padding-left: 18px; display: grid; gap: 9px; color: var(--ink-2); font-size: .94rem; }
+.comm__tags { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 12px; }
+.comm__tags .chip { font-size: .9rem; }
+.comm__online { margin-top: 12px; display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: .92rem; }
+.comm__online .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-2); animation: pulse 1.8s var(--ease-out) infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.7); } }
+.comm-guide { border-top: 1px solid var(--line); padding: clamp(40px, 7vh, 84px) 0; }
+.comm-guide .btn { margin-top: 20px; }
+@media (max-width: 760px) {
+  .comm__aside { grid-template-columns: 1fr 1fr; width: 100%; }
+}
 .flash { padding: 12px 16px; border-radius: 2px; margin-bottom: 18px; font-size: .9rem; border: 1px solid var(--line); background: var(--paper-2); }
 .flash.ok { background: rgba(88,150,100,.14); border-color: rgba(88,150,100,.34); }
-.flash.warn { background: rgba(207,90,50,.14); border-color: rgba(207,90,50,.36); }
+.flash.warn { background: oklch(53% 0.135 44 / .14); border-color: oklch(53% 0.135 44 / .36); }
 
 /* ---------- comm ---------- */
 /* 去卡片化：帖子是**发丝分隔的行**，不是浮起的填充卡片。
@@ -714,7 +858,17 @@ select.chip { border: 1px solid var(--line); border-radius: 2px; background: var
 .post__text { font-size: 1.02rem; line-height: 1.6; }
 .post__foot { display: flex; gap: 18px; margin-top: 14px; font-size: .85rem; color: var(--ink-2); }
 .post__foot button { background: none; border: 0; color: var(--ink-2); display: inline-flex; gap: 6px; align-items: center; transition: color .3s; }
-.post__foot button:hover { color: var(--accent-2); }
+.post__foot button:hover { color: var(--amber-ink); }
+.post__imgs { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 12px; max-width: 440px; }
+.post__img { display: block; border: 1px solid var(--line); overflow: hidden; transition: border-color .3s; }
+.post__img:hover { border-color: var(--accent); }
+.post__img img { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; }
+.post__file-row { align-items: center; }
+.post__file { cursor: pointer; }
+.post__file-btn { display: inline-block; padding: 9px 14px; border: 1px dashed var(--line); border-radius: 2px; color: var(--ink-2); font-size: .9rem; transition: border-color .3s, color .3s; }
+.post__file:hover .post__file-btn, .post__file:focus-within .post__file-btn { border-color: var(--accent); color: var(--ink); }
+.post__previews { display: flex; gap: 8px; flex-wrap: wrap; }
+.post__previews img { width: 46px; height: 46px; object-fit: cover; border: 1px solid var(--line); border-radius: 2px; }
 .tabbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 26px; }
 
 /* ---------- me ---------- */
@@ -760,22 +914,7 @@ select.chip { border: 1px solid var(--line); border-radius: 2px; background: var
    在聚光灯之外再叠一层「被刻开的表面」：光标处露出细密的斜纹材质，
    边缘由一层噪点撑开成毛边 —— 于是光斑不再是干净的圆，而像被刀口剖开。
    复用聚光已有的 --mx/--my（initSpotlight 以百分比 lerp 写到 .stage 上，无需新增 JS）。 */
-.stage__carve {
-  position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background:
-    repeating-linear-gradient(72deg, rgba(255,233,207,.06) 0 1px, transparent 1px 26px),
-    radial-gradient(120% 80% at 50% 42%, rgba(255,214,178,.10), transparent 62%);
-  -webkit-mask-image: radial-gradient(circle 190px at var(--mx,60%) var(--my,40%), #000 42%, transparent 76%);
-  mask-image: radial-gradient(circle 190px at var(--mx,60%) var(--my,40%), #000 42%, transparent 76%);
-  transition: opacity 1s var(--ease);
-}
-/* 毛边：噪点层被父级 mask 一并裁切，所以只出现在雕刻圈内（不再单独挂 mask） */
-.stage__carve::after {
-  content: ""; position: absolute; inset: -14%;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.5' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  opacity: .18;
-}
-body.is-idle .stage__carve { opacity: 0; }
+/* 删除 .stage__carve：随暗场画布一并退役（亮场首屏不再需要光标雕刻层，Gate 45）*/
 
 /* ---------- ② 深度模糊墙（学 cosmos.so 首屏：随机布点 + 离中心越远越糊/越淡）----------
    用作「玩家之声 / 空状态」的氛围底：不是一张图，是一层会呼吸的散落素材。 */
@@ -793,12 +932,18 @@ body.is-idle .stage__carve { opacity: 0; }
 .empty__inner { position: relative; z-index: 1; }
 .empty .depthwall { opacity: .8; }
 
+/* 组局空场：巨大"今晚"水印 + 双 CTA，把空状态做成一幕而不是一行字 */
+.grp-empty { position: relative; text-align: left; }
+.grp-empty__big { position: absolute; right: -2%; top: 50%; transform: translateY(-50%); font-family: var(--font-display); font-weight: 900; font-size: clamp(7rem, 26vw, 22rem); line-height: .8; color: var(--ink-dim); opacity: .45; pointer-events: none; z-index: 0; }
+.grp-empty .empty__inner { position: relative; z-index: 1; max-width: 46ch; }
+.grp-empty__row { margin-top: 22px; display: flex; gap: 14px; flex-wrap: wrap; }
+
 /* ---------- ③ 本本墙卡片：噪声毛边的圆形揭示（学 hubtown.co.in 的鼠标蒙版）----------
    hover 时从光标处晕开一圈暖光（毛边由噪点层撑），像提灯扫过封面。 */
 .card__lit {
   position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0;
   background: radial-gradient(circle 130px at var(--mx,50%) var(--my,50%),
-              rgba(255,224,190,.42), rgba(207,90,50,.18) 52%, transparent 72%);
+              oklch(73% 0.014 56 / .42), oklch(53% 0.135 44 / .18) 52%, transparent 72%);
   -webkit-mask-image: radial-gradient(circle 130px at var(--mx,50%) var(--my,50%), #000 46%, transparent 80%);
   mask-image: radial-gradient(circle 130px at var(--mx,50%) var(--my,50%), #000 46%, transparent 80%);
   transition: opacity .45s var(--ease);
@@ -809,16 +954,16 @@ body.is-idle .stage__carve { opacity: 0; }
   opacity: .2;
 }
 .card:hover .card__lit, .card:focus-visible .card__lit { opacity: 1; }
-@media (prefers-reduced-motion: reduce) { .stage__carve, .card__lit, .depthwall { display: none; } }
+@media (prefers-reduced-motion: reduce) { .card__lit, .depthwall { display: none; } }
 @media (max-width: 760px) { .depthwall { display: none; } }
 
 /* ---------- detail ---------- */
 .detail { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(24px,4vw,60px); align-items: start; }
 .detail__cover { aspect-ratio: 1; border-radius: 2px; background: var(--paper-3); border: 1px solid var(--line); display: grid; place-items: center; position: relative; overflow: hidden; }
 .detail__cover .emo { font-family: var(--font-display); font-weight: 900; font-size: 4.6rem; color: rgba(242,236,225,.9); }
-.detail__cover .ov { position: absolute; inset: 0; z-index: 2; background: radial-gradient(120% 90% at 30% 10%, rgba(207,90,50,.3), transparent 60%); }
+.detail__cover .ov { position: absolute; inset: 0; z-index: 2; background: radial-gradient(120% 90% at 30% 10%, oklch(53% 0.135 44 / .3), transparent 60%); }
 /* 详情页封面是主角：只做极轻的暗角压边，不压暗主体 */
-.detail__cover--pic .ov { background: linear-gradient(180deg, rgba(10,9,8,.10) 0%, rgba(10,9,8,0) 40%, rgba(10,9,8,.42) 100%); }
+.detail__cover--pic .ov { background: linear-gradient(180deg, oklch(25% 0.022 56 / .10) 0%, oklch(25% 0.022 56 / 0) 40%, oklch(25% 0.022 56 / .42) 100%); }
 .detail__img { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; object-fit: cover; filter: saturate(.92) contrast(1.03); }
 .detail__cover--pic .emo { display: none; }
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; margin: 22px 0; }
@@ -830,17 +975,25 @@ body.is-idle .stage__carve { opacity: 0; }
 .book__day button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 
 /* ---------- cursor ---------- */
-.cursor, .cursor-ring { position: fixed; top: 0; left: 0; z-index: 200; pointer-events: none; border-radius: 50%; }
-.cursor { width: 6px; height: 6px; background: var(--lit); box-shadow: 0 0 12px rgba(255,214,178,.8); transform: translate(-50%,-50%); }
+/* 情境软光标：用 mix-blend-mode:difference 反相 —— 亮底上是深圈、暗场/页脚上是亮圈，
+   任何底色都看得见。之前用浅色描边（给暗场调的），切到浅色首屏后直接隐身，
+   用户才说"看不到圆形光标"。unseen.co 的签名就是这颗始终跟随、悬停交互元素时
+   放大并显示标签（data-cursor）的圆。 */
+.cursor, .cursor-ring { position: fixed; top: 0; left: 0; z-index: 200; pointer-events: none; border-radius: 50%; mix-blend-mode: difference; }
+.cursor { width: 7px; height: 7px; background: #fff; transform: translate(-50%,-50%); }
 .cursor-ring {
-  width: 40px; height: 40px; border: 1px solid rgba(242,236,225,.5); transform: translate(-50%,-50%);
+  width: 34px; height: 34px; border: 1.5px solid #fff; transform: translate(-50%,-50%);
   display: grid; place-items: center;
-  transition: width .4s var(--ease-out), height .4s var(--ease-out), border-color .4s, background .4s;
+  transition: width .42s var(--ease-out), height .42s var(--ease-out), border-color .4s, background .4s, opacity .4s;
 }
-body.has-cursor .cursor-ring.big { width: 74px; height: 74px; border-color: var(--accent); background: rgba(207,90,50,.12); }
+body.has-cursor .cursor-ring.big { width: 78px; height: 78px; border-color: #fff; background: rgba(255,255,255,.14); }
+/* 首帧不显示：光标初始在屏幕中央（JS 把 mx/my 设在 innerWidth/2），
+   必须等第一次真实 mousemove 才淡入 —— 否则加载时圆圈会悬在正中很突兀。 */
+body.has-cursor:not(.cursor-live) .cursor,
+body.has-cursor:not(.cursor-live) .cursor-ring { opacity: 0; }
 .cursor-ring .lb {
-  font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em; color: var(--lit);
-  opacity: 0; transform: scale(.7); transition: opacity .3s, transform .3s var(--ease-out); white-space: nowrap;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; color: #fff;
+  opacity: 0; transform: scale(.6); transition: opacity .3s, transform .3s var(--ease-out); white-space: nowrap;
 }
 body.has-cursor .cursor-ring.big .lb { opacity: 1; transform: none; }
 @media (hover: none), (pointer: coarse) { .cursor, .cursor-ring { display: none; } body.has-cursor { cursor: auto; } }
@@ -961,16 +1114,33 @@ main.is-in { animation: sceneIn var(--tr-in) cubic-bezier(.16,1,.3,1) both; }
 }
 .transit.on { opacity: 1; visibility: visible; }
 
+/* 转场巨字幕（学 U1：进场先出巨大章节名）：随液面浮出又隐去 */
+.transit__title {
+  position: absolute; inset: 0; display: grid; place-items: center; z-index: 3;
+  font-family: var(--font-display); font-weight: 900; letter-spacing: -.02em;
+  font-size: clamp(2.4rem, 8vw, 6rem); color: var(--accent-2);
+  text-shadow: 0 2px 30px oklch(20% 0.018 56 / .4); opacity: 0;
+}
+.transit.on .transit__title {
+  animation: transitTitle 1s var(--ease-out) both;
+}
+@keyframes transitTitle {
+  0%   { opacity: 0; transform: translateY(26px); }
+  28%  { opacity: 1; transform: none; }
+  72%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-20px); }
+}
+
 /* 三条纵横流动的光带："液面漫过屏幕" 的主体 */
 .transit__band {
   position: absolute; left: -12%; right: -12%; height: 46vh;
   background: repeating-linear-gradient(
     180deg,
-    rgba(207,90,50,0)    0px,
-    rgba(207,90,50,.16)  7px,
+    oklch(53% 0.135 44 / 0)    0px,
+    oklch(53% 0.135 44 / .16)  7px,
     rgba(255,214,178,.30) 14px,
-    rgba(207,90,50,.10)  22px,
-    rgba(207,90,50,0)    34px);
+    oklch(53% 0.135 44 / .10)  22px,
+    oklch(53% 0.135 44 / 0)    34px);
   filter: blur(6px);
   transform: translate3d(0, 108vh, 0) skewY(2.2deg);
   will-change: transform;
@@ -993,8 +1163,8 @@ main.is-in { animation: sceneIn var(--tr-in) cubic-bezier(.16,1,.3,1) both; }
 }
 /* 色散带：原来是青/品红（很"赛博/AI"），改成品牌自己的琥珀/朱砂 —— 保留错位色散，
    但不再引入本设计之外的色相。（两条带的错位时长不变，观感仍然是"水波折射"。） */
-.transit__disp--c { background: linear-gradient(90deg, transparent, rgba(255,214,178,.85), rgba(226,148,71,.5), transparent); }
-.transit__disp--m { background: linear-gradient(90deg, transparent, rgba(207,90,50,.72), rgba(226,148,71,.45), transparent); }
+.transit__disp--c { background: linear-gradient(90deg, transparent, rgba(255,214,178,.85), oklch(66% 0.105 70 / .5), transparent); }
+.transit__disp--m { background: linear-gradient(90deg, transparent, oklch(53% 0.135 44 / .72), oklch(66% 0.105 70 / .45), transparent); }
 .transit.on .transit__disp { transform: translate3d(0, -20vh, 0); }
 .transit.on .transit__disp--c { transition: transform calc(var(--tr-band) * .98) cubic-bezier(.42,0,.28,1); }
 .transit.on .transit__disp--m { transition: transform calc(var(--tr-band) * .92) cubic-bezier(.42,0,.28,1); transition-delay: .035s; }
@@ -1002,7 +1172,7 @@ main.is-in { animation: sceneIn var(--tr-in) cubic-bezier(.16,1,.3,1) both; }
 /* 液面整体的一层极淡暖色雾：让扫描带"有厚度"，别像三根线 */
 .transit__haze {
   position: absolute; inset: -10% 0 -10% 0; opacity: 0;
-  background: radial-gradient(120% 62% at 50% 118%, rgba(207,90,50,.20), rgba(14,12,10,0) 62%);
+  background: radial-gradient(120% 62% at 50% 118%, oklch(53% 0.135 44 / .20), oklch(20% 0.018 56 / 0) 62%);
   transition: opacity .9s var(--ease);
 }
 .transit.on .transit__haze { opacity: 1; }
@@ -1036,7 +1206,7 @@ main.is-in { animation: sceneIn var(--tr-in) cubic-bezier(.16,1,.3,1) both; }
 .transit.tr-veil .transit__band,
 .transit.tr-veil .transit__disp { display: none; }
 .transit.tr-veil .transit__haze {
-  background: radial-gradient(120% 100% at 50% 50%, rgba(207,90,50,.26), rgba(14,12,10,0) 68%);
+  background: radial-gradient(120% 100% at 50% 50%, oklch(53% 0.135 44 / .26), oklch(20% 0.018 56 / 0) 68%);
 }
 .transit.tr-veil.on .transit__haze { opacity: 1; }
 
@@ -1065,7 +1235,7 @@ main.is-in { animation: sceneIn var(--tr-in) cubic-bezier(.16,1,.3,1) both; }
   font-family: var(--font-mono); font-size: 10px; letter-spacing: .22em;
   text-transform: uppercase; color: var(--ink-3);
 }
-.boot__pct { color: var(--accent-2); }
+.boot__pct { color: var(--amber-ink); }
 /* 打开后有实测素材（hero.mp4/webp）时，loader 让位给素材首帧，别抢戏 */
 html.has-media .boot { background: #070605; }
 
@@ -1079,7 +1249,7 @@ html.has-media .boot { background: #070605; }
   position: relative; overflow: hidden; background: var(--dark); color: var(--dark-ink);
   padding: calc(104px + clamp(16px, 3vw, 38px)) 0 clamp(30px, 4.4vw, 54px);
 }
-.band__glow { position: absolute; inset: 0; background: radial-gradient(72% 78% at 80% 0%, rgba(207,90,50,.22), transparent 62%); pointer-events: none; }
+.band__glow { position: absolute; inset: 0; background: radial-gradient(72% 78% at 80% 0%, oklch(53% 0.135 44 / .22), transparent 62%); pointer-events: none; }
 .band__in { position: relative; z-index: 1; }
 .band .eyebrow { color: var(--dark-2-ink); }
 .band__t { font-family: var(--font-display); font-weight: 600; font-size: clamp(2.4rem, 7vw, 5.2rem); line-height: .98; letter-spacing: -.02em; margin-top: 14px; font-synthesis: none; }
@@ -1098,7 +1268,7 @@ html.has-media .boot { background: #070605; }
 .stats > div:last-child { border-right: 0; }
 .stats b { display: block; font-family: var(--font-display); font-weight: 500; font-size: clamp(1.7rem, 3vw, 2.5rem); line-height: 1.05; }
 .stats b i { font-style: normal; font-size: .55em; color: var(--ink-3); }
-.stats span { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3); }
+.stats span { font-family: var(--font-mono); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-2); }
 
 /* ---------- 细线流水（消息中心 / 评价列表）---------- */
 .feed { border-top: 1px solid var(--line); }
@@ -1129,13 +1299,13 @@ html.has-media .boot { background: #070605; }
 .who__act { margin-left: auto; }
 
 /* ---------- 支付页 ---------- */
-.amount { font-family: var(--font-display); font-weight: 600; font-size: clamp(3.4rem, 11vw, 7.4rem); line-height: 1; color: var(--accent-2); letter-spacing: -.03em; margin: 10px 0 0; font-synthesis: none; }
+.amount { font-family: var(--font-display); font-weight: 600; font-size: clamp(3.4rem, 11vw, 7.4rem); line-height: 1; color: var(--amber-ink); letter-spacing: -.03em; margin: 10px 0 0; font-synthesis: none; }
 .amount i { font-style: normal; font-size: .42em; color: var(--ink-3); vertical-align: super; letter-spacing: 0; }
 .pay { display: grid; grid-template-columns: 1.12fr .88fr; gap: clamp(26px, 4vw, 64px); align-items: start; }
 .pay__side { background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r); padding: clamp(20px, 2.4vw, 26px); }
-.pay__side h2 { font-family: var(--font-mono); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 14px; font-weight: 400; }
+.pay__side h2 { font-family: var(--font-mono); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--amber-ink); margin-bottom: 14px; font-weight: 400; }
 .qr { width: 148px; flex: none; border: 1px solid var(--line); border-radius: 2px; overflow: hidden; background: var(--paper-3); }
-.wechat { font-family: var(--font-mono); font-size: 15px; letter-spacing: .04em; color: var(--accent-2); word-break: break-all; }
+.wechat { font-family: var(--font-mono); font-size: 15px; letter-spacing: .04em; color: var(--amber-ink); word-break: break-all; }
 
 /* ---------- 通用两栏（DM 主页等内页）----------
    注意：.split 是 JS 生成的"逐字揭示"类，别当布局用 —— 这里另起一个。 */
@@ -1168,7 +1338,7 @@ html.has-media .boot { background: #070605; }
   transition: opacity .32s var(--ease);
 }
 .u-search.is-focus .u-search__ring .g { opacity: 1; }
-.u-search.is-focus .u-search__ring .b { stroke: rgba(207,90,50,.34); }
+.u-search.is-focus .u-search__ring .b { stroke: oklch(53% 0.135 44 / .34); }
 .u-search.is-run .u-search__ring .g { animation: usRingRun 1.6s linear infinite; }
 /* 提交：一次性转满一整圈再走 */
 .u-search.is-go .u-search__ring .g {
@@ -1193,7 +1363,44 @@ html.has-media .boot { background: #070605; }
 .u-search__go:hover { background: var(--accent); color: var(--accent-ink); transform: rotate(-45deg); }
 /* 结果计数：与"在演 N 部"同一支 mono 笔 */
 .libcount { font-family: var(--font-mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3); }
-.libcount b { color: var(--accent-2); font-weight: 400; }
+.libcount b { color: var(--amber-ink); font-weight: 400; display: inline-block; }
+.libcount b.bump { animation: libBump .5s var(--ease-out); }
+@keyframes libBump { 0% { opacity: .15; transform: translateY(-4px); } 100% { opacity: 1; transform: none; } }
+/* 「清空筛选」：有任一条件生效才出现；虚线描边，弱于主操作 */
+.libclear {
+  display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: 2px;
+  border: 1px dashed var(--line); background: none; color: var(--ink-2);
+  font: inherit; font-size: .9rem; cursor: pointer; transition: color .25s, border-color .25s;
+}
+.libclear:hover { color: var(--accent); border-color: var(--accent); }
+.libclear .x { font-size: 1.05em; line-height: 1; opacity: .7; }
+.libclear[hidden] { display: none; }
+/* #148 搜索历史下拉：聚焦时贴着搜索框下方浮出（localStorage 存的最近几次） */
+.u-search__sug {
+  position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 118;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 3px;
+  box-shadow: 0 26px 54px -26px rgba(30,20,16,.42); padding: 6px; text-align: left;
+}
+.u-search__sug[hidden] { display: none; }
+.u-search__sug-h {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 9px 7px; border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3);
+}
+.u-search__sug-h button {
+  font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--ink-3);
+  background: none; border: 0; cursor: pointer; padding: 2px 4px; border-radius: 2px; transition: color .25s;
+}
+.u-search__sug-h button:hover { color: var(--accent); }
+.u-search__sug-i {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 9px 11px; border: 0; background: none; border-radius: 2px; cursor: pointer;
+  font: inherit; font-size: .92rem; color: var(--ink-2); transition: background .22s, color .22s;
+}
+.u-search__sug-i:hover { background: var(--paper-2); color: var(--ink); }
+.u-search__sug-i .ic { flex: none; width: 14px; height: 14px; color: var(--ink-3); }
+.u-search__sug-i .ic svg { width: 100%; height: 100%; display: block; }
+.u-search__sug-i .tx { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* 换网格时先压一下透明度再回来，别让卡片"啪"地一下整片换掉 */
 [data-lib-grid] { transition: opacity .22s linear; }
 [data-lib-grid].is-loading { opacity: .34; }
@@ -1217,9 +1424,9 @@ html.has-media .boot { background: #070605; }
   text-transform: uppercase; color: var(--ink-3); line-height: 1;
   display: inline-flex; align-items: center; gap: 8px;
 }
-.micro b { color: var(--accent-2); font-weight: 400; }
+.micro b { color: var(--amber-ink); font-weight: 400; }
 .micro .dot { width: 6px; height: 6px; border-radius: 50%; border: 1px solid var(--ink-3); display: inline-block; }
-.micro .dot.on { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 4px rgba(207,90,50,.16); }
+.micro .dot.on { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 4px oklch(53% 0.135 44 / .16); }
 /* 图框行：放在 footer 之前，像建筑图纸的图签 —— 不做 fixed，避免和正文叠字 */
 .frame {
   display: flex; justify-content: space-between; align-items: baseline; gap: 18px; flex-wrap: wrap;
@@ -1240,6 +1447,138 @@ html.has-media .boot { background: #070605; }
 }
 
 /* ============================================================================
+   自定义下拉选择框（#97 · 渐进增强，原生 <select> 仍保留在表单里负责提交）
+   ----------------------------------------------------------------------------
+   原生 <select> 是最"AI 模板感"的控件之一（系统字体 + 单调箭头 + 无动效）。
+   这里把它包成 editorial 风格的下拉：发丝描边按钮 + 朱砂对勾 + 展开时列表从顶部
+   裁开、选项逐条错落淡入。原生 select 仍留在 DOM 里（视觉隐藏），值由自定义控件
+   同步并 dispatch change —— 所以 car 的 onchange 整页筛、scripts 的 ?partial 换网格
+   全部照旧工作，零后端改动。
+   ========================================================================== */
+.u-select { position: relative; display: inline-block; vertical-align: middle; }
+.u-select > select {           /* 原生 select：视觉隐藏，但仍在表单中正常提交 */
+  position: absolute; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; margin: 0;
+  clip: rect(0 0 0 0); overflow: hidden; pointer-events: none;
+}
+.u-select__btn {
+  display: inline-flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-width: 138px; padding: 10px 14px; border-radius: 2px;
+  border: 1px solid var(--line); background: var(--paper-2); color: var(--ink);
+  font: inherit; font-size: .94rem; letter-spacing: .01em; cursor: pointer;
+  transition: border-color .3s, background .3s, color .3s, box-shadow .3s;
+}
+.u-select__btn:hover, .u-select__btn:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px oklch(53% 0.135 44 / .16); }
+.u-select__btn .lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.u-select__btn .chev {
+  flex: none; width: 9px; height: 9px; border-right: 1.5px solid var(--ink-3); border-bottom: 1.5px solid var(--ink-3);
+  transform: rotate(45deg) translate(-1px,-1px); transition: transform .42s var(--ease-out), border-color .3s;
+}
+.u-select.open .u-select__btn .chev { transform: rotate(225deg) translate(-1px,-1px); border-color: var(--accent); }
+.u-select__list {
+  position: absolute; top: calc(100% + 8px); left: 0; z-index: 120; min-width: 100%;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 3px;
+  box-shadow: 0 26px 54px -26px rgba(30,20,16,.42); padding: 6px;
+  opacity: 0; transform: translateY(-8px) scale(.985); transform-origin: top center;
+  pointer-events: none; overflow-y: auto; overflow-x: hidden;
+  max-height: min(62vh, 340px); overscroll-behavior: contain;
+  transition: opacity .26s var(--ease-out), transform .32s var(--ease-out);
+}
+.u-select__list::-webkit-scrollbar { width: 8px; }
+.u-select__list::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+.u-select__list::-webkit-scrollbar-track { background: transparent; }
+.u-select.open .u-select__list { opacity: 1; transform: none; pointer-events: auto; }
+/* #143 视口下方不够时向上弹（矮屏 / 靠视口底部）：翻转定位，从下方长出来 */
+.u-select--up .u-select__list { top: auto; bottom: calc(100% + 8px); transform: translateY(8px) scale(.985); transform-origin: bottom center; }
+.u-select--up.open .u-select__list { transform: none; }
+.u-select__opt {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; text-align: left; padding: 9px 11px; border: 0; background: none;
+  color: var(--ink-2); border-radius: 2px; cursor: pointer; font: inherit; font-size: .92rem;
+  opacity: 0; transform: translateY(7px);
+  transition: opacity .3s var(--ease-out), transform .3s var(--ease-out), background .25s, color .25s;
+}
+.u-select.open .u-select__opt { opacity: 1; transform: none; }
+/* 错落淡入的序用 --i（buildSelect 逐个写入），避免 optgroup 标题占位打乱 :nth-child 编号 */
+.u-select.open .u-select__opt { transition-delay: calc(var(--i, 0) * .03s); }
+.u-select__opt:hover, .u-select__opt.active { background: var(--paper-2); color: var(--ink); }
+.u-select__opt.sel { color: var(--lit); }
+.u-select__opt .tick { flex: none; width: 13px; height: 13px; opacity: 0; color: var(--accent); transition: opacity .3s; }
+.u-select__opt.sel .tick { opacity: 1; }
+/* #144 多选下拉：optgroup 分组标题 + 复选勾选态；勾选时列表保持展开便于连选 */
+.u-select__grp {
+  padding: 8px 11px 4px; font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3);
+}
+.u-select--multi .u-select__list { min-width: 200px; }
+.u-select--multi .u-select__btn { min-width: 148px; }
+.u-select--multi .u-select__opt .tick { opacity: .16; }        /* 未选：露一个浅勾占位 */
+.u-select--multi .u-select__opt.sel .tick { opacity: 1; }
+/* ⚠️ 含自定义下拉的容器必须显式分层：reveal 的 transform 会给容器建层叠上下文，
+   同层里 DOM 更靠后的元素便会盖住下拉列表。libbar（搜索+难度）须高于标签 chips，
+   否则难度下拉展开后被 .filters 的 chip 挡住，选项"看得见点不到"。 */
+.libbar { position: relative; z-index: 5; }
+.filters, .post--form { position: relative; z-index: 4; }
+@media (max-width: 600px) { .u-select { display: block; } .u-select__btn { width: 100%; } .u-select__list { left: 0; right: 0; min-width: 0; } }
+
+/* ============================================================================
+   光标状态机（#98 · 学 nova：悬停不同元素，圆有不同的"表情"）
+   ----------------------------------------------------------------------------
+   默认 7px 点 + 34px 圈；交互元素放大（.big，沿用）；
+   搜索框 → 圈放大并显出放大镜（.search）；普通文本输入 → 收成一条竖杠（.text）；
+   海报廊拖拽区 → 显出四向箭头（.drag）；链接/带标签 → 放大显标签（.link/.big）。
+   图标用 .ic--search / .ic--drag 两枚，由 ring 的类切换显隐。
+   ========================================================================== */
+.cursor-ring .ic { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transform: scale(.4); transition: opacity .3s, transform .3s var(--ease-out); color: #fff; pointer-events: none; }
+.cursor-ring .ic svg { width: 44%; height: 44%; }
+body.has-cursor .cursor-ring.search { width: 64px; height: 64px; border-color: #fff; background: rgba(255,255,255,.10); }
+body.has-cursor .cursor-ring.search .ic--search { opacity: 1; transform: none; }
+body.has-cursor .cursor-ring.search .lb { opacity: 0 !important; }
+body.has-cursor .cursor-ring.text { width: 3px; height: 30px; border: 0; background: #fff; border-radius: 1px; }
+body.has-cursor .cursor-ring.drag { width: 66px; height: 66px; border-color: #fff; background: rgba(255,255,255,.10); }
+body.has-cursor .cursor-ring.drag .ic--drag { opacity: 1; transform: none; }
+body.has-cursor .cursor-ring.drag .lb { opacity: 0 !important; }
+
+/* ============================================================================
+   确认感动效（#99 · 不要小手 + 不要涟漪，要"落定"的承诺感）
+   ----------------------------------------------------------------------------
+   · .btn--confirm 关闭原生 pointer 小手，回归 default；
+   · 点击时给一个"按压-回弹 + 朱砂对勾闪现"的 commit 反馈（.is-commit），
+     取代原先的涟漪 —— 像盖章落定，而不是水波荡开。 */
+.btn--confirm { cursor: default; }
+.btn--confirm .ck { display: inline-grid; place-items: center; width: 0; opacity: 0; overflow: hidden; transition: width .4s var(--ease-out), opacity .3s, margin .4s var(--ease-out); }
+.btn--confirm .ck svg { width: 14px; height: 14px; }
+.btn--confirm.is-commit { animation: commitPress .52s var(--ease-out); }
+.btn--confirm.is-commit .ck { width: 16px; opacity: 1; margin-left: 2px; }
+@keyframes commitPress {
+  0%   { transform: scale(1); }
+  22%  { transform: scale(.945); }
+  52%  { transform: scale(.945); }
+  100% { transform: scale(1); }
+}
+
+/* ============================================================================
+   本本墙「类型/标签切换」过渡（#100 · 不再瞬切）
+   ----------------------------------------------------------------------------
+   旧网格先轻淡出下移，再换入新网格；新卡片照旧逐条 reveal 上浮。 */
+[data-lib-grid].is-leaving {
+  opacity: .42; transform: translateY(10px) scale(.992);
+  transition: opacity .26s var(--ease-out), transform .3s var(--ease-out);
+}
+
+/* ============================================================================
+   转场 enrichment（#100 · 让换页更有"戏"）
+   ----------------------------------------------------------------------------
+   在原有液面带之上，加一道斜向的朱砂光幕扫过 —— 比纯色带更"有厚度"，
+   也不引入 brand 之外的色相。性能同原液面：纯 transform，不入合成负担名单外。 */
+.transit__wipe {
+  position: absolute; top: -10%; left: 0; right: 0; height: 120%; z-index: 2;
+  background: linear-gradient(118deg, oklch(53% 0.135 44 / 0) 8%, oklch(53% 0.135 44 / .82) 50%, oklch(53% 0.135 44 / 0) 92%);
+  transform: translateX(-118%) skewX(-9deg); transform-origin: left center;
+  mix-blend-mode: multiply; opacity: .0; will-change: transform; pointer-events: none;
+}
+.transit.on .transit__wipe { opacity: 1; transform: translateX(118%) skewX(-9deg); transition: transform calc(var(--tr-band) * 1.04) cubic-bezier(.6,0,.2,1); }
+
+/* ============================================================================
    响应式
    ========================================================================== */
 @media (max-width: 980px) {
@@ -1251,6 +1590,7 @@ html.has-media .boot { background: #070605; }
   .nav__links { position: fixed; inset: 0 0 0 auto; width: min(78vw, 320px); background: var(--paper-2); padding: 92px 28px; flex-direction: column; align-items: flex-start; gap: 20px; transform: translateX(100%); transition: transform .5s var(--ease); border-left: 1px solid var(--line); z-index: 70; }
   .nav__links.open { transform: none; }
   .nav__burger { display: block; z-index: 80; }
+  .nav__live { display: none; }
   .idx__row { grid-template-columns: 44px 1fr; }
   .idx__desc, .idx__go { display: none; }
   .auth { grid-template-columns: 1fr; }
@@ -1283,7 +1623,7 @@ html.has-media .boot { background: #070605; }
   * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   [data-reveal] { opacity: 1; transform: none; }
   .split .ch { transform: none !important; animation: none !important; }
-  .cursor, .cursor-ring, .transit, .stage__slits i { display: none; }
+  .cursor, .cursor-ring, .transit { display: none; }
   /* 减弱动效下，场景位移的三个类必须彻底无效 —— 否则页面会静态卡在"被推上去"的位置 */
   main.is-out, main.is-in, main.is-in.flow { transform: none !important; opacity: 1 !important; filter: none !important; }
   main.is-out > * { transform: none !important; opacity: 1 !important; }

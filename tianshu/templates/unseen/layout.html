@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-ui="unseen">
+<html lang="zh-CN" data-ui="unseen" class="no-field">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -14,22 +14,26 @@
   <meta property="og:url" content="{{ request.base_url }}">
   <meta property="og:image" content="{{ url_for('static', filename='media/hero.webp', _external=True) }}">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="theme-color" content="#0E0C0A">
+  <meta name="theme-color" content="#f5efe6">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
   <link rel="icon" href="{{ url_for('static', filename='icon.svg') }}" type="image/svg+xml">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  {# 字体：**不再从 Google 拉两个中文字库**（Noto Sans/Serif SC 是首屏最大的一块，
-     中文改由系统字族承担：macOS 苹方/宋体、Windows 微软雅黑/宋体，见 unseen.css 的 --font-* 栈）。
-     拉丁展示体只保留实际用到的字重（去掉了没用到的 Fraunces 700 与两组斜体），进一步减请求。 #}
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,900;1,9..144,900&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/unseen.css', v=static_v('css/unseen.css')) }}">
+  {# 字体：**免费、可商用（OFL）**。拉丁三件套避开 Inter（AI 默认）：
+     - Fraunces 仅罗马正体（斜体轴已删 —— 斜体标题是头号 AI tell）
+     - Instrument Sans 做拉丁正文（替代 Inter）
+     - Space Mono 只给真数字/数据
+     中文用 Google Fonts 的 **Noto Sans SC / Noto Serif SC**（OFL 免费）——
+     它们按 unicode-range 自动子集化，页面只下载用到字块，不会整库中招，
+     首屏增量可控。系统字作为兜底（断网/字体未就绪时也不塌。 #}
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,900&family=Instrument+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('asset_delivery', filename='css/unseen.css', v=static_v('css/unseen.css')) }}">
   {# Lenis 的极简配套样式（html/body height:auto + 关掉与 JS 打架的 CSS 平滑滚动） #}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/lenis.css', v=static_v('css/lenis.css')) }}">
   {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
   {# 键盘用户的第一站：跳过重复导航直达主内容（WCAG 2.4.1）。平时视觉隐藏，聚焦时出现。 #}
   <a class="skip" href="#main">跳到主内容</a>
   {# ⚠️ 类名是 field-canvas 不是 field —— 表单也用 .field（见 unseen.css 的 forms 段）。
@@ -37,18 +41,31 @@
      会顺手套到每一个表单字段上：字段全被做成全屏浮层、定到 (0,0)，页面看着就像"输入框没了"。 #}
   <canvas class="field-canvas" data-field aria-hidden="true"></canvas>
   <div class="cursor" aria-hidden="true"></div>
-  <div class="cursor-ring" aria-hidden="true"><span class="lb"></span></div>
+  <div class="cursor-ring" aria-hidden="true">
+    <span class="lb"></span>
+    <span class="ic ic--search" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.6" stroke="currentColor" stroke-width="1.5"/><path d="M10.6 10.6 14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </span>
+    <span class="ic ic--drag" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M8 1.5 5.5 4h5L8 1.5ZM8 14.5 5.5 12h5l-2.5 2.5ZM1.5 8 4 5.5v5L1.5 8ZM14.5 8 12 5.5v5l2.5-2.5Z" fill="currentColor"/></svg>
+    </span>
+  </div>
+  {# 胶片颗粒（学 U1/U3 的签名质感）：极淡的 SVG 噪声叠在全站内容之上，
+     用 multiply 混色 + 低透明，给扁平的暖纸底一点"胶片"颗粒感，不抢内容。 #}
+  <div class="grain" aria-hidden="true"></div>
 
   {# 场景流动式转场层（学 unseen.co 的换页）：旧场景上移离场 → 液面漫过 → 新场景从下上移进入。
      三条纵横光带 + 两条青/品红错位色散带，纯 CSS transform，不用 canvas（不给主线程加负担）。
      JS 拿不到 / 减弱动效 / fetch 失败时，它会保持隐藏，页面照常整页跳转。 #}
   <div class="transit" id="transit" aria-hidden="true">
     <div class="transit__haze"></div>
+    <div class="transit__wipe"></div>
     <div class="transit__band"></div>
     <div class="transit__band"></div>
     <div class="transit__band"></div>
     <div class="transit__disp transit__disp--c"></div>
     <div class="transit__disp transit__disp--m"></div>
+    <div class="transit__title" id="transitTitle"></div>
   </div>
 
   {# 首屏 loader：学 hubtown.co.in 的极简语法 —— 一行等宽方块 + 两个 mono 小标签，
@@ -68,6 +85,12 @@
     </div>
   </div>
 
+  {# #73 顶部滚动进度条（编辑式细线，1px）：跟随阅读进度，给"正在翻一本刊物"的暗示 #}
+  <div class="scrollbar" id="scrollbar" aria-hidden="true"><i></i></div>
+
+  {# #78 回顶引导：滚过一屏后浮出，点按平滑回顶（Lenis 感知） #}
+  <button class="to-top" id="toTop" type="button" aria-label="回到顶部" hidden>↑</button>
+
   <header class="nav" id="nav">
     <a class="nav__brand" href="{{ url_for('public.home') }}" data-cursor>
       <span class="mark">薯</span><span class="brand-word">甜薯</span>
@@ -78,7 +101,11 @@
       <a href="{{ url_for('public.comm') }}" class="{{ 'on' if request.path.startswith('/comm') }}"><span class="nw"><b>唠嗑</b><i>唠嗑</i></span></a>
       <a href="{{ url_for('public.group') }}" class="{{ 'on' if request.path.startswith('/group') }}"><span class="nw"><b>组局</b><i>组局</i></span></a>
       <a href="{{ url_for('public.faq') }}"><span class="nw"><b>问答</b><i>问答</i></span></a>
+      <i class="nav__line" aria-hidden="true"></i>
     </nav>
+    <a class="nav__live" href="{{ url_for('public.group') }}" data-cursor="今晚" data-live>
+      <span class="pulse" aria-hidden="true"></span>正在约局 <b data-live-count>{{ sessions|length if sessions is defined else '' }}</b>{% if sessions is defined %} 场{% endif %}
+    </a>
     <div class="nav__cta">
       {% if my_dm %}<a class="link-underline nav__work" href="{{ url_for('dm.index') }}">DM 工作台</a>{% endif %}
       {% if my_admin %}<a class="link-underline nav__work" href="{{ url_for('admin.dashboard') }}">管理后台</a>{% endif %}
@@ -87,7 +114,7 @@
       {% else %}
         <a class="link-underline" href="{{ url_for('user.login') }}">登录</a>
       {% endif %}
-      <a class="btn btn--accent" href="{{ url_for('user.register') if not me else url_for('public.scripts') }}">{{ '先逛逛' if me else '注册' }}</a>
+      <a class="btn btn--nav" href="{{ url_for('user.register') if not me else url_for('public.scripts') }}">{{ '先逛逛' if me else '注册' }}</a>
       <button class="nav__burger" id="burger" aria-label="菜单"><span></span><span></span><span></span></button>
     </div>
   </header>
@@ -116,39 +143,21 @@
 
   <footer class="foot">
     <div class="wrap">
-      <div class="foot__top">
-        <div>
-          <div class="foot__brand">甜薯剧本杀</div>
-          <p style="max-width:34ch;margin-top:16px;color:var(--dark-2-ink)">把一晚上的悬念，交给一群对的人。约本、拼车、组局，一个入口搞定。</p>
-        </div>
-        <div>
-          <h2>逛逛</h2>
-          <ul>
-            <li><a class="link-underline" href="{{ url_for('public.scripts') }}">本本墙</a></li>
-            <li><a class="link-underline" href="{{ url_for('public.car') }}">拼车大厅</a></li>
-            <li><a class="link-underline" href="{{ url_for('public.comm') }}">唠嗑社区</a></li>
-            <li><a class="link-underline" href="{{ url_for('public.group') }}">今日组局</a></li>
-          </ul>
-        </div>
-        <div>
-          <h2>账号</h2>
-          <ul>
-            {% if my_dm %}<li><a class="link-underline" href="{{ url_for('dm.index') }}">DM 工作台</a></li>{% endif %}
-            {% if my_admin %}<li><a class="link-underline" href="{{ url_for('admin.dashboard') }}">管理后台</a></li>{% endif %}
-            {% if me %}
-              <li><a class="link-underline" href="{{ url_for('user.me') }}">我的</a></li>
-              <li><a class="link-underline" href="{{ url_for('user.logout') }}">退出</a></li>
-            {% else %}
-              <li><a class="link-underline" href="{{ url_for('user.login') }}">登录</a></li>
-              <li><a class="link-underline" href="{{ url_for('user.register') }}">注册</a></li>
-            {% endif %}
-            <li><a class="link-underline" href="{{ url_for('public.faq') }}">常见问题</a></li>
-          </ul>
-        </div>
-      </div>
-      <div class="foot__bottom">
-        <span>© {{ year }} 甜薯剧本杀 · 约局工作室</span>
+      <div class="foot__word">甜薯剧本杀</div>
+      <nav class="foot__row" aria-label="页脚导航">
+        <a class="link-underline" href="{{ url_for('public.scripts') }}">本本墙</a>
+        <a class="link-underline" href="{{ url_for('public.car') }}">拼车大厅</a>
+        <a class="link-underline" href="{{ url_for('public.comm') }}">唠嗑社区</a>
+        <a class="link-underline" href="{{ url_for('public.group') }}">今日组局</a>
+        <a class="link-underline" href="{{ url_for('public.faq') }}">常见问题</a>
+        {% if me %}<a class="link-underline" href="{{ url_for('user.me') }}">我的</a>
+        {% else %}<a class="link-underline" href="{{ url_for('user.login') }}">登录</a>{% endif %}
+        <a class="link-underline" href="{{ url_for('user.register') }}">注册</a>
+      </nav>
+      <div class="foot__meta">
+        <span>营业 14:00 – 02:00 · 全年无休</span>
         <span>把一晚上的悬念，交给一群对的人。</span>
+        <span>© {{ year }} 甜薯剧本杀 · 约局工作室</span>
       </div>
     </div>
   </footer>
@@ -163,8 +172,8 @@
   {# Lenis 平滑滚动（vendor，暴露 globalThis.Lenis）。必须在 unseen.js 之前 ——
      unseen.js 的 initSmooth 会优先启用它，缺了才退回手写惯量滚动。 #}
   <script src="{{ url_for('static', filename='js/vendor/lenis.min.js') }}" defer></script>
-  <script src="{{ url_for('static', filename='js/unseen-field.js', v=static_v('js/unseen-field.js')) }}" defer></script>
-  <script src="{{ url_for('static', filename='js/unseen.js', v=static_v('js/unseen.js')) }}" defer></script>
+  <script src="{{ url_for('asset_delivery', filename='js/unseen-field.js', v=static_v('js/unseen-field.js')) }}" defer></script>
+  <script src="{{ url_for('asset_delivery', filename='js/unseen.js', v=static_v('js/unseen.js')) }}" defer></script>
   {% block extra_js %}{% endblock %}
 
   {# 离线外壳：与 base / nova / v1 版保持一致（unseen 版此前漏了注册，PWA 等于没接）。

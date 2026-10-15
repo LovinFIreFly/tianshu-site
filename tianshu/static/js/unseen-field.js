@@ -11,6 +11,9 @@
   'use strict';
   var canvas = document.querySelector('[data-field]');
   if (!canvas) return;
+  /* 暗场流体画布已默认退役（layout 的 <html class="no-field">）：浅暖亮场下不再需要暗场背景，
+     直接跳过 WebGL 初始化以省 GPU / 防掉帧。要回暗场沉浸时，把 no-field 去掉即可。 */
+  if (document.documentElement.classList.contains('no-field')) { canvas.style.display = 'none'; return; }
   var REDUCE = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   /* 渲染分辨率系数：这是块「软噪声背景」，不需要满分辨率——0.55 倍靠 CSS 放大后肉眼几乎无差，
      但填充率省约 3 倍。它曾经是整站掉帧的头号原因（满分辨率 × 每像素 6 次 fbm × 5 层）。*/

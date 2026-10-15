@@ -1,5 +1,7 @@
 {% extends 'layout.html' %}
 {% block title %}登录 · 甜薯剧本杀{% endblock %}
+{# 暗色左栏顶到导航之下：整条 nav 切"暗场字色"，否则深字压深底读不出来 #}
+{% block body_class %}on-dark-top{% endblock %}
 {% block content %}
 
 <div class="auth">

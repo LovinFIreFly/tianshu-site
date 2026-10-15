@@ -174,6 +174,14 @@ def banner(port, lan=''):
 def main():
     if '--dev' in sys.argv:                       # 开发模式：改模板刷新就见效（会慢一点）
         config.TEMPLATES_AUTO_RELOAD = True
+        # ⚠️ create_app() 已在模块导入时执行（见第 62 行），此时 config 改变已来不及
+        # 影响已建好的 jinja_env；这里再显式打开自动重载并清掉已编译缓存，让模板改动即时生效。
+        try:
+            app.jinja_env.auto_reload = True
+            app.jinja_env.cache = {}
+            app.config['TEMPLATES_AUTO_RELOAD'] = True   # 让 /assets 交付端点也认这是开发态（发 no-store）
+        except Exception:
+            pass
     for arg, attr in (('--lan', 'LAN_MODE'), ('--no-browser', None)):
         if arg in sys.argv and attr:
             setattr(config, attr, True)

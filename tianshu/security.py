@@ -157,6 +157,34 @@ def safe_next(candidate, fallback='/'):
     return c
 
 
+def safe_referrer(ref, fallback='/'):
+    """操作完成后跳回来源页 —— 只认**同站**来源。
+
+    Referer 头是外部可控的（从别人的页面点进来时它就是对方的网址），
+    直接 `redirect(request.referrer)` 等于把"跳去哪"交给了对方 —— 又一处开放重定向
+    （OWASP Unvalidated Redirect）。CSRF 虽已挡住伪造的跨站 POST，这里仍按纵深防御处理。
+
+    与 safe_next 的区别：safe_next 只认"/开头的相对路径"，而 Referer 通常是**绝对 URL**，
+    拿它去比会把同站来源也一并挡掉（"返回"就失效了）。所以这里按 host 比对：
+      · 本就是站内相对路径 → 原样返回；
+      · 同 host 的绝对 URL → 只取 path?query（丢掉对方拼的 scheme/host）；
+      · 外站 / 空 / 解析失败 → 回落 fallback。
+    """
+    from urllib.parse import urlparse
+    c = (ref or '').strip()
+    if not c:
+        return fallback
+    if c.startswith('/') and not c.startswith('//') and '\\' not in c:
+        return c
+    try:
+        p = urlparse(c)
+    except Exception:
+        return fallback
+    if p.scheme in ('http', 'https') and p.netloc and p.netloc == (request.host or ''):
+        return (p.path or '/') + (('?' + p.query) if p.query else '')
+    return fallback
+
+
 def login_required(view):
     @wraps(view)
     def wrapper(*a, **kw):
