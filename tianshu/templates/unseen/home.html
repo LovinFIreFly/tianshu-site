@@ -104,6 +104,11 @@
 
 <!-- 宣言断点（blueyard 式巨型长句，打破 eyebrow→h2 的重复节奏） -->
 <section class="manifesto" data-scene>
+  {# 幽灵巨字：这一屏的「材质」是字本身，不是被读的字，是被看的形。
+     学 sweet-tape（293px 巨字压在贴纸下面）/ 25residences（135px 巨字配一句正文）。
+     ⚠️ 必须是真实 DOM 元素而不是 ::before 伪元素 —— 空隙地图只数 DOM 节点，
+        伪元素撑起来的空间会被判成「空洞」（这条踩过，见 void_map.py 的必补项）。 #}
+  <i class="manifesto__ghost" aria-hidden="true">甜薯</i>
   <div class="wrap">
     <span class="eyebrow" data-reveal><b>S.0</b> 宣言 · Manifesto</span>
     <p class="manifesto__line" data-reveal data-d="1">我们<em>不</em>做又一家剧本杀店。<br>只把「约本」这一件事，<br>做到你愿意带朋友来。</p>

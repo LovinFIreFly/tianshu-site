@@ -2500,14 +2500,18 @@ a.banners__i:hover { transform: translateY(-4px); border-color: oklch(53% 0.135 
 /* 发帖表单是"实体块"，不是行 —— 它不推进（原来靠 padding-left 复位来抵消） */
 .post--form:hover > * { transform: none; }
 
-/* ---------- ④ 巨字：行高压到"块"的比例 ----------
-   sweet-tape 的 293px 标题配 214px 行高（0.73）—— 字读成**一块形状**而不是"几行字"。
-   我站原来的 1.0 左右是"正文行高被放大"，观感仍是文字。压到 .78 上下即可，
-   再低中文字形会互相咬到（汉字有下伸笔画，比拉丁更吃行高）。 */
-.paths__huge { line-height: .78; }
-.curtain__big { line-height: .84; }
-.foot__word { line-height: .8; }
-.stage__type .t { line-height: .88; }
+/* ---------- ④ 巨字：行高只能收到 .92，不能再低 ----------
+   ⚠️ 这里犯过一次错，记下来：sweet-tape 的 293px 标题配 214px 行高（**0.73**），
+      但那是 **Latin condensed** 字体（futura-pt-condensed）—— 拉丁大写的字身只占 em 的
+      六成上下，行高压到 0.73 仍然不碰。
+      **汉字是满字面的（字身≈1em），行高低于 ~0.92 就会上下行咬在一起。**
+      我照抄 0.73~0.88 试了一版，实测截图里整段字糊成一团黑块，已回退。
+   ⇒ 中文要"字当图形"，靠的是**字号 × 字重 × 字距 × 背景层**，不是压行高。
+      0.94 是安全的松紧点（0.96 偏松，0.90 开始有笔画接触）。 */
+.paths__huge { line-height: .94; }
+.curtain__big { line-height: .94; }
+.foot__word { line-height: .94; }
+.stage__type .t { line-height: .94; }
 
 /* ---------- 滚动驱动（scrub）：跟手 ----------
    JS 只往 --sy 写一个 px 值，这里用**独立变换属性 translate** 消费。
@@ -2520,3 +2524,60 @@ a.banners__i:hover { transform: translateY(-4px); border-color: oklch(53% 0.135 
 .sec__head, .poster, .voices__stage {
   translate: 0px var(--sy, 0px);
 }
+
+/* ============================================================================
+   幕 · 宣言：大字当图形（2026-10-17 · 学 sweet-tape.com / 25residences）
+   ----------------------------------------------------------------------------
+   这一幕是「不靠素材治单调」的样板：原本是"浅纸底 + 一段 74px 的字 + 一段小字"，
+   和全站其余每一屏同一种材质。现在改成：
+     ① 满幅纸色换一档（--paper-2）并给上下发丝线 —— 幕与幕之间**换图底关系**，
+        不用饱和色也换得掉"全站一个颜色"（sweet-tape 是荧光绿/橙/黄轮流换）。
+     ② 巨字顶到 clamp(2.2rem, 6.3vw, 5.7rem)（1440px 下约 91px）、行高 .96
+        —— 字在这里是**构图块**不是句子。字号上限由"最长那行 12 个汉字必须在
+          1096px 内容宽里不折行"倒推得出（12 × 91 ≈ 1090px）；
+          再大就会折行，折行之后巨字就退化成"一大段普通段落"。
+     ③ 背后再压一层更大的「幽灵字」（.manifesto__ghost，约 26vw、5% 墨色、被裁切），
+        让整屏有第二个层次 —— 这是"字当图形"最省力的一招，一张素材都不用。
+     ④ 小字移到右列底部，和巨字错开，留出大片**有意为之**的空白。
+        （留白不是空隙：空隙是"该有东西的地方没有"，留白是"刻意什么都没有"。）
+
+   ⚠️ 幽灵字必须是**真实 DOM 元素**而不是 ::before 伪元素：
+      空隙地图只遍历 DOM 节点，伪元素撑起来的空间会被判成「空洞」，
+      结果这一屏会被自己的量测器判成"空"（见 void_map.py 的必补项注释）。
+   ========================================================================== */
+.manifesto {
+  position: relative; overflow: hidden;
+  min-height: clamp(480px, 76vh, 780px);
+  display: grid; align-items: center;
+  padding: calc(var(--sec-y) * 1.05) 0;
+  background: var(--paper-2);
+  border-block: 1px solid var(--line);
+}
+/* 尺寸不是随手定的：要让它**顶到巨字最后一行的下沿**，把中间那段空白占住 ——
+   否则巨字和小字之间会空出 200–300px，读成"这屏没做完"，而不是"刻意留白"。
+   第一版给了 26vw 压在底部，实测中间留下 280px 真空；现在 34vw 并上提。
+   它同时是这一幕的**第二层材质**：整幕的视觉质量一半来自这层 5% 的墨色大字。 */
+.manifesto__ghost {
+  position: absolute; z-index: 0; left: -.05em; bottom: -.24em;
+  font-family: var(--font-display); font-weight: 900; font-style: normal;
+  font-size: clamp(11rem, 34vw, 30rem); line-height: .8; letter-spacing: -.05em;
+  color: var(--ink); opacity: .05;
+  white-space: nowrap; pointer-events: none; -webkit-user-select: none; user-select: none;
+}
+/* 单列：巨字要吃到整幅内容宽（1096px）才撑得住 12 个汉字一行不折。
+   原来那版用了 1.6fr/0.8fr 双列，巨字只剩 692px → 每行折一半 → 变成六行碎句，
+   反而比改之前更像"普通段落"。 */
+.manifesto > .wrap {
+  position: relative; z-index: 1;
+  display: grid; grid-template-columns: minmax(0, 1fr);
+  row-gap: clamp(18px, 2.4vh, 30px);
+}
+/* 纸色降了一档，--ink-3（53%）在这上面会掉到 4.5:1 以下 —— 局部改用 --ink-2 */
+.manifesto .eyebrow { color: var(--ink-2); }
+.manifesto__line {
+  margin-top: 0; max-width: none;
+  font-size: clamp(2.2rem, 6.3vw, 5.7rem); line-height: .96; letter-spacing: -.034em;
+}
+/* 小字挪到右下角：和巨字错开，左下留一片**有意为之**的空 —— 靠幽灵字去填那个层次，
+   这样"留白"仍然是有东西的，不会读成"没做完"。 */
+.manifesto__note { justify-self: end; margin-top: 0; max-width: 34ch; }
