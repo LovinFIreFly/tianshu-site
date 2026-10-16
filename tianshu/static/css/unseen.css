@@ -121,31 +121,59 @@
   --ease-expo:     cubic-bezier(.19, 1, .22, 1);
   /* expo in-out：两端停、中段冲 → 转场覆盖层，戏剧性（2 站使用） */
   --ease-drama:    cubic-bezier(.86, 0, .07, 1);
+  /* 2026-10-17 按 220 站实测补三条（85/178 站的曲线取值与我站原有 6 条都不重合）：
+     · glide   平滑起步、长尾收束（Apple 一类）
+     · swift   最通用的一条，快而稳 —— 揭示/位移的默认候选
+     · spring  带一点"过冲的余韵"，用于需要一点手感的揭示 */
+  --ease-glide:    cubic-bezier(.25, 0, 0, 1);
+  --ease-swift:    cubic-bezier(.4, 0, .1, 1);
+  --ease-spring:   cubic-bezier(.17, .4, .02, .99);
 
   /* ------------------------------------------------------------------------
-     圆角刻度（台账：圆角类 108 条，我站 7 个离散值里有 0.5px/1px/2px/3px 这种
-     "随手写"的值 → 收敛成 6 档）
+     圆角刻度（2026-10-17 按 220 站实测重排）
+     实测发现：**全站 31 处硬编码 2px**，这套刻度根本没被用起来 ——
+     内容框、按钮、输入框、面板、卡片全是同一档 2px，"物件感"为零。
+     参考站（136/178 = 76%）普遍 0/3/10/15/18px 这样拉开档次。
+     治法不是把全站变圆（那会丢掉印刷感），而是分两套：
+       内容面 = 锐角（--r / --r-1）  ｜  UI 面 = 有弧度（--r-2 / --r-3 / --r-4）
+     判据很直白：**"这是印上去的"就锐，"这是可以点的"就圆**。
      ---------------------------------------------------------------------- */
   --r-0: 0;
-  --r-1: 2px;      /* 微圆（标签、输入框） */
-  --r-2: 4px;      /* 常规（卡片） */
-  --r-3: 8px;      /* 面板 */
-  --r-4: 14px;     /* 大浮层 */
-  --r-pill: 999px; /* 药丸（极少用 —— 大圆角是 AI 味重灾区，只在徽标上用） */
+  --r-1: 3px;      /* 微圆（tag、行内小件、缩略图） */
+  --r-2: 6px;      /* UI 常规（输入框、chip、按钮、日期快选） */
+  --r-3: 10px;     /* 面板（卡片、横幅、表单块、订单票根） */
+  --r-4: 16px;     /* 大浮层（提示、下拉、悬浮缩略图） */
+  --r-pill: 999px; /* 药丸（只在徽标/状态点上用） */
 
   /* ------------------------------------------------------------------------
-     间距刻度（台账：间距类 179 条。用 4 的倍数成阶，杜绝 5px/7px/13px 这类"随手值"）
+     阴影刻度（同一次实测）：我站原来总共只有 6 条 box-shadow、且全是焦点环，
+     卡片基本没有层次；参考站中位 5 档。补一条与暖纸底同色的阶梯 ——
+     阴影色一律用暖褐 rgba(30,20,16) 而不是纯黑，纯黑在暖纸上会发灰发脏。
+     ---------------------------------------------------------------------- */
+  --sh-1: 0 2px 8px -4px rgba(30, 20, 16, .16);
+  --sh-2: 0 12px 28px -14px rgba(30, 20, 16, .26);
+  --sh-3: 0 26px 54px -26px rgba(30, 20, 16, .40);
+
+  /* ------------------------------------------------------------------------
+     间距刻度（2026-10-17 按 220 站实测重排）
+     参考站常见的 padding-top 档位：8, 12, 16, 24, 40, 80, 152, 160 —— 特征是
+     **低端细、高端跳跃大**（24→40 是 1.7×，40→80 是 2×）。我站原来是均匀的
+     4/8/12/16/24/32/48/64/96/128，"每级 1.33×" 排下来像尺子，节奏就平。
+     下面把高端拉开（低端保持细腻，小件还要靠它）。
+     ⚠️ 诚实说明：全站真正在用的只有 --s-5/--s-6/--s-8 三档，其余间距是 111 处
+     ad-hoc clamp() 现算的。这次只把刻度的"性格"改对，不强行把 111 处搬过来 ——
+     那种大迁移的风险远大于收益，留作以后单独一项。
      ---------------------------------------------------------------------- */
   --s-1: 4px;
   --s-2: 8px;
   --s-3: 12px;
   --s-4: 16px;
   --s-5: 24px;
-  --s-6: 32px;
-  --s-7: 48px;
-  --s-8: 64px;
-  --s-9: 96px;
-  --s-10: 128px;
+  --s-6: 40px;
+  --s-7: 60px;
+  --s-8: 88px;
+  --s-9: 128px;
+  --s-10: 168px;
 
   /* ------------------------------------------------------------------------
      透明度刻度（台账：参考站普遍有单独的"白/黑透明度阶"来做蒙层与暗场浮层；
@@ -187,7 +215,9 @@
   /* 行高：紧凑为主（Wantedly 正文 1.2，说明书式的 1.5 只给长段落） */
   --lh-tight: 1.2;
   --lh-body: 1.58;
-  --r: 2px;   /* 编辑式版式：几乎不带圆角 —— 大圆角/药丸是"AI 味"最重的来源之一 */
+  /* 编辑式版式的"骨相"：内容框（海报、图、印刷块）保持锐角 ——
+     大圆角/药丸是"AI 味"最重的来源之一，这一点不改。 */
+  --r: 2px;
 
   /* 转场时长（唯一来源）—— JS 也读这几个变量来决定"什么时候清场"。
      以前 JS 里硬编码 900ms，一旦调 CSS 时长就会脱钩，动画会被拦腰截断。 */
@@ -227,7 +257,7 @@ html.smooth, html.smooth body { scroll-behavior: auto; }
    ② 任何可聚焦元素都有清晰可见的焦点环（表单控件用自己的描边代替，见 .field 段）。 */
 .skip {
   position: fixed; top: 10px; left: 50%; transform: translate(-50%, -180%);
-  z-index: 300; padding: 10px 18px; border-radius: 2px;
+  z-index: 300; padding: 10px 18px; border-radius: var(--r-2);
   background: var(--accent); color: var(--accent-ink);
   font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-decoration: none;
   transition: transform .2s var(--ease-out);
@@ -335,7 +365,7 @@ p, .lede, .p__d, .idx__desc { text-wrap: pretty; }
   --bg: var(--ink); --fg: var(--paper);
   position: relative; overflow: hidden; isolation: isolate;
   display: inline-flex; align-items: center; gap: 10px;
-  padding: 14px 26px; border-radius: 2px;
+  padding: 14px 26px; border-radius: var(--r-2);
   background: var(--bg); color: var(--fg);
   border: 1px solid transparent; font-weight: 500; font-size: .95rem;
   transition: transform .5s var(--ease-out), color .4s, border-color .4s;
@@ -379,7 +409,7 @@ p, .lede, .p__d, .idx__desc { text-wrap: pretty; }
 section[id], [id="a1"], [id="a2"], [id="a3"], [id="a4"], [id="a5"], [id="a6"] { scroll-margin-top: calc(var(--nav-h, 68px) + 24px); }
 .nav__brand { display: inline-flex; align-items: center; gap: 11px; font-family: var(--font-display); }
 .nav__brand .mark {
-  width: 34px; height: 34px; border-radius: 2px; display: grid; place-items: center;
+  width: 34px; height: 34px; border-radius: var(--r-2); display: grid; place-items: center;
   border: 1px solid var(--accent); background: oklch(53% 0.135 44 / .10); color: var(--accent);
   font-weight: 900; font-size: 18px; box-shadow: 0 8px 22px -12px var(--glow);
 }
@@ -595,7 +625,7 @@ body.is-idle .stage__scene img { transform: translate3d(0, 0, 0) scale(1.08); }
 .stage__keys { font-family: var(--font-mono); font-size: 11px; letter-spacing: .16em; color: var(--ink-3); display: inline-flex; align-items: center; gap: 9px; }
 .stage__keys b {
   display: inline-grid; place-items: center; min-width: 21px; height: 21px; padding: 0 6px;
-  border: 1px solid var(--line); border-radius: 2px; color: var(--amber-ink); font-weight: 400;
+  border: 1px solid var(--line); border-radius: var(--r-2); color: var(--amber-ink); font-weight: 400;
   transition: border-color .4s, color .4s;
 }
 .stage__keys:hover b { border-color: oklch(53% 0.135 44 / .55); }
@@ -879,10 +909,11 @@ main > section:last-child:not(.curtain) { padding-bottom: calc(var(--sec-y) * .6
   gap: 1px; background: var(--line); border-block: 1px solid var(--line);
 }
 .card {
-  position: relative; background: var(--paper); border: 0;
-  border-radius: 0; overflow: hidden; transition: background .5s var(--ease);
+  position: relative; background: var(--paper); border: 1px solid var(--line);
+  border-radius: var(--r-3); overflow: hidden;
+  transition: background .5s var(--ease), box-shadow .5s var(--ease-out), transform .5s var(--ease-out);
 }
-.card:hover { background: var(--paper-2); }
+.card:hover { background: var(--paper-2); box-shadow: var(--sh-2); transform: translateY(-3px); }
 .card__cover { aspect-ratio: 4/5; background: var(--paper-3); display: grid; place-items: center; position: relative; overflow: hidden; }
 .card__cover .emo { font-family: var(--font-display); font-weight: 900; font-size: clamp(2.8rem,5vw,4rem); color: rgba(242,236,225,.9); }
 .card__cover .ov { position: absolute; inset: 0; background: radial-gradient(120% 90% at 30% 10%, oklch(53% 0.135 44 / .32), transparent 60%); }
@@ -909,7 +940,7 @@ main > section:last-child:not(.curtain) { padding-bottom: calc(var(--sec-y) * .6
 .card__body { padding: 18px 18px 20px; }
 .card__title { font-family: var(--font-display); font-size: 1.32rem; line-height: 1.1; }
 .card__tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.tag { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .1em; padding: 3px 8px; border-radius: 2px; background: transparent; color: var(--ink-3); border: 1px solid var(--line); }
+.tag { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .1em; padding: 3px 8px; border-radius: var(--r-1); background: transparent; color: var(--ink-3); border: 1px solid var(--line); }
 .tag--hot { background: transparent; color: var(--amber-ink); border-color: oklch(53% 0.135 44 / .5); }
 .card__foot { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; font-size: .9rem; }
 .card__price { font-family: var(--font-display); font-size: 1.25rem; color: var(--amber-ink); }
@@ -918,7 +949,7 @@ main > section:last-child:not(.curtain) { padding-bottom: calc(var(--sec-y) * .6
 
 .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 28px; }
 .filters input, .filters select {
-  font: inherit; padding: 10px 14px; border-radius: 2px; border: 1px solid var(--line);
+  font: inherit; padding: 10px 14px; border-radius: var(--r-2); border: 1px solid var(--line);
   background: var(--paper-2); color: var(--ink);
 }
 /* 筛选：改成**编辑式文字行** —— 去掉"填充药丸"，可点文字 + 发丝分隔，
@@ -934,7 +965,7 @@ main > section:last-child:not(.curtain) { padding-bottom: calc(var(--sec-y) * .6
   text-decoration: underline; text-underline-offset: 7px;
   text-decoration-color: var(--accent); text-decoration-thickness: 2px;
 }
-select.chip { border: 1px solid var(--line); border-radius: 2px; background: var(--paper-2); color: var(--ink); padding: 8px 12px; }
+select.chip { border: 1px solid var(--line); border-radius: var(--r-2); background: var(--paper-2); color: var(--ink); padding: 8px 12px; }
 .filters[data-lib-tags] { gap: 16px; }
 
 .rows { border-top: 1px solid var(--line); }
@@ -946,10 +977,10 @@ select.chip { border: 1px solid var(--line); border-radius: 2px; background: var
 .row__when { font-family: var(--font-mono); font-size: 12px; color: var(--accent); white-space: nowrap; }
 .row__title { font-family: var(--font-display); font-size: 1.25rem; }
 .row__sub { color: var(--ink-2); font-size: .9rem; }
-.row__pill { font-family: var(--font-mono); font-size: .78rem; letter-spacing: .08em; color: var(--ink-3); border: 1px solid var(--line); border-radius: 2px; padding: 4px 10px; white-space: nowrap; }
+.row__pill { font-family: var(--font-mono); font-size: .78rem; letter-spacing: .08em; color: var(--ink-3); border: 1px solid var(--line); border-radius: var(--r-2); padding: 4px 10px; white-space: nowrap; }
 /* 拼车行：加封面首字块 + 座位点阵，填满原本空荡的两行 */
 .row--car { grid-template-columns: auto auto 1fr auto auto; }
-.row__cover { flex: none; width: 46px; height: 46px; border-radius: 2px; display: grid; place-items: center; background: var(--paper-3); border: 1px solid var(--line); font-family: var(--font-display); font-weight: 900; font-size: 1.2rem; color: var(--ink-3); }
+.row__cover { flex: none; width: 46px; height: 46px; border-radius: var(--r-2); display: grid; place-items: center; background: var(--paper-3); border: 1px solid var(--line); font-family: var(--font-display); font-weight: 900; font-size: 1.2rem; color: var(--ink-3); }
 .row__main { display: grid; gap: 5px; min-width: 0; }
 .row__seats { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
 .row__seats i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
@@ -1016,7 +1047,7 @@ select.chip { border: 1px solid var(--line); border-radius: 2px; background: var
    在暗场里非常突兀。所以两个选择器都要列上。 */
 .field input, .field textarea, .field select,
 .field--row input, .field--row textarea, .field--row select {
-  width: 100%; font: inherit; padding: 13px 15px; border-radius: 2px;
+  width: 100%; font: inherit; padding: 13px 15px; border-radius: var(--r-2);
   border: 1px solid var(--line); background: var(--paper-2); color: var(--ink); transition: border-color .3s, box-shadow .3s;
 }
 .field input::placeholder, .field textarea::placeholder,
@@ -1045,7 +1076,7 @@ select.chip { border: 1px solid var(--line); border-radius: 2px; background: var
 @media (max-width: 760px) {
   .comm__aside { grid-template-columns: 1fr 1fr; width: 100%; }
 }
-.flash { padding: 12px 16px; border-radius: 2px; margin-bottom: 18px; font-size: .9rem; border: 1px solid var(--line); background: var(--paper-2); }
+.flash { padding: 12px 16px; border-radius: var(--r-2); margin-bottom: 18px; font-size: .9rem; border: 1px solid var(--line); background: var(--paper-2); }
 .flash.ok { background: rgba(88,150,100,.14); border-color: rgba(88,150,100,.34); }
 .flash.warn { background: oklch(53% 0.135 44 / .14); border-color: oklch(53% 0.135 44 / .36); }
 
@@ -1056,7 +1087,7 @@ select.chip { border: 1px solid var(--line); border-radius: 2px; background: var
 .post { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 22px 0; margin: 0; background: transparent; transition: padding-left .45s var(--ease), background .45s; }
 .post:first-of-type { border-top: 1px solid var(--line); }
 .post:hover { padding-left: 12px; background: linear-gradient(90deg, var(--paper-2), transparent 55%); }
-.post--form { border: 1px solid var(--line); border-radius: var(--r); padding: 22px; margin-bottom: 26px; background: transparent; }
+.post--form { border: 1px solid var(--line); border-radius: var(--r-3); padding: 22px; margin-bottom: 26px; background: transparent; }
 .post--form:hover { padding-left: 22px; background: transparent; }
 .post__head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .post__av { width: 36px; height: 36px; border-radius: 50%; background: var(--paper-3); border: 1px solid var(--line); color: var(--ink); display: grid; place-items: center; font-family: var(--font-display); }
@@ -1072,7 +1103,7 @@ select.chip { border: 1px solid var(--line); border-radius: 2px; background: var
 .post__img img { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; }
 .post__file-row { align-items: center; }
 .post__file { cursor: pointer; }
-.post__file-btn { display: inline-block; padding: 9px 14px; border: 1px dashed var(--line); border-radius: 2px; color: var(--ink-2); font-size: .9rem; transition: border-color .3s, color .3s; }
+.post__file-btn { display: inline-block; padding: 9px 14px; border: 1px dashed var(--line); border-radius: var(--r-2); color: var(--ink-2); font-size: .9rem; transition: border-color .3s, color .3s; }
 .post__file:hover .post__file-btn, .post__file:focus-within .post__file-btn { border-color: var(--accent); color: var(--ink); }
 .post__previews { display: flex; gap: 8px; flex-wrap: wrap; }
 .post__previews img { width: 46px; height: 46px; object-fit: cover; border: 1px solid var(--line); border-radius: 2px; }
@@ -1080,7 +1111,7 @@ select.chip { border: 1px solid var(--line); border-radius: 2px; background: var
 
 /* ---------- me ---------- */
 .me-grid { display: grid; grid-template-columns: 300px 1fr; gap: clamp(24px,3vw,48px); align-items: start; }
-.me-card { background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r); padding: 26px; position: sticky; top: 90px; }
+.me-card { background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r-3); box-shadow: var(--sh-1); padding: 26px; position: sticky; top: 90px; }
 .me-av { width: 72px; height: 72px; border-radius: 50%; background: var(--paper-3); border: 1px solid var(--line); color: var(--ink); display: grid; place-items: center; font-size: 26px; font-family: var(--font-display); margin-bottom: 16px; }
 .me-stat { display: flex; gap: 22px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
 .me-stat .n { font-family: var(--font-display); font-size: 1.5rem; }
@@ -1176,9 +1207,9 @@ select.chip { border: 1px solid var(--line); border-radius: 2px; background: var
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; margin: 22px 0; }
 .kv dt { color: var(--ink-3); font-size: .86rem; }
 .kv dd { margin: 0; }
-.book { background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r); padding: 24px; }
+.book { background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r-3); padding: 24px; }
 .book__day { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 18px; }
-.book__day button { padding: 9px 14px; border-radius: 2px; border: 1px solid var(--line); background: var(--paper-3); color: var(--ink); transition: .3s; }
+.book__day button { padding: 9px 14px; border-radius: var(--r-2); border: 1px solid var(--line); background: var(--paper-3); color: var(--ink); transition: .3s; }
 .book__day button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 
 /* ---------- cursor ---------- */
@@ -1533,7 +1564,7 @@ html.has-media .boot { background: #070605; }
 .amount { font-family: var(--font-display); font-weight: 600; font-size: clamp(3.4rem, 11vw, 7.4rem); line-height: 1; color: var(--amber-ink); letter-spacing: -.03em; margin: 10px 0 0; font-synthesis: none; }
 .amount i { font-style: normal; font-size: .42em; color: var(--ink-3); vertical-align: super; letter-spacing: 0; }
 .pay { display: grid; grid-template-columns: 1.12fr .88fr; gap: clamp(26px, 4vw, 64px); align-items: start; }
-.pay__side { background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r); padding: clamp(20px, 2.4vw, 26px); }
+.pay__side { background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r-3); padding: clamp(20px, 2.4vw, 26px); }
 .pay__side h2 { font-family: var(--font-mono); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--amber-ink); margin-bottom: 14px; font-weight: 400; }
 .qr { width: 148px; flex: none; border: 1px solid var(--line); border-radius: 2px; overflow: hidden; background: var(--paper-3); }
 .wechat { font-family: var(--font-mono); font-size: 15px; letter-spacing: .04em; color: var(--amber-ink); word-break: break-all; }
@@ -1556,7 +1587,7 @@ html.has-media .boot { background: #070605; }
 .libbar { display: flex; align-items: center; gap: clamp(14px,2vw,22px); flex-wrap: wrap; margin-bottom: 16px; }
 .u-search {
   position: relative; display: block; width: 100%; max-width: 470px;
-  border-radius: 2px; background: var(--paper-2);
+  border-radius: var(--r-2); background: var(--paper-2);
 }
 .u-search__ring { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
 .u-search__ring rect { fill: none; }
@@ -1581,12 +1612,12 @@ html.has-media .boot { background: #070605; }
 @keyframes usRingGo { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -100; } }
 .u-search__in {
   width: 100%; height: 54px; padding: 0 58px 0 24px; border: 0; background: transparent;
-  border-radius: 2px; font: inherit; font-size: .98rem; color: var(--ink);
+  border-radius: var(--r-2); font: inherit; font-size: .98rem; color: var(--ink);
 }
 .u-search__in::placeholder { color: var(--ink-3); }
 .u-search__in:focus { outline: none; }
 .u-search__go {
-  position: absolute; right: 7px; top: 7px; width: 40px; height: 40px; border-radius: 2px;
+  position: absolute; right: 7px; top: 7px; width: 40px; height: 40px; border-radius: var(--r-2);
   border: 1px solid transparent; display: grid; place-items: center;
   background: var(--paper-3); color: var(--ink-2);
   transition: background .3s, color .3s, transform .45s var(--ease-out);
@@ -1599,7 +1630,7 @@ html.has-media .boot { background: #070605; }
 @keyframes libBump { 0% { opacity: .15; transform: translateY(-4px); } 100% { opacity: 1; transform: none; } }
 /* 「清空筛选」：有任一条件生效才出现；虚线描边，弱于主操作 */
 .libclear {
-  display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: 2px;
+  display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: var(--r-2);
   border: 1px dashed var(--line); background: none; color: var(--ink-2);
   font: inherit; font-size: .9rem; cursor: pointer; transition: color .25s, border-color .25s;
 }
@@ -1620,12 +1651,12 @@ html.has-media .boot { background: #070605; }
 }
 .u-search__sug-h button {
   font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--ink-3);
-  background: none; border: 0; cursor: pointer; padding: 2px 4px; border-radius: 2px; transition: color .25s;
+  background: none; border: 0; cursor: pointer; padding: 2px 4px; border-radius: var(--r-1); transition: color .25s;
 }
 .u-search__sug-h button:hover { color: var(--accent); }
 .u-search__sug-i {
   display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
-  padding: 9px 11px; border: 0; background: none; border-radius: 2px; cursor: pointer;
+  padding: 9px 11px; border: 0; background: none; border-radius: var(--r-2); cursor: pointer;
   font: inherit; font-size: .92rem; color: var(--ink-2); transition: background .22s, color .22s;
 }
 .u-search__sug-i:hover { background: var(--paper-2); color: var(--ink); }
@@ -1706,7 +1737,7 @@ body:has(.curtain) .frame .micro .dot { border-color: var(--dark-2-ink); }
 }
 .u-select__btn {
   display: inline-flex; align-items: center; justify-content: space-between; gap: 12px;
-  min-width: 138px; padding: 10px 14px; border-radius: 2px;
+  min-width: 138px; padding: 10px 14px; border-radius: var(--r-4);
   border: 1px solid var(--line); background: var(--paper-2); color: var(--ink);
   font: inherit; font-size: .94rem; letter-spacing: .01em; cursor: pointer;
   transition: border-color .3s, background .3s, color .3s, box-shadow .3s;
@@ -1737,7 +1768,7 @@ body:has(.curtain) .frame .micro .dot { border-color: var(--dark-2-ink); }
 .u-select__opt {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   width: 100%; text-align: left; padding: 9px 11px; border: 0; background: none;
-  color: var(--ink-2); border-radius: 2px; cursor: pointer; font: inherit; font-size: .92rem;
+  color: var(--ink-2); border-radius: var(--r-2); cursor: pointer; font: inherit; font-size: .92rem;
   opacity: 0; transform: translateY(7px);
   transition: opacity .3s var(--ease-out), transform .3s var(--ease-out), background .25s, color .25s;
 }
@@ -2118,7 +2149,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline-offs
 .me-ticket__t { font-family: var(--font-display); font-weight: 500; font-size: clamp(1.3rem, 2.2vw, 1.75rem); line-height: 1.12; }
 .me-ticket__tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .me-ticket__tags span { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .1em; color: var(--ink-3);
-  border: 1px solid var(--line); border-radius: 2px; padding: 3px 9px; }
+  border: 1px solid var(--line); border-radius: var(--r-1); padding: 3px 9px; }
 .me-ticket__tags span.is-ink { color: var(--accent); border-color: oklch(53% 0.135 44 / .38); }
 .me-ticket__act { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 /* 核销码：左边一条砖红竖线， mono 大间距，到店好念 */
@@ -2129,10 +2160,10 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline-offs
 /* 行内小表单（改期：日期 + 时间 + 按钮横排） */
 .me-inline { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .me-inline select, .me-inline input { font: inherit; font-size: .86rem; color: var(--ink);
-  background: var(--paper); border: 1px solid var(--line); border-radius: 2px; padding: 7px 9px; }
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-2); padding: 7px 9px; }
 /* 面板内小按钮：比 .btn 小一档，配行内动作 */
 .act-sm { font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; color: var(--ink-2);
-  background: none; border: 1px solid var(--line); border-radius: 2px; padding: 7px 13px; cursor: pointer;
+  background: none; border: 1px solid var(--line); border-radius: var(--r-2); padding: 7px 13px; cursor: pointer;
   transition: color .3s, border-color .3s, background .3s; }
 .act-sm:hover { color: var(--accent); border-color: oklch(53% 0.135 44 / .45); }
 .act-sm--ink { color: #fff; background: var(--accent); border-color: var(--accent); }
@@ -2236,9 +2267,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline-offs
 /* 幕七 · 店里的事（后台配的三条主打，2026-10-16 · banners 路由一直传着却从没渲染） */
 .banners { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(14px, 2vw, 26px); margin-top: 22px; }
 .banners__i { display: grid; gap: 8px; align-content: start; padding: clamp(18px, 2.2vw, 26px);
-  background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r-2);
-  transition: transform .5s var(--ease-out), border-color .4s, background .4s; }
-a.banners__i:hover { transform: translateY(-4px); border-color: oklch(53% 0.135 44 / .38); }
+  background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r-3);
+  transition: transform .5s var(--ease-out), border-color .4s, background .4s, box-shadow .5s var(--ease-out); }
+a.banners__i:hover { transform: translateY(-4px); border-color: oklch(53% 0.135 44 / .38); box-shadow: var(--sh-2); }
 .banners__e { font-size: 1.7rem; line-height: 1; }
 .banners__t { font-family: var(--font-display); font-weight: 500; font-size: 1.16rem; line-height: 1.2; }
 .banners__x { color: var(--ink-2); font-size: .92rem; line-height: 1.55; }
