@@ -187,9 +187,9 @@
      unseen.js 的 initSmooth 会优先启用它，缺了才退回手写惯量滚动。 #}
   <script src="{{ url_for('static', filename='js/vendor/lenis.min.js') }}" defer></script>
   <script src="{{ url_for('asset_delivery', filename='js/unseen-field.js', v=static_v('js/unseen-field.js')) }}" defer></script>
-  {# 首屏浮尘粒子场（canvas 2D，零依赖）。必须在 unseen.js 之前 —— unseen.js 的
-     bootPage 会调 window.__dustInit() 给换页后的新 canvas 重建（幂等）。 #}
-  <script src="{{ url_for('asset_delivery', filename='js/unseen-dust.js', v=static_v('js/unseen-dust.js')) }}" defer></script>
+  {# 首屏散景光尘（canvas 2D，零依赖）。必须在 unseen.js 之前 —— unseen.js 的
+     bootPage 会调 window.__lightInit() 给换页后的新 canvas 重建（幂等）。 #}
+  <script src="{{ url_for('asset_delivery', filename='js/unseen-light.js', v=static_v('js/unseen-light.js')) }}" defer></script>
   <script src="{{ url_for('asset_delivery', filename='js/unseen.js', v=static_v('js/unseen.js')) }}" defer></script>
   {% block extra_js %}{% endblock %}
 

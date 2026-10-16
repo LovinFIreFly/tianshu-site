@@ -14,11 +14,12 @@
     <img src="{{ url_for('static', filename='media/hero.webp') }}" alt="" fetchpriority="high" decoding="async">
   </div>
   <div class="stage__glow" aria-hidden="true"></div>
-  {# 「光中的浮尘」粒子场：3D 透视 + 向相机飞行 + 指针吹散 + 滚动穿越。
-     这一层是治「空 / AI 感」的主药 —— 首屏不再是"一句话漂在空白里"，
-     而是一个有纵深、会被你搅动的空间。全部画在 canvas 上，不新增 DOM 节点。
-     ⚠️ 它必须放在 .stage__scene 之上、.stage__body 之下（z-index 1）。 #}
-  <canvas class="stage__dust" data-dust aria-hidden="true"></canvas>
+  {# 「散景光尘」：大半径、极低透明度的暖色软光斑 + 几根 1px 发丝光丝。
+     这一层是治「空 / AI 感」的主药 —— 首屏不再是"一句话漂在空白里"。
+     上一版是小颗粒浮尘，在浅暖纸底上读成灰尘（用户反馈"太显脏"），已整体替换：
+     干净与否的分界不在亮度，而在**光滑连续的大面**（光）vs **离散微小硬点**（脏）。
+     ⚠️ 必须放在 .stage__scene 之上、.stage__body 之下（z-index 1）。 #}
+  <canvas class="stage__bokeh" data-bokeh aria-hidden="true"></canvas>
   <div class="stage__edge" aria-hidden="true">约局工作室 · 甜薯 UNSEEN</div>
   <div class="stage__edge stage__edge--r" aria-hidden="true">S.00 · 推门 · THE DOOR</div>
   <div class="wrap stage__body">

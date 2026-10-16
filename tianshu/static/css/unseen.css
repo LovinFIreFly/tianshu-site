@@ -72,6 +72,107 @@
   --t-micro: .3s;    /* hover / 微交互 */
   --t-mid:   .5s;    /* 背景 / 配色 */
   --t-enter: .7s;    /* 内容进场 */
+
+  /* ========================================================================
+     动效刻度（2026-10-16 按《优化台账》补）
+     ── 台账实测：参考站 24 站里最高频的时长是 1s / 1.2s / 1.5s / 1.6s（电影档）
+        与 0.1s / 0.15s（即时档）。我站原只有 0.3 / 0.5 / 0.7 三档 ——
+        两端都缺：缺"按下瞬间"的手感，缺"整场开幕"的慢。
+     ── 分档原则：**按动作性质选档**，不是按喜好。
+        t-1 即时  按下/勾选/开关 —— 必须"零延迟感"
+        t-2 快     hover/颜色/描边 —— 一眨眼完成
+        t-3 常规   位移/展开/收起
+        t-4 场景   整块揭示、层叠推进
+        t-5 电影   首屏巨字、转场覆盖层
+        t-6 场域   背景呼吸、循环动画（长到"感觉不到在动"）
+     保留旧的 --t-micro / --t-mid / --t-enter 作为别名（老规则还在用，不改它们）。 */
+  --t-1: 120ms;
+  --t-2: 200ms;
+  --t-3: 320ms;
+  --t-4: 620ms;
+  --t-5: 1100ms;
+  --t-6: 1500ms;
+
+  /* ------------------------------------------------------------------------
+     缓动刻度（同上，按台账补）
+     ── 台账实测：除我站已有的 4 条外，参考站高频出现的是下面这几条。
+        它们不是随便挑的贝塞尔 —— 每条对应一类**动作语义**：
+     ---------------------------------------------------------------------- */
+  /* Material standard：来去都稳，通用默认（5 站使用） */
+  --ease-standard: cubic-bezier(.4, 0, .2, 1);
+  /* Material decelerate：快起慢停 → **只用于进场**（3 站使用） */
+  --ease-decel:    cubic-bezier(0, 0, .2, 1);
+  /* Material accelerate：慢起快出 → **只用于退场**（对称地配 decel） */
+  --ease-accel:    cubic-bezier(.4, 0, 1, 1);
+  /* easeOutQuart：收尾极长 → 位移类，观感"贵重"（3 站使用） */
+  --ease-quart:    cubic-bezier(.25, 1, .5, 1);
+  /* expo out：收尾最长 → 巨字/大位移（2 站使用） */
+  --ease-expo:     cubic-bezier(.19, 1, .22, 1);
+  /* expo in-out：两端停、中段冲 → 转场覆盖层，戏剧性（2 站使用） */
+  --ease-drama:    cubic-bezier(.86, 0, .07, 1);
+
+  /* ------------------------------------------------------------------------
+     圆角刻度（台账：圆角类 108 条，我站 7 个离散值里有 0.5px/1px/2px/3px 这种
+     "随手写"的值 → 收敛成 6 档）
+     ---------------------------------------------------------------------- */
+  --r-0: 0;
+  --r-1: 2px;      /* 微圆（标签、输入框） */
+  --r-2: 4px;      /* 常规（卡片） */
+  --r-3: 8px;      /* 面板 */
+  --r-4: 14px;     /* 大浮层 */
+  --r-pill: 999px; /* 药丸（极少用 —— 大圆角是 AI 味重灾区，只在徽标上用） */
+
+  /* ------------------------------------------------------------------------
+     间距刻度（台账：间距类 179 条。用 4 的倍数成阶，杜绝 5px/7px/13px 这类"随手值"）
+     ---------------------------------------------------------------------- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --s-9: 96px;
+  --s-10: 128px;
+
+  /* ------------------------------------------------------------------------
+     透明度刻度（台账：参考站普遍有单独的"白/黑透明度阶"来做蒙层与暗场浮层；
+     我站是散落的 rgba 值。补齐两组阶，专供遮罩/暗场/浮层用）
+     ---------------------------------------------------------------------- */
+  --w-a1: oklch(98% 0.008 78 / .06);    /* 暗底上的极轻浮层 */
+  --w-a2: oklch(98% 0.008 78 / .14);    /* 暗底上的卡片/描边 */
+  --w-a3: oklch(98% 0.008 78 / .22);
+  --w-a4: oklch(98% 0.008 78 / .34);
+  --b-a1: oklch(25% 0.022 56 / .04);    /* 浅底上的轻蒙层 */
+  --b-a2: oklch(25% 0.022 56 / .10);
+  --b-a3: oklch(25% 0.022 56 / .22);
+  --b-a4: oklch(25% 0.022 56 / .42);    /* 模态遮罩 */
+
+  /* ------------------------------------------------------------------------
+     字号音阶 + 字距音阶（台账：字号刻度类 539 条，最大的一类）
+     ── 参考站的做法是"成比例音阶 + 字距随字号收紧"，我站是一堆离散 clamp。
+        这里给出**基准档**（不强制替换现有 clamp，供新组件与后续收敛使用）。
+     ── 字距经验值（从参考站实测反推）：字号越大，负字距越明显
+        64px 标题 ≈ -0.03em；86px 巨字 ≈ -0.058em。
+     ---------------------------------------------------------------------- */
+  --fs-1: 11px;
+  --fs-2: 13px;
+  --fs-3: 15px;
+  --fs-4: 17px;
+  --fs-5: 21px;
+  --fs-6: 28px;
+  --fs-7: 38px;
+  --fs-8: 52px;
+  --fs-9: 72px;
+  --fs-10: 104px;
+  --ls-1: .16em;    /* 全大写微标签：放开 */
+  --ls-2: .02em;    /* 小字 */
+  --ls-3: 0;        /* 正文 */
+  --ls-4: -.018em;  /* 中标题 */
+  --ls-5: -.032em;  /* 大标题 */
+  --ls-6: -.05em;   /* 巨字 */
+
   /* 行高：紧凑为主（Wantedly 正文 1.2，说明书式的 1.5 只给长段落） */
   --lh-tight: 1.2;
   --lh-body: 1.58;
@@ -179,7 +280,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* 章节号 S.01 / S.02（CoMinVi 的分镜编号）：小小的、等宽的，给页面"书/电影"的节奏 */
 .eyebrow b { font-family: var(--font-mono); font-weight: 400; letter-spacing: .12em; color: var(--amber-ink); margin-right: 4px; }
 
-h1,h2,h3,h4 { font-family: var(--font-display); font-weight: 400; line-height: 1.04; margin: 0; letter-spacing: -.01em; }
+h1,h2,h3,h4 { font-family: var(--font-display); font-weight: 400; line-height: 1.04; margin: 0; letter-spacing: -.014em; }
 /* 字号阶梯收紧：AI 爱 h1=80/h2=48/h3=32 的巨大落差 + 行高 1.5；
    这里把每级差压到 ≤2.25×（display→h2→h3→正文），读起来紧凑有力（Wantedly 的 9/11/12/13/14/16 阶梯同理）。 */
 .display { font-size: clamp(2.3rem, 6vw, 5.2rem); font-weight: 600; }
@@ -369,13 +470,14 @@ body.is-idle .stage__glow { opacity: 0; }
                     oklch(96.5% 0.013 78 / .52) 68%, oklch(96.5% 0.013 78 / .70) 100%);
 }
 body.is-idle .stage__scene img { transform: translate3d(0, 0, 0) scale(1.08); }
-/* 首屏浮尘画布（见 unseen-dust.js）。放在场景底之上、正文之下。
-   注意：这里**没有** mask —— 粒子靠 JS 里"离光斑中心越远越稀"做衰减，
-   比给整块画布套 mask 更省（不用每帧重新栅格化 mask），也更好调。 */
-.stage__dust { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%;
+/* 首屏散景光尘画布（见 unseen-light.js）。放在场景底之上、正文之下。
+   这里**没有** mask —— 光斑靠 JS 里的大半径 + 极低透明度自己化开，
+   比给整块画布套 mask 更省（不用每帧重新栅格化 mask）。
+   注意：上一版叫 .stage__dust（小颗粒浮尘），因为"显脏"已整体替换。 */
+.stage__bokeh { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%;
   display: block; pointer-events: none; }
 /* 减弱动效下**不隐藏**这层：JS 那边 REDUCE 时只画一帧静态图就不进循环了。
-   WCAG 要的是"不要动"，不是"不要质感"—— 静态浮尘留着，画面仍不空。 */
+   WCAG 要的是"不要动"，不是"不要质感"—— 静态光斑留着，画面仍不空。 */
 /* 右缘竖排字标：与左缘 .stage__edge 成对（离轴编辑式家具） */
 .stage__edge--r { left: auto; right: clamp(10px, 1.4vw, 22px); transform: translateY(-50%); }
 /* 发丝线 + 微标签：给"巨字上方那片空"一点结构 —— 空不等于空无，线和小字就是家具 */
@@ -414,7 +516,10 @@ body.is-idle .stage__scene img { transform: translate3d(0, 0, 0) scale(1.08); }
 .stage__type { position: relative; font-family: var(--font-display); font-weight: 900; font-synthesis: none; }
 .stage__type .t {
   display: block; font-size: clamp(2.9rem, 10.4vw, 9.6rem); line-height: .98;
-  letter-spacing: -.025em; margin: 0;
+  /* 字距：台账实测参考站在 64–86px 的标题上用 -0.03 ~ -0.058em，我站原来只有 -0.025em
+     —— 展示型字号"松"是显廉价的主要原因之一。这里收到 -0.038em：
+     **比参考站的拉丁值略松**，因为汉字是满字面，收到 -0.05em 会开始粘连。 */
+  letter-spacing: -.038em; margin: 0;
 }
 .stage__type .t em { font-style: normal; color: var(--accent); }   /* 去 AI 味：强调用砖红而非斜体（Gate 38a）*/
 /* 中日韩字没有真斜体，禁止浏览器合成倾斜（合成斜体是"廉价 AI 味"的典型）：
@@ -703,7 +808,7 @@ body.is-idle .stage__scene img { transform: translate3d(0, 0, 0) scale(1.08); }
 .sec__head .h2 { max-width: 18ch; }
 /* 内页页首抬到"真巨字"：原先与节标题同尺寸 → 整站缺一条层级线（unseen 的字号对比可达 ~7×）。 */
 .sec .sec__head .h2,
-.sec > .wrap > .h2 { font-size: clamp(2.5rem, 6.4vw, 5.8rem); line-height: 1.01; letter-spacing: -.015em; }
+.sec > .wrap > .h2 { font-size: clamp(2.5rem, 6.4vw, 5.8rem); line-height: 1.01; letter-spacing: var(--ls-5); }
 @media (max-width: 760px) {
   .sec__head { grid-template-columns: 1fr; }
   .sec__head > :last-child { justify-self: start; text-align: left; }
@@ -1769,6 +1874,57 @@ body.has-cursor .cursor-ring.drag .lb { opacity: 0 !important; }
   .stage__foot { margin-top: clamp(26px, 4.2vh, 48px); }
   .stage__cap { margin-top: clamp(20px, 3.2vh, 36px); }
 }
+
+/* ============================================================================
+   交互层（2026-10-16 按《优化台账》补，全 P0）
+   ── 台账实测的缺口：我站 `:active` 规则只有 **1** 条、`:focus-visible` 5 条；
+      而 24 个参考站普遍三态齐全（hover / active / focus-visible）。
+      缺按下反馈 = 按钮"点不动"；缺焦点环 = 键盘用户迷路。
+   ── 安全边界（重要，别乱改）：
+      这里**不做全局 transform 式按下反馈**。大量组件自带 transform（磁吸位移、
+      缩放、海报倾斜），全局再叠一层会互相覆盖。改用 opacity —— 它不参与布局、
+      不与 transform 争属性，是所有按下反馈里最安全的一种。
+      位移式反馈只在下面点名的那几个组件上做（那些是我确认过没有自带 transform 动画的）。
+   ========================================================================== */
+
+/* 所有可交互元素统一走"快反馈"档（--t-2 200ms / --ease-standard）。
+   注意：组件级规则（.btn / .act …）特异性更高，会正常覆盖这里，不会被吃掉。 */
+a, button, [role="button"], summary, label, input, select, textarea {
+  transition: color var(--t-2) var(--ease-standard),
+              background-color var(--t-2) var(--ease-standard),
+              border-color var(--t-2) var(--ease-standard),
+              opacity var(--t-1) linear;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  /* 按下：即时档 120ms —— "手感"就是这一下 */
+  a:active, button:active, [role="button"]:active, summary:active, label:active { opacity: .78; }
+  /* 位移式按下：只给结构简单的按钮/行链接（已逐个确认无自带 transform 动画） */
+  .btn:active, .act:active, .idx__row:active, .p:active, .night__mark:active {
+    transform: translateY(1px);
+    transition-duration: var(--t-1);
+  }
+  /* 普通下划线链接的悬停：变色 + 下划线加速收尾（用收尾长的 --ease-quart，
+     观感比默认 ease 明显"贵"）。带 data-cursor 的链接由自绘光标接管，这里不重复。 */
+  .link-underline:hover { color: var(--accent); }
+  .link-underline::after { transition: transform var(--t-3) var(--ease-quart); }
+}
+
+/* 键盘焦点：全站统一环（原来只有一条裸 :focus-visible，圆角是写死的 3px → 改用刻度） */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--r-1); }
+/* 表单控件：贴边 1px 偏移，避免和控件自身 border 叠成双层线 */
+input:focus-visible, textarea:focus-visible, select:focus-visible { outline-offset: 1px; }
+
+/* 采用"电影档"的三处（否则新加的 --t-5/--t-6 永远不会被用到，等于白加）：
+   · 首屏那束暖光 —— 淡出要慢，光不该"啪"地消失
+   · 幕布转场覆盖层 —— 用戏剧性曲线 expo in-out
+   · 开场 loader —— 退场用场景档 */
+.stage__glow { transition: opacity var(--t-5) var(--ease-decel); }
+.transit { transition: opacity var(--t-3) var(--ease-standard), visibility 0s linear var(--t-3); }
+.transit__haze { transition: opacity var(--t-4) var(--ease-drama); }
+.boot { transition: opacity var(--t-4) var(--ease-decel), visibility 0s linear var(--t-4); }
+/* 循环类装饰（导航脉冲）用"场域档" —— 慢到感觉不到起点 */
+.nav__live .pulse { animation-duration: var(--t-6); }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
