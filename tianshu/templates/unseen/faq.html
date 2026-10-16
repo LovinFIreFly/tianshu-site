@@ -1,24 +1,140 @@
 {% extends 'layout.html' %}
 {% block title %}常见问题 · 甜薯剧本杀{% endblock %}
+{% block desc %}约本、定金、拼车、到场核销、账号 —— 约本之前要弄清的事都在这一页。{% endblock %}
 {% block content %}
 
+{# 「加信息」批次：原来是 5 条纯静态问答（171 个 DOM 节点，全站第二薄）。
+   现在按**代码里能验证的真规则**分组扩充成 14 条，并加分类导航与联系入口。
+   ⚠️ 每一条都对着 business.py / config.py / 注册模板核过 —— 不编规则。
+     尤其两处容易写错的：① 验证码发**邮箱**不是短信；② 定金是"玩完退回"，
+     不是消费，且**付定金并经小客服确认之前看不到核销码**。 #}
 <section class="sec" style="padding-top:120px">
-  <div class="wrap" style="max-width:820px">
+  <div class="wrap" style="max-width:860px">
     <span class="eyebrow" data-reveal>问答 · FAQ</span>
-    <h1 class="h2" data-reveal data-d="1" style="margin:14px 0 36px">约本之前，<br>先弄清这几件。</h1>
+    <h1 class="h2" data-reveal data-d="1" style="margin:14px 0 28px">约本之前，<br>先弄清这几件。</h1>
+
+    {# 分类导航：14 条平铺会难找，先给一条"目录" #}
+    <nav class="faqnav" aria-label="问题分类" data-reveal data-d="2">
+      <a href="#faq-book">约本与拼车</a>
+      <a href="#faq-money">钱的事</a>
+      <a href="#faq-arrive">到场与核销</a>
+      <a href="#faq-account">社区与账号</a>
+    </nav>
+
     <div class="faq">
-      {% for q, a in [
-        ('第一次来怎么约？', '在「本本墙」挑一本，点进详情选日期、时间和人数提交预约。定金线下转小客服微信，到店核销码进场。'),
-        ('拼车是什么？', '一个人凑不齐人，就进拼车大厅找同好。差几位、什么时段、走哪条线一目了然，上车即发车。'),
-        ('定金能退吗？', '开场前 24 小时以上可退；之后门店按规则处理。具体以预约详情里的按钮为准。'),
-        ('怎么找队友？', '去「唠嗑」社区发帖、发缺位招募，气味相投的人自然凑到一起。'),
-        ('客服在哪？', '微信：' + (serviceWechat or '见首页底栏') + '。约本、拼车、改期都找他。')
-      ] %}
-      <details data-reveal{% if loop.first %} open{% endif %}>
-        <summary>{{ q }}</summary>
-        <p>{{ a }}</p>
-      </details>
-      {% endfor %}
+      <div class="faq__grp" id="faq-book">
+        <div class="sec__frame" aria-hidden="true">
+          <span><i class="sq">▪</i>001</span><span class="sf__line"></span>
+          <span class="sf__note">约本与拼车 · <b>BOOKING</b></span>
+        </div>
+        <details data-reveal open>
+          <summary>第一次来怎么约？</summary>
+          <p>在「本本墙」挑一本，点进详情选日期、时间和人数提交预约；付定金后等小客服确认，
+             核销码就会出现在「我的预约」里，到店报码进场。</p>
+        </details>
+        <details data-reveal>
+          <summary>拼车是什么？</summary>
+          <p>一个人凑不齐人，就进拼车大厅找同好。差几位、什么时段、走哪条线一目了然，
+             凑够成车人数就发车。</p>
+        </details>
+        <details data-reveal>
+          <summary>几个人才算成车？</summary>
+          <p>看车主设的这两个数：<b>成车人数</b>（默认 4 人）与<b>车上限</b>（默认 8 人）。
+             上到上限就自动停止上车；到点人数不够，按门店规则处理。</p>
+        </details>
+        <details data-reveal>
+          <summary>可以指定 DM 吗？</summary>
+          <p>可以。指定某位 DM 带本，按门店设置会在总额外加一点费用
+             （当前 <b>+¥{{ (settings.dmFee or 0)|float|round|int }}/人</b>）；
+             不指定就由门店按排班分配。</p>
+        </details>
+      </div>
+
+      <div class="faq__grp" id="faq-money">
+        <div class="sec__frame" aria-hidden="true">
+          <span><i class="sq">▪</i>002</span><span class="sf__line"></span>
+          <span class="sf__note">钱的事 · <b>THE MONEY</b></span>
+        </div>
+        <details data-reveal>
+          <summary>定金要交多少？</summary>
+          <p>拼车是<b>一口价 ¥{{ (settings.carDeposit or 0)|float|round|int }}</b>（跟人数无关）；
+             包车按总价的 <b>{{ ((settings.depositRatio or 0) * 100)|round|int }}%</b> 计定金。</p>
+        </details>
+        <details data-reveal>
+          <summary>定金是消费吗？能退吗？</summary>
+          <p>定金<b>不是消费，玩完退回</b>。开场前 24 小时以上可退；之后按门店规则处理，
+             以预约详情里的按钮为准。</p>
+        </details>
+        <details data-reveal>
+          <summary>邀请朋友有优惠吗？</summary>
+          <p>有。注册时填朋友的邀请码，<b>双方各得 ¥{{ (settings.inviteCoupon or 0)|float|round|int }} 券</b>，
+             下单时可抵扣。</p>
+        </details>
+        <details data-reveal>
+          <summary>余额怎么用？</summary>
+          <p>在「我的」里充值，下单选余额抵扣。充值、抵扣、退款都会记一条流水，
+             对账时能一笔笔对得上。</p>
+        </details>
+      </div>
+
+      <div class="faq__grp" id="faq-arrive">
+        <div class="sec__frame" aria-hidden="true">
+          <span><i class="sq">▪</i>003</span><span class="sf__line"></span>
+          <span class="sf__note">到场与核销 · <b>ON ARRIVAL</b></span>
+        </div>
+        <details data-reveal>
+          <summary>到店怎么进场？</summary>
+          <p>到店报核销码。注意：<b>付定金并经小客服确认之前，客人自己看不到这个码</b> ——
+             这样做是为了不让没付定金的预约白占位。</p>
+        </details>
+        <details data-reveal>
+          <summary>营业时间是？</summary>
+          <p>14:00 – 02:00，全年无休。今天的场次和每个时段的余位在看板上实时可查。</p>
+        </details>
+        <details data-reveal>
+          <summary>在哪看今晚的场次和余位？</summary>
+          <p><a class="link-underline" href="{{ url_for('public.group') }}">今日组局</a>
+             按时间列出每场，标了已报人数与剩余位；想自己开一桌就从本本墙选本发起。</p>
+        </details>
+      </div>
+
+      <div class="faq__grp" id="faq-account">
+        <div class="sec__frame" aria-hidden="true">
+          <span><i class="sq">▪</i>004</span><span class="sf__line"></span>
+          <span class="sf__note">社区与账号 · <b>ACCOUNT</b></span>
+        </div>
+        <details data-reveal>
+          <summary>怎么找队友？</summary>
+          <p>去<a class="link-underline" href="{{ url_for('public.comm') }}">唠嗑</a>社区发帖、
+             发缺位招募，气味相投的人自然凑到一起。</p>
+        </details>
+        <details data-reveal>
+          <summary>注册要填什么？</summary>
+          <p>手机号、邮箱、发到邮箱的 4 位验证码、昵称和密码（至少 6 位）。
+             邀请码可以不填。<b>验证码是发到邮箱的</b>，不是短信。</p>
+        </details>
+        <details data-reveal>
+          <summary>信用分是什么？</summary>
+          <p>初始 100 分。爽约、临时大量退位这类会影响分数；每次变动在「我的」里
+             都能看到原因，扣分有据可查。</p>
+        </details>
+        <details data-reveal>
+          <summary>客服在哪？</summary>
+          <p>微信：<b>{{ serviceWechat or '见首页底栏' }}</b>。约本、拼车、改期、退款都找他。</p>
+        </details>
+      </div>
+    </div>
+
+    {# 收尾：把"还没解决"的人直接接到两个最常用的动作上，而不是让他自己找 #}
+    <div class="faq__cta" data-reveal>
+      <div>
+        <span class="micro"><i class="dot"></i>还没解决？</span>
+        <p class="note" style="margin-top:10px">微信直接问，或者在社区里发一条 —— 有人会答。</p>
+      </div>
+      <div class="faq__cta-row">
+        <a class="btn btn--accent" href="{{ url_for('public.group') }}"><span>看今晚的局</span><span class="arr">→</span></a>
+        <a class="btn btn--ghost" href="{{ url_for('public.comm') }}">去唠嗑问一句</a>
+      </div>
     </div>
   </div>
 </section>

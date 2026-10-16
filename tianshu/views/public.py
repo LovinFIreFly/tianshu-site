@@ -299,8 +299,34 @@ def car():
 
 @bp.get('/group')
 def group():
-    """组局：今天在开的局一览 + 自己开一桌的入口（去挑本选拼车/包车即发车）"""
-    return render_template('group.html', sessions=business.today_sessions())
+    """组局：今天在开的局一览 + 自己开一桌的入口（去挑本选拼车/包车即发车）
+
+    「加信息」批次：这一页原来只有一个列表或一个空状态，是全站最薄的页面
+    （实测 171 个 DOM 节点；24 个参考站的节点数中位数约 1050）。
+    这里把后端**本来就有的**真数据摊开：时段分布、在拼的车、值班 DM、
+    能约的本、以及定金/返利这些"钱的事"。
+    ⚠️ 加的是**信息**不是装饰 —— 每一块都能在 data/*.json 里被验证。
+    """
+    sessions = business.today_sessions()
+    # 时段分布：把今晚场次按 time 聚合 —— "今晚有多热闹"最短的一条信息
+    slots = {}
+    for s in sessions:
+        t = (s.get('time') or '').strip()
+        if t:
+            slots[t] = slots.get(t, 0) + 1
+    slot_rows = sorted(slots.items(), key=lambda x: x[0])          # 按时间升序
+    # 值班 DM：从场次里抽，去重保序（不额外查库）
+    duty = []
+    for s in sessions:
+        n = (s.get('dmName') or '').strip()
+        if n and n != '待安排' and n not in duty:
+            duty.append(n)
+    # 在拼的车：只留在拼的（满的没意义），取前 4 辆
+    cars = [c for c in business.car_pool() if not c.get('full')][:4]
+    # 能约的本：上架的前 6 个
+    on_sale = [s for s in db.rows('scripts') if s.get('onSale') is not False]
+    return render_template('group.html', sessions=sessions, cars=cars, scripts=on_sale[:6],
+                           settings=business.get_settings(), slot_rows=slot_rows, duty=duty)
 
 
 @bp.get('/car/<int:cid>')
@@ -609,8 +635,16 @@ def my_fav_ids(u):
 
 @bp.get('/faq')
 def faq():
-    """常见问题页（匿名可访问）。内容见 spec §5.4，模板由 T1 创建。"""
-    return render_template('faq.html', serviceWechat=business.get_settings().get('serviceWechat', ''))
+    """常见问题页（匿名可访问）。内容见 spec §5.4，模板由 T1 创建。
+
+    「加信息」批次：原来是 5 条纯静态问答（实测 171 个 DOM 节点，全站第二薄）。
+    现在按**代码里能验证的真规则**分组扩充 —— 定金退回口径、核销码出现时机、
+    信用分、邀请返利、注册流程都对着 business/config/templates 核过，不编。
+    另外把 settings 传进去，让价目与规则只有一处来源（改后台就全站同步）。
+    """
+    s = business.get_settings()
+    return render_template('faq.html', serviceWechat=s.get('serviceWechat', ''),
+                           settings=s)
 
 
 @bp.post('/api/track')

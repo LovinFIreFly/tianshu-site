@@ -3,6 +3,14 @@
 {% block desc %}今天在开的局一览无余。看中哪场直接约，没合适的自己开一桌。{% endblock %}
 {% block content %}
 
+{# 「加信息」批次：这一页原来只有节头 + 一个列表（或空状态），是全站最薄的一页。
+   现在把后端本来就有的真数据摊开 —— 加的是信息，不是装饰：
+     · 今夜概览（场次/时段/值班/在拼 四个真数字）
+     · 时段分布（把场次按时间聚合）
+     · 场次列表（补"已报 / 余位"）
+     · 还在拼的车（真车队，复用 row--car）
+     · 值班 DM + 能约的本
+     · 开场规则（定金比例 / 拼车定金 / 指定 DM 加价 / 邀请返利 —— 全部来自 settings） #}
 <section class="sec" style="padding-top:120px">
   <div class="wrap">
     <div class="sec__head">
@@ -13,14 +21,39 @@
       <a class="btn btn--accent btn--confirm" href="{{ url_for('public.scripts') }}" data-reveal data-confirm>去开一桌 <span class="arr">→</span></a>
     </div>
 
-    <div class="rows" style="margin-top:24px">
+    {# ── 今夜概览：四个真数字 ─────────────────────────────────────────────
+       比"今晚还没有局"这种空话有用得多：先把今晚的规模说清楚。 #}
+    <div class="stats" style="margin-top:28px" data-reveal>
+      <div><b>{{ sessions|length }}<i> 场</i></b><span>今晚已排</span></div>
+      <div><b>{{ slot_rows|length }}<i> 个</i></b><span>开场时段</span></div>
+      <div><b>{{ duty|length }}<i> 位</i></b><span>DM 值班</span></div>
+      <div><b>{{ cars|length }}<i> 辆</i></b><span>还在拼车</span></div>
+    </div>
+
+    {# ── 时段分布：把场次按时间聚合成一条横带 ────────────────────────────
+       "哪个时段还有位置" 是客人真正会问的问题，一眼可读。 #}
+    {% if slot_rows %}
+    <div class="slots" data-reveal>
+      <span class="slots__k">开场时段</span>
+      <span class="slots__list">
+        {% for t, n in slot_rows %}
+        <span class="slots__i"><b>{{ t }}</b><i>{{ n }} 场</i></span>
+        {% endfor %}
+      </span>
+    </div>
+    {% endif %}
+
+    {# ── 场次列表 ──────────────────────────────────────────────────────────
+       在原有的 title / 剧本 / DM / 人数 之外，补一条"已报 · 余位"——
+       这两项后端本身就算好了（sessions_of 里的 joined / left），之前没用上。 #}
+    <div class="rows" style="margin-top:8px">
       {% set st_map = {'open':'可约','closed':'已关闭','full':'已满','cancelled':'已取消','done':'已散场','pending':'待确认'} %}
       {% for s in sessions %}
       <a class="row" href="{{ url_for('public.script_detail', sid=s.sid) if s.sid else url_for('public.scripts') }}" data-reveal data-d="{{ loop.index0 % 4 }}" data-cursor>
         <span class="row__when">{{ s.time or '' }}</span>
         <span>
           <span class="row__title">{{ s.title or '一场组局' }}</span><br>
-          <span class="row__sub">《{{ s.scriptTitle or '' }}》· DM {{ s.dmName or '待安排' }} · {{ s.players or '' }} 人</span>
+          <span class="row__sub">《{{ s.scriptTitle or '' }}》· DM {{ s.dmName or '待安排' }} · {{ s.players or '' }} 人{% if s.cap %} · 已报 {{ s.joined or 0 }}/{{ s.cap }}，余 {{ s.left or 0 }} 位{% endif %}</span>
         </span>
         <span class="row__pill">{{ st_map.get(s.status, s.status) or '可约' }}</span>
         <span class="idx__go">→</span>
@@ -40,6 +73,100 @@
       </div>
       {% endfor %}
     </div>
+  </div>
+</section>
+
+{# ── 还在拼的车 ────────────────────────────────────────────────────────────
+   空场的时候这一块尤其重要：没有现成的局，那就告诉你"有人在等凑人"。 #}
+{% if cars %}
+<section class="sec" style="padding-top:var(--sec-y)">
+  <div class="wrap">
+    <div class="sec__head">
+      <h2 class="h3">还在拼的车。</h2>
+      <a class="link-underline" href="{{ url_for('public.car') }}">拼车大厅 →</a>
+    </div>
+    <div class="rows">
+      {% for c in cars %}
+      {% set need = c.need if c.need is defined else c.min %}
+      <a class="row row--car" href="{{ url_for('public.car_detail', cid=c.id) }}" data-reveal data-d="{{ loop.index0 % 4 }}" data-cursor>
+        <span class="row__when">{{ c.time or '' }}</span>
+        <span class="row__cover">{{ (c.scriptTitle or c.title or '本')[:1] }}</span>
+        <span class="row__main">
+          <span class="row__title">{{ c.title or '一辆拼车' }}</span>
+          <span class="row__sub">{{ c.scriptTitle or '剧本待定' }} · 车主 {{ c.owner or '玩家' }}{% if c.tags %} · {{ c.tags[:2]|join(' · ') }}{% endif %}</span>
+          <span class="row__seats" aria-label="还差 {{ need }} 人">
+            {% for i in range(6) %}<i class="{{ 'on' if i < (need|int if need is defined else 0) else '' }}"></i>{% endfor %}
+            <em>还差 {{ need }} 人 · 已上 {{ c.joined or 0 }}/{{ c.cap or 8 }}</em>
+          </span>
+        </span>
+        <span class="row__pill">拼车中</span>
+        <span class="idx__go">→</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ── 值班 DM + 能约的本（并排两栏，比两块整段更省纵向空间） ────────────── #}
+{% if duty or scripts %}
+<section class="sec" style="padding-top:var(--sec-y)">
+  <div class="wrap infopair">
+    {% if duty %}
+    <div data-reveal>
+      <div class="sec__frame" aria-hidden="true">
+        <span><i class="sq">▪</i>001</span>
+        <span class="sf__line"></span>
+        <span class="sf__note">今晚值班 · <b>ON DUTY</b></span>
+      </div>
+      <ul class="facts facts--inline">
+        {% for d in duty %}<li>{{ d }}</li>{% endfor %}
+      </ul>
+      <p class="note">指定某位 DM 带本，按门店设置会在总额外加一点费用；不指定就由门店排。</p>
+    </div>
+    {% endif %}
+    {% if scripts %}
+    <div data-reveal data-d="1">
+      <div class="sec__frame" aria-hidden="true">
+        <span><i class="sq">▪</i>002</span>
+        <span class="sf__line"></span>
+        <span class="sf__note">今晚能约 · <b>ON THE SHELF</b></span>
+      </div>
+      <ul class="facts">
+        {% for s in scripts %}
+        <li>
+          <a href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.title }}</a>
+          <span class="facts__meta">{% if s.diff %}难度 {{ s.diff }}{% endif %}{% if s.players %} · {{ s.players }} 人{% endif %}{% if s.tags %} · {{ (s.tags or [])[:2]|join(' · ') }}{% endif %}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      <p class="note"><a class="link-underline" href="{{ url_for('public.scripts') }}">看全部在演剧目 →</a></p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+{# ── 开场规则：钱的事，来自门店设置（settings），不是写死的文案 ────────────
+   把"要付多少、什么时候付、能退多少"前置，减少客人的犹豫和到店后的争议。 #}
+<section class="sec" style="padding-top:var(--sec-y)">
+  <div class="wrap">
+    <div class="sec__frame" aria-hidden="true">
+      <span><i class="sq">▪</i>003</span>
+      <span class="sf__line"></span>
+      <span class="sf__note">开场规则 · <b>HOUSE RULES</b></span>
+    </div>
+    <div class="stats" data-reveal>
+      {# 金额一律 `|float|round|int`：settings 里的值是数字，整数在 Jinja 里会渲染成
+         "50.0" —— 门店价目表上多一个 ".0" 看着就不专业（实测踩到过）。 #}
+      <div><b>{{ ((settings.depositRatio or 0) * 100)|round|int }}<i>%</i></b><span>包车定金比例</span></div>
+      <div><b>¥{{ (settings.carDeposit or 0)|float|round|int }}</b><span>拼车定金 · 一口价</span></div>
+      <div><b>+¥{{ (settings.dmFee or 0)|float|round|int }}<i> /人</i></b><span>指定 DM</span></div>
+      <div><b>¥{{ (settings.inviteCoupon or 0)|float|round|int }}</b><span>邀请返利 · 双方各得</span></div>
+    </div>
+    {% if settings.notice %}
+    <p class="note" style="margin-top:18px">{{ settings.notice }}</p>
+    {% endif %}
   </div>
 </section>
 

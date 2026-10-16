@@ -1905,6 +1905,74 @@ body.has-cursor .cursor-ring.drag .lb { opacity: 0 !important; }
 }
 
 /* ============================================================================
+   问答页分组（2026-10-16「加信息」批次）
+   ── 原来 5 条问答平铺；现在 14 条分 4 组。分组后 .faq 顶层那条 border-top
+      会和第一组的节框线重成两道，所以卸掉；组与组之间用间距分隔。
+   ========================================================================== */
+.faq { border-top: 0; }
+.faq__grp { scroll-margin-top: 100px; }          /* 锚点跳转别被固定导航盖住 */
+.faq__grp + .faq__grp { margin-top: var(--s-8); }
+
+/* 分类导航（页内的"目录"）：全大写等宽小 chip，克制 */
+.faqnav { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-bottom: var(--s-6); }
+.faqnav a {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+  padding: 6px 12px; border: 1px solid var(--line); border-radius: var(--r-1); color: var(--ink-2);
+}
+.faqnav a:hover { border-color: var(--accent); color: var(--accent); }
+
+/* 收尾 CTA：把"还没解决"的人直接接到两个最常用的动作上 */
+.faq__cta {
+  display: flex; justify-content: space-between; align-items: flex-end; gap: var(--s-5);
+  flex-wrap: wrap; margin-top: var(--s-8); padding-top: var(--s-5); border-top: 1px solid var(--line);
+}
+.faq__cta-row { display: flex; gap: var(--s-3); flex-wrap: wrap; }
+
+/* ============================================================================
+   组局页的信息块（2026-10-16「加信息」批次）
+   ── 背景：间距压完之后，剩下的"薄"必须靠**加真信息**解决，不是加装饰。
+      《空隙地图》治的是"空白太多"，这三个组件治的是"内容太薄"。
+      只服务 /group（全站最薄的一页，171 节点 vs 参考站中位数约 1050）。
+   ========================================================================== */
+
+/* 时段分布带：`开场时段  [19:00 ×3] [20:00 ×2] …`
+   比一段文字更快回答客人真正会问的"哪个时段还有位置"。 */
+.slots {
+  display: flex; align-items: center; gap: clamp(12px, 2vw, 22px); flex-wrap: wrap;
+  margin-top: var(--s-4); padding: var(--s-3) 0;
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+}
+.slots__k { font-family: var(--font-mono); font-size: 10px; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--ink-3); }
+.slots__list { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.slots__i {
+  display: inline-flex; align-items: baseline; gap: 7px;
+  padding: 5px 10px; border: 1px solid var(--line); border-radius: var(--r-1);
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em;
+}
+.slots__i b { font-weight: 400; color: var(--ink); }
+.slots__i i { font-style: normal; font-size: 10px; color: var(--amber-ink); }
+
+/* 两栏信息块（值班 DM ｜ 能约的本）：比两块整段省纵向空间 */
+.infopair { display: grid; gap: clamp(28px, 4vw, 64px); grid-template-columns: 1fr 1.35fr; }
+@media (max-width: 880px) { .infopair { grid-template-columns: 1fr; } }
+
+/* 事实清单：行式 + 发丝分隔，与 .rows 同族但更轻（不抢主列表的视觉权重） */
+.facts { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.facts li { display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  padding: 10px 0; border-bottom: 1px solid var(--line-2); font-size: .98rem; }
+.facts a { font-family: var(--font-display); font-size: 1.06rem; }
+.facts a:hover { color: var(--accent); }
+.facts__meta { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em;
+  color: var(--ink-3); text-align: right; }
+/* 并排变体：DM 名单这类短条目横向排成 chips，不占纵向 */
+.facts--inline { display: flex; flex-wrap: wrap; gap: var(--s-2); border-top: 0; }
+.facts--inline li {
+  display: inline-flex; padding: 5px 11px; border: 1px solid var(--line);
+  border-radius: var(--r-1); font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em;
+}
+
+/* ============================================================================
    交互层（2026-10-16 按《优化台账》补，全 P0）
    ── 台账实测的缺口：我站 `:active` 规则只有 **1** 条、`:focus-visible` 5 条；
       而 24 个参考站普遍三态齐全（hover / active / focus-visible）。
