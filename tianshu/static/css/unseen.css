@@ -291,7 +291,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* 章节号 S.01 / S.02（CoMinVi 的分镜编号）：小小的、等宽的，给页面"书/电影"的节奏 */
 .eyebrow b { font-family: var(--font-mono); font-weight: 400; letter-spacing: .12em; color: var(--amber-ink); margin-right: 4px; }
 
-h1,h2,h3,h4 { font-family: var(--font-display); font-weight: 400; line-height: 1.04; margin: 0; letter-spacing: -.014em; }
+/* 标题字距与行高：按 220 个参考站实测收紧（治单调-综合报告.md §三.7）
+   参考站大字普遍 -0.02em ~ -0.04em、行高比 0.86–0.95；我站原来是 -0.014em / 1.04，
+   读着"松"、"像文档"而不"像海报"。收紧是全站最便宜的一味药 —— 一个字都不用改。 */
+h1,h2,h3,h4 { font-family: var(--font-display); font-weight: 400; line-height: 1.0; margin: 0; letter-spacing: -.022em; }
 /* 字号阶梯收紧：AI 爱 h1=80/h2=48/h3=32 的巨大落差 + 行高 1.5；
    这里把每级差压到 ≤2.25×（display→h2→h3→正文），读起来紧凑有力（Wantedly 的 9/11/12/13/14/16 阶梯同理）。 */
 .display { font-size: clamp(2.3rem, 6vw, 5.2rem); font-weight: 600; }
@@ -715,7 +718,7 @@ body.is-idle .stage__scene img { transform: translate3d(0, 0, 0) scale(1.08); }
    改法：节只保留**上边距**，相邻节之间就只剩单份 76px。
    最后一节（.curtain）保留自己的下边距，页面收尾不会贴住页脚。 */
 .manifesto { padding: var(--sec-y) 0 0; }
-.manifesto__line { font-family: var(--font-display); font-weight: 900; font-size: clamp(2rem, 5.4vw, 4.6rem); line-height: 1.05; letter-spacing: -.02em; max-width: 17ch; margin-top: 22px; }
+.manifesto__line { font-family: var(--font-display); font-weight: 900; font-size: clamp(2rem, 5.4vw, 4.6rem); line-height: .96; letter-spacing: -.026em; max-width: 17ch; margin-top: 22px; }
 .manifesto__line em { font-style: normal; color: var(--accent); }
 .manifesto__note { margin-top: clamp(24px,3vh,36px); max-width: 44ch; color: var(--ink-2); font-size: clamp(1rem,1.3vw,1.14rem); }
 
@@ -752,8 +755,11 @@ body.is-idle .stage__scene img { transform: translate3d(0, 0, 0) scale(1.08); }
    ========================================================================== */
 .paths { padding: var(--sec-y) 0 0; }
 /* 由于节只保留上边距，页面收尾会贴住页脚图签 —— 给最后一节补回下边距。
-   谢幕（.curtain）自带下边距，排除掉避免叠成两倍。 */
-main > section:last-child:not(.curtain) { padding-bottom: var(--sec-y); }
+   谢幕（.curtain）自带下边距，排除掉避免叠成两倍。
+   ⚠️ 收到 60%：满值 --sec-y（900px 视口上 76.5px）叠上页脚自身的内边距，
+   在 /car /comm /scripts /group 上都形成一条 104px 的纯空（空隙地图实测，四页同源）。
+   收窄后收尾仍然"喘得过气"，但不再是一整块白。 */
+main > section:last-child:not(.curtain) { padding-bottom: calc(var(--sec-y) * .6); }
 .paths__grid { display: grid; grid-template-columns: 1fr 1.05fr; gap: clamp(28px, 5vw, 90px); align-items: start; }
 /* 左列**整列**钉住：巨字 + 约前规则 + 门店通知做成一张"章节卡"，右侧四行滚多久它停多久。
    ⚠️ 原来只有 .paths__huge 自己 sticky：整节才 739px 高，钉住范围几乎是 0，
@@ -841,9 +847,10 @@ main > section:last-child:not(.curtain) { padding-bottom: var(--sec-y); }
 }
 .sec__head > :last-child { justify-self: end; text-align: right; }
 .sec__head .h2 { max-width: 18ch; }
-/* 内页页首抬到"真巨字"：原先与节标题同尺寸 → 整站缺一条层级线（unseen 的字号对比可达 ~7×）。 */
+/* 内页页首抬到"真巨字"：原先与节标题同尺寸 → 整站缺一条层级线（unseen 的字号对比可达 ~7×）。
+   行高比 0.94、字距 -0.028em：参考站巨字普遍 0.86–0.95 / -0.02~-0.04em（220 站实测）。 */
 .sec .sec__head .h2,
-.sec > .wrap > .h2 { font-size: clamp(2.5rem, 6.4vw, 5.8rem); line-height: 1.01; letter-spacing: var(--ls-5); }
+.sec > .wrap > .h2 { font-size: clamp(2.5rem, 6.4vw, 5.8rem); line-height: .94; letter-spacing: -.028em; }
 @media (max-width: 760px) {
   .sec__head { grid-template-columns: 1fr; }
   .sec__head > :last-child { justify-self: start; text-align: left; }
@@ -2188,3 +2195,104 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline-offs
    （根 section 上分别挂了 .car-page / .comm-page） */
 .car-page  { --accent: var(--accent-3); --lit: var(--accent-3-ink); --glow: var(--glow-3); --ring: oklch(46% 0.078 165 / .20); }
 .comm-page { --accent: var(--accent-4); --lit: var(--accent-4-ink); --glow: var(--glow-4); --ring: oklch(47% 0.098 255 / .20); }
+
+/* ============================================================================
+   剧本详情页新增组件（2026-10-16 · 把路由白算的 9 组数据渲染出来）
+   ========================================================================== */
+/* 日期快选：7 天一排日子按钮，替代裸 date input（客人不用算周几、不用翻无意义的月份） */
+.daypick { display: flex; flex-wrap: wrap; gap: 8px; }
+.daypick__d { font: inherit; font-size: .88rem; color: var(--ink-2); background: var(--paper);
+  border: 1px solid var(--line); border-radius: var(--r-1); padding: 9px 14px; cursor: pointer;
+  transition: color .3s, border-color .3s, background .3s; }
+.daypick__d:hover { color: var(--ink); border-color: var(--ink-3); }
+.daypick__d.on { color: #fff; background: var(--accent); border-color: var(--accent); }
+/* 选角：被同场次的人选走的角色直接划掉，别等到提交才报错 */
+.roles { display: flex; flex-wrap: wrap; gap: 8px; }
+.roles__r { position: relative; display: inline-flex; font-size: .9rem; color: var(--ink-2);
+  border: 1px solid var(--line); border-radius: var(--r-1); padding: 7px 13px; cursor: pointer;
+  transition: color .3s, border-color .3s, background .3s; }
+.roles__r input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.roles__r:hover { color: var(--ink); border-color: var(--ink-3); }
+.roles__r:has(input:checked) { color: #fff; background: var(--accent); border-color: var(--accent); }
+.roles__r.is-taken { color: var(--ink-3); text-decoration: line-through; cursor: not-allowed; opacity: .55; }
+.roles__r.is-taken:hover { border-color: var(--line); color: var(--ink-3); }
+
+/* 本本墙卡片：评分与想玩标记（2026-10-16 · 路由一直传着 rating/favs，卡片从没显示） */
+.card__rate { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .06em; color: var(--amber-ink); }
+.card__fav { font-size: 13px; line-height: 1; color: var(--accent); }
+
+/* 唠嗑页：话题筛选接上后端 + 标签栏计数（2026-10-16 · 修"热门话题是死链"） */
+.comm__tags .chip.on { color: #fff; background: var(--accent); border-color: var(--accent); }
+.tabbar .chip s { text-decoration: none; color: var(--accent); margin-left: 5px; font-size: .92em; }
+.tabbar .chip--cur { cursor: default; color: var(--ink); border-color: var(--ink-3); }
+.tabbar .chip--x { color: var(--ink-3); margin-left: 6px; text-decoration: none; }
+.tabbar .chip--x:hover { color: var(--accent); }
+.chip--clear { border-style: dashed; }
+
+/* 拼车页：车队标签行（2026-10-16 · carTags 路由一直传着，页面从没渲染） */
+.cartags { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; width: 100%; margin-top: 4px; }
+.cartags__k { font-family: var(--font-mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-3); margin-right: 4px; }
+
+/* 幕七 · 店里的事（后台配的三条主打，2026-10-16 · banners 路由一直传着却从没渲染） */
+.banners { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(14px, 2vw, 26px); margin-top: 22px; }
+.banners__i { display: grid; gap: 8px; align-content: start; padding: clamp(18px, 2.2vw, 26px);
+  background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r-2);
+  transition: transform .5s var(--ease-out), border-color .4s, background .4s; }
+a.banners__i:hover { transform: translateY(-4px); border-color: oklch(53% 0.135 44 / .38); }
+.banners__e { font-size: 1.7rem; line-height: 1; }
+.banners__t { font-family: var(--font-display); font-weight: 500; font-size: 1.16rem; line-height: 1.2; }
+.banners__x { color: var(--ink-2); font-size: .92rem; line-height: 1.55; }
+.banners__go { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .14em; color: var(--accent); margin-top: 4px; }
+@media (max-width: 760px) { .banners { grid-template-columns: 1fr; } }
+
+/* ============================================================================
+   动效补强（2026-10-16 · P1，按《治单调-综合报告》§三.3/4/5）
+   ----------------------------------------------------------------------------
+   220 站实测出的三个短板：
+     ③ 关键帧动画少 —— 参考站中位 10+ 组 @keyframes，我站只有开场与转场在用
+     ④ 三态覆盖薄 —— :active 仅 4 条、:focus-visible 仅 9 条（参考站是我站 2–3 倍）
+     ⑤ 长缓动只留给转场 —— 参考站把 600–900ms 用在常规揭示上
+   ⚠️ 全局按下反馈一律用 **opacity** 不用 transform：很多组件自带 transform
+      （.p 的 padding-left、.to-top 的 translateY、.banners__i 的 hover 位移），
+      互相覆盖会抖。带 `animation: … both` 的元素（.act 的 actIn）改不了 opacity，
+      只能靠 transform —— 那类元素不在此列。
+   ========================================================================== */
+
+/* ⑤ 长缓动用到常规揭示：行式列表的 hover 从 .4–.5s 放到 .72s，配 cubic-bezier(.16,1,.3,1) */
+.p   { transition: padding-left .72s var(--ease-out), background .72s var(--ease-out); }
+.row { transition: padding-left .7s  var(--ease-out), background .7s  var(--ease-out); }
+.me-ticket { transition: background .5s var(--ease-out); }
+
+/* ④ 三态补强：新组件一个都不能漏（可点 = 有 hover / active / focus-visible 三态） */
+.act-sm:active, .daypick__d:active, .chip:active, .me-tabs button:active,
+.banners__i:active, .roles__r:active, .card__fav:active { opacity: .72; }
+.act-sm:focus-visible, .daypick__d:focus-visible, .chip:focus-visible,
+.me-tabs button:focus-visible, .banners__i:focus-visible, .roles__r:focus-visible,
+.cartags .chip:focus-visible, .me-chips label:focus-within,
+.daypick__d:focus-visible, .libclear:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+/* 复选/单选藏了原生控件，焦点环要落在包裹的 label 上才看得见 */
+.me-chips label:has(input:focus-visible), .roles__r:has(input:focus-visible) {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+/* 划掉的已选角色：焦点环也别抢，保持"不可用"的读感 */
+.roles__r.is-taken:focus-within { outline-color: var(--ink-3); }
+
+/* ③ 新关键帧：链接下划线"画出来"（编辑式站点的招牌微交互） */
+@keyframes underlineDraw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+/* 新关键帧：轻呼吸（回顶按钮 / 主打卡片的 emoji），让静止元素也有"活着"的底噪 */
+@keyframes softFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+/* ⚠️ softFloat 会接管 transform，把 .to-top.show 的入场过渡（translateY(12px)→none）吃掉。
+   加 0.5s 延迟：那半秒里 animation 还没生效，transform 仍走 CSS 过渡，之后才开始呼吸。 */
+.to-top.show { animation: softFloat 3.6s var(--ease-soft) .5s infinite; }
+.banners__e { animation: softFloat 4.8s var(--ease-soft) infinite; }
+.banners__i:nth-child(2) .banners__e { animation-delay: .6s; }
+.banners__i:nth-child(3) .banners__e { animation-delay: 1.2s; }
+/* 减弱动效：循环动画全停（softFloat 是纯装饰，停了不影响任何信息） */
+@media (prefers-reduced-motion: reduce) {
+  .to-top.show, .banners__e { animation: none; }
+}

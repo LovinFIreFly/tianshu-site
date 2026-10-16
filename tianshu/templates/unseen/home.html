@@ -344,6 +344,30 @@
 </section>
 {% endif %}
 
+<!-- 幕七 · 店里的事（后台配的三条主打，banners 路由一直传着却从没渲染）
+     ⚠️ 这一节**不加下边距**：谢幕 .curtain 自带 calc(--sec-y * 1.15) 的上内边距，
+     再加一份就叠成 176px 的纯空（空隙地图实测）。亮纸到暗场的"一口气"就是这里的呼吸。 -->
+{% if banners %}
+<section class="sec" data-scene>
+  <div class="wrap">
+    <div class="sec__frame" aria-hidden="true">
+      <span><i class="sq">▪</i>007</span><span class="sf__line"></span>
+      <span class="sf__note">店里的事 · <b>FROM THE SHOP</b></span>
+    </div>
+    <div class="banners">
+      {% for b in banners[:3] %}
+      <{% if b.sid %}a href="{{ url_for('public.script_detail', sid=b.sid) }}"{% else %}div{% endif %} class="banners__i" data-reveal data-d="{{ loop.index0 }}" data-cursor="去看看">
+        <span class="banners__e" aria-hidden="true">{{ b.emoji or '▪' }}</span>
+        <b class="banners__t">{{ b.title or '' }}</b>
+        <span class="banners__x">{{ b.text or b.desc or '' }}</span>
+        {% if b.sid %}<span class="banners__go">看这本 →</span>{% endif %}
+      </{% if b.sid %}a{% else %}div{% endif %}>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
 <!-- 谢幕 -->
 <section class="curtain" data-scene>
   <div class="curtain__glow" aria-hidden="true"></div>

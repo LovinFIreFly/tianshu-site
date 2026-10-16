@@ -14,7 +14,19 @@
           <dt>时间</dt><dd>{{ car.time or '待定' }}</dd>
           <dt>还差</dt><dd>{{ car.need if car.need is defined else car.min }} 人</dd>
           <dt>车主</dt><dd>{{ car.ownerNick or '—' }}</dd>
+          <dt>定金</dt><dd>锁位用，玩完退回</dd>
         </dl>
+        {# tags（carTags）与 user_names 路由一直传着，这页从没渲染：
+           · tags —— 后台配的车队标签，车主给自己车贴的正是这几个（不跳车/准时到场/…）
+           · user_names —— 发言的人是否还是本站账号；不判断就会点出 404
+           群里点开一个名字看主页，是社区最自然的动作。 #}
+        {% if tags %}
+        <div class="cartags" data-reveal style="margin-top:4px">
+          <span class="cartags__k">车队标签</span>
+          {% for tg in tags %}<span class="chip">{{ tg }}</span>{% endfor %}
+        </div>
+        <p class="note" style="margin-top:8px">标签由门店统一配置；挑车时可按它筛（拼车大厅那一行）。</p>
+        {% endif %}
         {% if me %}
           {% if is_owner %}
             <form method="post" action="{{ url_for('public.car_action', cid=car.id, action='close') }}" style="display:inline">
@@ -43,7 +55,11 @@
       <div style="display:flex;gap:12px;align-items:flex-start">
         <span class="post__av">{{ (m.nick or m.username or '队')[:1] }}</span>
         <div style="background:var(--paper-2);border:1px solid var(--line);border-radius:12px;padding:10px 14px">
-          <div class="post__name" style="font-size:.85rem">{{ m.nick or m.username or '队友' }}</div>
+          <div class="post__name" style="font-size:.85rem">
+            {% if m.username and (m.username|string) in user_names %}
+              <a class="link-underline" href="{{ url_for('public.user_profile', username=m.username) }}">{{ m.nick or m.username }}</a>
+            {% else %}{{ m.nick or m.username or '队友' }}{% endif %}
+          </div>
           <div style="font-size:.98rem">{{ m.text }}</div>
         </div>
       </div>

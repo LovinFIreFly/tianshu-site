@@ -146,14 +146,14 @@ def home():
     hotScripts = [scripts_by_id[sid] for sid, _ in st['hot'] if sid in scripts_by_id]
     # 新本首车：上架剧本按 id 倒序 top6（on_sale 上面已经算过，直接复用）
     newScripts = sorted(on_sale, key=lambda s: -(s.get('id') or 0))[:6]
-    # 本本宇宙球：上架剧本前 8 个（按热度/上新），给球画廊足够的"星球"
-    sphere_scripts = sorted(on_sale, key=lambda s: -(int(s.get('hot') or 0) + (10 if s.get('isNew') else 0)))[:8]
+    # ⚠️ 原来这里还算一个 sphere_scripts（"本本宇宙球"的 8 个星球），但首页从来没有
+    #    渲染它的模板 —— 每次请求白扫一遍全部上架剧本再排序。已删。
+    #    真要做那颗球，是独立的功能立项（拖拽惯性 + 3D 布点），不是加个列表能糊过去的。
     return render_template('home.html', scripts=feat, scripts_total=scripts_total, stat=st, rating=rating,
                            banners=business.banners(), served=served,
                            sessions=sessions, cars=business.car_pool()[:6],
                            dm_duty=dm_duty, reviews=reviews, boss_pick=boss_pick,
                            hotScripts=hotScripts, newScripts=newScripts,
-                           sphere_scripts=sphere_scripts,
                            settings=business.get_settings())
 
 
@@ -200,13 +200,16 @@ def scripts():
                 tags.append(t)
     st = business.stats()
     rating = {k: v.get('rating') for k, v in st['byScript'].items()}
+    # 评价条数：卡片上「★4.8」hover 时要能说出"几条评价算出来的"，不然一个孤零零的
+    # 小数没有可信度。和 rating 同一口径（stats() 的 byScript）。
+    rating_n = {k: v.get('n', 0) for k, v in st['byScript'].items()}
     # SPA 筛选：带上 partial=1 时只返回卡片网格那一段 HTML（不含 base 布局），
     # 前端点了分类标签用 fetch 拉这段、原地替换，网址始终是 /scripts，不会整页跳。
     if request.args.get('partial') == '1':
-        return render_template('_scripts_grid.html', scripts=rows, favs=favs, rating=rating)
+        return render_template('_scripts_grid.html', scripts=rows, favs=favs, rating=rating, rating_n=rating_n)
     return render_template('scripts.html', scripts=rows, tags=tags,
                            q=q, tag=tag, sel_tags=sel_tags, diff=diff, sel_diffs=sel_diffs,
-                           only_fav=only_fav, favs=favs, rating=rating)
+                           only_fav=only_fav, favs=favs, rating=rating, rating_n=rating_n)
 
 
 @bp.get('/scripts/<int:sid>')
@@ -272,7 +275,8 @@ def script_detail(sid):
                            taken=taken_roles, favs=my_fav_ids(u), join=joined,
                            open_cars=open_cars, car_deposit=business.car_deposit(st),
                            # 日历控件的可选范围：今天 ~ 30 天后（别再让客人翻无意义的月份）
-                           day_min=business.iso_day(0), day_max=business.iso_day(30),
+                           # ⚠️ 日期输入已换成「7 天快选」，day_max 跟着退役 —— 留着就是白算。
+                           day_min=business.iso_day(0),
                            rating=_st.get('rating'), rating_n=_st.get('n'),
                            canSeeReview=canSeeReview, next_sc=next_sc,
                            # 评价里写的用户名不一定还是本站账号（改过名/注销/历史脏数据），

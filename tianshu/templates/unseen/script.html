@@ -2,10 +2,31 @@
 {% block title %}{{ sc.title }} · 甜薯剧本杀{% endblock %}
 {% block desc %}{{ sc.desc or (sc.title + ' —— 甜薯剧本杀在演剧目') }}{% endblock %}
 {% block content %}
+{# 剧本详情 = 全站**转化页**。这一页以前只有"封面 + 四个数字 + 一个表单"，
+   而路由早就把 9 组数据算好了却一个都没渲染：days（7 天可选）、coupons（我的券）、
+   dm_fee（指定 DM 费用）、taken（已被选走的角色）、favs（收藏状态）、
+   join（每场已报人数）、car_deposit（拼车定金）、canSeeReview（演后复盘）、
+   user_names（评价者是否还是账号）。
+   "功能很少"的观感就是这么来的 —— 后端在白白做功。
+   现在全用上，视觉仍走站内既有语言（kv / facts / rows / slots / book）。 #}
+{% set fav_on = (sc.id|string) in (favs or []) %}
+{% set b_map = {'booked':'已预约','arrived':'已到店','cancelled':'已取消','pending':'待确认','done':'已完成'} %}
 
 <section class="sec" style="padding-top:120px">
   <div class="wrap">
-    <a class="link-underline" href="{{ url_for('public.scripts') }}" data-reveal>← 返回本本墙</a>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap">
+      <a class="link-underline" href="{{ url_for('public.scripts') }}" data-reveal>← 返回本本墙</a>
+      {% if me %}
+      {# 收藏：以前这页没有收藏入口，客人得回本本墙才舍得下心 #}
+      <form method="post" action="{{ url_for('public.fav', sid=sc.id) }}" data-fav-form>
+        <input type="hidden" name="group" value="want">
+        <button class="act-sm" type="submit" data-fav-btn data-on="{{ '1' if fav_on else '0' }}"
+                aria-pressed="{{ 'true' if fav_on else 'false' }}">
+          <span data-fav-txt>{{ '♥ 已收藏' if fav_on else '♡ 想玩' }}</span>
+        </button>
+      </form>
+      {% endif %}
+    </div>
     <div class="detail" style="margin-top:24px">
       <div class="detail__cover{% if sc.img or sc.cover %} detail__cover--pic{% endif %}" data-reveal>
         {% if sc.img or sc.cover %}<img class="detail__img" src="{{ sc.img or sc.cover }}" alt="{{ sc.title }}" loading="lazy" decoding="async">{% endif %}
@@ -20,6 +41,7 @@
           <dt>难度</dt><dd class="card__diff">{% for i in range(5) %}{% if loop.index <= (sc.diff or 0) %}●{% else %}<i>○</i>{% endif %}{% endfor %}</dd>
           <dt>单人价</dt><dd>¥{{ sc.price or 0 }}</dd>
           <dt>适合人数</dt><dd>{{ lo }}–{{ hi }} 人</dd>
+          <dt>时长</dt><dd>{{ sc.dur or '—' }}</dd>
           <dt>评分</dt><dd>{% if rating %}{{ '%.1f'|format(rating) }} / 5（{{ rating_n or 0 }} 评）{% else %}—{% endif %}</dd>
         </dl>
         <div class="card__tags" style="margin-bottom:18px">
@@ -31,15 +53,34 @@
           <h2 class="h3" style="margin-bottom:4px">约这一本</h2>
           <p class="note">填好日期和场次，定金线下转小客服微信，到店核销。</p>
           <input type="hidden" name="sid" value="{{ sc.id }}">
-          <div class="field"><label for="f-ts-day">日期</label><input id="f-ts-day" type="date" name="ts_day" value="{{ day_min }}" min="{{ day_min }}" max="{{ day_max }}" required></div>
-          <div class="field"><label for="f-time">时间</label><input id="f-time" type="time" name="time" value="19:00" required></div>
-          <div class="field"><label for="f-players">人数</label><input id="f-players" type="number" name="players" min="{{ lo }}" max="{{ hi }}" value="{{ lo }}" required></div>
+
+          {# ---- 日期：从裸 date input 改成 7 天可选的日子（days 终于用上了）。
+                 客人不用算"周几有空"，也不用翻无意义的月份；点哪天下拉就同步。 ---- #}
+          <div class="field">
+            <span style="display:block;font-size:.82rem;letter-spacing:.04em;color:var(--ink-2);margin-bottom:8px">日期</span>
+            <div class="daypick" data-daypick>
+              {% for d in days %}
+              <button type="button" class="daypick__d {{ 'on' if loop.first }}" data-ts="{{ d.ts }}"
+                      data-iso="{{ d.label }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">
+                <b>{{ d.label }}</b>
+              </button>
+              {% endfor %}
+            </div>
+            <input type="hidden" name="ts_day" id="f-ts-day" value="{{ day_min }}" data-daypick-out>
+          </div>
+
+          <div class="field--row">
+            <div class="field"><label for="f-time">时间</label><input id="f-time" type="time" name="time" value="19:00" required></div>
+            <div class="field"><label for="f-players">人数</label><input id="f-players" type="number" name="players" min="{{ lo }}" max="{{ hi }}" value="{{ lo }}" required></div>
+          </div>
           <div class="field"><label for="f-mode">方式</label>
             <select id="f-mode" name="mode">
               <option value="拼车">拼车（凑人发车）</option>
               <option value="包车">包车（整场独享）</option>
             </select>
           </div>
+
+          {# ---- 指定 DM：附上费用，别让人点了才发现要多花钱 ---- #}
           {% if dms %}
           <div class="field"><label for="f-dmphone">指定 DM</label>
             <select id="f-dmphone" name="dmPhone">
@@ -47,7 +88,10 @@
               {% for d in dms %}<option value="{{ d.phone }}">{{ d.name }}</option>{% endfor %}
             </select>
           </div>
+          <p class="note" style="margin-top:-6px">指定某位 DM 带本，总额外加 ¥{{ (dm_fee or 0)|float|round|int }} /人；不指定就由门店排。</p>
           {% endif %}
+
+          {# ---- 加入已有拼车：把定金规则说在前面 ---- #}
           {% if open_cars %}
           <div class="field"><label for="f-carid">加入已有拼车</label>
             <select id="f-carid" name="carId">
@@ -55,7 +99,40 @@
               {% for c in open_cars %}<option value="{{ c.id }}">{{ c.title }}（还差 {{ c.need }} 人）</option>{% endfor %}
             </select>
           </div>
+          <p class="note" style="margin-top:-6px">拼车定金一口价 ¥{{ (car_deposit or 0)|float|round|int }}，锁位用，玩完原路退回。</p>
           {% endif %}
+
+          {# ---- 选角：把"已经被别人选走的角色"摊开，省得到提交才报错 ---- #}
+          {% if taken %}
+          <div class="field">
+            <span style="display:block;font-size:.82rem;letter-spacing:.04em;color:var(--ink-2);margin-bottom:8px">选角（可空）</span>
+            <div class="roles" data-roles>
+              {% for r in (sc.roles or []) %}
+              {% set _nm = r if r is string else (r.get('name') or r.get('role') or '') %}
+              {% if _nm %}
+              <label class="roles__r {{ 'is-taken' if _nm in taken }}">
+                <input type="radio" name="role" value="{{ _nm }}" {{ 'disabled' if _nm in taken }}>
+                <span>{{ _nm }}</span>
+              </label>
+              {% endif %}
+              {% endfor %}
+            </div>
+            <p class="note" style="margin:8px 0 0">划掉的已被同场次的人选走；同一天同一时段只能一人选一角。</p>
+          </div>
+          {% endif %}
+
+          {# ---- 用券：我的可用券一直算着，从没让人看见过 ---- #}
+          {% if coupons %}
+          <div class="field"><label for="f-coupon">用一张券</label>
+            <select id="f-coupon" name="couponId">
+              <option value="">不用券</option>
+              {% for c in coupons %}
+              <option value="{{ c.id }}">¥{{ (c.amount or 0)|float|round|int }} 抵扣券{% if c.minAmount %}（满 {{ c.minAmount }} 可用）{% endif %}{% if c.exp %} · {{ day_label(c.exp) }} 到期{% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+
           <button class="btn btn--accent" type="submit" style="width:100%;justify-content:center">提交预约 <span class="arr">→</span></button>
         </form>
         {% else %}
@@ -70,6 +147,36 @@
   </div>
 </section>
 
+{# ---- 已排场次：路由里 ses（ sessions=ses ）早算好了，以前只有导航徽标用得到。
+       客人真正想问的是"这本周几有局、还差几人"—— 摆出来。 ---- #}
+{% if sessions %}
+<section class="sec" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec__frame" aria-hidden="true">
+      <span><i class="sq">▪</i>001</span><span class="sf__line"></span>
+      <span class="sf__note">已排场次 · <b>ON THE CALENDAR</b></span>
+    </div>
+    <div class="rows" style="margin-top:18px">
+      {% for s in sessions[:8] %}
+      <div class="row" data-reveal>
+        <span class="row__when">{{ day_label(s.ts) }}<br>{{ s.time or '' }}</span>
+        <span class="row__main">
+          <span class="row__title">{{ s.title or sc.title }}</span>
+          <span class="row__sub">{{ s.roomId or '待排房' }} · DM {{ s.dmName or '待安排' }}</span>
+          <span class="row__seats" aria-hidden="true">
+            {% for i in range(s.cap or 6) %}<i class="{{ 'on' if i < (s.joined or 0) }}"></i>{% endfor %}
+            <em>已报 {{ s.joined or 0 }}/{{ s.cap or 0 }} · 余 {{ s.left if s.left is not none else (s.cap or 0) }} 位</em>
+          </span>
+        </span>
+        <span class="row__pill">{{ b_map.get(s.status, s.status) or '可约' }}</span>
+        <a class="idx__go" href="{{ url_for('public.group') }}">去组局 →</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
 {% if reviews %}
 <section class="sec" style="padding-top:0">
   <div class="wrap">
@@ -79,10 +186,41 @@
       {% for r in reviews[:6] %}
       <figure class="quote" data-reveal data-d="{{ loop.index0 % 4 }}">
         <blockquote class="quote__text">“{{ r.text }}”</blockquote>
-        <figcaption class="quote__by"><span class="quote__av">{{ (r.nick or '玩')[:1] }}</span>{{ r.nick or '玩家' }}{% if r.title %} · 《{{ r.title }}》{% endif %}{% if r.rating %} · {{ r.rating }} 分{% endif %}</figcaption>
+        <figcaption class="quote__by">
+          <span class="quote__av">{{ (r.nick or '玩')[:1] }}</span>
+          {# user_names 终于用上：评价里写的用户名不一定还是本站账号（改过名/注销/历史脏数据），
+             不判断就会点出 404 —— 路由注释里专门写了这条，模板却从没看过它。 #}
+          {% if r.username and (r.username|string) in user_names and not r.anonymous %}
+            <a class="link-underline" href="{{ url_for('public.user_profile', username=r.username) }}">{{ r.nick or r.username }}</a>
+          {% else %}{{ r.nick or '玩家' }}{% endif %}
+          {% if r.title %} · 《{{ r.title }}》{% endif %}{% if r.rating %} · {{ r.rating }} 分{% endif %}
+        </figcaption>
+        {% if r.reply %}<p class="note" style="margin:10px 0 0;padding-left:12px;border-left:2px solid var(--accent)">店长回复：{{ r.reply }}</p>{% endif %}
       </figure>
       {% endfor %}
     </div>
+  </div>
+</section>
+{% endif %}
+
+{# ---- 演后复盘：只有 DM / 管理员看得到（§2.5）。canSeeReview 一直在算，
+       以前这页压根没有这块 —— DM 想复盘得自己去后台翻。 ---- #}
+{% if canSeeReview and reviews %}
+<section class="sec" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec__frame" aria-hidden="true">
+      <span><i class="sq">▪</i>002</span><span class="sf__line"></span>
+      <span class="sf__note">演后复盘 · <b>CREW ONLY</b></span>
+    </div>
+    <p class="note" style="margin-top:14px">这一块只有 DM 和店长看得到（客人页面上不显示）。</p>
+    <ul class="facts" style="margin-top:14px">
+      {% for r in reviews[:8] %}
+      <li>
+        <span>{{ r.nick or r.username or '玩家' }}{% if r.dmPhone %} · DM {{ r.dmPhone }}{% endif %}</span>
+        <span class="facts__meta">{{ r.rating or 0 }} 分{% if r.dims %} · {% for k, v in r.dims.items() %}{{ k }} {{ v }}/5{% if not loop.last %} · {% endif %}{% endfor %}{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ul>
   </div>
 </section>
 {% endif %}
@@ -100,4 +238,44 @@
 </section>
 {% endif %}
 
+{# 日期快选 + 收藏按钮：两小段原生 JS，不引框架。
+   日期点了要把值同步进隐藏 input（后端要的是 YYYY-MM-DD），收藏点了先本地换态再提交。 #}
+<script>
+(function () {
+  /* —— 日期快选 —— */
+  var box = document.querySelector('[data-daypick]');
+  var out = document.querySelector('[data-daypick-out]');
+  if (box && out) {
+    var btns = box.querySelectorAll('.daypick__d');
+    function pick(b) {
+      for (var i = 0; i < btns.length; i++) {
+        btns[i].classList.remove('on');
+        btns[i].setAttribute('aria-pressed', 'false');
+      }
+      b.classList.add('on');
+      b.setAttribute('aria-pressed', 'true');
+      /* d.ts 是当天 00:00 的毫秒数；后端要 'YYYY-MM-DD'，这里就地算，别再引库 */
+      var t = new Date(parseInt(b.getAttribute('data-ts'), 10) || Date.now());
+      var p = function (n) { return (n < 10 ? '0' : '') + n; };
+      out.value = t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate());
+    }
+    for (var j = 0; j < btns.length; j++) {
+      btns[j].addEventListener('click', function () { pick(this); });
+    }
+    if (btns.length) pick(btns[0]);
+  }
+  /* —— 收藏：先本地换态（不等网络），再照常提交表单整页回跳 —— 失败也能看到真实状态 #}
+     （接口本身支持 ajax=1，这里故意走整页：收藏是低频操作，省一段状态机更稳） */
+  var fb = document.querySelector('[data-fav-btn]');
+  if (fb) {
+    fb.addEventListener('click', function () {
+      var on = fb.getAttribute('data-on') === '1';
+      fb.setAttribute('data-on', on ? '0' : '1');
+      var txt = fb.querySelector('[data-fav-txt]');
+      if (txt) txt.textContent = on ? '♡ 想玩' : '♥ 已收藏';
+      fb.setAttribute('aria-pressed', on ? 'false' : 'true');
+    });
+  }
+})();
+</script>
 {% endblock %}

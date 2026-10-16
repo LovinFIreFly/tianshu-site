@@ -24,25 +24,36 @@
         </div>
         <div class="comm__box">
           <span class="comm__box-t">热门话题</span>
+          {# ⚠️ 以前这五个话题是**死链**：全指向 type='all'，一个 topic 参数都不带，
+             而后端 community_posts() 早就支持 ?topic= 筛选（ftopic 一路传到了模板，
+             只是从没被用过）。点"情感"和点"全部"结果完全一样。
+             现在接上真筛选，并用 ftopic 标出当前选中项。 #}
           <div class="comm__tags">
-            <a class="chip" href="{{ url_for('public.comm', type='all') }}">情感</a>
-            <a class="chip" href="{{ url_for('public.comm', type='all') }}">硬核</a>
-            <a class="chip" href="{{ url_for('public.comm', type='all') }}">恐怖</a>
-            <a class="chip" href="{{ url_for('public.comm', type='recruit') }}">招募</a>
-            <a class="chip" href="{{ url_for('public.comm', type='all') }}">新手</a>
+            {% for tp in ['情感','硬核','恐怖','欢乐','机制','阵营','沉浸','新手'] %}
+            <a class="chip {{ 'on' if ftopic == tp }}" href="{{ url_for('public.comm', type=ftype, topic=tp) }}">{{ tp }}</a>
+            {% endfor %}
+            {% if ftopic %}<a class="chip chip--clear" href="{{ url_for('public.comm', type=ftype) }}">清空话题 ×</a>{% endif %}
           </div>
         </div>
         <div class="comm__box">
           <span class="comm__box-t">现在</span>
+          {# counts 路由一直算着（按帖子类型计数），标签栏却光秃秃三个字。
+             "招募 12 条"这种数字本身就是社区热闹程度的证明。 #}
+          <ul class="facts" style="margin-top:4px">
+            <li><span>全部帖子</span><span class="facts__meta">{{ (counts.get('chat') or 0) + (counts.get('recruit') or 0) }}</span></li>
+            <li><span>闲聊</span><span class="facts__meta">{{ counts.get('chat') or 0 }}</span></li>
+            <li><span>缺位招募</span><span class="facts__meta">{{ counts.get('recruit') or 0 }}</span></li>
+          </ul>
           <div class="comm__online"><span class="pulse" aria-hidden="true"></span>社区开放中 · 随时来聊</div>
         </div>
       </div>
     </div>
 
     <div class="tabbar" data-reveal>
-      <a class="chip {{ 'on' if ftype in ('','all') }}" href="{{ url_for('public.comm', type='all') }}">全部</a>
-      <a class="chip {{ 'on' if ftype == 'chat' }}" href="{{ url_for('public.comm', type='chat') }}">闲聊</a>
-      <a class="chip {{ 'on' if ftype == 'recruit' }}" href="{{ url_for('public.comm', type='recruit') }}">招募</a>
+      <a class="chip {{ 'on' if ftype in ('','all') }}" href="{{ url_for('public.comm', type='all', topic=ftopic) }}">全部 <s>{{ (counts.get('chat') or 0) + (counts.get('recruit') or 0) }}</s></a>
+      <a class="chip {{ 'on' if ftype == 'chat' }}" href="{{ url_for('public.comm', type='chat', topic=ftopic) }}">闲聊 <s>{{ counts.get('chat') or 0 }}</s></a>
+      <a class="chip {{ 'on' if ftype == 'recruit' }}" href="{{ url_for('public.comm', type='recruit', topic=ftopic) }}">招募 <s>{{ counts.get('recruit') or 0 }}</s></a>
+      {% if ftopic %}<span class="chip chip--cur">话题：{{ ftopic }} <a class="chip--x" href="{{ url_for('public.comm', type=ftype) }}" aria-label="清空话题筛选">×</a></span>{% endif %}
     </div>
 
     {% if me %}

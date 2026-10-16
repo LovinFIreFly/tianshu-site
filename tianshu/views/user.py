@@ -271,10 +271,6 @@ def me():
                if c.get('all') or str(c.get('phone')) == phone]
     order_of = {o.get('bid'): o for o in orders}
     booking_of = {b.get('id'): b for b in bookings}   # 订单面板按 bid 反查预约（亮核销码用）
-    fav_ids = set()
-    for r in db.rows('favs'):
-        if str(r.get('phone')) == phone:
-            fav_ids = {str(x) for x in r.get('sids') or []}
     # 侧栏那三格里显示"已付定金"，代替原来的余额（余额功能先撤了）
     spent = sum(int(o.get('deposit') or 0) for o in orders if o.get('status') == 'paid')
     # 我自己的评价（按预约 id 索引）：订单卡片里要把它摆出来 ——
@@ -311,7 +307,7 @@ def me():
                            coupons=coupons, notices=business.my_notices(u, 20), spent=spent,
                            unread=business.unread_count(u),
                            settings=business.get_settings(),
-                           order_of=order_of, booking_of=booking_of, scripts=scripts_all, fav_ids=fav_ids,
+                           order_of=order_of, booking_of=booking_of, scripts=scripts_all,
                            tsnow=business.now_ms(),
                            reviewed={r.get('bid') for r in _revs},
                            my_reviews=my_reviews,

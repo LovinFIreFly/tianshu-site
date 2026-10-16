@@ -25,6 +25,15 @@
         {% for d in range(1,6) %}<option value="{{ d }}" {{ 'selected' if diff|string == d|string }}>难度 {{ d }}</option>{% endfor %}
       </select>
       <button class="btn btn--ghost btn--confirm" type="submit" data-confirm>筛选 <span class="ck"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
+      {# tags（carTags）路由一直传着，拼车页从没渲染过。
+         它是后台配的"车队标签"（不跳车/准时到场/新手友好/硬核玩家），
+         拼车的人最想按这个筛 —— 现在做成可点的标签行，点了拼筛选参数。 #}
+      <div class="cartags" data-reveal>
+        <span class="cartags__k">车队标签</span>
+        {% for tg in tags %}
+        <button class="chip {{ 'on' if q == tg }}" type="submit" name="q" value="{{ tg }}">{{ tg }}</button>
+        {% endfor %}
+      </div>
     </form>
 
     <div class="rows" style="margin-top:24px">

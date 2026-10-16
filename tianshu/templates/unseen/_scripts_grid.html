@@ -29,6 +29,13 @@
       <div class="card__foot">
         <span class="card__price">¥{{ s.price or 0 }}</span>
         <span class="card__diff">{% for i in range(5) %}{% if loop.index <= (s.diff or 0) %}●{% else %}<i>○</i>{% endif %}{% endfor %}</span>
+        {# rating / favs 两组数据路由一直传着，卡片却从没显示过：
+           · rating 是 stats() 按剧本聚合的平均分（0 = 没人评过）
+           · favs 是我的想玩清单（字符串 id 集合）
+           客人挑本时最想知道的就是"别人给这本打几分、我自己是不是已经想玩了"。 #}
+        {% set _rt = rating.get(s.id|string) if rating else none %}
+        {% if _rt %}<span class="card__rate" title="玩家评分 · {{ rating_n.get(s.id|string, 0) if rating_n else 0 }} 条评价">★{{ '%.1f'|format(_rt) }}</span>{% endif %}
+        {% if favs and (s.id|string) in favs %}<span class="card__fav" title="已在我的想玩清单里">♥</span>{% endif %}
       </div>
     </div>
   </a>
