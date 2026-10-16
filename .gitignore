@@ -62,3 +62,7 @@ _nv*.log
 .workbuddy/
 miniprogram/project.private.config.json
 _research/
+
+# 本地静态预览页（手写的独立 HTML，复刻 unseen 皮肤但没有后端）—— 不入库，
+# 否则会和真模板一起漂移。文件保留在磁盘上。
+tianshu/preview.html

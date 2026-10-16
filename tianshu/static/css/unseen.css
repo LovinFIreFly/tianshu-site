@@ -26,6 +26,17 @@
   --accent:     oklch(53% 0.135 44);     /* 砖红 / 铁锈 */
   --accent-2:   oklch(66% 0.105 70);     /* 暖琥珀（次要，极少用）——用于暗底/描边/装饰 */
   --amber-ink:  oklch(53% 0.105 70);     /* 同一支琥珀，作**浅底上的文字**用（暗一档，4.5:1 达标） */
+  /* —— 第三、第四强调色（2026-10-16 按《治单调-综合报告》补）——
+     220 个参考站实测：中位用 2–4 个高饱和强调色，而我站只有 1 个砖红 ——
+     「全部一个颜色显得枯燥」的量化解释就在这里。补一支冷色对位（松绿）和一支
+      editorial 黛蓝，按幕轮换（见文件末尾的 .gallery/.night/#a5/.voices 作用域规则）。
+     刻意**不碰紫**：oklch 300° 一带正是 AI 渐变紫的老窝，用户明令避开。 */
+  --accent-3:   oklch(46% 0.078 165);    /* 松绿 —— 数据 / 榜单 / 组局 */
+  --accent-4:   oklch(47% 0.098 255);    /* 黛蓝 —— 剧目 / 社区 / 玩家之声 */
+  --accent-3-ink: oklch(40% 0.078 165);  /* 松绿作浅底文字（暗一档保 4.5:1） */
+  --accent-4-ink: oklch(41% 0.098 255);  /* 黛蓝作浅底文字 */
+  --glow-3:     oklch(46% 0.078 165 / .15);
+  --glow-4:     oklch(47% 0.098 255 / .15);
   --accent-ink: oklch(98% 0.008 78);     /* 强调面上的字色（浅） */
   --lit:        oklch(47% 0.135 44);     /* 浅底上"被照亮"的字色 = 深强调 */
   --glow:       oklch(53% 0.135 44 / .15);
@@ -2158,3 +2169,22 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline-offs
   .me-ticket__d b { font-size: 1.8rem; }
   .me-ticket__in { padding-left: 0; }
 }
+
+/* ============================================================================
+   按幕轮换强调色（2026-10-16 · 治「单调」第一刀）
+   ----------------------------------------------------------------------------
+   220 个参考站实测结论：中位用 2–4 个高饱和强调色，我站只有 1 个砖红。
+   「全部一个颜色加上文字显得很枯燥」—— 病根就在这一行。
+   治法不是把某处改成绿色，而是**让 --accent 在幕与幕之间换人**：
+   全站几百处都写 var(--accent)，在 section 上重新定义这个变量，
+   下面所有子孙（发丝线、编号、pill、下划线、焦点环）自动跟着换，一行不用改。
+   ⚠️ 谢幕 .curtain 是暗场，保持砖红不动 —— 暗底上换色容易脏。
+   ========================================================================== */
+.gallery { --accent: var(--accent-4); --lit: var(--accent-4-ink); --glow: var(--glow-4); --ring: oklch(47% 0.098 255 / .20); }
+.night   { --accent: var(--accent-3); --lit: var(--accent-3-ink); --glow: var(--glow-3); --ring: oklch(46% 0.078 165 / .20); }
+#a5      { --accent: var(--accent-3); --lit: var(--accent-3-ink); --glow: var(--glow-3); --ring: oklch(46% 0.078 165 / .20); }
+.voices  { --accent: var(--accent-4); --lit: var(--accent-4-ink); --glow: var(--glow-4); --ring: oklch(47% 0.098 255 / .20); }
+/* 内页：给「拼车」「唠嗑」也各分一支，进到哪页都是那页的色
+   （根 section 上分别挂了 .car-page / .comm-page） */
+.car-page  { --accent: var(--accent-3); --lit: var(--accent-3-ink); --glow: var(--glow-3); --ring: oklch(46% 0.078 165 / .20); }
+.comm-page { --accent: var(--accent-4); --lit: var(--accent-4-ink); --glow: var(--glow-4); --ring: oklch(47% 0.098 255 / .20); }
