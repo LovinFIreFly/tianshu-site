@@ -189,8 +189,26 @@
 <section class="paths" id="a4" data-scene>
   <div class="wrap paths__grid">
     <div>
+      {# 左列原来是「巨字 + 一句注」，实测只有 300px 内容却占 662px 高的格子，
+         中下段一整片空（用户截图点名"这个位置还是太空"）。
+         补三样真东西：章节框（和别的幕一致）+ 约前必须知道的四条规则 + 门店自己的通知。
+         这些数据 settings 里都有，只是从没往首页传过。 #}
+      <div class="sec__frame" aria-hidden="true">
+        <span><i class="sq">▪</i>004</span><span class="sf__line"></span>
+        <span class="sf__note">四件事 · <b>FOUR WAYS IN</b></span>
+      </div>
       <div class="paths__huge" data-float="-0.06">四<br><em>件</em>事</div>
       <p class="paths__note" data-reveal>怎么约，都在这儿。从挑本到散场，一条线索串到底。</p>
+      <ul class="facts" data-reveal data-d="1">
+        <li><span>定金锁位</span><span class="facts__meta">¥{{ (settings.carDeposit or 0)|float|round|int }} · 玩完原路退回</span></li>
+        <li><span>随时退</span><span class="facts__meta">开场前 {{ (settings.freeCancelHours or 24)|round|int }} 小时以上</span></li>
+        <li><span>小客服微信</span><span class="facts__meta">{{ settings.serviceWechat or '见首页' }}</span></li>
+        <li><span>邀请朋友</span><span class="facts__meta">各得 ¥{{ (settings.inviteCoupon or 0)|float|round|int }} 抵扣券</span></li>
+      </ul>
+      {% if settings.notice %}
+      <p class="note" data-reveal data-d="2" style="margin-top:16px;padding-left:12px;border-left:2px solid var(--accent)">{{ settings.notice }}</p>
+      {% endif %}
+      <a class="link-underline" href="{{ url_for('public.faq') }}" data-reveal data-d="3" style="margin-top:14px;display:inline-block">约之前，先看常见问题 →</a>
     </div>
     <div class="p-list">
       <a class="p" href="{{ url_for('public.scripts') }}" data-reveal data-cursor="入场">

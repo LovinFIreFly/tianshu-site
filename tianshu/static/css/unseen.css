@@ -357,7 +357,12 @@ p, .lede, .p__d, .idx__desc { text-wrap: pretty; }
   border-bottom: 1px solid transparent;
   transition: background .55s var(--ease), padding .45s var(--ease), border-color .55s var(--ease), transform .5s var(--ease);
 }
-.nav.scrolled { background: color-mix(in srgb, var(--paper) 88%, transparent); padding-block: 12px; border-bottom-color: var(--line); }
+/* ⚠️ 滚动态背景必须**不透明**：原来是 color-mix(paper 88%, transparent)，
+   内容滚到导航下面会透上来，和导航文字叠成一团（用户实测 /me 的「收藏」标题
+   透上来和「问答」糊成"收藏问答"）。88% 那点"透气感"不值得拿可读性换。 */
+.nav.scrolled { background: var(--paper); padding-block: 12px; border-bottom-color: var(--line); }
+/* 锚点跳转（幕次导轨 #a1…#a6）不被固定导航压住 */
+section[id], [id="a1"], [id="a2"], [id="a3"], [id="a4"], [id="a5"], [id="a6"] { scroll-margin-top: calc(var(--nav-h, 68px) + 24px); }
 .nav__brand { display: inline-flex; align-items: center; gap: 11px; font-family: var(--font-display); }
 .nav__brand .mark {
   width: 34px; height: 34px; border-radius: 2px; display: grid; place-items: center;
@@ -739,7 +744,11 @@ body.is-idle .stage__scene img { transform: translate3d(0, 0, 0) scale(1.08); }
    谢幕（.curtain）自带下边距，排除掉避免叠成两倍。 */
 main > section:last-child:not(.curtain) { padding-bottom: var(--sec-y); }
 .paths__grid { display: grid; grid-template-columns: 1fr 1.05fr; gap: clamp(28px, 5vw, 90px); align-items: start; }
-.paths__huge { font-family: var(--font-display); font-weight: 900; font-size: clamp(4rem, 11.5vw, 9.5rem); line-height: .82; letter-spacing: -.03em; color: var(--ink-dim); position: sticky; top: 16vh; max-width: 100%; word-break: keep-all; }
+/* 左列**整列**钉住：巨字 + 约前规则 + 门店通知做成一张"章节卡"，右侧四行滚多久它停多久。
+   ⚠️ 原来只有 .paths__huge 自己 sticky：整节才 739px 高，钉住范围几乎是 0，
+   看不出效果，还在左列中下段留下一道 300px 的空（用户截图点名"这个位置还是太空"）。 */
+.paths__grid > div:first-child { position: sticky; top: 14vh; align-self: start; }
+.paths__huge { font-family: var(--font-display); font-weight: 900; font-size: clamp(4rem, 11.5vw, 9.5rem); line-height: .82; letter-spacing: -.03em; color: var(--ink-dim); max-width: 100%; word-break: keep-all; }
 .paths__huge em { font-style: normal; color: var(--accent); }   /* 去 AI 味：巨型"件"字用砖红强调而非斜体（Gate 38a）*/
 .paths__note { margin-top: 18px; max-width: 30ch; color: var(--ink-3); font-size: .95rem; }
 .p-list { border-top: 1px solid var(--line); }
@@ -1740,23 +1749,35 @@ body:has(.curtain) .frame .micro .dot { border-color: var(--dark-2-ink); }
 /* ============================================================================
    光标状态机（#98 · 学 nova：悬停不同元素，圆有不同的"表情"）
    ----------------------------------------------------------------------------
-   默认 7px 点 + 34px 圈；交互元素放大（.big，沿用）；
-   搜索框 → 圈放大并显出放大镜（.search）；普通文本输入 → 收成一条竖杠（.text）；
-   海报廊拖拽区 → 显出四向箭头（.drag）；链接/带标签 → 放大显标签（.link/.big）。
-   图标用 .ic--search / .ic--drag 两枚，由 ring 的类切换显隐。
+   默认 7px 点 + 34px 圈。
+   输入框 / 搜索框 → 圆圈直接**形变成 I 型竖条**（.text / .search，学 nova）；
+   海报廊拖拽区 → 显出四向箭头（.drag）；
+   带 data-cursor 标签的链接/按钮 → 胀到 78px 大环显字（.big）；
+   普通链接/按钮 → 只稍稍放大到 44px 且**不填色**（.link）—— 填色会盖住按钮文字。
+   图标只剩 .ic--drag 一枚，由 ring 的类切换显隐。
    ========================================================================== */
 .cursor-ring .ic { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transform: scale(.4); transition: opacity .3s, transform .3s var(--ease-out); color: #fff; pointer-events: none; }
 .cursor-ring .ic svg { width: 44%; height: 44%; }
-/* 搜索框 / 输入框：**圆圈 + 里面一根 I**。
-   系统那个 I 型鼠标指针已被关掉（见 body.has-cursor 那几条），这里补自绘替代。
-   原先 .search 画的是放大镜、.text 是一根 3px 竖条 —— 竖条尤其糟：圆圈直接没了，
-   用户看到的就剩系统 I 型。现在两种状态统一成"圆圈 + I"。 */
-body.has-cursor .cursor-ring.search { width: 58px; height: 58px; border-color: #fff; background: rgba(255,255,255,.10); }
-body.has-cursor .cursor-ring.search .ic--search { opacity: 0; }
-body.has-cursor .cursor-ring.search .ic--caret { opacity: 1; transform: none; }
+/* 输入框 / 搜索框：圆圈直接**形变成 I 型竖条**（学 nova 的 data-cur="text"）。
+   用户 2026-10-16 明确要求："学习nova版，圆圈直接变成输入的这个图标" ——
+   覆盖此前"圆圈 + 里面一根 I"的方案：那个远看只是一枚圆圈，读不出"这儿能打字"。
+   竖条 3×28、圆角 2px；颜色仍走 difference 混合的 #fff，深底浅底都看得见。
+   中心那颗点同时藏掉（:has 选择器，代码库已在 body:has(.curtain) 用过）。 */
+body.has-cursor .cursor-ring.text,
+body.has-cursor .cursor-ring.search {
+  width: 3px; height: 28px;
+  border-width: 0; border-radius: 2px;
+  background: #fff;
+}
+body.has-cursor .cursor-ring.text .lb,
 body.has-cursor .cursor-ring.search .lb { opacity: 0 !important; }
-body.has-cursor .cursor-ring.text { width: 52px; height: 52px; border: 1.5px solid #fff; background: rgba(255,255,255,.06); border-radius: 50%; }
-body.has-cursor .cursor-ring.text .ic--caret { opacity: 1; transform: none; }
+body.has-cursor:has(.cursor-ring.text) .cursor,
+body.has-cursor:has(.cursor-ring.search) .cursor { opacity: 0; }
+/* 普通链接 / 按钮：环只稍稍放大，**不填色**。
+   原来一律落到 .big（78px + 半透填充），mix-blend-mode:difference 之下那层白
+   会把按钮上的字盖成反色 —— 用户实测"字体被遮盖住了"（棕色实心按钮上尤其明显）。
+   只有带 data-cursor 标签、需要显字的才值得胀到 78px。 */
+body.has-cursor .cursor-ring.link { width: 44px; height: 44px; border-color: #fff; background: transparent; }
 body.has-cursor .cursor-ring.drag { width: 66px; height: 66px; border-color: #fff; background: rgba(255,255,255,.10); }
 body.has-cursor .cursor-ring.drag .ic--drag { opacity: 1; transform: none; }
 body.has-cursor .cursor-ring.drag .lb { opacity: 0 !important; }
@@ -2046,4 +2067,94 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline-offs
   main.is-out, main.is-in, main.is-in.flow { transform: none !important; opacity: 1 !important; filter: none !important; }
   main.is-out > * { transform: none !important; opacity: 1 !important; }
   .boot { display: none; }
+}
+
+/* ============================================================================
+   「我的」页（2026-10-16 重写）
+   ── 五个面板：01 预约 / 02 订单 / 03 券·心愿单 / 04 消息 / 05 资料。
+   以前这页只有 78 行模板、只渲染 4 组数据，而路由已经算好 12 组 ——
+   和 home() 同一个毛病：白算。现在全用上，视觉仍走站内既有语言
+   （发丝线 + 编辑式编号 + 纸色卡片），不另造一套控件。
+   ========================================================================== */
+/* 分段导航：编辑式横排编号 + 发丝下划线，不用 nova 的胶囊 */
+.me-tabs { display: flex; flex-wrap: wrap; gap: clamp(16px, 2.6vw, 38px); border-bottom: 1px solid var(--line); }
+.me-tabs button { position: relative; background: none; border: 0; padding: 0 0 13px;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .16em; color: var(--ink-3);
+  cursor: pointer; transition: color .35s var(--ease-out); }
+.me-tabs button s { text-decoration: none; color: var(--accent); margin-left: 7px; }
+.me-tabs button:hover { color: var(--ink-2); }
+.me-tabs button.on { color: var(--ink); }
+.me-tabs button.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--accent); }
+.me-pane { display: none; }
+.me-pane.on { display: block; animation: paneIn .5s var(--ease-out) both; }
+@keyframes paneIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.me-pane__hd { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin: 24px 0 4px; }
+
+/* 票根：左侧日期撕口（虚线分隔）+ 右侧票面 */
+.me-ticket { display: grid; grid-template-columns: 96px 1fr; border-top: 1px solid var(--line); }
+.me-ticket__d { border-right: 1px dashed var(--line); padding: 20px 16px 20px 0; }
+.me-ticket__d b { display: block; font-family: var(--font-display); font-weight: 500; font-size: 2.7rem; line-height: 1; }
+.me-ticket__d s { display: block; text-decoration: none; font-family: var(--font-mono); font-size: 11px; letter-spacing: .14em; color: var(--ink-3); margin-top: 7px; }
+.me-ticket__d i { display: block; font-style: normal; font-family: var(--font-mono); font-size: 12px; color: var(--accent); margin-top: 11px; }
+.me-ticket__in { padding: 20px 0 20px clamp(18px, 2.4vw, 30px); display: grid; gap: 13px; }
+.me-ticket__t { font-family: var(--font-display); font-weight: 500; font-size: clamp(1.3rem, 2.2vw, 1.75rem); line-height: 1.12; }
+.me-ticket__tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.me-ticket__tags span { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .1em; color: var(--ink-3);
+  border: 1px solid var(--line); border-radius: 2px; padding: 3px 9px; }
+.me-ticket__tags span.is-ink { color: var(--accent); border-color: oklch(53% 0.135 44 / .38); }
+.me-ticket__act { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+/* 核销码：左边一条砖红竖线， mono 大间距，到店好念 */
+.me-code { display: inline-flex; align-items: baseline; gap: 13px; padding: 10px 16px;
+  background: var(--paper-2); border: 1px solid var(--line); border-left: 2px solid var(--accent); }
+.me-code__lb { font-family: var(--font-mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3); }
+.me-code__v { font-family: var(--font-mono); font-size: 1.3rem; letter-spacing: .22em; color: var(--ink); }
+/* 行内小表单（改期：日期 + 时间 + 按钮横排） */
+.me-inline { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.me-inline select, .me-inline input { font: inherit; font-size: .86rem; color: var(--ink);
+  background: var(--paper); border: 1px solid var(--line); border-radius: 2px; padding: 7px 9px; }
+/* 面板内小按钮：比 .btn 小一档，配行内动作 */
+.act-sm { font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; color: var(--ink-2);
+  background: none; border: 1px solid var(--line); border-radius: 2px; padding: 7px 13px; cursor: pointer;
+  transition: color .3s, border-color .3s, background .3s; }
+.act-sm:hover { color: var(--accent); border-color: oklch(53% 0.135 44 / .45); }
+.act-sm--ink { color: #fff; background: var(--accent); border-color: var(--accent); }
+.act-sm--ink:hover { color: #fff; background: oklch(47% 0.135 44); border-color: oklch(47% 0.135 44); }
+/* 评分星（JS 接管点选与高亮，纯 CSS :hover 在触屏上会粘住） */
+.me-stars { display: inline-flex; gap: 4px; }
+.me-stars input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.me-stars label { font-size: 1.35rem; line-height: 1; color: var(--line); cursor: pointer; transition: color .2s; }
+.me-stars label.on { color: var(--accent); }
+/* 玩家风格标签 */
+.me-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.me-chips label { position: relative; display: inline-flex; font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: .08em; color: var(--ink-3); border: 1px solid var(--line); border-radius: 999px;
+  padding: 6px 13px; cursor: pointer; transition: color .3s, border-color .3s, background .3s; }
+.me-chips input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.me-chips label:has(input:checked) { color: var(--accent); border-color: oklch(53% 0.135 44 / .45); background: oklch(53% 0.135 44 / .07); }
+/* 券 */
+.me-coupon { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 0; border-bottom: 1px solid var(--line); }
+.me-coupon.is-used { opacity: .5; }
+.me-coupon__amt { font-family: var(--font-display); font-weight: 500; font-size: 1.9rem; margin-right: 10px; }
+.me-coupon__lb { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .14em; color: var(--ink-3); }
+.me-coupon em { display: block; font-style: normal; font-size: .82rem; color: var(--ink-3); margin-top: 4px; }
+/* 消息 */
+.me-msg { padding: 15px 0; border-bottom: 1px solid var(--line); }
+.me-msg__hd { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.me-msg__t { font-family: var(--font-display); font-size: 1.06rem; }
+.me-msg__hd em { font-style: normal; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .1em; color: var(--ink-3); }
+.me-msg__x { margin: 8px 0 0; color: var(--ink-2); font-size: .94rem; line-height: 1.62; }
+.me-msg__r { margin: 9px 0 0; padding-left: 12px; border-left: 2px solid var(--accent); color: var(--ink); font-size: .9rem; }
+/* 心愿单 */
+.me-wish { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--line-2); }
+.me-wish em { font-style: normal; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
+/* 账号信息 KV */
+.me-kv { margin: 0; }
+.me-kv > div { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--line-2); }
+.me-kv dt { font-size: .88rem; color: var(--ink-3); }
+.me-kv dd { margin: 0; font-family: var(--font-mono); font-size: .92rem; }
+@media (max-width: 700px) {
+  .me-ticket { grid-template-columns: 1fr; }
+  .me-ticket__d { display: flex; align-items: baseline; gap: 12px; border-right: 0; border-bottom: 1px dashed var(--line); padding: 14px 0; }
+  .me-ticket__d b { font-size: 1.8rem; }
+  .me-ticket__in { padding-left: 0; }
 }

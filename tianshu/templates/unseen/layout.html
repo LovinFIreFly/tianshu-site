@@ -43,14 +43,9 @@
   <div class="cursor" aria-hidden="true"></div>
   <div class="cursor-ring" aria-hidden="true">
     <span class="lb"></span>
-    <span class="ic ic--search" aria-hidden="true">
-      <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.6" stroke="currentColor" stroke-width="1.5"/><path d="M10.6 10.6 14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-    </span>
-    {# 输入类控件的光标：一根**画在圆圈里的 I**（上下两道短横 + 竖杆）。
-       用户明确要求：搜索框不要再出现系统那个 I 型鼠标指针，用自绘圆圈 + I 代替。 #}
-    <span class="ic ic--caret" aria-hidden="true">
-      <svg viewBox="0 0 16 16" fill="none"><path d="M5.6 2.2h4.8M8 2.2v11.6M5.6 13.8h4.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-    </span>
+    {# 输入类控件的光标：圆圈直接**形变成 I 型竖条**（学 nova 的 data-cur="text"），
+       不再画"圆圈 + 里面一根 I" —— 那个远看只是一枚圆圈，读不出"这儿能打字"。
+       系统那个 I 型鼠标指针已被关掉（见 unseen.css 的 body.has-cursor 那几条）。 #}
     <span class="ic ic--drag" aria-hidden="true">
       <svg viewBox="0 0 16 16" fill="none"><path d="M8 1.5 5.5 4h5L8 1.5ZM8 14.5 5.5 12h5l-2.5 2.5ZM1.5 8 4 5.5v5L1.5 8ZM14.5 8 12 5.5v5l2.5-2.5Z" fill="currentColor"/></svg>
     </span>

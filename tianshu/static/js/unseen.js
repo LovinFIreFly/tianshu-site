@@ -72,30 +72,31 @@
       dot.style.transform = 'translate(' + mx + 'px,' + my + 'px) translate(-50%,-50%)';
       ring.style.transform = 'translate(' + rx + 'px,' + ry + 'px) translate(-50%,-50%)';
     });
-    /* 状态机：交互元素放大；搜索框 → 放大镜；文本输入 → 竖杠；海报廊 → 四向箭头；
-       链接/带标签 → 放大显标签。图标显隐交给 CSS（ring 的类）。 */
+    /* 状态机：交互元素放大；搜索框/文本输入 → I 型竖条（学 nova，圆圈直接变成输入图标）；
+       海报廊 → 四向箭头；带 data-cursor 标签 → 胀到大环显字；普通链接/按钮 → 稍放大不填色。
+       图标显隐交给 CSS（ring 的类）。 */
     function classify(t) {
       if (!t) return '';
       if (t.classList && t.classList.contains('u-search__in')) return 'search';
       if (t.closest && t.closest('.gallery__track')) return 'drag';
       if (t.matches && t.matches('input[type="text"],input[type="search"],input[type="email"],input[type="tel"],input:not([type]),textarea')) return 'text';
-      if (t.matches && t.matches('a,[data-cursor]')) return 'link';
-      return 'big';
+      return 'link';
     }
     function over(e) {
       var t = e.target.closest('a,button,[data-cursor],input,textarea,select,label,.u-search__in');
       if (!t) return;
       var state = classify(t);
-      ring.classList.remove('big', 'search', 'text', 'drag', 'link');
-      ring.classList.add(state);
+      ring.classList.remove('big', 'search', 'text', 'drag', 'link', 'tagged');
+      if (lb) lb.textContent = '';
       if (state === 'search' || state === 'text' || state === 'drag') {
-        if (lb) lb.textContent = '';
-        ring.classList.remove('tagged');
-      } else {
-        var label = t.getAttribute && t.getAttribute('data-cursor');
-        if (lb) lb.textContent = label || '';
-        if (label) ring.classList.add('tagged'); else ring.classList.remove('tagged');
+        ring.classList.add(state);
+        return;
       }
+      /* 带 data-cursor 标签的才胀到 78px 显字；普通链接/按钮只走 .link（44px、不填色）——
+         填色那层白在 difference 混合下会把按钮文字盖成反色，用户实测读不清。 */
+      var label = t.getAttribute && t.getAttribute('data-cursor');
+      if (label) { if (lb) lb.textContent = label; ring.classList.add('big', 'tagged'); }
+      else ring.classList.add('link');
     }
     function out(e) {
       var t = e.target.closest('a,button,[data-cursor],input,textarea,select,label,.u-search__in');

@@ -153,7 +153,8 @@ def home():
                            sessions=sessions, cars=business.car_pool()[:6],
                            dm_duty=dm_duty, reviews=reviews, boss_pick=boss_pick,
                            hotScripts=hotScripts, newScripts=newScripts,
-                           sphere_scripts=sphere_scripts)
+                           sphere_scripts=sphere_scripts,
+                           settings=business.get_settings())
 
 
 @bp.get('/scripts')

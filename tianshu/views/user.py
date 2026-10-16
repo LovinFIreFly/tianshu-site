@@ -304,8 +304,13 @@ def me():
     serviceWechat = business.get_settings().get('serviceWechat', '')
     # 模板要用当前时间算「距开场几小时」：< 24h 不给退定金按钮（business.order_action
     # 的 freeCancelHours=24 规则在后端照样兜底，这里只是让按钮提前消失、别点了才被拦）
+    # ⚠️ 以前这页只把 orders / coupons / notices / msgs / favGroups / my_reviews 之类
+    #    12 组数据算好却一个都没渲染（78 行的模板只用了 4 组）—— 和 home() 同一个毛病：
+    #    路由白算，页面看着"功能很少"。现在五面板全用上，顺带补 unread 和 settings。
     return render_template('me.html', u=u, bookings=bookings, orders=orders,
                            coupons=coupons, notices=business.my_notices(u, 20), spent=spent,
+                           unread=business.unread_count(u),
+                           settings=business.get_settings(),
                            order_of=order_of, booking_of=booking_of, scripts=scripts_all, fav_ids=fav_ids,
                            tsnow=business.now_ms(),
                            reviewed={r.get('bid') for r in _revs},
