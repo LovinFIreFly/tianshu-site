@@ -186,6 +186,9 @@
   {# 首屏散景光尘（canvas 2D，零依赖）。必须在 unseen.js 之前 —— unseen.js 的
      bootPage 会调 window.__lightInit() 给换页后的新 canvas 重建（幂等）。 #}
   <script src="{{ url_for('asset_delivery', filename='js/unseen-light.js', v=static_v('js/unseen-light.js')) }}" defer></script>
+  {# 谢幕暗场余烬（canvas 2D，零依赖）。同样必须在 unseen.js 之前 ——
+     bootPage 会调 window.__emberInit() 给换页后的新 canvas 重建（幂等）。 #}
+  <script src="{{ url_for('asset_delivery', filename='js/unseen-ember.js', v=static_v('js/unseen-ember.js')) }}" defer></script>
   <script src="{{ url_for('asset_delivery', filename='js/unseen.js', v=static_v('js/unseen.js')) }}" defer></script>
   {% block extra_js %}{% endblock %}
 

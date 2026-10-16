@@ -32,6 +32,7 @@ BUDGET = {
     'js/unseen.js':            21.0,
     'js/unseen-field.js':      10.0,
     'js/unseen-light.js':       6.0,   # 首屏散景光尘（canvas 2D，零依赖）
+    'js/unseen-ember.js':       4.0,   # 谢幕暗场余烬（canvas 2D，零依赖）
     'js/vitals.js':             2.0,
     'js/csrf.js':               1.5,
     'js/vendor/lenis.min.js':   5.0,

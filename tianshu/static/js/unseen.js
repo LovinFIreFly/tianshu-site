@@ -1761,6 +1761,8 @@
     /* 散景光尘（unseen-light.js）：换页后 #main 里的旧 canvas 已被换掉，
        这里重新建一次（该模块的 init 是幂等的，同一个 canvas 只绑一次）。 */
     if (window.__lightInit) window.__lightInit();
+    /* 谢幕暗场余烬（unseen-ember.js）：同上，换页后给新的 canvas 重建 */
+    if (window.__emberInit) window.__emberInit();
     initHeroStagger();
     initTickerSpeed();
     initSpotlight();

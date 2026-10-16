@@ -2581,3 +2581,34 @@ a.banners__i:hover { transform: translateY(-4px); border-color: oklch(53% 0.135 
 /* 小字挪到右下角：和巨字错开，左下留一片**有意为之**的空 —— 靠幽灵字去填那个层次，
    这样"留白"仍然是有东西的，不会读成"没做完"。 */
 .manifesto__note { justify-self: end; margin-top: 0; max-width: 34ch; }
+
+/* ============================================================================
+   谢幕：暗场余烬 + 呼吸光晕（B3 · 沉浸介质，0 素材）
+   ----------------------------------------------------------------------------
+   这一幕是全站唯一的暗场，也是 unseen / symphonyofvines 那条"暗色沉浸"路线
+   在本站唯一能落地的地方 —— 但它原来是**完全静止**的：一层静态径向渐变 + 字。
+   现在加两层：
+     ① .curtain__ember（canvas）：小亮点缓慢上升 + 闪烁 + 被光标搅动
+     ② .curtain__glow 的呼吸：14s 极缓明暗缩放，让静止也在动
+
+   ⚠️ 层序必须显式写死：glow / ember 都是 absolute，会盖在静态的 .wrap 之上
+      （定位元素默认画在非定位元素之上）。不给 .wrap 抬 z-index，
+      余烬和光晕就会糊在巨字和按钮上面。
+   ⚠️ 亮底与暗底的"小点"语法是**相反**的，别串台：
+       亮底：离散小暗点 = 灰尘（脏）；光滑大亮面 = 干净
+       暗底：离散小亮点 = 余烬（对）；光滑大亮面 = 糊
+   ========================================================================== */
+.curtain__glow { z-index: 0; transform-origin: 84% 8%;
+  animation: curtainBreath 14s var(--ease-soft) infinite; }
+/* ⚠️ canvas 是**替换元素**：position:absolute + inset:0 时 width/height:auto 会解析成
+   它的**固有尺寸**（默认 300×150 / 这里 240×120），`right/bottom` 被忽略 —— 撑不满。
+   必须显式写 width/height:100%（同 .stage__bokeh 那条的写法）。 */
+.curtain__ember { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; pointer-events: none; }
+.curtain > .wrap { position: relative; z-index: 2; }
+@keyframes curtainBreath {
+  0%, 100% { opacity: .78; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.07); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .curtain__glow { animation: none; }
+}
