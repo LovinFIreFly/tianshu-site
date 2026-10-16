@@ -712,6 +712,45 @@
     }, { passive: true });
   }
 
+  /* ---------------- 心形收藏（本本墙卡片 / 详情页）----------------
+     必须**委派到 document**：本本墙的网格会被 initLib 用 fetch 换掉，
+     挂在卡片上的监听会跟着旧节点一起没。委派则对新卡片同样生效，且只有一个监听。
+     接口 `POST /fav/<sid>?ajax=1` 回 JSON {on, group}（见 views/public.py 的 fav()），
+     所以这里能先本地换态、失败再翻回来 —— 不刷新整页。
+     失败兜底：网络断了就把按钮还原，不让界面撒谎。 */
+  function initCardFav() {
+    if (document.__cardFav) return;
+    document.__cardFav = true;
+    document.addEventListener('submit', function (e) {
+      var f = e.target;
+      if (!f || !f.hasAttribute || !f.hasAttribute('data-ajax-fav')) return;
+      e.preventDefault();
+      var btn = f.querySelector('.fav-btn');
+      if (!btn || btn.disabled) return;
+      var on = btn.classList.contains('on');
+      var url = f.getAttribute('action');
+      enter(btn, on);
+      btn.disabled = true;
+      fetch(url + (url.indexOf('?') < 0 ? '?' : '&') + 'ajax=1', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: new URLSearchParams(new FormData(f)).toString()
+      }).then(function (r) { return r.json(); }).then(function (j) {
+        if (typeof j.on === 'boolean') enter(btn, j.on);
+        btn.disabled = false;
+      }).catch(function () {
+        enter(btn, on);            // 没成 → 还原成原来的样子
+        btn.disabled = false;
+      });
+    });
+    function enter(btn, on) {
+      btn.classList.toggle('on', on);
+      btn.textContent = on ? '♥' : '♡';
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.setAttribute('aria-label', on ? '取消想玩' : '加入想玩');
+    }
+  }
+
   /* ---------------- Magnetic 磁吸 ---------------- */
   function initMagnetic() {
     if (COARSE || REDUCE) return;
@@ -1678,6 +1717,7 @@
     initFloat();
     initDepthWall();
     initCardLit();
+    initCardFav();
     initMagnetic();
     initRail();
     initVoices();

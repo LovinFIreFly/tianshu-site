@@ -12,7 +12,8 @@
 {% if scripts %}
 <div class="cards" data-lib-grid data-lib-n="{{ scripts|length }}" style="margin-top:34px">
   {% for s in scripts %}
-  <a class="card" href="{{ url_for('public.script_detail', sid=s.id) }}" data-reveal data-d="{{ loop.index0 % 4 }}" data-cursor>
+  <div class="cardslot" data-reveal data-d="{{ loop.index0 % 4 }}">
+  <a class="card" href="{{ url_for('public.script_detail', sid=s.id) }}" data-cursor>
     <div class="card__cover{% if s.img or s.cover %} card__cover--pic{% endif %}">
       {% if s.img or s.cover %}<img class="card__img" src="{{ s.img or s.cover }}" alt="{{ s.title }}" loading="lazy" decoding="async">{% endif %}
       <div class="ov"></div>
@@ -39,6 +40,16 @@
       </div>
     </div>
   </a>
+  {# 心形收藏：和详情页那颗是同一个接口（public.fav）。data-ajax-fav 由 unseen.js
+     委派处理（网格会被 fetch 换掉，挂在卡片上的监听会一起没）。
+     **不判 me**：v2 对游客也显示这颗心，点了由 /fav 带去登录页 —— 藏起来客人根本不知道有这个功能。 #}
+  <form class="cardfav" method="post" action="{{ url_for('public.fav', sid=s.id) }}" data-ajax-fav>
+    <input type="hidden" name="group" value="want">
+    <button class="fav-btn {{ 'on' if favs and (s.id|string) in favs }}" type="submit"
+            aria-label="{{ '取消想玩' if favs and (s.id|string) in favs else '加入想玩' }}"
+            aria-pressed="{{ 'true' if favs and (s.id|string) in favs else 'false' }}">{{ '♥' if favs and (s.id|string) in favs else '♡' }}</button>
+  </form>
+  </div>
   {% endfor %}
 </div>
 {% else %}

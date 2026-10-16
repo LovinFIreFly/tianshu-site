@@ -2371,3 +2371,45 @@ a.banners__i:hover { transform: translateY(-4px); border-color: oklch(53% 0.135 
   content: ""; position: absolute; top: 0; left: 50%; width: 100vw; margin-left: -50vw;
   height: 1px; background: var(--line);
 }
+
+/* 角色人物卡（带图）—— 2026-10-17 补：v2 有这块，unseen 建版时只留了单选按钮，
+   后台传上去的角色图全白摆了。判据是"有图才摆"，没图靠单选按钮就够。 */
+.rolecast { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+.rolecast__c { position: relative; margin: 0; border: 1px solid var(--line); border-radius: var(--r-2);
+  overflow: hidden; background: var(--paper-2); }
+.rolecast__c img { display: block; width: 100%; aspect-ratio: 3/4; object-fit: cover; }
+.rolecast__no { position: absolute; top: 7px; left: 8px; z-index: 2; font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: .14em; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.55); }
+.rolecast__b { display: grid; gap: 3px; padding: 8px 10px 10px; }
+.rolecast__b b { font-family: var(--font-display); font-weight: 500; font-size: .96rem; }
+.rolecast__line { color: var(--ink-3); font-size: .78rem; line-height: 1.45; }
+.rolecast__tag { font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; color: var(--accent); }
+.rolecast__c.is-taken img { filter: grayscale(.75) brightness(.92); }
+.rolecast__c.is-taken .rolecast__b b { color: var(--ink-3); }
+
+/* 本本墙卡片：外包一层 .cardslot 放"心形收藏"（2026-10-17 补齐 v2 有、unseen 丢的功能）。
+   ⚠️ 卡本身仍是 `<a class="card">` —— 换标签会同时废掉
+   「按 S 随机挑一本」（读 href）、initCardLit（追光）、data-reveal 三处。 */
+.cardslot { position: relative; }
+.cardfav { position: absolute; top: 10px; right: 10px; z-index: 3; }
+.fav-btn { width: 34px; height: 34px; display: grid; place-items: center; cursor: pointer;
+  font-size: 15px; line-height: 1; color: rgba(255,255,255,.92);
+  background: rgba(20,15,12,.42); border: 1px solid rgba(255,255,255,.28); border-radius: var(--r-pill);
+  backdrop-filter: blur(3px); transition: color .3s, background .3s, border-color .3s, transform .3s var(--ease-out); }
+.fav-btn:hover { transform: scale(1.08); background: rgba(20,15,12,.58); }
+.fav-btn.on { color: #fff; background: oklch(53% 0.135 44 / .82); border-color: oklch(53% 0.135 44); }
+.fav-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+/* 卡片自己有边框和圆角了（同日改的），.cards 那套"1px 缝隙露出底线"的假网格就多余了 ——
+   两者叠一起是一条 2px 的双线。改成正常间距。 */
+.cards { gap: clamp(12px, 1.5vw, 20px); background: none; border-block: 0; }
+
+/* 详情页那颗心：和卡片上的同款按钮，但要跟着亮底走形（不是压在封面上）——
+   用同族描边 + 文字色，别用卡片那套"封面上压一层深色玻璃"。 */
+.fav-inline { width: auto; height: auto; padding: 7px 14px; gap: 7px; border-radius: var(--r-2);
+  font-size: 14px; color: var(--ink-2); background: var(--paper); border-color: var(--line);
+  backdrop-filter: none; }
+.fav-inline:hover { color: var(--accent); border-color: oklch(53% 0.135 44 / .45); background: var(--paper); }
+.fav-inline.on { color: #fff; background: var(--accent); border-color: var(--accent); }
+
+/* 车队成员里的"空位"：虚线框 + 静音色，一眼看出这辆车还缺几个人 */
+.facts--inline li.is-empty { color: var(--ink-3); border-style: dashed; }

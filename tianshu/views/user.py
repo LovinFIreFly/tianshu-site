@@ -93,7 +93,8 @@ def register():
         # TODO 以后上线上，这里得加个人机验证，不然会被脚本注册刷爆
         if not rate('reg:' + ip, 12, 3600000):
             flash('注册太频繁了，歇一会儿再试', 'warn')
-            return render_template('register.html'), 429
+            return render_template('register.html', dev=business.is_dev_request(),
+                                   inviteCoupon=(business.get_settings().get('inviteCoupon') or 0)), 429
         # 跟老版一样：手机号 + 验证码 + 两次密码 + 同意协议，才给建号
         f = request.form
         phone = (f.get('phone') or '').strip()
@@ -148,7 +149,10 @@ def register():
             flash('注册好了，你的邀请码是 %s（朋友用它注册，你俩各得一张 %s 元券）'
                   % (my_invite, invite_amount), 'ok')
             return redirect(safe_next(request.args.get('next'), url_for('public.home')))
-    return render_template('register.html')
+    # dev 开关：通用码提示只在**本机**露（is_dev_request() 按 Host 判，公网一律 False）。
+    # unseen 建版时把那句提示写死在页面上，公网访客也会看到「直接填 1234」—— 是个真 bug。
+    return render_template('register.html', dev=business.is_dev_request(),
+                           inviteCoupon=(business.get_settings().get('inviteCoupon') or 0))
 
 
 @bp.route('/forgot', methods=['GET', 'POST'])

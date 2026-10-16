@@ -246,12 +246,28 @@ def script_detail(sid):
         days.append({'ts': ts, 'label': '今天' if i == 0 else ('明天' if i == 1 else business.day_label(ts))})
 
     # 这个本已排的场次（客人可以直接约某一场）
-    ses = [s for s in db.rows('sessions') if str(s.get('sid')) == str(sid) and s.get('status') == 'open']
-    joined = {}
+    # ⚠️ joined / left 不落库 —— 它是 sessions_of() 每次现算的。这里必须自己补，
+    #    否则模板拿到的是"光秃秃"的场次行，"已报几位 / 还差几人"永远是空的 ——
+    #    而那恰恰是客人决定约不约的关键。口径与 sessions_of() 保持一致：
+    #    一次聚合 bookings（别每场扫一遍全表），已取消的预约不计。
+    _joined_map = {}
     for b in db.rows('bookings'):
-        if b.get('sessionId') and b.get('status') != 'cancelled':
-            k = str(b['sessionId'])
-            joined[k] = joined.get(k, 0) + (b.get('players') or 1)
+        if b.get('status') == 'cancelled':
+            continue
+        _sid = b.get('sessionId')
+        if _sid:
+            _joined_map[_sid] = _joined_map.get(_sid, 0) + (b.get('players') or 1)
+    ses = []
+    for _s in db.rows('sessions'):
+        if str(_s.get('sid')) != str(sid) or _s.get('status') != 'open':
+            continue
+        _s = dict(_s)
+        _s['joined'] = _joined_map.get(_s.get('id'), 0)
+        _s['left'] = max(0, int(_s.get('cap') or 0) - _s['joined'])
+        ses.append(_s)
+    joined = {}                     # 下面算「每场已报」用的是同一份数据（保持兼容）
+    for k, v in _joined_map.items():
+        joined[str(k)] = v
 
     # 我的券
     coupons = []

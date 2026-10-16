@@ -47,6 +47,21 @@
       </div>
     </div>
 
+    {# 车上有谁：car 对象一直带着 members，这页却从没渲染过 ——
+       车队详情的核心内容就是"谁在这辆车上"。 #}
+    {% if car.members %}
+    <div class="sec__head" style="margin-top:48px">
+      <h2 class="h3" data-reveal>车上的成员（{{ car.members|length }}）</h2>
+      <span class="note" data-reveal style="margin:0">还差 {{ car.need }} 人发车</span>
+    </div>
+    <ul class="facts facts--inline" style="margin-top:6px">
+      {% for m in car.members %}
+      <li>{{ m.nick or m.username or '队友' }}{% if m.owner %} · 车主{% endif %}</li>
+      {% endfor %}
+      {% for _ in range(car.need or 0) %}<li class="is-empty">空位</li>{% endfor %}
+    </ul>
+    {% endif %}
+
     <div class="sec__head" style="margin-top:48px">
       <h2 class="h3" data-reveal>车里聊两句</h2>
     </div>

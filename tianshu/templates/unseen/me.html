@@ -110,7 +110,9 @@
                   <button class="act-sm" type="submit">改期（定金留着）</button>
                 </form>
                 {% endif %}
-                {% if b.status != 'cancelled' %}
+                {% if b.status == 'booked' %}
+                  {# 还没开场：改期 / 退定金 / 不玩了 才有意义。
+                     退改的 24 小时规矩由 business.order_action 兜底，这里只提前收按钮。 #}
                   {% set _hrs = ((b.ts or 0) - tsnow) / 3600000 %}
                   {% if o and o.status in ('unpaid','paid') and _hrs >= 24 %}
                   <form method="post" action="{{ url_for('user.order_act', oid=o.id, action='refund') }}">
@@ -121,6 +123,19 @@
                   <form method="post" action="{{ url_for('user.cancel_booking', bid=b.id) }}"
                         onsubmit="return confirm('确定不玩了？开场前 24 小时内取消，定金不退。')">
                     <button class="act-sm" type="submit">不玩了</button></form>
+                {% elif b.status in ('arrived','done') %}
+                  {# 已到店 / 已完成：该出现的是「付游玩费」，而不是一个点了必然被拒的退定金。
+                     （v2 有这道口子，unseen 重写时漏了 —— 客人玩完想付钱，页面上找不到按钮。） #}
+                  {% set _bal = (o.amount or 0) if o else 0 %}
+                  {% if o and o.balStatus == 'paid' %}
+                    {% if o.depositBack %}<span class="row__pill">定金已退回</span>{% endif %}
+                    <span class="row__pill">游玩费已结清</span>
+                  {% elif o and o.balStatus == 'claimed' %}
+                    <span class="note" style="margin:0">游玩费待小客服确认</span>
+                    <a class="act-sm" href="{{ url_for('user.pay_deposit', oid=o.id) }}">看支付方式</a>
+                  {% elif o and _bal > 0 %}
+                    <a class="act-sm act-sm--ink" href="{{ url_for('user.pay_deposit', oid=o.id) }}">付游玩费 ¥{{ _bal|float|round|int }}</a>
+                  {% endif %}
                 {% endif %}
                 {% if b.sid %}<a class="act-sm" href="{{ url_for('public.script_detail', sid=b.sid) }}">再看一眼本本</a>{% endif %}
               </div>

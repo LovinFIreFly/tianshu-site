@@ -44,7 +44,9 @@
         <span class="row__cover">{{ (c.scriptTitle or c.title or '本')[:1] }}</span>
         <span class="row__main">
           <span class="row__title">{{ c.title or '一辆拼车' }}</span>
-          <span class="row__sub">{{ c.scriptTitle or '剧本待定' }}</span>
+          {# ⚠️ 这里原来写的是 c.scriptTitle —— car_pool() 没有这个字段，副行恒显示"剧本待定"。
+             真该说清的是"谁开的车、什么调性"。 #}
+          <span class="row__sub">{{ c.owner or '玩家' }} 开的车{% if c.tags %} · {{ (c.tags or [])[:2]|join(' · ') }}{% endif %}</span>
           <span class="row__seats" aria-label="还差 {{ need }} 人">
             {% for i in range(6) %}<i class="{{ 'on' if i < (need|int if need is defined else 0) else '' }}"></i>{% endfor %}
             <em>还差 {{ need }} 人</em>

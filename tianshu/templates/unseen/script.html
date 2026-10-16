@@ -18,12 +18,12 @@
       <a class="link-underline" href="{{ url_for('public.scripts') }}" data-reveal>← 返回本本墙</a>
       {% if me %}
       {# 收藏：以前这页没有收藏入口，客人得回本本墙才舍得下心 #}
-      <form method="post" action="{{ url_for('public.fav', sid=sc.id) }}" data-fav-form>
+      {# 与卡片上的心形走同一个委派处理器（data-ajax-fav），不再整页刷新 #}
+      <form method="post" action="{{ url_for('public.fav', sid=sc.id) }}" data-ajax-fav>
         <input type="hidden" name="group" value="want">
-        <button class="act-sm" type="submit" data-fav-btn data-on="{{ '1' if fav_on else '0' }}"
-                aria-pressed="{{ 'true' if fav_on else 'false' }}">
-          <span data-fav-txt>{{ '♥ 已收藏' if fav_on else '♡ 想玩' }}</span>
-        </button>
+        <button class="fav-btn fav-inline {{ 'on' if fav_on else '' }}" type="submit"
+                aria-pressed="{{ 'true' if fav_on else 'false' }}"
+                aria-label="{{ '取消想玩' if fav_on else '加入想玩' }}">{{ '♥' if fav_on else '♡' }}</button>
       </form>
       {% endif %}
     </div>
@@ -42,6 +42,7 @@
           <dt>单人价</dt><dd>¥{{ sc.price or 0 }}</dd>
           <dt>适合人数</dt><dd>{{ lo }}–{{ hi }} 人</dd>
           <dt>时长</dt><dd>{{ sc.dur or '—' }}</dd>
+          {% if sc.type %}<dt>类型</dt><dd>{{ sc.type }}</dd>{% endif %}
           <dt>评分</dt><dd>{% if rating %}{{ '%.1f'|format(rating) }} / 5（{{ rating_n or 0 }} 评）{% else %}—{% endif %}</dd>
         </dl>
         <div class="card__tags" style="margin-bottom:18px">
@@ -91,15 +92,45 @@
           <p class="note" style="margin-top:-6px">指定某位 DM 带本，总额外加 ¥{{ (dm_fee or 0)|float|round|int }} /人；不指定就由门店排。</p>
           {% endif %}
 
-          {# ---- 加入已有拼车：把定金规则说在前面 ---- #}
-          {% if open_cars %}
-          <div class="field"><label for="f-carid">加入已有拼车</label>
+          {# ---- 拼车：自己开一辆 / 加入别人开的 ---- #}
+          {# ⚠️ 这块原来整个包在 {% if open_cars %} 里：一本还没人开车的本，客人连
+             "可以拼别人的车"这条路都看不见。改成永远展示这个选择，没车时给一句解释。 #}
+          <div class="field"><label for="f-carid">要不要拼别人开的车</label>
             <select id="f-carid" name="carId">
-              <option value="">不拼，我自己开</option>
+              <option value="">不拼，我自己开一辆</option>
               {% for c in open_cars %}<option value="{{ c.id }}">{{ c.title }}（还差 {{ c.need }} 人）</option>{% endfor %}
             </select>
           </div>
-          <p class="note" style="margin-top:-6px">拼车定金一口价 ¥{{ (car_deposit or 0)|float|round|int }}，锁位用，玩完原路退回。</p>
+          <p class="note" style="margin-top:-6px">
+            拼车定金一口价 ¥{{ (car_deposit or 0)|float|round|int }}，锁位用，玩完原路退回。
+            {% if not open_cars %}现在还没有别人在拼这本 —— 你开一辆，后面的人就能上。{% endif %}
+          </p>
+
+          {# ---- 角色人物卡（带图）：后台给角色传过头像就摆出来 ----
+             v2 有这块，unseen 建版时只留了单选按钮 —— 传上去的角色图白摆了。
+             判据用 selectattr('img')：没图的角色靠单选按钮选就够了，不必占一屏。 #}
+          {% if sc.roles and sc.roles|selectattr('img')|list %}
+          <div class="field">
+            <span style="display:block;font-size:.82rem;letter-spacing:.04em;color:var(--ink-2);margin-bottom:10px">这一本的角色</span>
+            <div class="rolecast" data-roles-cast>
+              {% for r in sc.roles %}
+              {% set _rn = r if r is string else (r.get('name') or r.get('role') or '') %}
+              {% set _ri = '' if r is string else (r.get('img') or '') %}
+              {% set _rl = '' if r is string else (r.get('line') or '') %}
+              {% if _ri %}
+              <figure class="rolecast__c {{ 'is-taken' if _rn in taken }}">
+                <span class="rolecast__no" aria-hidden="true">{{ '%02d' % loop.index }}</span>
+                <img src="{{ _ri }}" alt="{{ _rn }}" loading="lazy" decoding="async">
+                <figcaption class="rolecast__b">
+                  <b>{{ _rn }}</b>
+                  {% if _rl %}<span class="rolecast__line">{{ _rl }}</span>{% endif %}
+                  {% if _rn in taken %}<span class="rolecast__tag">已被选</span>{% endif %}
+                </figcaption>
+              </figure>
+              {% endif %}
+              {% endfor %}
+            </div>
+          </div>
           {% endif %}
 
           {# ---- 选角：把"已经被别人选走的角色"摊开，省得到提交才报错 ---- #}
@@ -169,7 +200,21 @@
           </span>
         </span>
         <span class="row__pill">{{ b_map.get(s.status, s.status) or '可约' }}</span>
-        <a class="idx__go" href="{{ url_for('public.group') }}">去组局 →</a>
+        {% if me and (s.left or 0) > 0 %}
+        {# 直接按这一场下单：日期/时间/人数从场次带过去。
+           注意**不用**传 sessionId —— create_booking() 是按 (sid, ts, time) 自己配对的，
+           传一个后端不读的字段只会误导下一个人。 #}
+        <form method="post" action="{{ url_for('user.book') }}">
+          <input type="hidden" name="sid" value="{{ sc.id }}">
+          <input type="hidden" name="ts" value="{{ s.ts }}">
+          <input type="hidden" name="time" value="{{ s.time }}">
+          <input type="hidden" name="players" value="{{ lo }}">
+          <input type="hidden" name="mode" value="拼车">
+          <button class="act-sm act-sm--ink" type="submit">约这一场</button>
+        </form>
+        {% else %}
+        <a class="idx__go" href="{{ url_for('public.group') }}">{{ '登录后可约 →' if not me else '已满 →' }}</a>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
@@ -263,18 +308,6 @@
       btns[j].addEventListener('click', function () { pick(this); });
     }
     if (btns.length) pick(btns[0]);
-  }
-  /* —— 收藏：先本地换态（不等网络），再照常提交表单整页回跳 —— 失败也能看到真实状态 #}
-     （接口本身支持 ajax=1，这里故意走整页：收藏是低频操作，省一段状态机更稳） */
-  var fb = document.querySelector('[data-fav-btn]');
-  if (fb) {
-    fb.addEventListener('click', function () {
-      var on = fb.getAttribute('data-on') === '1';
-      fb.setAttribute('data-on', on ? '0' : '1');
-      var txt = fb.querySelector('[data-fav-txt]');
-      if (txt) txt.textContent = on ? '♡ 想玩' : '♥ 已收藏';
-      fb.setAttribute('aria-pressed', on ? 'false' : 'true');
-    });
   }
 })();
 </script>
