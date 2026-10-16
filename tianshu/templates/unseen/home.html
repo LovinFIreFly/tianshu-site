@@ -113,7 +113,7 @@
 
 <!-- 幕二 · 剧目（钉住横滚海报廊） -->
 {% if scripts %}
-<section class="gallery" id="a2" data-gallery>
+<section class="gallery" id="a2" data-gallery aria-label="幕二 · 剧目：正在上演的本">
   <div class="gallery__sticky">
     <div class="gallery__head">
       <div>
@@ -158,7 +158,7 @@
 {% endif %}
 
 <!-- 幕三 · 今晚（时间轴排期） -->
-<section class="night" id="a3" data-scene>
+<section class="night" id="a3" data-scene aria-label="幕三 · 今晚：今天的组局与场次">
   <div class="wrap">
     <div class="night__head">
       <h2 class="h2 night__title" data-reveal>今晚，<br>谁在开场。</h2>
@@ -246,7 +246,7 @@
         台账实测：参考站 DOM 节点中位约 1050，我站首页从 438 涨到 570（+8 张海报
         +这一屏）—— "空"的另一半是内容太薄，光压间距补不回来，得往里加真信息。 -->
 {% if hotScripts or newScripts or dm_duty %}
-<section class="sec" id="a5" data-scene>
+<section class="sec" id="a5" data-scene aria-label="幕五 · 榜与场：热玩本、新本首车与今日值班 DM">
   <div class="wrap">
     <div class="sec__frame" aria-hidden="true">
       <span><i class="sq">▪</i>005</span>
@@ -329,7 +329,7 @@
 
 <!-- 幕六 · 声音 -->
 {% if reviews %}
-<section class="voices" id="a6" data-voices data-scene>
+<section class="voices" id="a6" data-voices data-scene aria-label="幕六 · 玩家之声：玩过的人怎么说">
   {# 玩家之声：深度模糊墙做氛围底。原来只是 22 个空 <i> 装饰块 ——
      学 cosmos.so 的做法该用**真的图**当底，而剧本封面本来就齐（28/28）。
      data-imgs 把"写评价的人玩过的本"的封面传下去，unseen.js 拿它当背景图。 #}
@@ -358,7 +358,7 @@
      ⚠️ 这一节**不加下边距**：谢幕 .curtain 自带 calc(--sec-y * 1.15) 的上内边距，
      再加一份就叠成 176px 的纯空（空隙地图实测）。亮纸到暗场的"一口气"就是这里的呼吸。 -->
 {% if banners %}
-<section class="sec" data-scene>
+<section class="sec" data-scene aria-label="幕七 · 店里的事">
   <div class="wrap">
     <div class="sec__frame" aria-hidden="true">
       <span><i class="sq">▪</i>007</span><span class="sf__line"></span>
