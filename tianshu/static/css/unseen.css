@@ -2308,3 +2308,9 @@ a.banners__i:hover { transform: translateY(-4px); border-color: oklch(53% 0.135 
   font-weight: 900; font-size: 1.05rem; color: var(--ink-3); }
 /* 标题吃掉弹性空间，meta 贴右 —— 和原来的 space-between 视觉一致 */
 .facts--pic li > a { margin-right: auto; }
+
+/* 玩家之声：引语署名行加"评价所属剧本"的封面小图
+   （深度模糊墙改用真封面之后，署名点一下也有据可依） */
+.voices__q .by { display: flex; align-items: center; }
+.voices__q .by__pic { flex: none; width: 36px; height: 36px; margin-right: 12px;
+  border-radius: var(--r-1); object-fit: cover; border: 1px solid var(--line); background: var(--paper-3); }

@@ -667,6 +667,12 @@
   function initDepthWall() {
     $$('[data-depthwall]').forEach(function (host) {
       if (host.__built) return; host.__built = true;
+      /* 真图优先：模板把"写评价的人玩过的本"的封面挂在 data-imgs 上（逗号分隔）。
+         有图就用 background-image 做深度模糊墙 —— 学 cosmos.so；
+         没有图（一首评价都没有 / 封面都没传）才退回原来的纯色 <i> 装饰块。
+         ⚠️ 背景图**只挂一次**（同一张图铺在块上），不是每个 <i> 各挂一张：
+         22 张不同图会让 22 个元素各走一次解码，内存和首帧都吃亏。 */
+      var imgs = (host.getAttribute('data-imgs') || '').split(',').filter(function (s) { return s.trim(); });
       for (var i = 0; i < 22; i++) {
         var t = document.createElement('i');
         var x = Math.random() * 100, y = Math.random() * 100;
@@ -676,6 +682,12 @@
                             'deg) scale(' + (0.55 + edge * 0.7).toFixed(2) + ')';
         t.style.opacity = (0.18 + edge * 0.5).toFixed(2);
         t.style.filter = 'blur(' + ((1 - edge) * 2.4).toFixed(1) + 'px)';
+        if (imgs.length) {
+          var url = imgs[i % imgs.length];
+          t.style.backgroundImage = 'url("' + url + '")';
+          t.style.backgroundSize = 'cover';
+          t.style.backgroundPosition = 'center';
+        }
         host.appendChild(t);
         if (HAS_GSAP && !REDUCE) {
           gsap.to(t, { y: '+=' + (8 + Math.random() * 18), duration: 5 + Math.random() * 4,

@@ -127,19 +127,33 @@ def home():
     # 真实玩家短评：最近几条"已展示"的评价（reviews_of 已带昵称/头像，按时间倒序）
     # 只取最近 20 条来挑带文字的 8 条，不必给全量评价建昵称/头像（AUD-B-0026）
     script_titles = {str(s.get('id')): s.get('title', '') for s in scripts}
+    # 评价所属剧本的封面：玩家之声的「深度模糊墙」原来只是 22 个空 <i> 装饰块，
+    # 学 cosmos.so 的做法应该用**真的图**当底 —— 而剧本封面本来就有（28/28 全覆盖）。
+    script_covers = {str(s.get('id')): (s.get('cover') or s.get('img') or '') for s in scripts}
     reviews = []
     for r in business.reviews_of(limit=20):
         if not r.get('text'):
             continue
+        _sid = str(r.get('sid') or '')
         reviews.append({
             'nick': r.get('nick') or '玩家',
             'avatar': r.get('avatar') or '',
-            'title': script_titles.get(str(r.get('sid')) or '', ''),
+            'sid': r.get('sid'),
+            'title': script_titles.get(_sid, ''),
+            'cover': script_covers.get(_sid, ''),
             'text': r.get('text', ''),
             'stars': r.get('rating') or 0,
         })
         if len(reviews) >= 8:
             break
+    # 深度模糊墙的底图：从写评价的人玩过的本里取（去重、最多 10 张）
+    _covers, _seen_c = [], set()
+    for r in reviews:
+        c = r.get('cover')
+        if c and c not in _seen_c:
+            _seen_c.add(c)
+            _covers.append(c)
+    voice_covers = _covers[:10]
     boss_pick = feat[0] if feat else (scripts[0] if scripts else None)
     # 热玩本：stats['hot'] 已是 [(sid, {plays...})] 按 plays 降序 top6，转回剧本对象
     scripts_by_id = {str(s.get('id')): s for s in scripts}
@@ -154,6 +168,7 @@ def home():
                            sessions=sessions, cars=business.car_pool()[:6],
                            dm_duty=dm_duty, reviews=reviews, boss_pick=boss_pick,
                            hotScripts=hotScripts, newScripts=newScripts,
+                           voice_covers=voice_covers,
                            settings=business.get_settings())
 
 

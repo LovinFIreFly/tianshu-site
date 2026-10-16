@@ -330,15 +330,20 @@
 <!-- 幕六 · 声音 -->
 {% if reviews %}
 <section class="voices" id="a6" data-voices data-scene>
-  {# 玩家之声：cosmos.so 的深度模糊墙做氛围底 #}
-  <div class="depthwall" data-depthwall aria-hidden="true"></div>
+  {# 玩家之声：深度模糊墙做氛围底。原来只是 22 个空 <i> 装饰块 ——
+     学 cosmos.so 的做法该用**真的图**当底，而剧本封面本来就齐（28/28）。
+     data-imgs 把"写评价的人玩过的本"的封面传下去，unseen.js 拿它当背景图。 #}
+  <div class="depthwall" data-depthwall{% if voice_covers %} data-imgs="{{ voice_covers|join(',') }}"{% endif %} aria-hidden="true"></div>
   <div class="wrap">
     <span class="eyebrow" data-reveal><b>S.06</b> 玩家之声 · Voices</span>
     <div class="voices__stage">
       {% for r in reviews[:3] %}
       <blockquote class="voices__q{% if loop.first %} on{% endif %}" data-voice="{{ loop.index0 }}">
         “{{ r.text }}”
-        <span class="by"><b>{{ r.nick or '一位玩家' }}</b>{% if r.title %} · 《{{ r.title }}》{% endif %}</span>
+        <span class="by">
+          {% if r.cover %}<img class="by__pic" src="{{ r.cover }}" alt="" loading="lazy" decoding="async">{% endif %}
+          <b>{{ r.nick or '一位玩家' }}</b>{% if r.title %} · 《{{ r.title }}》{% endif %}
+        </span>
       </blockquote>
       {% endfor %}
     </div>
