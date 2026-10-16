@@ -109,6 +109,10 @@
   <div><b>{{ stat.income }}</b><span>已收定金(元)</span></div>
   <div><b>{{ sessions|length }}</b><span>今日场次</span></div>
   <div><b>{{ pending|length }}</b><span>今日待核销</span></div>
+  {# 用户数 / 剧本数：dash_panel() 一直把它们算着传进来，模板从没显示过 ——
+     概览页不摆"店有多大"的两个基本数，说不过去。 #}
+  <div><b>{{ n_users }}</b><span>注册用户</span></div>
+  <div><b>{{ n_scripts }}</b><span>在库剧本</span></div>
 </div>
 
 <div class="two mt">

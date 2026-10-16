@@ -76,7 +76,8 @@ def index():
     if request.args.get('partial') == '1':
         return func()                      # 前端 fetch 单个面板
     panels = {k: (('<!-- panel:%s -->' % k) if k != tab else _panel_html(k)) for k in _TAB_FUNCS}
-    return render_template('dm/shell.html', panels=panels, active=tab)
+    # active 删了：和 admin 一样，切 tab 走网址 #hash。
+    return render_template('dm/shell.html', panels=panels)
 
 
 @bp.post('/verify')

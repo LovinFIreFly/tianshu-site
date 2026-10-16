@@ -40,7 +40,10 @@ def dash_panel():
                                     and b.get('day') == today0][:10],
                            recent=sorted(bookings, key=lambda x: -(x.get('id') or 0))[:8],
                            logs=db.rows('logs')[:6],
-                           users=db.rows('users'), scripts=db.rows('scripts'))
+                           # ⚠️ 这里原来传的是**完整的** users / scripts 两个列表，
+                           #    而模板只用得上条数 —— 每次渲染概览都要把整张用户表和
+                           #    剧本表读过再传进模板（白算审计抓到的）。改成直接给数。
+                           n_users=len(db.rows('users')), n_scripts=len(db.rows('scripts')))
 
 
 def _panel_html(key):
@@ -66,7 +69,8 @@ def dashboard():
     if request.args.get('partial') == '1':
         return func()                      # 前端 fetch 单个面板
     panels = {k: (('<!-- panel:%s -->' % k) if k != tab else _panel_html(k)) for k in _TAB_FUNCS}
-    return render_template('admin/index.html', panels=panels, active=tab)
+    # active 删了：后台切 tab 走的是网址 #hash（见 legacy() 的重定向），不是 ?tab=。
+    return render_template('admin/index.html', panels=panels)
 
 
 @bp.get('/<path:old>')
@@ -180,7 +184,7 @@ def users():
     # 员工排前面（要改角色通常先找他们），同类里按来店次数
     rows.sort(key=lambda x: (-business.ROLE_RANK.get(x['role'], 0), -x['visits']))
     return render_template('admin/panel_users.html', rows=rows, q=kw,
-                           role_filter=role_filter, counts=counts, me=me)
+                           role_filter=role_filter, counts=counts)
 
 
 @bp.post('/users/<phone>/credit')
@@ -869,7 +873,9 @@ def sessions():
     return render_template('admin/panel_sessions.html', rows=rows, ts=ts, view=view,
                            prev=ts - 86400000, nxt=ts + 86400000, day=business.day_label(ts),
                            week=week, rooms=db.rows('rooms'), dms=dms, room_map=room_map,
-                           times=SESSION_TIMES, pending=pending)
+                           # times 删了：这一页是预约驱动的（时间是客人定的，排期只挑
+                           # 房间和 DM），那个时间档位列表用不上。
+                           pending=pending)
 
 
 @bp.post('/bookings/<int:bid>/arrange')

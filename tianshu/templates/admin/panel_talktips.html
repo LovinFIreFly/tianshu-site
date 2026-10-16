@@ -12,7 +12,7 @@
    data-show 直接写中文分类值，配合每条记录上的 data-cat。 #}
 <div class="row mt" style="gap:6px;flex-wrap:wrap" data-filter="cat">
   <button type="button" class="pill on" data-show="all">全部</button>
-  {% for c_opt in ['开场白', '过渡', '结尾', '其他'] %}
+  {# 分类来自 TALKTIP_CATS（路由传的 cats），不再写死 —— 加分类时只改 config 一处 #}{% for c_opt in (cats or ['开场白', '过渡', '结尾', '其他']) %}
   <button type="button" class="pill" data-show="{{ c_opt }}">{{ c_opt }}</button>
   {% endfor %}
 </div>
@@ -47,7 +47,7 @@
   <form method="post" action="{{ url_for('admin.talktip_add') }}" class="form-inline" style="gap:12px;align-items:flex-end;flex-wrap:wrap">
     <div class="field" style="margin:0"><label>分类</label>
       <select name="cat">
-        {% for c_opt in ['开场白', '过渡', '结尾', '其他'] %}
+        {# 分类来自 TALKTIP_CATS（路由传的 cats），不再写死 —— 加分类时只改 config 一处 #}{% for c_opt in (cats or ['开场白', '过渡', '结尾', '其他']) %}
         <option value="{{ c_opt }}">{{ c_opt }}</option>
         {% endfor %}
       </select></div>
