@@ -2,24 +2,29 @@
 """
 自检脚本：改完代码跑一遍，看看有没有把功能改坏
 
-⚠️⚠️ 现状（2026-10-17 核查）：本脚本**写于「二代」版式时期**，而全站默认版式
-     早已换成 unseen（`DEFAULT_UI='unseen'`），二代/三代那几套 ui=1..8 也已删除。
-     2026-10-17 做了一轮配平：**282 通过 / 16 失败**（配平前是 245 / 100）。
-     剩下的 16 条里只有 1 条是真缺口（DM 工作台没有资料面板 → 形象照无处上传，断言已
-     改名带【待实现】保持红着当待办）；其余几条要么依赖运行期上下文的偶发数据，
-     要么是同一批旧文案的残余 —— 逐条原因见 `_research/` 里那次配平的记录。
-     配平前的典型三类（保留，说明当时为什么红）：
-       ① 旧文案：断言里查的是「上车登记」「预约这一本」「拼车局」「本本墙」，
-          而 unseen 用的是另一套措辞；
-       ② 已删除的功能：`<nav class="mobtab">`（手机底部导航）、
-          `?ui=1` 版式切换、`design3.css`、后台「外观款式」下拉、
-          皮肤表 skin-noir/riso/swiss/monolith —— 这些在 unseen 下都不存在了；
-       ③ 少数是被有意的设计改动取代的（如预约表单从 `type="date"`
-          换成了「7 天快选」，断言已跟着改成查 `.daypick__d`）。
-     所以：**跑它是为了看「OK 数有没有掉」，不是看它整体绿不绿**。
-     配平时要先判断"这条断言该改成 unseen 的写法，还是该删掉" ——
-     那是一个需要设计判断的独立任务，别机械地改字符串把红灯刷绿。
-     基线：**282 通过 / 16 失败**（2026-10-17 配平后实测）。之后每加功能 OK 数应当只增不减。
+✅ 现状（2026-10-17 配平完成）：**291 项全过**。
+   起点是 245 通过 / 100 失败 —— 那 100 条**不是功能坏了**，是断言写于二代版式时期，
+   而全站早已换成 unseen。配平过程（不为了让灯变绿去改判据）分三类：
+     ① 后台面板早已改成前端切 tab：`/admin/orders` 会 302 到 `/admin#orders`，而
+        **#fragment 在 HTTP 传输里会丢** —— urllib 跟完跳转拿到的是概览面板。正确取法是
+        `?partial=1&tab=<面板>`。改了 16 处。
+     ② 已删除的功能：`nav.mobtab`（手机底部导航）、后台「外观款式」下拉 —— 断言连注释一起删。
+     ③ 旧文案：unseen 换了一套措辞（「上车登记」→「登录」、「拼车局」→「拼车」等），
+        逐条实测页面之后改判据。
+   **配平途中揪出 8 个真 bug**（这才是这一轮的价值），其中两个很致命：
+     · 车队详情页对**已登录用户 100% 500** —— `url_for('public.car_action')` 这个端点
+       根本不存在（真名是 `user.car_act`），而它藏在 `{% if me %}` 里，游客走不到，
+       本地随手一测还是好的。新增 `_research/check_endpoints.py` 全站校验 111 个模板，
+       现已无同类问题。
+     · 注册页把「本机测试直接填 1234」**无条件**写死在页面上，公网访客也看得到。
+   另外六个：角色人物卡有图不显示、已排场次不能当场约、/me 核销后没有「付游玩费」
+   却还挂着必然被拒的「退定金」、本本墙卡片丢了心形收藏、车队列表副行恒显示
+   "剧本待定"（字段根本不存在）、`car_pool` 的 15 秒缓存没在「开新车/改期/退单/核销」
+   之后作废（刚开的车在大厅看不见）。还有 DM 结算表头写死了按比例那套公式，
+   设置切「每场固定场费」时页面上还在写"营业额 × N%"，店主对账必然对不上。
+
+⚠️ 以后改东西再跑它时：**看"OK 数有没有掉"，不是看它绿不绿**。
+   （新增功能后 OK 数应当只增不减；基线就是上面这个 291。）
 
 用法（一条命令就够，它会自己起一个"一次性"服务）：
     python tools/smoke_test.py
@@ -690,8 +695,8 @@ check('封面出现在剧本页', '/img/cover/' in html)
 # 会员余额：界面上撤掉了（2026-09，不做充值/余额抵扣）—— 逐页确认"真的看不到"
 s, html = cus4.get('/me')
 check('「我的」里不再出现余额', '余额' not in html)
-s, html = cus4.get('/me?tab=coupons')
-check('那栏改叫「券 / 心愿单」', '券 / 心愿单' in html and '余额' not in html)
+s, html = cus4.get('/me')          # 面板是前端切 tab（data-tab），不吃 ?tab=
+check('那栏改叫「券 · 心愿单」', '券 · 心愿单' in html and '余额' not in html)
 check('侧栏那格换成了「已付定金」', '已付定金' in html)
 s, html = cus4.get('/scripts/%s' % sc['id'])
 check('下单页不再有「用余额抵定金」', 'use_balance' not in html and '抵定金' not in html)
@@ -867,7 +872,10 @@ cus5.post('/book', {'sid': sc['id'], 'ts': ts_in(9), 'time': '13:00', 'players':
 car_bk = next((b for b in jread('bookings') if b.get('ts') == ts_in(9) and b.get('carNew')), None)
 car_id = (car_bk or {}).get('id')
 s, html = admin.get('/car/%s' % car_id)
-check('车队详情页能打开', s == 200 and '车上的成员' in html)
+check('车队详情页能打开', s == 200 and '车上的成员' in html,
+      'car_id=%s 车在池子里=%s members=%s HTTP=%s' % (car_id,
+        bool(car_id) and any(str(x.get('id')) == str(car_id) for x in _bs.car_pool('')),
+        [len(c.get('members') or []) for c in _bs.car_pool('') if str(c.get('id')) == str(car_id)], s))
 cus4.post('/car/%s/join' % car_id, {})
 cus4.post('/car/%s/msg' % car_id, {'text': '自检：我上车啦'})
 check('车队里能聊天', any(m.get('text') == '自检：我上车啦' for m in jread('carmsgs')))
@@ -1007,13 +1015,13 @@ check('锚点能先切面板再滚动（不再只认标签名）',
 check('同页锚点链接接上了 hashchange', "addEventListener('hashchange'" in tabs_js)
 
 # DM 形象照：自己上传，客人打开公开主页能看到
-# ⚠️ 已知未实现（2026-10-17 核对）：unseen 的 DM 工作台只有 6 个面板
-#    （msgs/today/credit/sched/growth/guides），**没有资料面板**；形象照上传的表单
-#    在全站模板里零命中（name=photo）。后端 POST /dm/profile 是好的，公开主页也已经在
-#    显示这张照片 —— 缺的只是「在哪儿传」。这条保持红着当待办，别改成绿的。
-#    要做就在 templates/dm/ 下加一个 profile 面板并挂进 _TAB_FUNCS。
-check('DM 工作台有上传形象照的入口【待实现】',
-      'name="photo"' in html and 'multipart/form-data' in html)
+# DM 形象照上传在 **growth 面板**里（templates/dm/panel_growth.html 的「我的公开主页」）。
+# ⚠️ 不能拿上面的 `html`（那是 /dm 的**默认面板** today）来断言 —— DM 工作台早就改成
+#    前端切 tab 了，一页只服务端渲染当前面板。（2026-10-17 我先误判成"没有这个表单"，
+#    原因就是只 grep 了 templates/unseen/ 和根目录、漏了 templates/dm/。）
+s, html_growth = dmcli.get('/dm?partial=1&tab=growth')
+check('DM 工作台有上传形象照的入口（成长面板的「我的公开主页」）',
+      s == 200 and 'name="photo"' in html_growth and 'multipart/form-data' in html_growth)
 dmcli.post_file('/dm/profile', 'photo', 'me.png', png,
                 {'style': '情感本一把好手', 'bio': '自检用简介', 'canOpen': '1'})
 dm_u = next((x for x in jread('users') if x.get('phone') == '12345678901'), {})

@@ -49,6 +49,34 @@
           {% for t in (sc.tags or []) %}<span class="tag">{{ t }}</span>{% endfor %}
         </div>
 
+        {# ---- 角色人物卡（带图）：后台给角色传过头像就摆出来 ----
+           ⚠️ 放在 `{% if me %}` 的**外面** —— 它是剧本内容（这一本有哪些角色），
+           不是操作，游客本来就该看得见。第一版塞进了预约表单里，只有登录用户看得到。
+           判据用 selectattr('img')：没图的角色靠单选按钮选就够了，不必占一屏。 #}
+        {% if sc.roles and sc.roles|selectattr('img')|list %}
+        <div style="margin-bottom:18px">
+          <span style="display:block;font-size:.82rem;letter-spacing:.04em;color:var(--ink-2);margin-bottom:10px">这一本的角色</span>
+          <div class="rolecast" data-roles-cast>
+            {% for r in sc.roles %}
+            {% set _rn = r if r is string else (r.get('name') or r.get('role') or '') %}
+            {% set _ri = '' if r is string else (r.get('img') or '') %}
+            {% set _rl = '' if r is string else (r.get('line') or '') %}
+            {% if _ri %}
+            <figure class="rolecast__c {{ 'is-taken' if _rn in taken }}">
+              <span class="rolecast__no" aria-hidden="true">{{ '%02d' % loop.index }}</span>
+              <img src="{{ _ri }}" alt="{{ _rn }}" loading="lazy" decoding="async">
+              <figcaption class="rolecast__b">
+                <b>{{ _rn }}</b>
+                {% if _rl %}<span class="rolecast__line">{{ _rl }}</span>{% endif %}
+                {% if _rn in taken %}<span class="rolecast__tag">已被选</span>{% endif %}
+              </figcaption>
+            </figure>
+            {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
         {% if me %}
         <form method="post" action="{{ url_for('user.book') }}" class="book">
           <h2 class="h3" style="margin-bottom:4px">约这一本</h2>
@@ -105,33 +133,6 @@
             拼车定金一口价 ¥{{ (car_deposit or 0)|float|round|int }}，锁位用，玩完原路退回。
             {% if not open_cars %}现在还没有别人在拼这本 —— 你开一辆，后面的人就能上。{% endif %}
           </p>
-
-          {# ---- 角色人物卡（带图）：后台给角色传过头像就摆出来 ----
-             v2 有这块，unseen 建版时只留了单选按钮 —— 传上去的角色图白摆了。
-             判据用 selectattr('img')：没图的角色靠单选按钮选就够了，不必占一屏。 #}
-          {% if sc.roles and sc.roles|selectattr('img')|list %}
-          <div class="field">
-            <span style="display:block;font-size:.82rem;letter-spacing:.04em;color:var(--ink-2);margin-bottom:10px">这一本的角色</span>
-            <div class="rolecast" data-roles-cast>
-              {% for r in sc.roles %}
-              {% set _rn = r if r is string else (r.get('name') or r.get('role') or '') %}
-              {% set _ri = '' if r is string else (r.get('img') or '') %}
-              {% set _rl = '' if r is string else (r.get('line') or '') %}
-              {% if _ri %}
-              <figure class="rolecast__c {{ 'is-taken' if _rn in taken }}">
-                <span class="rolecast__no" aria-hidden="true">{{ '%02d' % loop.index }}</span>
-                <img src="{{ _ri }}" alt="{{ _rn }}" loading="lazy" decoding="async">
-                <figcaption class="rolecast__b">
-                  <b>{{ _rn }}</b>
-                  {% if _rl %}<span class="rolecast__line">{{ _rl }}</span>{% endif %}
-                  {% if _rn in taken %}<span class="rolecast__tag">已被选</span>{% endif %}
-                </figcaption>
-              </figure>
-              {% endif %}
-              {% endfor %}
-            </div>
-          </div>
-          {% endif %}
 
           {# ---- 选角：把"已经被别人选走的角色"摊开，省得到提交才报错 ---- #}
           {% if taken %}
@@ -240,6 +241,14 @@
           {% else %}{{ r.nick or '玩家' }}{% endif %}
           {% if r.title %} · 《{{ r.title }}》{% endif %}{% if r.rating %} · {{ r.rating }} 分{% endif %}
         </figcaption>
+        {# 四个分项分：v2 就摆在评价里，unseen 建版时只在「演后复盘」（DM/店长可见）
+           那块渲染了 dims，客人自己看不到 —— 而分项恰恰是"这本好在哪"最有信息量的部分
+           （总分只说明喜不喜欢，分项才说明为什么）。 #}
+        {% if r.dims %}
+        <span class="quote__dims">
+          {% for k, v in r.dims.items() %}<span class="quote__dim">{{ k }} {{ v }}/5</span>{% endfor %}
+        </span>
+        {% endif %}
         {% if r.reply %}<p class="note" style="margin:10px 0 0;padding-left:12px;border-left:2px solid var(--accent)">店长回复：{{ r.reply }}</p>{% endif %}
       </figure>
       {% endfor %}

@@ -2,8 +2,17 @@
 <div class="between">
   <div>
     <h1>DM 结算</h1>
-    <p class="sub">分成 = 他带的场次营业额 × {{ (settings.dmRate * 100)|round(1) }}%
-      ＋ 客人点名加价（¥{{ settings.dmFee|int }}/人）。比例在「概览 → 门店设置」里改</p>
+    {# ⚠️ 表头必须跟着 dmPayMode 走：原来只写了按比例那套公式，
+       设置切成「每场固定场费」时页面上还在写"营业额 × N%" —— 店主按它核对必然对不上。 #}
+    <p class="sub">
+      {% if settings.dmPayMode == 'fixed' %}
+        分成 = 带本场次 × 每场 ¥{{ settings.dmFixedPay|int }}
+      {% else %}
+        分成 = 他带的场次营业额 × {{ (settings.dmRate * 100)|round(1) }}%
+      {% endif %}
+      ＋ 客人点名加价（¥{{ settings.dmFee|int }}/人）。口径在「概览 → 门店设置」里改</p>
+    <p class="sub">只统计「游玩费已确认到账」的单子 —— 钱没收到就不进结算表，
+      所以当月还没结清时这里会是 0，那是正常的。</p>
   </div>
 </div>
 

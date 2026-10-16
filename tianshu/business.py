@@ -1423,6 +1423,7 @@ def reschedule(user, bid, ts, new_time):
     hit.update(ts=ts, time=tm, day=day_label(ts),
                rescheduleCount=(hit.get('rescheduleCount') or 0) + 1)
     db.write('bookings', bookings)
+    invalidate('car_pool')     # 改期改了 ts，这辆车的有效期跟着变
     pays = db.rows('pays')
     for o in pays:
         if o.get('bid') == bid:
@@ -1912,6 +1913,7 @@ def create_booking(user, form):
                 if (_ses.get('cap') or 0) - _used < players:
                     return False, '手慢了，这辆车/这场刚满，换个时段或者改下人数', None
         db.update('bookings', lambda rows: rows + [booking])
+        invalidate('car_pool')         # 新开的车要立刻出现在大厅（缓存 15 秒，不作废就看不见）
         db.update('pays', lambda rows: rows + [order])
         if used:
             adjust_balance(user.get('phone'), -used, '抵扣《%s》%s 的定金' % (sc.get('title'), booking['day']),
@@ -2089,6 +2091,7 @@ def order_action(user, order_id, action, is_staff=False, reason='', coupon_id='0
         if booking:
             booking.update(status='cancelled', cancelAt=now_ms(), cancelBy='staff' if is_staff else 'user')
             db.write('bookings', bookings)
+            invalidate('car_pool')     # 退单 / 确认会影响车还在不在池子里
             # 2026-10：原来这里有一句"临期取消扣信用分"，但它上面已经
             # `if not free and not is_staff: return False` 提前返回了，永远走不到（死代码），
             # 导致后台的「临期取消扣分」配置形同虚设。扣分改由 cancel_booking 统一负责。
@@ -2128,6 +2131,7 @@ def order_action(user, order_id, action, is_staff=False, reason='', coupon_id='0
         if booking and booking.get('status') not in ('arrived', 'done'):
             booking.update(status='cancelled', cancelAt=now_ms(), cancelBy='noshow')
             db.write('bookings', bookings)
+            invalidate('car_pool')
         notify(order.get('phone'), '这一单的定金不退',
                '《%s》%s %s 这一场没有到场（或中途离开），按门店规矩定金 ¥%d 不退。'
                '位子当时一直给你留着，下次提前说一声就好～'
@@ -2371,6 +2375,7 @@ def verify_checkin(code, by_name):
         return False, '这个码查不到未核销的预约', None
     hit.update(status='arrived', arrivedAt=now_ms(), verifiedBy=by_name)
     db.write('bookings', bookings)
+    invalidate('car_pool')         # 到店核销后这辆车就从池子里撤了
     # 核销的是车主自己开的那一车 → 计一次车数，满阈值发车主奖励券
     if hit.get('carNew') is True:
         _maybe_car_reward(hit.get('phone'))

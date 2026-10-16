@@ -29,15 +29,15 @@
         {% endif %}
         {% if me %}
           {% if is_owner %}
-            <form method="post" action="{{ url_for('public.car_action', cid=car.id, action='close') }}" style="display:inline">
+            <form method="post" action="{{ url_for('user.car_act', cid=car.id, action='close') }}" style="display:inline">
               <button class="btn btn--ghost" type="submit">收车</button>
             </form>
           {% elif car.joined %}
-            <form method="post" action="{{ url_for('public.car_action', cid=car.id, action='quit') }}" style="display:inline">
+            <form method="post" action="{{ url_for('user.car_act', cid=car.id, action='quit') }}" style="display:inline">
               <button class="btn btn--ghost" type="submit">退出这辆车</button>
             </form>
           {% else %}
-            <form method="post" action="{{ url_for('public.car_action', cid=car.id, action='join') }}" style="display:inline">
+            <form method="post" action="{{ url_for('user.car_act', cid=car.id, action='join') }}" style="display:inline">
               <button class="btn btn--accent" type="submit">上车 <span class="arr">→</span></button>
             </form>
           {% endif %}
@@ -83,7 +83,7 @@
       {% endfor %}
     </div>
     {% if me %}
-    <form method="post" action="{{ url_for('public.car_action', cid=car.id, action='msg') }}">
+    <form method="post" action="{{ url_for('user.car_act', cid=car.id, action='msg') }}">
       <div class="field" style="display:flex;gap:10px">
         <input class="field" name="text" placeholder="说点什么…" required style="flex:1">
         <button class="btn btn--accent" type="submit">发送</button>
