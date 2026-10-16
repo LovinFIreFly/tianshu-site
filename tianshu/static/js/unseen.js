@@ -265,8 +265,12 @@
           y: 30, autoAlpha: 0, duration: 1.0, ease: 'power3.out', delay: d * 0.07,
           scrollTrigger: { trigger: el, start: 'top 86%', once: true },
           /* 收尾清掉行内 transform：gsap 收尾会留下 identity 矩阵，使元素永久成为层叠上下文，
-             把内部的下拉列表困在同层卡片/标签之下（选项点不到）。清掉后落回 CSS 的 transform:none。 */
-          onComplete: function () { gsap.set(el, { clearProps: 'transform' }); }
+             把内部的下拉列表困在同层卡片/标签之下（选项点不到）。清掉后落回 CSS 的 transform:none。
+             ⚠️ 必须连 translate / rotate / scale 一起清：gsap 的 CSSPlugin 在写 transform 的同时
+             会顺手写 `translate:none; rotate:none; scale:none`，把**独立变换属性**一并关掉。
+             而滚动视差（scrub）正是靠 translate 消费 --sy 的 —— 不清掉，凡是被 gsap 揭示过的元素
+             就永远没有视差（实测 spot 到：.manifesto__line / .paths__huge 的 translate 恒为 none）。 */
+          onComplete: function () { gsap.set(el, { clearProps: 'transform,translate,rotate,scale' }); }
         });
       }); };
       // 等字体就绪再拆分/编排（避免 SplitText 断行测量不准）
@@ -660,6 +664,56 @@
       var f = floats[i], r = f.el.getBoundingClientRect();
       var c = r.top + r.height / 2 - innerHeight / 2;
       f.el.style.transform = 'translate3d(0,' + (c * f.sp).toFixed(2) + 'px,0)';
+    }
+  }
+
+  /* ---------------- 滚动驱动（scrub）：让页面"跟手" ----------------
+     sweet-tape / unseen / turionspace 身上最像"贵"的一件事：有东西随着滚动**连续**位移，
+     而不是"进视口触发一次就完事"。我站原来全站只有首屏那颗圆是连续的（--p），
+     其余 0 处 scrub —— 所以滚起来像在翻 PDF，这就是"死板"的主因之一。
+
+     实现要点（三个坑都踩过了，别再回头）：
+     ① 用**独立变换属性 translate**（不是 transform）：data-reveal / SplitText 的揭示动画
+        写的是行内 transform，两边会互相覆盖；translate 与 transform 分开合成，互不干扰。
+     ② JS 只写一个 CSS 变量 --sy，绝不直接碰 transform/translate —— 换页、gsap 收尾、
+        clearProps 都不会把 scrub 打断。
+     ③ 复用 wireScroll 的 rAF 节流（它本来就在跑），不新开常驻循环、不往 window 挂新监听；
+        换页只需重置 SCRUB 数组（DOM 被换掉后旧引用自然失效）。
+
+     为什么不直接用 ScrollTrigger：它已经和 Lenis 同步好了，但每换一页要 killAll 再重建，
+     而这里的需求只是"读一个进度写一个变量"，自己算 getBoundingClientRect 更省。 */
+  var SCRUB = [];
+  /* 每类元素的视差幅度（单位：整屏高度的倍数，正数=比页面走得快，负数=滞后）
+     幅度一律很小 —— 视差是"感觉到深度"，不是"看到东西在飘"。 */
+  var SCRUB_SPEED = {
+    'stage__type': .09, 'manifesto__line': .035, 'paths__huge': .05,
+    'curtain__big': .05, 'sec__head': .028, 'foot__word': .06,
+    'voices__stage': .022, 'poster': .035
+  };
+  function scrubSpeed(el) {
+    var own = parseFloat(el.getAttribute('data-scrub') || '');
+    if (!isNaN(own)) return own;
+    var cls = (el.className || '').toString().split(' ');
+    for (var i = 0; i < cls.length; i++) if (SCRUB_SPEED[cls[i]] != null) return SCRUB_SPEED[cls[i]];
+    return 0;
+  }
+  function initScrub() {
+    SCRUB = [];
+    if (REDUCE) return;
+    $$('.foot__word, .paths__huge, .manifesto__line, .curtain__big, .stage__type, .sec__head, .voices__stage, .poster')
+      .forEach(function (el) {
+        if (el.hasAttribute('data-float')) return;   // 老 float 通道已经在写 transform，别叠两层视差
+        var sp = scrubSpeed(el);
+        if (sp) SCRUB.push({ el: el, sp: sp });
+      });
+  }
+  function renderScrub() {
+    for (var i = 0; i < SCRUB.length; i++) {
+      var s = SCRUB[i], r = s.el.getBoundingClientRect();
+      if (!r.height) continue;
+      var c = (r.top + r.height / 2 - innerHeight / 2) / innerHeight;   // 元素中心相对视口中心，约 -1..1
+      if (c > 1.3 || c < -1.3) continue;                                // 完全出屏的不算，省掉无谓写样式
+      s.el.style.setProperty('--sy', (c * s.sp * innerHeight).toFixed(2) + 'px');
     }
   }
 
@@ -1154,6 +1208,7 @@
       requestAnimationFrame(function () {
         pending = false;
         renderFloat();
+        renderScrub();
         var g = $('[data-gallery]');
         if (g && g.__render) g.__render();
       });
@@ -1699,6 +1754,7 @@
     initReveal();
     initSplit();
     initScenes();
+    initScrub();
     initMediaWarm();
     initHeroParallax();
     initSceneParallax();
@@ -1745,6 +1801,7 @@
     bootShell();
     bootPage();
     renderFloat();
+    renderScrub();      // 先算一遍初值，否则第一屏滚动前所有 scrub 元素都在 0 位（会"跳"一下）
     document.documentElement.classList.add('js-on');
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

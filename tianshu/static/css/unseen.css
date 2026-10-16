@@ -2418,3 +2418,105 @@ a.banners__i:hover { transform: translateY(-4px); border-color: oklch(53% 0.135 
 .quote__dims { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .quote__dim { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em;
   color: var(--ink-3); border: 1px solid var(--line); border-radius: var(--r-1); padding: 3px 8px; }
+
+/* ============================================================================
+   动效手感层（2026-10-17 · 学 sweet-tape.com 与 unseen）
+   ----------------------------------------------------------------------------
+   诊断（实测数据见 _research/为什么不空-实测.md，178 站 DNA 对照）：
+     · 我站 transition 里 **20.3% 在动 color**，只有 14.9% 在动 transform；
+       标杆站是 3% / 31.5%。动颜色人眼只读成"闪一下"，不读成"动了一下"。
+     · 全站缓动**名义 12 条、实际只用 5 条**，其中 --ease-out 一条用了 46 次（占 78%）
+       → 所有东西同一个节奏，等于没有性格。
+     · 四条行列表（.p / .row / .post / .idx__row）过渡的是 **padding-left**
+       → 每帧触发布局重排再重绘，掉帧 → 手感"黏"，这是"不流畅"的物理原因。
+     · sweet-tape.com 的对照：**transition 里 0 处在动 color**，
+       招牌曲线是 cubic-bezier(.34,1.56,.64,1)（带回弹的 overshoot），
+       overflow:hidden 353 个元素（处处是"从裁剪框里滑出来"，不是淡入）。
+
+   所以这一层只做四件事：
+     ① 把曲线真正分下去（新增 --ease-back 回弹档，按下/点击类走它）
+     ② 只变色不动位的 hover，补上位移/缩放
+     ③ padding-left 过渡 → 子元素 transform 过渡（消灭逐帧重排）
+     ④ 巨字行高压紧到"块"的比例（sweet-tape 293px 配 0.73 行高）
+   ========================================================================== */
+:root {
+  /* 回弹档：数值 1.56 取自 sweet-tape.com 实测（>1 的部分就是"过冲再收回"）。
+     用在**可点击物**上 —— 按钮、卡片、标签页、圆盘贴纸一类，给人"有实体、被按住又弹回"的手感。
+     不要用在整块版面的进场（大面积过冲会晕），进场仍走 --ease-glide / --ease-out。 */
+  --ease-back: cubic-bezier(.34, 1.56, .64, 1);
+  /* 轻回弹：小件（12–34px 的图标、圆点、开关）用，幅度过大反而显得廉价 */
+  --ease-back-s: cubic-bezier(.34, 1.28, .64, 1);
+  /* 位移升降：卡片抬起、行推进这类"实体被挪动"，长尾收束最像实物 */
+  --ease-lift: cubic-bezier(.22, .9, .24, 1);
+}
+
+/* ---------- ② 只变色不动位的 hover，补位移 ---------- */
+.chip, .me-tabs button, .daypick__d, .roles__r, .faqnav a, .libclear,
+.u-search__sug-h button, .u-search__sug-i, .post__foot button, .act-sm,
+.fav-inline, .nav__live, .facts a, .p__go, .idx__go, .u-select__btn, .tag {
+  transition-property: transform, color, background-color, border-color, box-shadow, opacity;
+  transition-duration: var(--t-3);
+  transition-timing-function: var(--ease-back);
+}
+.chip:hover, .me-tabs button:hover, .daypick__d:hover, .roles__r:hover, .faqnav a:hover,
+.libclear:hover, .post__foot button:hover, .act-sm:hover, .fav-inline:hover,
+.nav__live:hover, .facts a:hover, .u-search__sug-h button:hover {
+  transform: translateY(-1.5px);
+}
+/* 按下：用最短档 + accel 曲线，做出"被摁进去"的即时感。
+   ⚠️ 全局按下反馈一律用 transform 而不是改 opacity —— opacity 是留给"进动画"的
+   （animation: ... both 的填充优先级高于普通声明，改了也不生效）。 */
+.chip:active, .me-tabs button:active, .daypick__d:active, .roles__r:active,
+.faqnav a:active, .act-sm:active, .fav-inline:active, .nav__live:active,
+.u-search__go:active, .fav-btn:active, .banners__i:active {
+  transform: translateY(0) scale(.97);
+  transition-duration: var(--t-1);
+  transition-timing-function: var(--ease-swift);
+}
+/* 卡片抬起改用 --ease-lift：原来 .5s ease-out 收尾太平，落下去没有"重量" */
+.card { transition: background .38s var(--ease), box-shadow .5s var(--ease-lift), transform .5s var(--ease-lift); }
+.banners__i { transition: transform .42s var(--ease-back), border-color .3s var(--ease); }
+.fav-btn { transition: color .3s var(--ease), background .3s var(--ease), border-color .3s var(--ease), transform .34s var(--ease-back); }
+
+/* ---------- ③ 行列表：padding-left 过渡 → 子元素 transform 过渡 ----------
+   .p / .row / .post / .idx__row 悬停时把内容右推 12–14px。
+   原来推的是 padding-left，每次变化都要整行重新排版；改成对**直接子元素**做 transform，
+   视觉几乎一致（背景渐变仍anchored在行上），但整条过渡只在合成层上跑，不再逐帧重排。 */
+.p, .row, .post, .idx__row {
+  transition: background .45s var(--ease), border-color .45s var(--ease);
+}
+/* 子元素向右推 12–14px，行的右端会超出内容盒一点 —— 裁掉，免得大屏上擦出横向滚动条。
+   ⚠️ 两个约束：
+   ① 用 clip 不用 hidden：clip 是唯一允许另一轴保持 visible 的值，
+      行底那条发丝线是 ::after{bottom:-1px}，overflow-y 若跟着变 hidden 会把线切掉。
+   ② 发帖表单 .post--form 必须排除 —— 里面有 .u-select 下拉，被祖先裁掉就"看得见点不到"。 */
+.p, .row, .idx__row, .post:not(.post--form) { overflow-x: clip; }
+.p > *, .row > *, .idx__row > * { transition: transform .5s var(--ease-lift); }
+.post > * { transition: transform .46s var(--ease-lift); }
+.p:hover, .row:hover, .idx__row:hover { padding-left: 0; }
+.p:hover > *, .row:hover > *, .idx__row:hover > * { transform: translateX(14px); }
+.post:hover { padding-left: 0; }
+.post:not(.post--form):hover > * { transform: translateX(12px); }
+/* 发帖表单是"实体块"，不是行 —— 它不推进（原来靠 padding-left 复位来抵消） */
+.post--form:hover > * { transform: none; }
+
+/* ---------- ④ 巨字：行高压到"块"的比例 ----------
+   sweet-tape 的 293px 标题配 214px 行高（0.73）—— 字读成**一块形状**而不是"几行字"。
+   我站原来的 1.0 左右是"正文行高被放大"，观感仍是文字。压到 .78 上下即可，
+   再低中文字形会互相咬到（汉字有下伸笔画，比拉丁更吃行高）。 */
+.paths__huge { line-height: .78; }
+.curtain__big { line-height: .84; }
+.foot__word { line-height: .8; }
+.stage__type .t { line-height: .88; }
+
+/* ---------- 滚动驱动（scrub）：跟手 ----------
+   JS 只往 --sy 写一个 px 值，这里用**独立变换属性 translate** 消费。
+   为什么必须用 translate 而不是 transform：gsap 的揭示动画（data-reveal / SplitText）
+   写的是行内 transform，两边会互相覆盖；translate 与 transform 是分开合成的一对，
+   互不干扰 —— 于是同一个元素既能"被揭示"，又能"跟着滚动走"。
+   ⚠️ translate 和 transform 一样会让元素成为 position:fixed 后代的包含块，
+      所以只挑"不含 fixed 子树"的展示型元素（巨字、幕头、卡片、海报）。 */
+.foot__word, .paths__huge, .manifesto__line, .curtain__big, .stage__type,
+.sec__head, .poster, .voices__stage {
+  translate: 0px var(--sy, 0px);
+}
