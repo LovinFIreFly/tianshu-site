@@ -146,12 +146,13 @@
 
   {# 图框行（学 hubtown.co.in 的底部三处微标签）：像建筑图纸的图签，
      用 10px/字距 .2em 的全大写等宽小字把页面"框"起来。
-     刻意放在文档流里而不是 fixed —— fixed 会压在正文和表单上。 #}
+     刻意放在文档流里而不是 fixed —— fixed 会压在正文和表单上。
+     ⚠️ 第三格原本是「营业 14:00 – 02:00 · 全年无休」，与谢幕段的 meta、页脚 meta
+        重复了三次 —— 用重复内容填格子只会让页面显得"空"。删掉，留两格。 #}
   <div class="wrap">
     <div class="frame">
       <span class="micro"><i class="dot"></i>甜薯剧本杀 · 约局工作室</span>
-      <span class="micro">按 <b>S</b> 随机挑一本</span>
-      <span class="micro">营业 14:00 – 02:00 · 全年无休</span>
+      <span class="micro">按 <b>S</b> 随机挑一本 · 键盘 ← → 翻页</span>
     </div>
   </div>
 

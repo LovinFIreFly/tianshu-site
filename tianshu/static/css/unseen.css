@@ -691,7 +691,14 @@ body.is-idle .stage__scene img { transform: translate3d(0, 0, 0) scale(1.08); }
 
 /* blueyard 式巨型宣言长句：单列、大字号、大量留白、左对齐，
    在"eyebrow→h2→内容"的重复节奏里插一段 Editorial 断点，专治单调。 */
-.manifesto { padding: var(--sec-y) 0; }
+/* ── 节间距去重叠（治「空隙」的主刀，2026-10-16 按《空隙地图》实测）────────────
+   原来每一节都是 `padding: var(--sec-y) 0`。相邻两节叠在一起时，上一节的
+   padding-bottom 和下一节的 padding-top 会**相加** —— 900px 视口下就是
+   76 + 76 = 152px 的纯空白，占了落地页空洞量的三分之一（实测宣言段底
+   到下一节首行正好 152px）。
+   改法：节只保留**上边距**，相邻节之间就只剩单份 76px。
+   最后一节（.curtain）保留自己的下边距，页面收尾不会贴住页脚。 */
+.manifesto { padding: var(--sec-y) 0 0; }
 .manifesto__line { font-family: var(--font-display); font-weight: 900; font-size: clamp(2rem, 5.4vw, 4.6rem); line-height: 1.05; letter-spacing: -.02em; max-width: 17ch; margin-top: 22px; }
 .manifesto__line em { font-style: normal; color: var(--accent); }
 .manifesto__note { margin-top: clamp(24px,3vh,36px); max-width: 44ch; color: var(--ink-2); font-size: clamp(1rem,1.3vw,1.14rem); }
@@ -699,7 +706,7 @@ body.is-idle .stage__scene img { transform: translate3d(0, 0, 0) scale(1.08); }
 /* ============================================================================
    幕三 · 时间轴排期（今晚组局）
    ========================================================================== */
-.night { position: relative; padding: var(--sec-y) 0; }
+.night { position: relative; padding: var(--sec-y) 0 0; }
 /* 幕三页首**不复刻幕二**：幕二是"eyebrow → h2 → kicker"竖排，幕三改成
    "巨标题在左 / 元信息挂在右侧竖线栏" —— 同一页两幕编排明显不同，节奏才不雷同（去模板感的关键一步）。 */
 .night__head { display: grid; grid-template-columns: minmax(0, 1.28fr) minmax(0, .72fr); align-items: end; gap: clamp(24px, 4vw, 62px); }
@@ -727,7 +734,10 @@ body.is-idle .stage__scene img { transform: translate3d(0, 0, 0) scale(1.08); }
 /* ============================================================================
    幕四 · 编辑式路径（四件事，非重复小节头）
    ========================================================================== */
-.paths { padding: var(--sec-y) 0; }
+.paths { padding: var(--sec-y) 0 0; }
+/* 由于节只保留上边距，页面收尾会贴住页脚图签 —— 给最后一节补回下边距。
+   谢幕（.curtain）自带下边距，排除掉避免叠成两倍。 */
+main > section:last-child:not(.curtain) { padding-bottom: var(--sec-y); }
 .paths__grid { display: grid; grid-template-columns: 1fr 1.05fr; gap: clamp(28px, 5vw, 90px); align-items: start; }
 .paths__huge { font-family: var(--font-display); font-weight: 900; font-size: clamp(4rem, 11.5vw, 9.5rem); line-height: .82; letter-spacing: -.03em; color: var(--ink-dim); position: sticky; top: 16vh; max-width: 100%; word-break: keep-all; }
 .paths__huge em { font-style: normal; color: var(--accent); }   /* 去 AI 味：巨型"件"字用砖红强调而非斜体（Gate 38a）*/
@@ -735,7 +745,9 @@ body.is-idle .stage__scene img { transform: translate3d(0, 0, 0) scale(1.08); }
 .p-list { border-top: 1px solid var(--line); }
 .p {
   position: relative; display: grid; grid-template-columns: 56px 1fr auto; gap: 20px;
-  align-items: baseline; padding: clamp(22px, 3.4vw, 40px) 0; border-bottom: 1px solid var(--line);
+  /* 行内上下 padding 原为 clamp(22px,3.4vw,40px)（1440px 取到 40px 上限 →
+     相邻两行之间 80px 纯空白，而单行内容只有 36–56px 高）。按《空隙地图》压到 24px。 */
+  align-items: baseline; padding: clamp(14px, 1.9vw, 24px) 0; border-bottom: 1px solid var(--line);
   transition: padding-left .5s var(--ease-out), background .5s;
 }
 .p::after { content: ""; position: absolute; left: 0; right: 100%; bottom: -1px; height: 2px; background: var(--accent); transition: right .6s var(--ease-out); }
@@ -750,7 +762,7 @@ body.is-idle .stage__scene img { transform: translate3d(0, 0, 0) scale(1.08); }
 /* ============================================================================
    幕五 · 引言（大字轮播）
    ========================================================================== */
-.voices { padding: var(--sec-y) 0; border-top: 1px solid var(--line); }
+.voices { padding: var(--sec-y) 0 0; border-top: 1px solid var(--line); }
 .voices__stage { position: relative; min-height: clamp(200px, 26vh, 300px); margin-top: clamp(26px, 4vh, 48px); }
 .voices__q {
   position: absolute; inset: 0; opacity: 0; transform: translateY(22px);
@@ -796,7 +808,7 @@ body.is-idle .stage__scene img { transform: translate3d(0, 0, 0) scale(1.08); }
    通用小节（内页沿用）
    ========================================================================== */
 /* #66 整站页底留白过大：底部单独收一档，顶/底呼吸不均更自然 */
-.sec { padding: var(--sec-y) 0 clamp(72px, 10vh, 140px); }
+.sec { padding: var(--sec-y) 0 0; }
 /* 非对称页首（学 upforward 的 7:5 + 基线错位、unseen 的 Selected Work）：
    左右不等分才有张力，"两栏各半、都贴底"是最像模板的那种对称。 */
 .sec__head {
@@ -817,7 +829,8 @@ body.is-idle .stage__scene img { transform: translate3d(0, 0, 0) scale(1.08); }
 .idx { border-top: 1px solid var(--line); }
 .idx__row {
   display: grid; grid-template-columns: 64px 1.1fr 1.4fr auto; gap: clamp(16px,3vw,40px);
-  align-items: center; padding: clamp(22px,3.4vw,40px) 0; border-bottom: 1px solid var(--line);
+  /* 同 .p：行内 padding 从 40px 压到 24px（实测单行高 137px 里只有 ~56px 是内容） */
+  align-items: center; padding: clamp(14px, 1.9vw, 24px) 0; border-bottom: 1px solid var(--line);
   transition: padding-left .5s var(--ease), background .5s;
 }
 .idx__row:hover { padding-left: 14px; background: linear-gradient(90deg, var(--paper-2), transparent 60%); }
@@ -946,7 +959,10 @@ select.chip { border: 1px solid var(--line); border-radius: 2px; background: var
 .quote__av { width: 30px; height: 30px; border-radius: 50%; background: var(--paper-3); border: 1px solid var(--line); display: grid; place-items: center; font-size: 13px; font-family: var(--font-display); }
 
 /* ---------- footer ---------- */
-.foot { background: var(--dark); color: var(--dark-2-ink); padding: clamp(64px,10vh,120px) 0 clamp(40px,6vh,64px); }
+/* 上边距从 clamp(64px,10vh,120px) 收到 clamp(36px,5vh,64px)：
+   《空隙地图》实测每页在「图签行 → 页脚大字」之间都有 ~100px 纯空白。
+   图签行本身已经有上发丝线做分隔，页脚再留 90px 顶空间是重复的一次留白。 */
+.foot { background: var(--dark); color: var(--dark-2-ink); padding: clamp(36px,5vh,64px) 0 clamp(40px,6vh,64px); }
 .foot a { color: var(--dark-2-ink); }
 /* 页脚改排版式 colophon（打破 Gate 43 的"4 链接列 + 社交 + 版权"标准指纹）：
    巨型衬线字标 + 单行横向链接 + 等宽元信息行，克制而有签名感。 */
@@ -1606,6 +1622,19 @@ html.has-media .boot { background: #070605; }
   display: flex; justify-content: space-between; align-items: baseline; gap: 18px; flex-wrap: wrap;
   padding: 18px 0 20px; border-top: 1px solid var(--line);
 }
+/* 页面以暗场（.curtain）收尾时，图签行也跟着走暗底。
+   否则会出现「暗块 → 亮条 → 暗块」的三明治 —— 那看着像 bug，不像设计。
+   ⚠️ 不能只给 .frame 上背景：它在 .wrap 里（max-width 1240px），1440 视口下两侧
+      会漏出两道纸色边。用伪元素做**全幅出血**（100vw + 负 margin 抵消居中）。
+   （:has() 需要 Chrome 105+ / Safari 15.4+） */
+body:has(.curtain) .frame { position: relative; border-top: 0; }
+body:has(.curtain) .frame::before {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 100vw;
+  margin-left: -50vw; background: var(--dark); z-index: -1;
+}
+body:has(.curtain) .frame .micro { color: var(--dark-2-ink); }
+body:has(.curtain) .frame .micro b { color: var(--accent-2); }
+body:has(.curtain) .frame .micro .dot { border-color: var(--dark-2-ink); }
 
 /* ---------- 点击落点涟漪（学 nova：点下去必须有反馈）----------
    纯 DOM 一个 span，不动 WebGL 场 —— 成本一个元素，反馈却很实在。 */
