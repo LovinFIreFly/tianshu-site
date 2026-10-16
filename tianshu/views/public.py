@@ -33,9 +33,35 @@ def _mark_entered():
 
 
 def _welcome_ctx():
-    """欢迎页底部那行小字：上架几部本、今天几场"""
-    on_sale = [s for s in db.rows('scripts') if s.get('onSale') is not False]
-    return {'meta': {'scripts': len(on_sale), 'today': len(business.today_sessions())}}
+    """欢迎页（未登录落地页）需要的真数据。
+
+    ⚠️ 这一页以前只给两个数字（在演几部、今天几场），而正文里那两条「玩家短评」
+       是**写死的假内容**（"小林 · 情感本爱好者" / "阿哲 · 硬核玩家" + 编的台词）。
+       门店落地页上编客户评价是硬伤 —— 这里改成一律取真数据：真剧本、真评价、
+       真接待人次。没有真评价时模板那一段直接不渲染（**宁可不显示，也不编**）。
+    """
+    scripts = db.rows('scripts')
+    on_sale = [s for s in scripts if s.get('onSale') is not False]
+    # 本期在演：优先"热门/上新"，没有就按 id 倒序取最新的几部
+    feat = [s for s in on_sale if s.get('hot') or s.get('isNew')][:4] \
+        or sorted(on_sale, key=lambda s: -(s.get('id') or 0))[:4]
+    # 累计接待人次：与首页同一口径（含今天，status 为已到场/已完成）
+    day_end = business.midnight() + 86400000
+    served = sum(int(b.get('players') or 0) for b in db.rows('bookings')
+                 if b.get('status') in ('arrived', 'done') and (b.get('ts') or 0) < day_end)
+    # 真实玩家短评：只取带文字的最近 2 条（reviews_of 已带昵称/头像，按时间倒序）
+    titles = {str(s.get('id')): s.get('title', '') for s in scripts}
+    reviews = []
+    for r in business.reviews_of(limit=20):
+        if not r.get('text'):
+            continue
+        reviews.append({'nick': r.get('nick') or '一位玩家', 'avatar': r.get('avatar') or '',
+                        'title': titles.get(str(r.get('sid')) or '', ''),
+                        'text': r.get('text', ''), 'stars': r.get('rating') or 0})
+        if len(reviews) >= 2:
+            break
+    return {'meta': {'scripts': len(on_sale), 'today': len(business.today_sessions())},
+            'featured': feat, 'served': served, 'reviews': reviews}
 
 
 @bp.get('/welcome')
@@ -73,10 +99,18 @@ def home():
     if request.args.get('browse'):
         session['entered'] = True
     scripts = db.rows('scripts')
+    on_sale = [s for s in scripts if s.get('onSale') is not False]
     # 首页先推"上架 + 标了热门/上新"的，没有就按价格从低到高摆几个
-    feat = [s for s in scripts if s.get('onSale') is not False and (s.get('hot') or s.get('isNew'))][:4]
+    # ⚠️ 取 8 部不是 4 部：幕二是**钉住横滚海报廊**，横滚距离 = 轨道宽 − 视口宽。
+    #    实测 4 张海报时横滚距离只有 87px —— 花了 900px 的视口钉住，却几乎没东西可横滚，
+    #    海报廊结束到下一幕之间还留了一道 232px 的空（空隙地图实测）。
+    #    8 张 → 约 1600px 的真实横滚旅程，机制才配得上它占的那一屏。
+    feat = [s for s in on_sale if (s.get('hot') or s.get('isNew'))][:8]
     if not feat:
-        feat = [s for s in scripts if s.get('onSale') is not False][:4]
+        feat = on_sale[:8]
+    # 在演总数：模板里多处要显示"本本墙有几部"。以前直接写 scripts|length，
+    # 而 scripts 传的是 feat（精选），于是首页一直把 28 部说成 4 部 —— 数字对不上是硬伤。
+    scripts_total = len(on_sale)
     st = business.stats()
     rating = {k: v.get('rating') for k, v in st['byScript'].items()}
     # 累计场次：到今天为止一共排了多少场（含今天的）—— 首页对外不露营业额，就露这个
@@ -110,12 +144,11 @@ def home():
     # 热玩本：stats['hot'] 已是 [(sid, {plays...})] 按 plays 降序 top6，转回剧本对象
     scripts_by_id = {str(s.get('id')): s for s in scripts}
     hotScripts = [scripts_by_id[sid] for sid, _ in st['hot'] if sid in scripts_by_id]
-    # 新本首车：上架剧本按 id 倒序 top6
-    on_sale = [s for s in scripts if s.get('onSale') is not False]
+    # 新本首车：上架剧本按 id 倒序 top6（on_sale 上面已经算过，直接复用）
     newScripts = sorted(on_sale, key=lambda s: -(s.get('id') or 0))[:6]
     # 本本宇宙球：上架剧本前 8 个（按热度/上新），给球画廊足够的"星球"
     sphere_scripts = sorted(on_sale, key=lambda s: -(int(s.get('hot') or 0) + (10 if s.get('isNew') else 0)))[:8]
-    return render_template('home.html', scripts=feat, stat=st, rating=rating,
+    return render_template('home.html', scripts=feat, scripts_total=scripts_total, stat=st, rating=rating,
                            banners=business.banners(), served=served,
                            sessions=sessions, cars=business.car_pool()[:6],
                            dm_duty=dm_duty, reviews=reviews, boss_pick=boss_pick,

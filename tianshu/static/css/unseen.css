@@ -677,7 +677,7 @@ body.is-idle .stage__scene img { transform: translate3d(0, 0, 0) scale(1.08); }
    一张缩略图黏在光标旁、带轻微惯性，专门打破"一排静态卡片"的模板感。
    外层 .gal-thumb 只负责 JS 定位（translate），内层 .gal-thumb__in 负责缩放/淡入，
    二者分层才不会互相覆盖 transform。没有真封面就用首字大字占位。 */
-.gal-thumb { position: fixed; top: 0; left: 0; z-index: 180; pointer-events: none; will-change: transform; }
+.gal-thumb { position: fixed; top: 0; left: 0; z-index: 180; pointer-events: none; will-change: transform; transition: opacity .34s var(--ease-out); }
 .gal-thumb__in {
   width: 190px; height: 244px; border-radius: 3px; overflow: hidden;
   transform: translate(-50%,-50%) scale(.82); opacity: 0;
@@ -758,6 +758,9 @@ main > section:last-child:not(.curtain) { padding-bottom: var(--sec-y); }
 .p__d { grid-column: 2 / 3; color: var(--ink-2); font-size: .96rem; max-width: 48ch; margin-top: 8px; }
 .p__go { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .14em; color: var(--ink-3); white-space: nowrap; align-self: center; transition: color .4s; }
 .p:hover .p__go { color: var(--amber-ink); }
+/* 老板今日推荐行：复用 .p 的悬停推进与发丝线，但标题不吃路径四件事那种巨号
+   （那档字尺是给「四件事」的短标签定的，长标题会折行很难看）。 */
+.p--pick .p__t { font-size: clamp(1.15rem, 1.7vw, 1.45rem); }
 
 /* ============================================================================
    幕五 · 引言（大字轮播）
@@ -796,7 +799,7 @@ main > section:last-child:not(.curtain) { padding-bottom: var(--sec-y); }
 /* ============================================================================
    左侧幕次导轨（Acts rail）
    ========================================================================== */
-.rail { position: fixed; left: 22px; top: 50%; transform: translateY(-50%); z-index: 55; display: grid; gap: 16px; }
+.rail { position: fixed; left: 22px; top: 50%; transform: translateY(-50%); z-index: 55; display: grid; gap: 16px; transition: opacity .34s var(--ease-out); }
 .rail a { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .16em; color: var(--ink-3); transition: color .4s; }
 .rail a .d { width: 7px; height: 7px; border-radius: 50%; border: 1px solid var(--ink-3); transition: .4s; }
 .rail a.on { color: var(--lit); }
@@ -1249,10 +1252,21 @@ html.js-on [data-scene].in { opacity: 1; transform: none; filter: blur(0); }
    ========================================================================== */
 
 /* ---------- 场景位移：离场向上、入场从下往上 ---------- */
-main#main {
+/* ⚠️ will-change 只能挂在转场的两个类上，不能常驻在 main#main 上：
+   will-change: transform 会让 main 变成**固定定位后代的包含块** ——
+   main 高 5000+px，于是 .rail（top:50%）被解析成"文档中部"，整页滚到哪都看不见
+   （2026-10-16 实测：rail 落在 y≈2610，视口只有 900 高，幕次导航全程不可见）。
+   .gal-thumb 同一条规则下一起中招。转场时 main 本来就会被赋 transform，
+   浏览器自己就会提层，这一点点提前量不值得拿整页导航去换。 */
+main.is-out,
+main.is-in {
   will-change: transform, opacity;
-  /* 场景只在转场期间才被赋 transform，平时 transform 为 none，不干扰 position:sticky 的后代 */
 }
+/* 转场那 1.3s 里 main 带 transform，fixed 后代仍会改以 main 为包含块 ——
+   这两层在转场里本来也被液面和场景盖住，直接淡出，动画结束（transform:none）再回来，
+   避免"从文档中间跳回视口左侧"的闪跳。 */
+main.is-out .rail, main.is-in .rail,
+main.is-out .gal-thumb, main.is-in .gal-thumb { opacity: 0; }
 /* ⚠️ 离场/入场故意用 animation 而不是 transition，这不是风格选择，是必须：
    transition 需要一个"上一帧已画出的计算样式"当起点；而换页时新场景是刚 replaceChild
    插进来的节点，浏览器往往还没为它画过任何一帧就被加上了终点类 —— 位移直接被跳过，

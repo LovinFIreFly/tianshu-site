@@ -100,12 +100,46 @@
   </div>
 </section>
 
+{# 本期在演：门店落地页必须回答"你卖什么"。以前这一页只有情绪词跑马灯，
+   **一部真实剧目都不露** —— 客人得先点进本本墙才知道店里有什么。
+   数据来自 db.rows('scripts')，复用站内已有的 .rows/.row 列表语言（不新造组件）。 #}
+{% if featured %}
+<section class="sec">
+  <div class="wrap">
+    <div class="sec__head">
+      <div>
+        <div class="sec__frame" aria-hidden="true">
+          <span><i class="sq">▪</i>002</span>
+          <span class="sf__line"></span>
+          <span class="sf__note">本期在演 · <b>NOW PLAYING</b></span>
+        </div>
+        <h2 class="h3" data-reveal data-d="1" style="margin-top:14px">这几部，正在上演。</h2>
+      </div>
+      <a class="link-underline" href="{{ url_for('public.scripts') }}" data-reveal data-d="1">全部 {{ meta.scripts if meta else 0 }} 部 →</a>
+    </div>
+    <div class="rows" style="margin-top:22px">
+      {% for s in featured %}
+      <a class="row" href="{{ url_for('public.script_detail', sid=s.id) }}" data-reveal data-d="{{ loop.index0 % 4 }}" data-cursor="看这个本">
+        <span class="row__when">{% if s.diff %}D{{ s.diff }}{% else %}—{% endif %}</span>
+        <span>
+          <span class="row__title">{{ s.title }}</span><br>
+          <span class="row__sub">{{ (s.tags or [])[:3]|join(' · ') }}{% if s.players %} · {{ s.players }} 人{% endif %}</span>
+        </span>
+        <span class="row__pill">¥{{ (s.price or 0)|float|round|int }}</span>
+        <span class="idx__go">→</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
 {# 进门能做什么：四件事，编辑式编号列表（非重复小节头）。data-accent=amber 给这一节换暖琥珀强调，破单一砖红 #}
 <section class="paths" data-accent="amber">
   <div class="wrap paths__grid">
     <div>
       <div class="sec__frame" aria-hidden="true">
-        <span><i class="sq">▪</i>002</span>
+        <span><i class="sq">▪</i>003</span>
         <span class="sf__line"></span>
         <span class="sf__note">进门能做什么 · <b>FOUR WAYS IN</b></span>
       </div>
@@ -144,11 +178,13 @@
 {# 数据条：今天的可信数字，给落地页一点"真东西"的厚度 #}
 <section class="sec" style="padding-top:0">
   <div class="wrap">
+    {# 数据条：四个可核对的真数字。把"累计接待人次"换进来（对外露这个，不露营业额），
+       去掉「全年无休 · 随时推门」—— 那条信息量最低，且页脚已经说过一次。 #}
     <div class="stats" data-reveal>
       <div><b>{{ meta.scripts if meta else 0 }}<i> 部</i></b><span>在演剧目</span></div>
       <div><b>{{ meta.today if meta else 0 }}<i> 场</i></b><span>今晚已约</span></div>
+      <div><b>{{ served or 0 }}<i> 人次</i></b><span>累计接待</span></div>
       <div><b>14:00<i>–</i>02:00</b><span>营业时段</span></div>
-      <div><b>全年<i> 无休</i></b><span>随时推门</span></div>
     </div>
   </div>
 </section>
@@ -159,7 +195,7 @@
     <div class="sec__head">
       <div>
         <div class="sec__frame" aria-hidden="true">
-          <span><i class="sq">▪</i>003</span>
+          <span><i class="sq">▪</i>004</span>
           <span class="sf__line"></span>
           <span class="sf__note">怎么约 · <b>HOW IT WORKS</b></span>
         </div>
@@ -190,26 +226,32 @@
   </div>
 </section>
 
-{# 玩家之声：静态两句，给页面一点"真人"温度 #}
+{# 玩家之声：**必须是真评价**。
+   这一块原来是写死的假内容 —— 「小林 · 情感本爱好者」「阿哲 · 硬核玩家」加两条编的
+   台词。门店落地页上编客户评价是硬伤，已改成从 business.reviews_of() 取真评价。
+   没有带文字的真评价时整段不渲染 —— **宁可不显示，也不编**。 #}
+{% if reviews %}
 <section class="sec">
   <div class="wrap">
     <div class="sec__frame" aria-hidden="true">
-      <span><i class="sq">▪</i>004</span>
+      <span><i class="sq">▪</i>005</span>
       <span class="sf__line"></span>
       <span class="sf__note">玩家之声 · <b>VOICES</b></span>
     </div>
     <div class="quotes" data-reveal data-d="1" style="margin-top:24px">
+      {% for r in reviews %}
       <blockquote class="quote">
-        <p class="quote__text">"本来只是想凑个周末，结果一桌人从晚上八点聊到凌晨两点，散场了还舍不得走。"</p>
-        <div class="quote__by"><span class="quote__av">玩</span>小林 · 情感本爱好者</div>
+        <p class="quote__text">“{{ r.text }}”</p>
+        <div class="quote__by">
+          <span class="quote__av">{{ (r.nick or '玩')[:1] }}</span>
+          {{ r.nick }}{% if r.title %} · 《{{ r.title }}》{% endif %}{% if r.stars %} · {{ '★' * r.stars }}{% endif %}
+        </div>
       </blockquote>
-      <blockquote class="quote">
-        <p class="quote__text">"拼车这个功能救了我这种社恐 —— 不用自己拉人，系统就把缺的位补上了。"</p>
-        <div class="quote__by"><span class="quote__av">玩</span>阿哲 · 硬核玩家</div>
-      </blockquote>
+      {% endfor %}
     </div>
   </div>
 </section>
+{% endif %}
 
 {# 谢幕 CTA：推门进来 #}
 <section class="curtain">

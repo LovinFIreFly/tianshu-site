@@ -11,7 +11,8 @@
   <a href="#a2"><span class="d"></span><span class="lb">幕二 · 剧目</span></a>
   <a href="#a3"><span class="d"></span><span class="lb">幕三 · 今晚</span></a>
   <a href="#a4"><span class="d"></span><span class="lb">幕四 · 路径</span></a>
-  <a href="#a5"><span class="d"></span><span class="lb">幕五 · 声音</span></a>
+  <a href="#a5"><span class="d"></span><span class="lb">幕五 · 榜单</span></a>
+  <a href="#a6"><span class="d"></span><span class="lb">幕六 · 声音</span></a>
 </nav>
 
 <!-- 幕一 · 光缝 -->
@@ -62,7 +63,7 @@
 
     <div class="stage__foot">
       <div class="stage__acts" data-reveal data-d="3">
-        <a class="act" href="{{ url_for('public.scripts') }}" data-cursor="入场"><span class="no">01</span>本本墙<span class="ct">{{ scripts|length }}</span></a>
+        <a class="act" href="{{ url_for('public.scripts') }}" data-cursor="入场"><span class="no">01</span>本本墙<span class="ct">{{ scripts_total }}</span></a>
         <a class="act" href="{{ url_for('public.car') }}" data-cursor="入场"><span class="no">02</span>拼车<span class="ct">{{ cars|length }}</span></a>
         <a class="act" href="{{ url_for('public.comm') }}" data-cursor="入场"><span class="no">03</span>唠嗑</a>
         <a class="act" href="{{ url_for('public.group') }}" data-cursor="入场"><span class="no">04</span>组局<span class="ct">{{ sessions|length }}</span></a>
@@ -75,7 +76,7 @@
        同样刻意不用 data-reveal —— 它在 ScrollTrigger 触发线以下会一直停在隐藏态。 #}
     <div class="stage__cap">
       <span class="cap__i"><i class="sq" aria-hidden="true">▪</i>001 今晚的场</span>
-      <span class="cap__tag"><i class="sq" aria-hidden="true">▪</i>在演 {{ scripts|length }} 部 · 今日 {{ sessions|length }} 场</span>
+      <span class="cap__tag"><i class="sq" aria-hidden="true">▪</i>在演 {{ scripts_total }} 部 · 今日 {{ sessions|length }} 场</span>
       <span class="cap__end">
         <i class="sq" aria-hidden="true">▪</i>约局工作室 · 甜薯剧本杀<br>
         <span class="dim">挑本 · 拼车 · 组局 · 唠嗑 —— 一条线索串到底</span>
@@ -122,7 +123,7 @@
       </div>
       {# 键盘/按钮替代拖拽（WCAG 2.5.7）：拖拽不再是唯一的浏览方式 #}
       <div class="gallery__side" data-reveal data-d="2">
-        <span class="gallery__hint">拖拽 / 滚动 / ← → 全部 {{ scripts|length }} 部</span>
+        <span class="gallery__hint">拖拽 / 滚动 / ← → 在演 {{ scripts_total }} 部</span>
         <div class="gallery__nav" role="group" aria-label="切换剧目">
           <button type="button" data-gal-prev aria-label="上一部">←</button>
           <button type="button" data-gal-next aria-label="下一部">→</button>
@@ -195,7 +196,7 @@
       <a class="p" href="{{ url_for('public.scripts') }}" data-reveal data-cursor="入场">
         <span class="p__no">01</span>
         <span class="p__t">本本墙</span>
-        <span class="p__go">{{ scripts|length }} 部 →</span>
+        <span class="p__go">{{ scripts_total }} 部 →</span>
         <span class="p__d">在演剧目一墙摆开。按情绪、按难度、按人数挑，热门与新本永远在最前。</span>
       </a>
       <a class="p" href="{{ url_for('public.car') }}" data-reveal data-d="1" data-cursor="入场">
@@ -220,13 +221,96 @@
   </div>
 </section>
 
-<!-- 幕五 · 声音 -->
+<!-- 幕五 · 榜与场（热玩本 / 新本首车 / 今日值班 DM）
+     ── 这一屏把 home() 每次都在算、却从未渲染的 6 组数据用起来：
+        hotScripts / newScripts / dm_duty / served / stat / boss_pick
+        （served 还要遍历一遍 bookings，不摆出来就是白算）。
+        台账实测：参考站 DOM 节点中位约 1050，我站首页从 438 涨到 570（+8 张海报
+        +这一屏）—— "空"的另一半是内容太薄，光压间距补不回来，得往里加真信息。 -->
+{% if hotScripts or newScripts or dm_duty %}
+<section class="sec" id="a5" data-scene>
+  <div class="wrap">
+    <div class="sec__frame" aria-hidden="true">
+      <span><i class="sq">▪</i>005</span>
+      <span class="sf__line"></span>
+      <span class="sf__note">榜与场 · <b>LEADERBOARD</b></span>
+    </div>
+    <div class="infopair">
+      <div data-reveal>
+        <div class="sec__frame" aria-hidden="true">
+          <span><i class="sq">▪</i>001</span>
+          <span class="sf__line"></span>
+          <span class="sf__note">热玩本 · <b>MOST PLAYED</b></span>
+        </div>
+        {% if hotScripts %}
+        <ul class="facts">
+          {% for s in hotScripts %}
+          {# byScript 的键是字符串 sid（stats() 里 str(b.get('sid'))），必须 |string 才能取到 #}
+          {% set bs = stat.byScript.get(s.id|string) or {} %}
+          <li>
+            <a href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.title }}</a>
+            <span class="facts__meta">{{ bs.get('plays', 0) }} 场{% if rating.get(s.id|string) %} · ★{{ rating.get(s.id|string) }}{% endif %}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="note">场次记录还空着 —— 第一场由你来开。</p>
+        {% endif %}
+      </div>
+      <div data-reveal data-d="1">
+        <div class="sec__frame" aria-hidden="true">
+          <span><i class="sq">▪</i>002</span>
+          <span class="sf__line"></span>
+          <span class="sf__note">新本首车 · <b>FRESH IN</b></span>
+        </div>
+        {% if newScripts %}
+        <ul class="facts">
+          {% for s in newScripts %}
+          <li>
+            <a href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.title }}</a>
+            <span class="facts__meta">{% if s.players %}{{ s.players }} · {% endif %}¥{{ s.price or 0 }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="note">暂时没有新上架的本。</p>
+        {% endif %}
+      </div>
+    </div>
+
+    {# 数字带：门店的"存量事实"。台账实测我站数字类信息量只有参考站三成。 #}
+    <div class="stats" data-reveal data-d="2">
+      <div><b>{{ stat.plays }}<i> 场</i></b><span>累计开局</span></div>
+      <div><b>{{ served }}<i> 人次</i></b><span>累计接待</span></div>
+      <div><b>{% if dm_duty %}{{ dm_duty|length }}<i> 位</i>{% else %}—{% endif %}</b><span>今日值班 DM</span></div>
+    </div>
+
+    {% if dm_duty %}
+    <ul class="facts facts--inline" data-reveal data-d="3">
+      {% for d in dm_duty %}<li>{{ d }}</li>{% endfor %}
+    </ul>
+    <p class="note" data-reveal data-d="3">今日在场带本的司仪。约局时可指定其中一位，指定费用与规则见组局页。</p>
+    {% endif %}
+
+    {% if boss_pick %}
+    <a class="p p--pick" href="{{ url_for('public.script_detail', sid=boss_pick.id) }}" data-reveal data-d="4" data-cursor="看这个本">
+      <span class="p__no">★</span>
+      <span class="p__t">老板今日推荐 · {{ boss_pick.title }}</span>
+      <span class="p__go">¥{{ boss_pick.price or 0 }} →</span>
+      <span class="p__d">{{ boss_pick.desc or '挑一本，替别人活一晚。' }}</span>
+    </a>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+<!-- 幕六 · 声音 -->
 {% if reviews %}
-<section class="voices" id="a5" data-voices data-scene>
+<section class="voices" id="a6" data-voices data-scene>
   {# 玩家之声：cosmos.so 的深度模糊墙做氛围底 #}
   <div class="depthwall" data-depthwall aria-hidden="true"></div>
   <div class="wrap">
-    <span class="eyebrow" data-reveal><b>S.04</b> 玩家之声 · Voices</span>
+    <span class="eyebrow" data-reveal><b>S.06</b> 玩家之声 · Voices</span>
     <div class="voices__stage">
       {% for r in reviews[:3] %}
       <blockquote class="voices__q{% if loop.first %} on{% endif %}" data-voice="{{ loop.index0 }}">
