@@ -261,11 +261,15 @@
           <span class="sf__note">热玩本 · <b>MOST PLAYED</b></span>
         </div>
         {% if hotScripts %}
-        <ul class="facts">
+        {# 加封面缩略图：220 站实测里我站最大的结构性短板就是"媒体用量"
+           （参考站中位 8+ 个媒体元素，我站首页原来只有 1 张 hero）。
+           剧本封面本来就有（28/28 全覆盖），没理由只在海报廊露一次。 #}
+        <ul class="facts facts--pic">
           {% for s in hotScripts %}
           {# byScript 的键是字符串 sid（stats() 里 str(b.get('sid'))），必须 |string 才能取到 #}
           {% set bs = stat.byScript.get(s.id|string) or {} %}
           <li>
+            {% if s.cover or s.img %}<img class="facts__pic" src="{{ s.cover or s.img }}" alt="" loading="lazy" decoding="async">{% else %}<span class="facts__pic facts__pic--txt">{{ (s.title or '本')[:1] }}</span>{% endif %}
             <a href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.title }}</a>
             <span class="facts__meta">{{ bs.get('plays', 0) }} 场{% if rating.get(s.id|string) %} · ★{{ rating.get(s.id|string) }}{% endif %}</span>
           </li>
@@ -282,9 +286,10 @@
           <span class="sf__note">新本首车 · <b>FRESH IN</b></span>
         </div>
         {% if newScripts %}
-        <ul class="facts">
+        <ul class="facts facts--pic">
           {% for s in newScripts %}
           <li>
+            {% if s.cover or s.img %}<img class="facts__pic" src="{{ s.cover or s.img }}" alt="" loading="lazy" decoding="async">{% else %}<span class="facts__pic facts__pic--txt">{{ (s.title or '本')[:1] }}</span>{% endif %}
             <a href="{{ url_for('public.script_detail', sid=s.id) }}">{{ s.title }}</a>
             <span class="facts__meta">{% if s.players %}{{ s.players }} · {% endif %}¥{{ s.price or 0 }}</span>
           </li>

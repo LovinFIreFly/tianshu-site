@@ -2296,3 +2296,15 @@ a.banners__i:hover { transform: translateY(-4px); border-color: oklch(53% 0.135 
 @media (prefers-reduced-motion: reduce) {
   .to-top.show, .banners__e { animation: none; }
 }
+
+/* 事实清单加封面缩略图（.facts--pic）：220 站实测里我站最大的结构性短板是"媒体用量"
+   —— 参考站中位 8+ 个媒体元素，我站首页原来只有 1 张 hero。
+   剧本封面本来就有（28/28 全覆盖），没理由只在海报廊露一次。
+   ⚠️ 只挂在 .facts--pic 上：/me、/group 里的纯文字 facts 清单不受影响。 */
+.facts--pic li { align-items: center; gap: 12px; }
+.facts--pic .facts__pic { flex: none; width: 40px; height: 40px; border-radius: var(--r-1);
+  object-fit: cover; border: 1px solid var(--line); background: var(--paper-3); }
+.facts--pic .facts__pic--txt { display: grid; place-items: center; font-family: var(--font-display);
+  font-weight: 900; font-size: 1.05rem; color: var(--ink-3); }
+/* 标题吃掉弹性空间，meta 贴右 —— 和原来的 space-between 视觉一致 */
+.facts--pic li > a { margin-right: auto; }
