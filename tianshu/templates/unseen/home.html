@@ -204,12 +204,16 @@
       </div>
       <div class="paths__huge" data-float="-0.06">四<br><em>件</em>事</div>
       <p class="paths__note" data-reveal>怎么约，都在这儿。从挑本到散场，一条线索串到底。</p>
-      <ul class="facts" data-reveal data-d="1">
-        <li><span>定金锁位</span><span class="facts__meta">¥{{ (settings.carDeposit or 0)|float|round|int }} · 玩完原路退回</span></li>
-        <li><span>随时退</span><span class="facts__meta">开场前 {{ (settings.freeCancelHours or 24)|round|int }} 小时以上</span></li>
-        <li><span>小客服微信</span><span class="facts__meta">{{ settings.serviceWechat or '见首页' }}</span></li>
-        <li><span>邀请朋友</span><span class="facts__meta">各得 ¥{{ (settings.inviteCoupon or 0)|float|round|int }} 抵扣券</span></li>
-      </ul>
+      {# C3：这一列原来为了填满右侧 4 行的高格子，硬塞了 4 行 label/value 文字
+         （定金/退订/客服/邀请，和 /faq、/car 重复）—— 典型的"用文字填空"。
+         现在改成「编号标签」：每格一个 01–04 的大号幽灵数字当图形，文字退成配角。
+         填空方式从"再加一行字"变成"加一个图形符号"（0 素材）。 #}
+      <ol class="stamps" data-reveal data-d="1">
+        <li><b aria-hidden="true">01</b><span>定金锁位</span><em>¥{{ (settings.carDeposit or 0)|float|round|int }} · 玩完原路退回</em></li>
+        <li><b aria-hidden="true">02</b><span>随时退</span><em>开场前 {{ (settings.freeCancelHours or 24)|round|int }} 小时以上</em></li>
+        <li><b aria-hidden="true">03</b><span>小客服微信</span><em>{{ settings.serviceWechat or '见首页' }}</em></li>
+        <li><b aria-hidden="true">04</b><span>邀请朋友</span><em>各得 ¥{{ (settings.inviteCoupon or 0)|float|round|int }} 抵扣券</em></li>
+      </ol>
       {% if settings.notice %}
       <p class="note" data-reveal data-d="2" style="margin-top:16px;padding-left:12px;border-left:2px solid var(--accent)">{{ settings.notice }}</p>
       {% endif %}

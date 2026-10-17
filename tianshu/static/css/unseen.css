@@ -2656,3 +2656,46 @@ a.banners__i:hover { transform: translateY(-4px); border-color: oklch(53% 0.135 
    ⚠️ JS 那边算行程用的是 track.scrollWidth / clientWidth（见 initGallery），
       不认 padding，所以去掉内边距不会让横滚行程算错。 */
 .gallery__track { padding-inline: 0; }
+
+/* ============================================================================
+   C3 · 「编号标签」：把装饰性键值对换成 01–04 的图形化编号（2026-10-17）
+   ----------------------------------------------------------------------------
+   幕四左列原来为了填满右侧 4 行的高格子，硬塞了 4 行 label/value 文字
+   （定金 / 退订 / 客服 / 邀请，和 /faq、/car 重复）—— 典型的"用文字填空"。
+   现在改成 2×2 的编号格：大号幽灵数字当图形（01–04），文字退成配角。
+   ⇒ 填空的方式从"再加一行字"变成"加一个图形符号"（0 素材）。
+
+   ⚠️ 幽灵数字是**真实 DOM 文本**（不是 ::before）：空隙地图只遍历 body *，
+      伪元素撑起来的空间会被判成空洞。
+   ⚠️ 不直接改 .facts —— 它被 comm / group / me / script / car_detail 共用，
+      改 base 会波及那些页。这里另起 .stamps。
+   ========================================================================== */
+.stamps {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+  background: var(--line-2); border: 1px solid var(--line);
+}
+.stamps li {
+  position: relative; display: grid; gap: 5px; align-content: start;
+  padding: 15px 16px 16px; background: var(--paper);
+  transition: background .4s var(--ease-out);
+}
+.stamps li:hover { background: var(--paper-2); }
+.stamps b {
+  position: absolute; right: 10px; top: 3px; z-index: 0;
+  font-family: var(--font-display); font-weight: 900; font-size: 2.7rem; line-height: 1;
+  letter-spacing: -.05em; color: var(--ink); opacity: .09;
+  pointer-events: none; -webkit-user-select: none; user-select: none;
+}
+.stamps span { position: relative; z-index: 1; font-family: var(--font-display); font-size: 1.02rem; line-height: 1.2; }
+.stamps em {
+  position: relative; z-index: 1; font-style: normal;
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .05em;
+  line-height: 1.5; color: var(--ink-3);
+}
+@media (max-width: 520px) { .stamps { grid-template-columns: 1fr; } }
+
+/* C3 · 关于 .stats 数字：试过放大成"数字块"，但 welcome 的「14:00–02:00」这一格
+   在 4 列布局里内容宽只有 ~222px，而这串时间在 46px 下要 ~255px —— 任何放大都会把它
+   折成两三行（实测 2.9rem 仍折）。原来 2.5rem 已是这格的上限，故**保持原样**，不覆盖。
+   教训：数字放大要按"最长那个值"倒推，不能只看短数字（28 / 0 / 119）。 */
