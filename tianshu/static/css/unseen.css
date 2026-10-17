@@ -2612,3 +2612,47 @@ a.banners__i:hover { transform: translateY(-4px); border-color: oklch(53% 0.135 
 @media (prefers-reduced-motion: reduce) {
   .curtain__glow { animation: none; }
 }
+
+/* ============================================================================
+   C2 · 出血（2026-10-17）：让内容真正跑到屏幕两侧
+   ----------------------------------------------------------------------------
+   诊断：全站所有内容都关在 `.wrap`（max-width 1240px + --gut 内边距）里 ——
+   **每一屏的左右留白永远一样宽**。这本身就是"单调"的一大半：眼睛读到的版式
+   从头到尾只有一种框。参考站（unseen / blueyard / sweet-tape）几乎都有
+   "对齐的标题 + 出血的图/轨道/巨字"这种**两种框交替**的节奏。
+
+   出血的标准写法（全站统一，别再各写一套）：
+     width: 100vw; max-width: none; margin-inline: calc(50% - 50vw);
+   `margin-inline` 两个都设才会正好填满父级宽度并居中；只设 margin-left 时
+   另一侧的 auto 会把盒子推歪。`100vw` 超出视口的部分由 body{overflow-x:hidden} 兜住。
+
+   挑三处出血，其余保持栏内 —— **出血之所以有效，是因为有对齐的东西做对照**：
+     ① 宣言幕：整块出血，巨字因此能吃满 1296px（比栏内的 1096px 大 18%）
+     ② 谢幕：标题/按钮出血，底部 meta 仍在栏内
+     ③ 海报廊轨道：左右全出血，海报直接贴边并跑出屏幕
+   ========================================================================== */
+
+/* ① 宣言幕：从栏内 → 出血到 --gut。
+   巨字字号上限由"最长那行 12 个汉字必须在出血后的 1296px 里不折行"重新倒推
+   （1296 ÷ 12 ≈ 108，取 7.2vw/上限 6.5rem=104px 留余量）—— 原来是 90.7px。 */
+.manifesto > .wrap {
+  width: 100vw; max-width: none; margin-inline: calc(50% - 50vw);
+  padding-inline: var(--gut);
+}
+/* 下限压到 1.6rem：360px 屏上 7.2vw ≈ 25.9px × 12 个字 = 311px，塞进 320px 的内容宽 ——
+   390px 走 7.2vw（28px），360px 落进下限仍不折行；再大一点就折成 4 行，巨字退化成普通段落。
+   max-width:none 必须解开：基础规则（line 751）给的 17ch ≈ 850px 会卡住巨字，
+   12 个汉字在 104px 下宽 1244px > 850px → 明明放得下却被挤成两行。 */
+.manifesto__line { font-size: clamp(1.6rem, 7.2vw, 6.5rem); max-width: none; }
+
+/* ② 谢幕：标题与按钮出血到 --gut；底部 .curtain__meta 留在栏内做对照 */
+.curtain__grid {
+  width: 100vw; max-width: none; margin-inline: calc(50% - 50vw);
+  padding-inline: var(--gut);
+}
+
+/* ③ 海报廊轨道：左右都不要内边距 —— 第一张贴左缘、最后一张跑出右缘。
+   标题栏 .gallery__head 仍按 --gut 对齐，形成"对齐的标题 + 出血的轨道"。
+   ⚠️ JS 那边算行程用的是 track.scrollWidth / clientWidth（见 initGallery），
+      不认 padding，所以去掉内边距不会让横滚行程算错。 */
+.gallery__track { padding-inline: 0; }
