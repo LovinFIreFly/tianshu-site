@@ -2699,3 +2699,52 @@ a.banners__i:hover { transform: translateY(-4px); border-color: oklch(53% 0.135 
    在 4 列布局里内容宽只有 ~222px，而这串时间在 46px 下要 ~255px —— 任何放大都会把它
    折成两三行（实测 2.9rem 仍折）。原来 2.5rem 已是这格的上限，故**保持原样**，不覆盖。
    教训：数字放大要按"最长那个值"倒推，不能只看短数字（28 / 0 / 119）。 */
+
+/* ============================================================================
+   C1 · 幕间底色轮换（2026-10-17）
+   ----------------------------------------------------------------------------
+   诊断：除了「宣言幕 --paper-2」和「谢幕暗场」，home 上 gallery→night→paths→a5→voices→sec
+   连续 6 幕都是同一种浅暖纸 —— 眼睛看到的"版面节奏"其实是一条平的直线。
+   参考站几乎都有"亮—暗—亮—彩"的幕间跳变。
+
+   做法：给 section 挂色调 class，**只局部覆盖 token**（--paper/--ink/--line/--accent），
+   所有用 var() 画的组件就自动跟着翻转，不用逐个改组件。
+     .tone-2     降一档纸（--paper-2），轻
+     .tone-3     降两档纸（--paper-3），中
+     .tone-dark  深墨（--dark），强（只给「今晚」这一幕用）
+   ⚠️ section 必须显式 `background: var(--paper)`，否则它透明、透出 main 的浅纸。
+   ⚠️ 纸色降档后 --ink-3（53%，按 96.5% 纸底调过）会掉到 4.5:1 以下 —— 一并往下压。
+   ⚠️ 暗幕要把强调色一起提亮（松绿/黛蓝在 46% 暗底上对比不足）。
+   ========================================================================== */
+.tone-2 { background: var(--paper-2); --ink-3: oklch(47% 0.017 56); }
+.tone-3 { background: var(--paper-3); --ink-3: oklch(44% 0.017 56); }
+
+.tone-dark {
+  --paper:    var(--dark);
+  --paper-2:  var(--dark-2);
+  --paper-3:  oklch(31% 0.022 56);
+  --ink:      var(--dark-ink);
+  --ink-2:    oklch(85% 0.012 78);
+  --ink-3:    oklch(75% 0.014 70);
+  --ink-dim:  oklch(44% 0.020 56);
+  --ink-wash: oklch(68% 0.020 56);
+  --line:     oklch(95% 0.010 78 / .14);
+  --line-2:   oklch(95% 0.010 78 / .07);
+  /* 强调色在暗底提亮 ~20 个百分点，否则松绿 46% / 黛蓝 47% 直接糊进背景 */
+  --accent-3:  oklch(72% 0.100 165);
+  --accent-4:  oklch(72% 0.110 255);
+  --accent-2:  oklch(72% 0.110 70);
+  --amber-ink: oklch(72% 0.110 70);
+  --lit:       oklch(76% 0.100 165);
+  background: var(--paper);
+  color: var(--ink);
+}
+/* 注：暗幕**不加**下内边距 —— .night 的轴本身有 clamp(180,26vh,260) 的高度、
+   空态 lede 还有 40px 内边距，底部已有呼吸；再加 42px 会让空隙地图从 4.3% 反弹到 4.8%。 */
+
+/* 导轨在暗幕上翻浅色（JS 的 scroll-spy 在 tone-dark 幕进入视口时挂 .rail--dark）。
+   导轨是 position:fixed 的全局元素，拿不到 section 上覆盖后的 --ink-3，必须单独翻。 */
+.rail.rail--dark a { color: oklch(80% 0.014 70); }
+.rail.rail--dark a .d { border-color: oklch(80% 0.014 70); }
+.rail.rail--dark a.on { color: oklch(78% 0.100 165); }
+.rail.rail--dark a.on .d { border-color: oklch(78% 0.100 165); }

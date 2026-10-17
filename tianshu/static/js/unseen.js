@@ -836,6 +836,9 @@
       ents.forEach(function (en) {
         if (en.isIntersecting) {
           links.forEach(function (a) { a.classList.toggle('on', a.getAttribute('href') === '#' + en.target.id); });
+          /* C1 幕间底色轮换：导轨是 fixed 的全局元素，不继承 section 的 token ——
+             当前幕是暗场时，给导轨挂 rail--dark 把字/点翻成浅色，否则深字压在暗底上看不见。 */
+          rail.classList.toggle('rail--dark', en.target.classList.contains('tone-dark'));
         }
       });
     }, { threshold: 0.4, rootMargin: '-20% 0px -40% 0px' });
